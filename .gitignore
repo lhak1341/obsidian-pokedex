@@ -1,0 +1,27 @@
+# Build output
+main.js
+*.js.map
+
+# Dependencies
+node_modules/
+
+# Test vault
+test-vault/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Environment
+.env
+
+# Misc
+.claude/
+.gemini/
+.codex/
+temp/
+.fallow/

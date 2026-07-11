@@ -1,0 +1,18 @@
+{
+	"id": 1,
+	"name": "bulbasaur",
+	"gender_rate": 1,
+	"hatch_counter": 20,
+	"capture_rate": 45,
+	"egg_groups": [
+		{ "name": "monster", "url": "" },
+		{ "name": "plant", "url": "" }
+	],
+	"flavor_text_entries": [
+		{ "flavor_text": "A strange seed was\nplanted on its\nback at birth.", "language": { "name": "en", "url": "" }, "version": { "name": "red", "url": "" } },
+		{ "flavor_text": "It can go for days\nwithout eating a\nsingle morsel.", "language": { "name": "en", "url": "" }, "version": { "name": "firered", "url": "" } },
+		{ "flavor_text": "Bulbasaur peut etre\nvu somnolant sous\nle soleil.", "language": { "name": "fr", "url": "" }, "version": { "name": "emerald", "url": "" } }
+	],
+	"evolution_chain": { "url": "https://pokeapi.co/api/v2/evolution-chain/1/" },
+	"generation": { "name": "generation-i", "url": "" }
+}

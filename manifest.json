@@ -1,0 +1,9 @@
+{
+	"id": "obsidian-pokedex",
+	"name": "Pokedex",
+	"version": "0.1.0",
+	"minAppVersion": "1.8.0",
+	"description": "Browse, search, and inspect Pokemon (Gen 1-3) via PokeAPI, right inside Obsidian.",
+	"author": "lhak1341",
+	"isDesktopOnly": true
+}
