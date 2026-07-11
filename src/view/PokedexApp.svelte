@@ -3,7 +3,9 @@
 	import { onMount } from "svelte";
 	import type { PokedexRepository } from "../data/PokedexRepository";
 	import type { PluginSettings, PokedexTableRow } from "../data/types";
+	import { resolveGenerationScope } from "../utils/generationScope";
 	import DetailScreen from "./components/DetailScreen.svelte";
+	import { PokedexLoadState } from "./PokedexLoadState";
 	import TableScreen from "./components/TableScreen.svelte";
 
 	let { repository, settings, onColumnsChange }: {
@@ -14,47 +16,47 @@
 
 	let screen = $state<"table" | "detail">("table");
 	let selectedId = $state<number | null>(null);
+
+	// PokedexLoadState is a plain, non-reactive class (tested with plain
+	// vitest, see PokedexLoadState.test.ts) — Svelte 5's $state only
+	// deep-proxies plain objects/arrays, not class instances, so mutations
+	// to its fields wouldn't be visible to the template. These $state
+	// primitives are the reactive boundary instead, explicitly assigned
+	// from the worker's results/progress callback.
 	let rows = $state<PokedexTableRow[]>([]);
 	let failedIds = $state<number[]>([]);
 	let loading = $state(true);
 	let retrying = $state(false);
 	let progress = $state({ loaded: 0, total: 0 });
 
-	function mergeRows(fetched: PokedexTableRow[]) {
-		const byId = new Map(rows.map((r) => [r.id, r]));
-		for (const row of fetched) byId.set(row.id, row);
-		rows = [...byId.values()].sort((a, b) => a.id - b.id);
-	}
+	let loadState: PokedexLoadState;
 
 	onMount(() => {
-		repository
-			.getTableRows(
-				{ start: settings.dexRangeStart, end: settings.dexRangeEnd },
-				(loaded, total) => (progress = { loaded, total }),
-			)
-			.then((result) => {
-				rows = result.rows;
-				failedIds = result.failedIds;
-				loading = false;
-				if (result.failedIds.length > 0) {
-					new Notice(
-						`Pokedex: showing ${result.rows.length} of ${result.rows.length + result.failedIds.length} ` +
-						"Pokemon; some entries couldn't be fetched (offline or PokeAPI unreachable).",
-					);
-				}
-			});
+		const { fetchRange, includes } = resolveGenerationScope(settings.enabledGenerations);
+		loadState = new PokedexLoadState(repository, fetchRange, includes);
+		loadState.load((loaded, total) => (progress = { loaded, total })).then(() => {
+			rows = loadState.rows;
+			failedIds = loadState.failedIds;
+			loading = false;
+			if (failedIds.length > 0) {
+				new Notice(
+					`Pokedex: showing ${rows.length} of ${rows.length + failedIds.length} ` +
+					"Pokemon; some entries couldn't be fetched (offline or PokeAPI unreachable).",
+				);
+			}
+		});
 	});
 
 	function retryFailed() {
-		if (failedIds.length === 0 || retrying) return;
+		const attempted = failedIds.length;
 		retrying = true;
-		const idsToRetry = failedIds;
-		repository.retryRows(idsToRetry).then((result) => {
-			mergeRows(result.rows);
-			failedIds = result.failedIds;
+		loadState.retry((loaded, total) => (progress = { loaded, total })).then((result) => {
 			retrying = false;
+			if (!result) return;
+			rows = loadState.rows;
+			failedIds = loadState.failedIds;
 			if (result.failedIds.length > 0) {
-				new Notice(`Pokedex: ${result.rows.length} of ${idsToRetry.length} retried entries loaded; ${result.failedIds.length} still unreachable.`);
+				new Notice(`Pokedex: ${result.rows.length} of ${attempted} retried entries loaded; ${result.failedIds.length} still unreachable.`);
 			} else {
 				new Notice("Pokedex: all entries loaded.");
 			}

@@ -29,6 +29,12 @@ export class DiskCache {
 		return new DiskCache(app.vault.adapter, cacheDir);
 	}
 
+	// Second adapter at the same seam: tests construct a DiskCache against a
+	// fake DataAdapter instead of a real Obsidian App.
+	static forTest(adapter: DataAdapter, cacheDir: string): DiskCache {
+		return new DiskCache(adapter, cacheDir);
+	}
+
 	private resolve(relPath: string): string {
 		return `${this.cacheDir}/${relPath}`;
 	}

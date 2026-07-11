@@ -137,8 +137,7 @@ export interface PokedexEntry extends PokedexTableRow {
 }
 
 export interface PluginSettings {
-	dexRangeStart: number;
-	dexRangeEnd: number;
+	enabledGenerations: number[];
 	spriteStyle: "official-artwork" | "sprite";
 	gridDensity: "compact" | "comfortable";
 	defaultSortColumn: "id" | "name";

@@ -37,12 +37,16 @@ function matchesTypes(row: PokedexTableRow, types: string[]): boolean {
 	return types.every((type) => row.types.includes(type));
 }
 
-function matchesGenerations(row: PokedexTableRow, generations: number[]): boolean {
+export function isIdInGenerations(id: number, generations: number[]): boolean {
 	if (generations.length === 0) return true;
 	return generations.some((genId) => {
 		const gen = GENERATIONS.find((g) => g.id === genId);
-		return gen ? row.id >= gen.start && row.id <= gen.end : false;
+		return gen ? id >= gen.start && id <= gen.end : false;
 	});
+}
+
+export function matchesGenerations(row: PokedexTableRow, generations: number[]): boolean {
+	return isIdInGenerations(row.id, generations);
 }
 
 function matchesStatRanges(row: PokedexTableRow, ranges: PokedexFilters["statRanges"]): boolean {

@@ -1,11 +1,10 @@
-import { Notice, PluginSettingTab, Setting } from "obsidian";
-import { DEFAULT_DEX_RANGE, DEFAULT_VISIBLE_COLUMNS, MAX_DEX_NUMBER } from "./data/constants";
+import { Notice, PluginSettingTab, Setting, type SettingDefinitionItem } from "obsidian";
+import { DEFAULT_ENABLED_GENERATIONS, DEFAULT_VISIBLE_COLUMNS, GENERATIONS } from "./data/constants";
 import type { PluginSettings } from "./data/types";
 import type PokedexPlugin from "./main";
 
 export const DEFAULT_SETTINGS: PluginSettings = {
-	dexRangeStart: DEFAULT_DEX_RANGE.start,
-	dexRangeEnd: DEFAULT_DEX_RANGE.end,
+	enabledGenerations: DEFAULT_ENABLED_GENERATIONS,
 	spriteStyle: "official-artwork",
 	gridDensity: "comfortable",
 	defaultSortColumn: "id",
@@ -23,55 +22,45 @@ export class PokedexSettingTab extends PluginSettingTab {
 		super(app, plugin);
 	}
 
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		return [];
+	}
+
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		new Setting(containerEl).setName("Dex range").setHeading();
+		new Setting(containerEl).setName("Generations").setHeading();
+		const generationItems = containerEl.createDiv("setting-group").createDiv("setting-items");
 
-		new Setting(containerEl)
-			.setName("Start number")
-			.setDesc("National dex number to start browsing from.")
-			.addText((text) =>
-				text
-					.setValue(String(this.plugin.settings.dexRangeStart))
-					.onChange(async (value) => {
-						let parsed = clamp(Number(value) || 1, 1, MAX_DEX_NUMBER);
-						if (parsed > this.plugin.settings.dexRangeEnd) {
-							new Notice(
-								`Pokedex: start number can't be after the end number (${this.plugin.settings.dexRangeEnd}); clamped.`,
-							);
-							parsed = this.plugin.settings.dexRangeEnd;
-							text.setValue(String(parsed));
-						}
-						this.plugin.settings.dexRangeStart = parsed;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("End number")
-			.setDesc(`National dex number to stop at (currently supports up to ${MAX_DEX_NUMBER}).`)
-			.addText((text) =>
-				text
-					.setValue(String(this.plugin.settings.dexRangeEnd))
-					.onChange(async (value) => {
-						let parsed = clamp(Number(value) || DEFAULT_DEX_RANGE.end, 1, MAX_DEX_NUMBER);
-						if (parsed < this.plugin.settings.dexRangeStart) {
-							new Notice(
-								`Pokedex: end number can't be before the start number (${this.plugin.settings.dexRangeStart}); clamped.`,
-							);
-							parsed = this.plugin.settings.dexRangeStart;
-							text.setValue(String(parsed));
-						}
-						this.plugin.settings.dexRangeEnd = parsed;
-						await this.plugin.saveSettings();
-					})
-			);
+		for (const gen of GENERATIONS) {
+			new Setting(generationItems)
+				.setName(gen.name)
+				.setDesc(`National dex #${gen.start}-${gen.end}.`)
+				.addToggle((toggle) =>
+					toggle
+						.setValue(this.plugin.settings.enabledGenerations.includes(gen.id))
+						.onChange(async (value) => {
+							const enabled = new Set(this.plugin.settings.enabledGenerations);
+							if (value) {
+								enabled.add(gen.id);
+							} else if (enabled.size === 1) {
+								new Notice("Pokedex: at least one generation must stay enabled.");
+								toggle.setValue(true);
+								return;
+							} else {
+								enabled.delete(gen.id);
+							}
+							this.plugin.settings.enabledGenerations = [...enabled].sort((a, b) => a - b);
+							await this.plugin.saveSettings();
+						})
+				);
+		}
 
 		new Setting(containerEl).setName("Display").setHeading();
+		const displayItems = containerEl.createDiv("setting-group").createDiv("setting-items");
 
-		new Setting(containerEl)
+		new Setting(displayItems)
 			.setName("Sprite style")
 			.setDesc("Which artwork to feature in the detail view header.")
 			.addDropdown((dropdown) =>
@@ -85,7 +74,7 @@ export class PokedexSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
+		new Setting(displayItems)
 			.setName("Grid density")
 			.setDesc("Row height/sprite size in the browse table.")
 			.addDropdown((dropdown) =>
@@ -99,7 +88,7 @@ export class PokedexSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
+		new Setting(displayItems)
 			.setName("Default sort column")
 			.addDropdown((dropdown) =>
 				dropdown
@@ -113,21 +102,22 @@ export class PokedexSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl).setName("Cache").setHeading();
+		const cacheItems = containerEl.createDiv("setting-group").createDiv("setting-items");
 
-		const cacheSizeSetting = new Setting(containerEl)
+		const cacheSizeSetting = new Setting(cacheItems)
 			.setName("Cached data")
 			.setDesc("Loading...");
 		void this.plugin.cache.getSizeBytes().then((bytes) => {
 			cacheSizeSetting.setDesc(`${formatBytes(bytes)} of PokeAPI JSON and images cached on disk.`);
 		});
 
-		new Setting(containerEl)
+		new Setting(cacheItems)
 			.setName("Clear cache")
 			.setDesc("Deletes all cached PokeAPI JSON and images; they'll be re-fetched next time you browse.")
 			.addButton((button) =>
 				button
 					.setButtonText("Clear cache")
-					.setWarning()
+					.setDestructive()
 					.onClick(async () => {
 						await this.plugin.cache.clear();
 						new Notice("Pokedex: cache cleared.");
@@ -135,8 +125,4 @@ export class PokedexSettingTab extends PluginSettingTab {
 					})
 			);
 	}
-}
-
-function clamp(value: number, min: number, max: number): number {
-	return Math.min(Math.max(value, min), max);
 }

@@ -1,11 +1,5 @@
 export const POKEAPI_BASE = "https://pokeapi.co/api/v2";
 
-// National dex #1-386 = Gen 1 (Kanto) through Gen 3 (Hoenn).
-// Kept as a plain range (not hardcoded into fetch/cache logic) so a later
-// settings change can widen it without touching the data layer.
-export const DEFAULT_DEX_RANGE = { start: 1, end: 386 } as const;
-export const MAX_DEX_NUMBER = 1025; // upper bound PokeAPI currently supports
-
 // Movepool/learn-method data is filtered to these version groups so a
 // Pokemon's move list matches Gen 3 (FireRed/LeafGreen + Emerald) instead of
 // dumping every game the species has ever appeared in.
@@ -22,6 +16,9 @@ export const GENERATIONS = [
 	{ id: 2, name: "Gen 2 (Johto)", start: 152, end: 251 },
 	{ id: 3, name: "Gen 3 (Hoenn)", start: 252, end: 386 },
 ] as const;
+
+// All generations enabled by default (dex #1-386, Gen 1 through Gen 3).
+export const DEFAULT_ENABLED_GENERATIONS: number[] = GENERATIONS.map((g) => g.id);
 
 export const STAT_NAMES = [
 	"hp", "attack", "defense", "special-attack", "special-defense", "speed",
