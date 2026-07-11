@@ -15,6 +15,7 @@ function row(overrides: Partial<PokedexTableRow>): PokedexTableRow {
 		weight: 69,
 		catchRate: 45,
 		hatchCounter: 20,
+		rarity: "normal",
 		...overrides,
 	};
 }
@@ -24,11 +25,13 @@ const rows: PokedexTableRow[] = [
 	row({ id: 4, name: "charmander", types: ["fire"], abilityNames: ["blaze"], stats: { hp: 39, attack: 52, defense: 43, specialAttack: 60, specialDefense: 50, speed: 65 } }),
 	row({ id: 6, name: "charizard", types: ["fire", "flying"], abilityNames: ["blaze"], stats: { hp: 78, attack: 84, defense: 78, specialAttack: 109, specialDefense: 85, speed: 100 } }),
 	row({ id: 152, name: "chikorita", types: ["grass"], abilityNames: ["overgrow"] }),
+	row({ id: 144, name: "articuno", types: ["ice", "flying"], abilityNames: ["pressure"], rarity: "legendary" }),
+	row({ id: 151, name: "mew", types: ["psychic"], abilityNames: ["synchronize"], rarity: "mythical" }),
 ];
 
 describe("filterPokemon", () => {
 	it("returns all rows when filters are empty", () => {
-		expect(filterPokemon(rows, EMPTY_FILTERS)).toHaveLength(4);
+		expect(filterPokemon(rows, EMPTY_FILTERS)).toHaveLength(6);
 	});
 
 	it("matches search by name substring", () => {
@@ -62,6 +65,11 @@ describe("filterPokemon", () => {
 	it("matches ANY selected ability", () => {
 		const result = filterPokemon(rows, { ...EMPTY_FILTERS, abilities: ["blaze"] });
 		expect(result.map((r) => r.name)).toEqual(["charmander", "charizard"]);
+	});
+
+	it("matches ANY selected rarity", () => {
+		const result = filterPokemon(rows, { ...EMPTY_FILTERS, rarities: ["legendary", "mythical"] });
+		expect(result.map((r) => r.name)).toEqual(["articuno", "mew"]);
 	});
 
 	it("combines multiple filter axes with AND", () => {

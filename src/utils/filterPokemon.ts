@@ -16,6 +16,8 @@ export interface PokedexFilters {
 	statRanges: Partial<Record<keyof StatBlock, StatRange>>;
 	// OR semantics: matches if the Pokemon has ANY of the selected abilities.
 	abilities: string[];
+	// OR semantics: matches if the Pokemon's rarity is ANY of the selected ones.
+	rarities: string[];
 }
 
 export const EMPTY_FILTERS: PokedexFilters = {
@@ -24,6 +26,7 @@ export const EMPTY_FILTERS: PokedexFilters = {
 	generations: [],
 	statRanges: {},
 	abilities: [],
+	rarities: [],
 };
 
 function matchesSearch(row: PokedexTableRow, search: string): boolean {
@@ -62,12 +65,18 @@ function matchesAbilities(row: PokedexTableRow, abilities: string[]): boolean {
 	return abilities.some((ability) => row.abilityNames.includes(ability));
 }
 
+function matchesRarities(row: PokedexTableRow, rarities: string[]): boolean {
+	if (rarities.length === 0) return true;
+	return rarities.includes(row.rarity);
+}
+
 export function filterPokemon(rows: PokedexTableRow[], filters: PokedexFilters): PokedexTableRow[] {
 	return rows.filter((row) =>
 		matchesSearch(row, filters.search) &&
 		matchesTypes(row, filters.types) &&
 		matchesGenerations(row, filters.generations) &&
 		matchesStatRanges(row, filters.statRanges) &&
-		matchesAbilities(row, filters.abilities)
+		matchesAbilities(row, filters.abilities) &&
+		matchesRarities(row, filters.rarities)
 	);
 }

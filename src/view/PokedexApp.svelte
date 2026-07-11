@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Notice } from "obsidian";
-	import { onMount } from "svelte";
+	import { onDestroy, onMount } from "svelte";
 	import type { PokedexRepository } from "../data/PokedexRepository";
 	import type { PluginSettings, PokedexTableRow } from "../data/types";
 	import { resolveGenerationScope } from "../utils/generationScope";
@@ -31,10 +31,18 @@
 
 	let loadState: PokedexLoadState;
 
+	// PokedexView.refresh() (fired on any settings change — see main.ts
+	// saveSettings) unmounts this component and mounts a fresh one. Without
+	// cancelling here, a load still in flight when that happens keeps running
+	// in the background while the new instance starts its own load — every id
+	// the old one hadn't reached yet gets fetched twice for nothing.
+	onDestroy(() => loadState?.cancel());
+
 	onMount(() => {
 		const { fetchRange, includes } = resolveGenerationScope(settings.enabledGenerations);
 		loadState = new PokedexLoadState(repository, fetchRange, includes);
 		loadState.load((loaded, total) => (progress = { loaded, total })).then(() => {
+			if (loadState.cancelled) return;
 			rows = loadState.rows;
 			failedIds = loadState.failedIds;
 			loading = false;
@@ -52,7 +60,7 @@
 		retrying = true;
 		loadState.retry((loaded, total) => (progress = { loaded, total })).then((result) => {
 			retrying = false;
-			if (!result) return;
+			if (!result || loadState.cancelled) return;
 			rows = loadState.rows;
 			failedIds = loadState.failedIds;
 			if (result.failedIds.length > 0) {
@@ -98,6 +106,7 @@
 			density={settings.gridDensity}
 			defaultSortColumn={settings.defaultSortColumn}
 			initialVisibleColumns={settings.visibleColumns}
+			useTypeIcons={settings.useTypeIcons}
 			{onColumnsChange}
 			onSelect={openDetail}
 		/>
@@ -106,6 +115,7 @@
 			{repository}
 			id={selectedId}
 			spriteStyle={settings.spriteStyle}
+			useTypeIcons={settings.useTypeIcons}
 			onBack={backToTable}
 			onSelect={openDetail}
 		/>

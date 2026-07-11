@@ -15,6 +15,7 @@ function makeRow(overrides: Partial<PokedexTableRow> = {}): PokedexTableRow {
 		weight: 69,
 		catchRate: 45,
 		hatchCounter: 20,
+		rarity: "normal",
 		...overrides,
 	};
 }

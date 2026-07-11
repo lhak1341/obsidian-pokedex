@@ -8,11 +8,12 @@
 	import Icon from "./Icon.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 
-	let { rows, density, defaultSortColumn, initialVisibleColumns, onColumnsChange, onSelect }: {
+	let { rows, density, defaultSortColumn, initialVisibleColumns, useTypeIcons, onColumnsChange, onSelect }: {
 		rows: PokedexTableRow[];
 		density: "compact" | "comfortable";
 		defaultSortColumn: "id" | "name";
 		initialVisibleColumns: string[];
+		useTypeIcons: boolean;
 		onColumnsChange: (columns: string[]) => void;
 		onSelect: (id: number) => void;
 	} = $props();
@@ -61,21 +62,45 @@
 </script>
 
 <div class="table-screen">
-	<FilterBar bind:filters {abilityOptions} />
+	<FilterBar bind:filters {abilityOptions} {useTypeIcons} />
 
 	<details class="column-toggle">
-		<summary>Columns</summary>
+		<summary>
+			<Icon name="columns-3" size={14} strokeWidth={2} />
+			<span>Columns</span>
+		</summary>
 		<div class="column-checkbox-list">
-			{#each TOGGLEABLE_COLUMNS as col (col.key)}
-				<label class="column-checkbox">
-					<input
-						type="checkbox"
-						checked={visibleColumnKeys.has(col.key)}
-						onchange={() => toggleColumn(col.key)}
-					/>
-					{col.label}
-				</label>
-			{/each}
+			<div class="column-section">
+				<div class="column-section-label">Stats</div>
+				<div class="column-grid column-grid-stats">
+					{#each TOGGLEABLE_COLUMNS.filter((c) => !c.headerIcon) as col (col.key)}
+						<label class="column-checkbox">
+							<input
+								type="checkbox"
+								checked={visibleColumnKeys.has(col.key)}
+								onchange={() => toggleColumn(col.key)}
+							/>
+							{col.label}
+						</label>
+					{/each}
+				</div>
+			</div>
+			<div class="column-section">
+				<div class="column-section-label">Other</div>
+				<div class="column-grid column-grid-other">
+					{#each TOGGLEABLE_COLUMNS.filter((c) => c.headerIcon) as col (col.key)}
+						<label class="column-checkbox">
+							<input
+								type="checkbox"
+								checked={visibleColumnKeys.has(col.key)}
+								onchange={() => toggleColumn(col.key)}
+							/>
+							<Icon name={col.headerIcon ?? "circle"} size={13} strokeWidth={2} />
+							{col.label}
+						</label>
+					{/each}
+				</div>
+			</div>
 		</div>
 	</details>
 
@@ -117,7 +142,7 @@
 						<td class="name-cell">{row.name}</td>
 						<td>
 							{#each row.types as type (type)}
-								<TypeBadge {type} />
+								<TypeBadge {type} useIcon={useTypeIcons} />
 							{/each}
 						</td>
 						{#each activeColumns as col (col.key)}
@@ -137,46 +162,97 @@
 		margin: 6px 0;
 	}
 	.column-toggle {
+		position: relative;
 		margin-bottom: var(--size-4-3);
 	}
 	.column-toggle summary {
-		display: inline-block;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
 		cursor: pointer;
-		padding: 4px 10px;
+		padding: 5px 10px;
 		border: 1px solid var(--background-modifier-border);
-		border-radius: 4px;
+		border-radius: 6px;
 		list-style: none;
 		user-select: none;
+		color: var(--text-muted);
+		transition: background-color 100ms ease-out, color 100ms ease-out;
 	}
 	.column-toggle summary::-webkit-details-marker {
 		display: none;
 	}
+	.column-toggle summary:hover {
+		background: var(--background-modifier-hover);
+		color: var(--text-normal);
+	}
 	.column-toggle summary::after {
-		content: "▸";
-		float: right;
-		margin-left: 8px;
-		color: var(--text-faint);
+		content: "";
+		width: 12px;
+		height: 12px;
+		margin-left: 2px;
+		background-color: var(--text-faint);
+		-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") center / contain no-repeat;
+		mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") center / contain no-repeat;
 		transition: transform 100ms ease-out;
 	}
 	.column-toggle[open] summary::after {
-		transform: rotate(90deg);
+		transform: rotate(180deg);
 	}
 	.column-toggle[open] summary {
-		border-color: var(--interactive-accent);
+		background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
+		color: var(--interactive-accent);
+		border-color: color-mix(in srgb, var(--interactive-accent) 40%, var(--background-modifier-border));
 	}
 	.column-checkbox-list {
+		position: absolute;
+		top: calc(100% + 4px);
+		left: 0;
+		z-index: 10;
 		display: flex;
-		flex-wrap: wrap;
-		max-width: 420px;
-		padding: 6px;
+		flex-direction: column;
+		gap: 10px;
+		width: 320px;
+		max-width: 80vw;
+		padding: 10px;
+		background: var(--background-primary);
+		border: 1px solid var(--background-modifier-border);
+		border-radius: 4px;
+		box-shadow: var(--shadow-s);
+	}
+	.column-section + .column-section {
+		padding-top: 10px;
+		border-top: 1px solid var(--background-modifier-border);
+	}
+	.column-section-label {
+		margin-bottom: 4px;
+		font-size: 0.7em;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--text-faint);
+	}
+	.column-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 2px 8px;
+	}
+	.column-grid-other {
+		grid-template-columns: repeat(2, 1fr);
 	}
 	.column-checkbox {
 		display: flex;
 		align-items: center;
-		gap: 4px;
-		padding: 2px 6px;
+		gap: 6px;
+		padding: 3px 6px;
+		border-radius: 4px;
 		font-size: 0.85em;
 		cursor: pointer;
+		color: var(--text-muted);
+		transition: background-color 100ms ease-out, color 100ms ease-out;
+	}
+	.column-checkbox:hover {
+		background: var(--background-modifier-hover);
+		color: var(--text-normal);
 	}
 	.table-wrap {
 		overflow: auto;

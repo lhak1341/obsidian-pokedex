@@ -1,6 +1,6 @@
 import { mapWithConcurrency } from "../utils/concurrency";
 import { DiskCache } from "./Cache";
-import { normalizeEvolutionChain, toEntry, toTableRow } from "./normalize";
+import { normalizeEvolutionChain, toEntry, toTableRow, trimMovesToVersionGroups } from "./normalize";
 import { PokeApiClient } from "./PokeApiClient";
 import type {
 	EvolutionNode,
@@ -11,7 +11,12 @@ import type {
 	RawSpecies,
 } from "./types";
 
-const FETCH_CONCURRENCY = 5;
+// Applies to both a cold load (real PokeAPI requests) and a warm one (pure
+// disk reads once cached) — 10 is a modest increase over the previous 5 for
+// PokeAPI's sake, but doubles a warm reload's throughput where the only real
+// cost is disk I/O. withRetry's exponential backoff (see retry.ts) already
+// absorbs an occasional 429 at this concurrency.
+const FETCH_CONCURRENCY = 10;
 
 export interface TableLoadResult {
 	rows: PokedexTableRow[];
@@ -22,43 +27,91 @@ export interface TableLoadResult {
 // Facade the UI talks to: "give me row/entry data for id X", never worrying
 // about whether that means a cache hit or a live PokeAPI call.
 export class PokedexRepository {
+	// Session-lifetime in-memory layer on top of DiskCache. The table reload
+	// (settings change, tab close/reopen) is common — PokedexView remounts on
+	// every settings save — and without this, each of those re-reads and
+	// re-parses/re-base64-encodes the same ~400 files from disk even though
+	// nothing on disk changed since the last read a moment ago.
+	private pokemonMemCache = new Map<number, RawPokemon>();
+	private speciesMemCache = new Map<number, RawSpecies>();
+	private evolutionChainMemCache = new Map<string, RawEvolutionChain>();
+	private imageMemCache = new Map<string, string>();
+
 	constructor(
 		private client: PokeApiClient,
 		private cache: DiskCache,
 	) {}
 
 	private async getOrFetchPokemon(id: number): Promise<RawPokemon> {
+		const mem = this.pokemonMemCache.get(id);
+		if (mem) return mem;
 		const cached = await this.cache.readJson<RawPokemon>(`pokemon/${id}.json`);
-		if (cached) return cached;
+		if (cached) {
+			// Self-heals a cache written before trimMovesToVersionGroups existed
+			// (a full, untrimmed moves array) by rewriting it trimmed the first
+			// time it's read, rather than requiring a manual cache clear.
+			const trimmedMoves = trimMovesToVersionGroups(cached.moves);
+			if (trimmedMoves.length !== cached.moves.length) {
+				const migrated: RawPokemon = { ...cached, moves: trimmedMoves };
+				await this.cache.writeJson(`pokemon/${id}.json`, migrated);
+				this.pokemonMemCache.set(id, migrated);
+				return migrated;
+			}
+			this.pokemonMemCache.set(id, cached);
+			return cached;
+		}
 		const fresh = await this.client.fetchPokemon(id);
-		await this.cache.writeJson(`pokemon/${id}.json`, fresh);
-		return fresh;
+		// See trimMovesToVersionGroups: strips the ~20 version groups this
+		// plugin never reads before it's written to disk / kept in memory.
+		const trimmed: RawPokemon = { ...fresh, moves: trimMovesToVersionGroups(fresh.moves) };
+		await this.cache.writeJson(`pokemon/${id}.json`, trimmed);
+		this.pokemonMemCache.set(id, trimmed);
+		return trimmed;
 	}
 
 	private async getOrFetchSpecies(id: number): Promise<RawSpecies> {
+		const mem = this.speciesMemCache.get(id);
+		if (mem) return mem;
 		const cached = await this.cache.readJson<RawSpecies>(`species/${id}.json`);
-		if (cached) return cached;
+		if (cached) {
+			this.speciesMemCache.set(id, cached);
+			return cached;
+		}
 		const fresh = await this.client.fetchSpecies(id);
 		await this.cache.writeJson(`species/${id}.json`, fresh);
+		this.speciesMemCache.set(id, fresh);
 		return fresh;
 	}
 
 	private async getOrFetchEvolutionChain(url: string): Promise<RawEvolutionChain> {
 		const chainId = url.match(/\/(\d+)\/?$/)?.[1] ?? "unknown";
+		const mem = this.evolutionChainMemCache.get(chainId);
+		if (mem) return mem;
 		const cached = await this.cache.readJson<RawEvolutionChain>(`evolution-chain/${chainId}.json`);
-		if (cached) return cached;
+		if (cached) {
+			this.evolutionChainMemCache.set(chainId, cached);
+			return cached;
+		}
 		const fresh = await this.client.fetchEvolutionChain(url);
 		await this.cache.writeJson(`evolution-chain/${chainId}.json`, fresh);
+		this.evolutionChainMemCache.set(chainId, fresh);
 		return fresh;
 	}
 
 	private async getOrFetchImage(url: string | null, relPath: string): Promise<string | null> {
 		if (!url) return null;
+		const mem = this.imageMemCache.get(relPath);
+		if (mem) return mem;
 		const cached = await this.cache.readImageDataUri(relPath);
-		if (cached) return cached;
+		if (cached) {
+			this.imageMemCache.set(relPath, cached);
+			return cached;
+		}
 		const buffer = await this.client.fetchImageBinary(url);
 		await this.cache.writeImageBinary(relPath, buffer);
-		return this.cache.readImageDataUri(relPath);
+		const dataUri = await this.cache.readImageDataUri(relPath);
+		if (dataUri) this.imageMemCache.set(relPath, dataUri);
+		return dataUri;
 	}
 
 	// Fetches/caches table rows (pokemon + species, for catch rate/hatch
@@ -68,9 +121,14 @@ export class PokedexRepository {
 	// previously-failed ids re-attempts just those (a failed id was never
 	// cached, so `getOrFetchPokemon`/`getOrFetchSpecies` fetch fresh rather
 	// than returning a stale miss).
+	//
+	// `isCancelled` lets a caller whose view has since closed/remounted stop
+	// this from continuing to fetch ids nobody's waiting on anymore — see
+	// PokedexLoadState, which is the thing that actually goes stale.
 	private async getRowsForIds(
 		ids: number[],
 		onProgress?: (loaded: number, total: number) => void,
+		isCancelled?: () => boolean,
 	): Promise<TableLoadResult> {
 		const rows: PokedexTableRow[] = [];
 		const failedIds: number[] = [];
@@ -96,6 +154,7 @@ export class PokedexRepository {
 				if ("value" in result) rows.push(result.value);
 				else failedIds.push(ids[result.index]);
 			},
+			isCancelled,
 		);
 
 		rows.sort((a, b) => a.id - b.id);
@@ -105,19 +164,21 @@ export class PokedexRepository {
 	async getTableRows(
 		range: { start: number; end: number },
 		onProgress?: (loaded: number, total: number) => void,
+		isCancelled?: () => boolean,
 	): Promise<TableLoadResult> {
 		const ids = Array.from(
 			{ length: range.end - range.start + 1 },
 			(_, i) => range.start + i,
 		);
-		return this.getRowsForIds(ids, onProgress);
+		return this.getRowsForIds(ids, onProgress, isCancelled);
 	}
 
 	async retryRows(
 		ids: number[],
 		onProgress?: (loaded: number, total: number) => void,
+		isCancelled?: () => boolean,
 	): Promise<TableLoadResult> {
-		return this.getRowsForIds(ids, onProgress);
+		return this.getRowsForIds(ids, onProgress, isCancelled);
 	}
 
 	async getEntry(id: number): Promise<PokedexEntry> {

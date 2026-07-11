@@ -4,6 +4,8 @@
 	"gender_rate": 1,
 	"hatch_counter": 20,
 	"capture_rate": 45,
+	"is_legendary": false,
+	"is_mythical": false,
 	"egg_groups": [
 		{ "name": "monster", "url": "" },
 		{ "name": "plant", "url": "" }

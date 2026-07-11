@@ -9,6 +9,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	gridDensity: "comfortable",
 	defaultSortColumn: "id",
 	visibleColumns: DEFAULT_VISIBLE_COLUMNS,
+	useTypeIcons: false,
 };
 
 function formatBytes(bytes: number): string {
@@ -84,6 +85,18 @@ export class PokedexSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.gridDensity)
 					.onChange(async (value) => {
 						this.plugin.settings.gridDensity = value as PluginSettings["gridDensity"];
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(displayItems)
+			.setName("Type icons")
+			.setDesc("Show a Lucide icon instead of the type name on type badges.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.useTypeIcons)
+					.onChange(async (value) => {
+						this.plugin.settings.useTypeIcons = value;
 						await this.plugin.saveSettings();
 					})
 			);

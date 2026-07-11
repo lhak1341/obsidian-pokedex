@@ -11,12 +11,22 @@ export class PokedexLoadState {
 	loading = true;
 	retrying = false;
 	progress = { loaded: 0, total: 0 };
+	// Set by the owning view when it's closed/remounted while a load is still
+	// in flight (e.g. a settings change triggers a remount mid-fetch). Without
+	// this, that stale load keeps running in the background — a brand new
+	// PokedexLoadState starts its own full fetch at the same time, and every
+	// id the old one hasn't reached yet gets fetched twice.
+	cancelled = false;
 
 	constructor(
 		private repository: PokedexRepository,
 		private fetchRange: { start: number; end: number },
 		private includes: (id: number) => boolean,
 	) {}
+
+	cancel(): void {
+		this.cancelled = true;
+	}
 
 	private mergeRows(fetched: PokedexTableRow[]) {
 		const byId = new Map(this.rows.map((r) => [r.id, r]));
@@ -37,7 +47,9 @@ export class PokedexLoadState {
 				this.progress = { loaded, total };
 				onProgress?.(loaded, total);
 			},
+			() => this.cancelled,
 		);
+		if (this.cancelled) return;
 		this.rows = result.rows.filter((row) => this.includes(row.id));
 		this.failedIds = result.failedIds.filter(this.includes);
 		this.loading = false;
@@ -57,10 +69,12 @@ export class PokedexLoadState {
 				this.progress = { loaded, total };
 				onProgress?.(loaded, total);
 			},
+			() => this.cancelled,
 		);
+		this.retrying = false;
+		if (this.cancelled) return result;
 		this.mergeRows(result.rows);
 		this.failedIds = result.failedIds;
-		this.retrying = false;
 		return result;
 	}
 }

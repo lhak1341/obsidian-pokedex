@@ -40,6 +40,8 @@ export interface RawSpecies {
 	gender_rate: number;
 	hatch_counter: number;
 	capture_rate: number;
+	is_legendary: boolean;
+	is_mythical: boolean;
 	egg_groups: NamedApiResource[];
 	flavor_text_entries: {
 		flavor_text: string;
@@ -109,6 +111,8 @@ export interface EvYieldEntry {
 // filter doesn't require a separate fetch per Pokemon. Also carries a few
 // species-level fields (catchRate, hatchCounter) so those can be shown as
 // optional table columns without a per-row detail fetch.
+export type PokemonRarity = "normal" | "legendary" | "mythical";
+
 export interface PokedexTableRow {
 	id: number;
 	name: string;
@@ -121,6 +125,7 @@ export interface PokedexTableRow {
 	weight: number;
 	catchRate: number;
 	hatchCounter: number;
+	rarity: PokemonRarity;
 }
 
 // Full record shown in the detail screen.
@@ -142,4 +147,5 @@ export interface PluginSettings {
 	gridDensity: "compact" | "comfortable";
 	defaultSortColumn: "id" | "name";
 	visibleColumns: string[];
+	useTypeIcons: boolean;
 }

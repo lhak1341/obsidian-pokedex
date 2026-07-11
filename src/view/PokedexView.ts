@@ -42,14 +42,20 @@ export class PokedexView extends ItemView {
 	// with the new configuration instead of requiring the tab to be closed
 	// and reopened.
 	refresh(): void {
+		this.mountApp();
+	}
+
+	// Defensively unmounts any existing instance first — Obsidian can call
+	// onOpen() more than once for the same leaf (e.g. during workspace layout
+	// restoration), and without this guard that second call would leave the
+	// first instance's fetch loop running invisibly in the background while a
+	// second one starts from scratch, which looks like the load restarting
+	// partway through.
+	private mountApp(): void {
 		if (this.appInstance) {
 			void unmount(this.appInstance);
 			this.appInstance = undefined;
 		}
-		this.mountApp();
-	}
-
-	private mountApp(): void {
 		this.contentEl.empty();
 		this.appInstance = mount(PokedexApp, {
 			target: this.contentEl,

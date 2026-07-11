@@ -66,6 +66,26 @@ export function normalizeMoves(
 	return moves;
 }
 
+// PokeAPI's `moves` array carries every version group the move has ever
+// appeared in (20+ games) — `normalizeMoves` only ever reads the couple this
+// plugin cares about (MOVE_VERSION_GROUPS). Trimming it down to just those
+// before a raw pokemon response is cached cuts a ~260KB moves array (out of
+// ~263KB total) down to a few KB, since that's ~99% of what makes
+// `pokemon/<id>.json` slow to read and parse on every table load.
+export function trimMovesToVersionGroups(
+	rawMoves: RawPokemon["moves"],
+	versionGroups: readonly string[] = MOVE_VERSION_GROUPS,
+): RawPokemon["moves"] {
+	return rawMoves
+		.map((entry) => ({
+			...entry,
+			version_group_details: entry.version_group_details.filter((d) =>
+				versionGroups.includes(d.version_group.name),
+			),
+		}))
+		.filter((entry) => entry.version_group_details.length > 0);
+}
+
 function idFromUrl(url: string): number {
 	const match = url.match(/\/(\d+)\/?$/);
 	return match ? Number(match[1]) : 0;
@@ -122,6 +142,7 @@ export function toTableRow(
 		weight: pokemon.weight,
 		catchRate: species.capture_rate,
 		hatchCounter: species.hatch_counter,
+		rarity: species.is_mythical ? "mythical" : species.is_legendary ? "legendary" : "normal",
 	};
 }
 

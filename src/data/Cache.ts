@@ -54,9 +54,12 @@ export class DiskCache {
 		return this.adapter.exists(this.resolve(relPath));
 	}
 
+	// A cache hit is the hot path (every warm reload of the ~400-row table
+	// hits this), so this reads directly and treats a rejected read as a
+	// miss instead of paying a separate exists() round-trip up front for
+	// every single file.
 	async readJson<T>(relPath: string): Promise<T | null> {
 		const path = this.resolve(relPath);
-		if (!(await this.adapter.exists(path))) return null;
 		try {
 			return JSON.parse(await this.adapter.read(path)) as T;
 		} catch {
@@ -72,10 +75,13 @@ export class DiskCache {
 
 	async readImageDataUri(relPath: string): Promise<string | null> {
 		const path = this.resolve(relPath);
-		if (!(await this.adapter.exists(path))) return null;
-		const buffer = await this.adapter.readBinary(path);
-		const mime = MIME_BY_EXT[extOf(relPath)] ?? "image/png";
-		return `data:${mime};base64,${arrayBufferToBase64(buffer)}`;
+		try {
+			const buffer = await this.adapter.readBinary(path);
+			const mime = MIME_BY_EXT[extOf(relPath)] ?? "image/png";
+			return `data:${mime};base64,${arrayBufferToBase64(buffer)}`;
+		} catch {
+			return null;
+		}
 	}
 
 	async writeImageBinary(relPath: string, buffer: ArrayBuffer): Promise<void> {

@@ -37,13 +37,19 @@ export function createFakeDataAdapter(): DataAdapter {
 				folders: [...folders].filter((p) => isDirectChild(p, prefix)),
 			};
 		},
+		// Real Obsidian (Node fs under the hood) rejects read/readBinary for a
+		// missing path rather than returning empty content — matched here so
+		// DiskCache's try/catch-based "missing file" handling is exercised the
+		// same way tests run as it will against the real adapter.
 		async read(path) {
 			const content = files.get(path);
-			return typeof content === "string" ? content : "";
+			if (typeof content !== "string") throw new Error(`ENOENT: ${path}`);
+			return content;
 		},
 		async readBinary(path) {
 			const content = files.get(path);
-			return content instanceof ArrayBuffer ? content : new ArrayBuffer(0);
+			if (!(content instanceof ArrayBuffer)) throw new Error(`ENOENT: ${path}`);
+			return content;
 		},
 		async write(path, data) {
 			files.set(path, data);

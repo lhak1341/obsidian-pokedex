@@ -7,6 +7,7 @@ import {
 	normalizeStats,
 	toEntry,
 	toTableRow,
+	trimMovesToVersionGroups,
 } from "./normalize";
 import type { RawEvolutionChain, RawPokemon, RawSpecies } from "./types";
 import bulbasaurChain from "./__fixtures__/bulbasaur-evolution-chain.json";
@@ -48,6 +49,29 @@ describe("normalizeMoves", () => {
 
 	it("returns an empty list when no version group matches", () => {
 		expect(normalizeMoves(pokemon.moves, ["scarlet-violet"])).toEqual([]);
+	});
+});
+
+describe("trimMovesToVersionGroups", () => {
+	it("drops version_group_details outside the requested groups", () => {
+		const trimmed = trimMovesToVersionGroups(pokemon.moves, ["firered-leafgreen", "emerald"]);
+		for (const entry of trimmed) {
+			for (const detail of entry.version_group_details) {
+				expect(["firered-leafgreen", "emerald"]).toContain(detail.version_group.name);
+			}
+		}
+	});
+
+	it("drops a move entirely once it has no remaining version_group_details", () => {
+		const trimmed = trimMovesToVersionGroups(pokemon.moves, ["firered-leafgreen", "emerald"]);
+		expect(trimmed.some((m) => m.move.name === "solar-beam")).toBe(false); // diamond-pearl only
+	});
+
+	it("produces output normalizeMoves still resolves the same way", () => {
+		const trimmed = trimMovesToVersionGroups(pokemon.moves, ["firered-leafgreen", "emerald"]);
+		const before = normalizeMoves(pokemon.moves, ["firered-leafgreen", "emerald"]).map((m) => m.name).sort();
+		const after = normalizeMoves(trimmed, ["firered-leafgreen", "emerald"]).map((m) => m.name).sort();
+		expect(after).toEqual(before);
 	});
 });
 

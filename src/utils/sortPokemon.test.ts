@@ -15,6 +15,7 @@ function row(id: number, name: string, speed: number, overrides: Partial<Pokedex
 		weight: 0,
 		catchRate: 0,
 		hatchCounter: 0,
+		rarity: "normal",
 		...overrides,
 	};
 }

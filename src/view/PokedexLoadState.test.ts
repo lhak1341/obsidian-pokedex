@@ -62,6 +62,16 @@ describe("PokedexLoadState", () => {
 		expect(await loadState.retry()).toBeNull();
 	});
 
+	it("load() leaves rows/loading untouched when cancelled", async () => {
+		const { loadState } = makeLoadState({ start: 1, end: 3 });
+		loadState.cancel();
+
+		await loadState.load();
+
+		expect(loadState.loading).toBe(true);
+		expect(loadState.rows).toEqual([]);
+	});
+
 	it("retry() is a no-op returning null when a retry is already in flight", async () => {
 		const { client, loadState } = makeLoadState({ start: 1, end: 1 });
 		client.failIds.add(1);

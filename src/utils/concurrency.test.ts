@@ -32,4 +32,21 @@ describe("mapWithConcurrency", () => {
 		expect(results.find((r) => r.index === 1)?.ok).toBe(false);
 		expect(results.filter((r) => r.ok)).toHaveLength(2);
 	});
+
+	it("stops picking up new items once isCancelled() is true", async () => {
+		let cancelled = false;
+		const started: number[] = [];
+		await mapWithConcurrency(
+			[1, 2, 3, 4, 5, 6],
+			1,
+			async (item) => {
+				started.push(item);
+				if (item === 2) cancelled = true;
+				return item;
+			},
+			undefined,
+			() => cancelled,
+		);
+		expect(started).toEqual([1, 2]);
+	});
 });

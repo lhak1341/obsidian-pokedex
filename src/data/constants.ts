@@ -11,6 +11,12 @@ export const TYPE_NAMES = [
 	"rock", "ghost", "dragon", "dark", "steel", "fairy",
 ] as const;
 
+export const RARITIES = [
+	{ key: "normal", label: "Normal" },
+	{ key: "legendary", label: "Legendary" },
+	{ key: "mythical", label: "Mythical" },
+] as const;
+
 export const GENERATIONS = [
 	{ id: 1, name: "Gen 1 (Kanto)", start: 1, end: 151 },
 	{ id: 2, name: "Gen 2 (Johto)", start: 152, end: 251 },
@@ -43,4 +49,15 @@ export const TYPE_COLORS: Record<string, string> = {
 	ground: "#E0C068", flying: "#A890F0", psychic: "#F85888", bug: "#A8B820",
 	rock: "#B8A038", ghost: "#705898", dragon: "#7038F8", dark: "#705848",
 	steel: "#B8B8D0", fairy: "#EE99AC",
+};
+
+// Lucide icon names, picked for a recognizable-at-a-glance match to each
+// type (verified against Obsidian's bundled icon set — not every Lucide
+// icon ships with every Obsidian version).
+export const TYPE_ICONS: Record<string, string> = {
+	normal: "circle", fire: "flame", water: "droplet", electric: "zap",
+	grass: "leaf", ice: "snowflake", fighting: "hand-fist", poison: "skull",
+	ground: "mountain", flying: "feather", psychic: "eye", bug: "bug",
+	rock: "stone", ghost: "ghost", dragon: "tornado", dark: "moon",
+	steel: "anvil", fairy: "heart",
 };

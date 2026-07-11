@@ -6,10 +6,11 @@
 	import StatBars from "./StatBars.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 
-	let { repository, id, spriteStyle, onBack, onSelect }: {
+	let { repository, id, spriteStyle, useTypeIcons, onBack, onSelect }: {
 		repository: PokedexRepository;
 		id: number;
 		spriteStyle: PluginSettings["spriteStyle"];
+		useTypeIcons: boolean;
 		onBack: () => void;
 		onSelect: (id: number) => void;
 	} = $props();
@@ -67,7 +68,7 @@
 				<h2 class="detail-name">#{String(entry.id).padStart(3, "0")} {entry.name}</h2>
 				<div>
 					{#each entry.types as type (type)}
-						<TypeBadge {type} />
+						<TypeBadge {type} useIcon={useTypeIcons} />
 					{/each}
 				</div>
 				{#if entry.flavorText}
