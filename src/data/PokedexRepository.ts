@@ -359,6 +359,37 @@ export class PokedexRepository {
 		return { artworkDataUri, shinyDataUri, shinyArtworkDataUri, evolutionChain };
 	}
 
+	// Sprites for evolution-chain partners shown alongside the currently
+	// viewed entry (see EvolutionTree/EvolutionChain). Every chain member was
+	// already fetched for the table load that got the user here, so this
+	// usually resolves from mem cache; a chain spanning outside the
+	// currently-browsed generation range is the one case that's a real
+	// network fetch. Skips species entirely, unlike getEntryCore — the
+	// evolution tree only ever renders a partner's id/name/sprite, name
+	// already comes free from the evolution-chain response itself (see
+	// normalizeEvolutionChain), so fetching a partner's whole species record
+	// just to throw away everything but a sprite URL isn't worth it. Each id
+	// resolves independently to null on failure rather than rejecting the
+	// whole set — a dropped connection on one partner's sprite shouldn't
+	// blank out the others.
+	async getEntrySprites(ids: number[]): Promise<Record<number, string | null>> {
+		const pairs = await Promise.all(
+			ids.map(async (id): Promise<readonly [number, string | null]> => {
+				try {
+					const pokemon = await this.getOrFetchPokemon(id);
+					const sprite = await this.getOrFetchImage(
+						pokemon.sprites.front_default,
+						`images/${id}-sprite.png`,
+					);
+					return [id, sprite];
+				} catch {
+					return [id, null];
+				}
+			}),
+		);
+		return Object.fromEntries(pairs);
+	}
+
 	async getEntry(id: number): Promise<PokedexEntry> {
 		const [core, extras] = await Promise.all([this.getEntryCore(id), this.getEntryExtras(id)]);
 		return { ...core, ...extras };

@@ -4,6 +4,7 @@
 	import { sortPokemon, type SortColumn, type SortDirection } from "../../utils/sortPokemon";
 	import { TOGGLEABLE_COLUMNS } from "../../utils/tableColumns";
 	import { untrack } from "svelte";
+	import { relativeRect } from "../domPosition";
 	import FilterBar from "./FilterBar.svelte";
 	import Icon from "./Icon.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
@@ -23,16 +24,10 @@
 
 	function showPreview(id: number, target: EventTarget | null) {
 		hoveredSpriteId = id;
-		const el = target as HTMLElement;
-		const rect = el.getBoundingClientRect();
 		// Positioned relative to .table-screen (position: absolute, not
-		// fixed — see its CSS comment for why), so subtract that container's
-		// own viewport offset to get coordinates local to it.
-		const containerRect = el.closest(".table-screen")?.getBoundingClientRect();
-		previewPos = {
-			top: rect.top + rect.height / 2 - (containerRect?.top ?? 0),
-			left: rect.right - (containerRect?.left ?? 0) + 6,
-		};
+		// fixed — see its CSS comment for why), not the raw viewport rect.
+		const r = relativeRect(target as HTMLElement, ".table-screen");
+		previewPos = { top: r.top + r.height / 2, left: r.right + 6 };
 	}
 
 	function hidePreview() {

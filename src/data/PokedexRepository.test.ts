@@ -183,6 +183,27 @@ describe("PokedexRepository", () => {
 		expect(extras.shinyArtworkDataUri).not.toBeNull();
 	});
 
+	it("getEntrySprites resolves a sprite per id without fetching species", async () => {
+		const { client, repository } = makeRepository();
+
+		const sprites = await repository.getEntrySprites([1, 2]);
+
+		expect(sprites[1]).not.toBeNull();
+		expect(sprites[2]).not.toBeNull();
+		expect(client.fetchSpecies).not.toHaveBeenCalled();
+	});
+
+	it("getEntrySprites resolves null for an id that fails, without dropping the others", async () => {
+		const { client, repository } = makeRepository();
+		client.failIds.add(2);
+
+		const sprites = await repository.getEntrySprites([1, 2, 3]);
+
+		expect(sprites[1]).not.toBeNull();
+		expect(sprites[2]).toBeNull();
+		expect(sprites[3]).not.toBeNull();
+	});
+
 	it("getAbilityDescription fetches once per ability name, then serves cache on repeat calls", async () => {
 		const { client, repository } = makeRepository();
 

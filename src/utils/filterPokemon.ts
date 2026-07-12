@@ -29,7 +29,10 @@ export const EMPTY_FILTERS: PokedexFilters = {
 	rarities: [],
 };
 
-function matchesSearch(row: PokedexTableRow, search: string): boolean {
+// Exported for QuickSearch.svelte's quick-check input, which needs the same
+// substring/exact-id match as the browse table's own search rather than a
+// separate reimplementation that could silently drift from it.
+export function matchesSearch(row: PokedexTableRow, search: string): boolean {
 	if (!search.trim()) return true;
 	const needle = search.trim().toLowerCase();
 	return row.name.toLowerCase().includes(needle) || String(row.id) === needle;

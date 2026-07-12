@@ -109,6 +109,16 @@ export function normalizeEvolutionChain(link: RawEvolutionChainLink): EvolutionN
 	};
 }
 
+// Flattens an evolution chain tree down to the ids of every member (the
+// currently-viewed Pokemon and every branch of its evolution family) — used
+// to fetch sprites for the evolution tree display (see
+// PokedexRepository.getEntrySprites).
+export function collectChainIds(node: EvolutionNode, ids: number[] = []): number[] {
+	ids.push(node.id);
+	for (const child of node.children) collectChainIds(child, ids);
+	return ids;
+}
+
 export function extractFlavorText(
 	species: RawSpecies,
 	versionGroups: readonly string[] = FLAVOR_TEXT_VERSION_GROUPS,

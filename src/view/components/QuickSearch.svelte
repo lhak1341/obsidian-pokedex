@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PokedexTableRow } from "../../data/types";
+	import { matchesSearch } from "../../utils/filterPokemon";
 
 	let { rows, onSelect }: {
 		rows: PokedexTableRow[];
@@ -10,14 +11,12 @@
 	let open = $state(false);
 
 	// Same substring/exact-id matching as the browse table's own search (see
-	// matchesSearch in utils/filterPokemon.ts) — kept consistent rather than
-	// pulling in a separate fuzzy-matching dependency for one input.
+	// matchesSearch in utils/filterPokemon.ts) — an empty query still means
+	// "show nothing" here (unlike matchesSearch's own no-op-filter default),
+	// so that guard stays local rather than folding into the shared predicate.
 	const matches = $derived.by(() => {
-		const needle = query.trim().toLowerCase();
-		if (!needle) return [];
-		return rows
-			.filter((r) => r.name.toLowerCase().includes(needle) || String(r.id) === needle)
-			.slice(0, 8);
+		if (!query.trim()) return [];
+		return rows.filter((r) => matchesSearch(r, query)).slice(0, 8);
 	});
 
 	function select(id: number) {

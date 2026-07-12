@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	collectChainIds,
 	extractFlavorText,
 	normalizeEvolutionChain,
 	normalizeEvYield,
@@ -94,6 +95,28 @@ describe("normalizeEvolutionChain", () => {
 		expect(node.children[0].minLevel).toBe(16);
 		expect(node.children[0].children[0].name).toBe("venusaur");
 		expect(node.children[0].children[0].minLevel).toBe(32);
+	});
+});
+
+describe("collectChainIds", () => {
+	it("flattens a linear chain into id order root-first", () => {
+		const node = normalizeEvolutionChain(chain.chain);
+		expect(collectChainIds(node)).toEqual([node.id, node.children[0].id, node.children[0].children[0].id]);
+	});
+
+	it("walks every branch of a forked chain (e.g. Eevee-shaped)", () => {
+		const forked = {
+			id: 1,
+			name: "root",
+			minLevel: null,
+			trigger: null,
+			item: null,
+			children: [
+				{ id: 2, name: "branch-a", minLevel: null, trigger: null, item: null, children: [] },
+				{ id: 3, name: "branch-b", minLevel: null, trigger: null, item: null, children: [] },
+			],
+		};
+		expect(collectChainIds(forked)).toEqual([1, 2, 3]);
 	});
 });
 

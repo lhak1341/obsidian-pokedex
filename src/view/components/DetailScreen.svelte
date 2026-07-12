@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { Notice } from "obsidian";
+	import { onDestroy } from "svelte";
 	import { TYPE_COLORS } from "../../data/constants";
 	import type { PokedexRepository } from "../../data/PokedexRepository";
-	import type { EvolutionNode, MoveDetail, PokedexEntry, PokedexTableRow, PluginSettings } from "../../data/types";
+	import type { MoveDetail, PokedexEntry, PokedexTableRow, PluginSettings } from "../../data/types";
 	import BarRow from "./BarRow.svelte";
+	import { DetailLoadState } from "../DetailLoadState";
+	import { relativeRect } from "../domPosition";
 	import EvolutionTree from "./EvolutionTree.svelte";
 	import Icon from "./Icon.svelte";
 	import QuickSearch from "./QuickSearch.svelte";
@@ -28,17 +31,31 @@
 		onSelect: (id: number) => void;
 	} = $props();
 
+	// DetailLoadState is a plain, non-reactive class (tested with plain
+	// vitest, see DetailLoadState.test.ts) — Svelte 5's $state only
+	// deep-proxies plain objects/arrays, not class instances, so mutations
+	// to its fields wouldn't be visible to the template. These $state
+	// primitives are the reactive boundary instead, mirrored from its
+	// onUpdate/onMoveDetail callbacks (see PokedexApp.svelte for the same
+	// pattern applied to the browse table's load state).
+	// $derived (not a plain const) so Svelte doesn't warn about capturing the
+	// `repository` prop outside a reactive scope — it never actually changes
+	// across this component's lifetime (see PokedexApp's template, which
+	// remounts DetailScreen only via `selectedId`/`screen`, never a new
+	// `repository`), so this evaluates exactly once in practice.
+	const loadState = $derived(new DetailLoadState(repository));
+	onDestroy(() => loadState.cancel());
+
 	let entry = $state<PokedexEntry | null>(null);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
-	let retryToken = $state(0);
-	// Keyed by dex id, filled in once the evolution chain arrives (see
-	// getEntryExtras below). Every id in a chain was already fetched for the
-	// table load that got the user here, so this resolves from mem cache —
-	// not a second round of real network requests.
+	// Keyed by dex id, filled in once the evolution chain arrives. Every id
+	// in a chain was already fetched for the table load that got the user
+	// here, so this resolves from mem cache — not a second round of real
+	// network requests.
 	let evolutionSprites = $state<Record<number, string | null>>({});
-	// Reset per-entry (see the id-keyed $effect below) so switching Pokemon
-	// never leaves a previous one's shiny toggle silently applied.
+	// Reset per-entry (see startLoad below) so switching Pokemon never
+	// leaves a previous one's shiny toggle silently applied.
 	let showShiny = $state(false);
 
 	// Keyed by ability name, NOT reset on id change — abilities repeat
@@ -52,16 +69,10 @@
 
 	function showAbilityPopover(name: string, target: EventTarget | null) {
 		hoveredAbility = name;
-		const el = target as HTMLElement;
-		const rect = el.getBoundingClientRect();
 		// Positioned relative to .detail-screen (position: absolute, not
-		// fixed — see its CSS comment for why), so subtract that container's
-		// own viewport offset to get coordinates local to it.
-		const containerRect = el.closest(".detail-screen")?.getBoundingClientRect();
-		abilityPopoverPos = {
-			top: rect.bottom - (containerRect?.top ?? 0) + 6,
-			left: rect.left - (containerRect?.left ?? 0),
-		};
+		// fixed — see its CSS comment for why), not the raw viewport rect.
+		const r = relativeRect(target as HTMLElement, ".detail-screen");
+		abilityPopoverPos = { top: r.bottom + 6, left: r.left };
 		if (!(name in abilityDescriptions)) {
 			repository.getAbilityDescription(name)
 				.then((text) => {
@@ -117,12 +128,6 @@
 	);
 	const malePct = $derived(femalePct === null ? null : 100 - femalePct);
 
-	function collectChainIds(node: EvolutionNode, ids: number[] = []): number[] {
-		ids.push(node.id);
-		for (const child of node.children) collectChainIds(child, ids);
-		return ids;
-	}
-
 	// Every entry gets its own accent, drawn from its primary type's existing
 	// badge color (see TypeBadge/constants.ts) rather than one fixed brand
 	// color — the identity column is themed per-Pokemon, not per-plugin. Only
@@ -135,58 +140,44 @@
 		entry?.moves.filter((m) => m.learnMethod === activeMoveMethod) ?? [],
 	);
 
-	$effect(() => {
-		const currentId = id;
-		void retryToken; // re-run this effect when retry() bumps the token
-		loading = true;
-		error = null;
-		entry = null;
-		evolutionSprites = {};
+	// Re-mirrors every DetailLoadState field wholesale — cheap (a handful of
+	// small objects), and simpler than a dedicated callback per field since
+	// entry/loading/error/evolutionSprites only ever change at 2-3 discrete
+	// points per load rather than streaming (unlike moveDetails, which gets
+	// its own callback below).
+	function mirror() {
+		entry = loadState.entry;
+		loading = loadState.loading;
+		error = loadState.error;
+		evolutionSprites = loadState.evolutionSprites;
+	}
+
+	function startLoad(currentId: number) {
 		showShiny = false;
-		// Pokemon/species/sprite are already mem-cached from the table load
-		// that got the user to this row, so getEntryCore resolves almost
-		// immediately — render on that instead of waiting on the genuinely
-		// slow, never-cached-until-now parts (evolution chain, official
-		// artwork, shiny), which arrive later via getEntryExtras and merge in
-		// once ready. `id !== currentId` guards against a stale response
-		// landing after the user has since clicked through to another entry
-		// (e.g. from the evolution chain) before this one settled.
-		repository.getEntryCore(currentId)
-			.then((core) => {
-				if (id !== currentId) return;
-				entry = core;
-				loading = false;
-				repository.getMoveDetailsForMoves(
-					core.moves.map((m) => m.name),
-					(name, detail) => {
-						moveDetails = { ...moveDetails, [name]: detail };
-					},
-				);
-				repository.getEntryExtras(currentId).then((extras) => {
-					if (id !== currentId || !entry) return;
-					entry = { ...entry, ...extras };
-					if (!extras.evolutionChain) return;
-					const chainIds = collectChainIds(extras.evolutionChain);
-					Promise.all(
-						chainIds.map((chainId) =>
-							repository.getEntryCore(chainId).then((partner) => [chainId, partner.spriteDataUri] as const)
-						),
-					).then((pairs) => {
-						if (id !== currentId) return;
-						evolutionSprites = Object.fromEntries(pairs);
-					});
-				});
-			})
-			.catch((err) => {
-				if (id !== currentId) return;
-				error = err instanceof Error ? err.message : String(err);
-				loading = false;
-				new Notice(`Pokedex: couldn't load #${currentId} (${error})`);
-			});
+		const result = loadState.load(currentId, mirror, (name, detail) => {
+			moveDetails = { ...moveDetails, [name]: detail };
+		});
+		// The synchronous prefix of load() (up to its first await) has
+		// already run by the time it returns a pending promise, so this
+		// captures the "loading, nothing rendered yet" reset immediately
+		// rather than waiting a tick.
+		mirror();
+		// `id !== currentId` guards against a stale response landing after
+		// the user has since clicked through to another entry (e.g. from
+		// the evolution chain) before this one settled — load() itself
+		// never rejects, it records failure on `error` instead.
+		result.then(() => {
+			if (id !== currentId || loadState.cancelled || !loadState.error) return;
+			new Notice(`Pokedex: couldn't load #${currentId} (${loadState.error})`);
+		});
+	}
+
+	$effect(() => {
+		startLoad(id);
 	});
 
 	function retry() {
-		retryToken++;
+		startLoad(id);
 	}
 </script>
 
