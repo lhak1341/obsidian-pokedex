@@ -1,0 +1,127 @@
+<script lang="ts">
+	import type { PokedexTableRow } from "../../data/types";
+
+	let { rows, onSelect }: {
+		rows: PokedexTableRow[];
+		onSelect: (id: number) => void;
+	} = $props();
+
+	let query = $state("");
+	let open = $state(false);
+
+	// Same substring/exact-id matching as the browse table's own search (see
+	// matchesSearch in utils/filterPokemon.ts) — kept consistent rather than
+	// pulling in a separate fuzzy-matching dependency for one input.
+	const matches = $derived.by(() => {
+		const needle = query.trim().toLowerCase();
+		if (!needle) return [];
+		return rows
+			.filter((r) => r.name.toLowerCase().includes(needle) || String(r.id) === needle)
+			.slice(0, 8);
+	});
+
+	function select(id: number) {
+		onSelect(id);
+		query = "";
+		open = false;
+	}
+
+	function onKeydown(e: KeyboardEvent) {
+		if (e.key === "Enter" && matches.length > 0) {
+			select(matches[0].id);
+		} else if (e.key === "Escape") {
+			query = "";
+			open = false;
+			(e.currentTarget as HTMLInputElement).blur();
+		}
+	}
+</script>
+
+<div class="quick-search">
+	<input
+		type="text"
+		class="quick-search-input"
+		placeholder="Quick check a Pokemon..."
+		bind:value={query}
+		onfocus={() => (open = true)}
+		oninput={() => (open = true)}
+		onblur={() => (open = false)}
+		onkeydown={onKeydown}
+	/>
+	{#if open && matches.length > 0}
+		<ul class="quick-search-results">
+			{#each matches as row (row.id)}
+				<li>
+					<!-- preventDefault keeps focus on the input instead of moving it
+					to this button, which would fire the input's onblur (closing this
+					list) before the click/select below ever runs. -->
+					<button type="button" onmousedown={(e) => { e.preventDefault(); select(row.id); }}>
+						<span class="quick-search-id">#{String(row.id).padStart(3, "0")}</span>
+						<span class="quick-search-name">{row.name}</span>
+					</button>
+				</li>
+			{/each}
+		</ul>
+	{/if}
+</div>
+
+<style>
+	.quick-search {
+		position: relative;
+		flex: 1 1 160px;
+		max-width: 260px;
+		min-width: 0;
+	}
+	.quick-search-input {
+		width: 100%;
+	}
+	.quick-search-results {
+		position: absolute;
+		top: calc(100% + 4px);
+		left: 0;
+		right: 0;
+		z-index: 50;
+		margin: 0;
+		padding: 4px;
+		list-style: none;
+		background: var(--background-primary);
+		border: 1px solid var(--background-modifier-border);
+		border-radius: var(--radius-m, 8px);
+		box-shadow: var(--shadow-s);
+		max-height: 260px;
+		overflow-y: auto;
+	}
+	.quick-search-results li {
+		display: block;
+	}
+	.quick-search-results button {
+		display: flex;
+		align-items: baseline;
+		/* Obsidian's own button CSS sets justify-content: center — harmless
+		to override since we declare it ourselves rather than relying on the
+		flex default, same class of issue as the button height/img max-width
+		overrides noted elsewhere in this codebase. */
+		justify-content: flex-start;
+		gap: 8px;
+		width: 100%;
+		height: auto;
+		padding: 6px 8px;
+		background: transparent;
+		border: none;
+		border-radius: var(--radius-s, 4px);
+		box-shadow: none;
+		text-align: left;
+		cursor: pointer;
+	}
+	.quick-search-results button:hover {
+		background: var(--background-modifier-hover);
+	}
+	.quick-search-id {
+		font-family: var(--font-monospace);
+		font-size: 0.8em;
+		color: var(--text-muted);
+	}
+	.quick-search-name {
+		text-transform: capitalize;
+	}
+</style>

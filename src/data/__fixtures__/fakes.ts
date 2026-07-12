@@ -1,7 +1,14 @@
 import type { DataAdapter } from "obsidian";
 import { vi } from "vitest";
 import { PokeApiClient } from "../PokeApiClient";
-import type { RawEvolutionChain, RawPokemon, RawPokemonListResponse, RawSpecies } from "../types";
+import type {
+	RawAbility,
+	RawEvolutionChain,
+	RawMove,
+	RawPokemon,
+	RawPokemonListResponse,
+	RawSpecies,
+} from "../types";
 import bulbasaurChain from "./bulbasaur-evolution-chain.json";
 import bulbasaurSpecies from "./bulbasaur-species.json";
 import bulbasaur from "./bulbasaur.json";
@@ -82,6 +89,8 @@ export class FakePokeApiClient extends PokeApiClient {
 	failIds = new Set<number>();
 	failEvolutionChain = false;
 	failImage = false;
+	failAbility = false;
+	failMoves = new Set<string>();
 
 	fetchPokemon = vi.fn(async (idOrName: number | string): Promise<RawPokemon> => {
 		const id = Number(idOrName);
@@ -103,6 +112,21 @@ export class FakePokeApiClient extends PokeApiClient {
 	fetchImageBinary = vi.fn(async (): Promise<ArrayBuffer> => {
 		if (this.failImage) throw new Error("fake failure fetching image");
 		return new ArrayBuffer(4);
+	});
+
+	fetchAbility = vi.fn(async (name: string): Promise<RawAbility> => {
+		if (this.failAbility) throw new Error(`fake failure fetching ability ${name}`);
+		return {
+			name,
+			effect_entries: [
+				{ effect: `${name} full effect`, short_effect: `${name} short effect`, language: { name: "en", url: "" } },
+			],
+		};
+	});
+
+	fetchMove = vi.fn(async (name: string): Promise<RawMove> => {
+		if (this.failMoves.has(name)) throw new Error(`fake failure fetching move ${name}`);
+		return { name, power: 40, accuracy: 100, pp: 35, type: { name: "normal", url: "" } };
 	});
 
 	fetchPokemonList = vi.fn(async (): Promise<RawPokemonListResponse> => {

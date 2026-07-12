@@ -66,6 +66,11 @@ export interface RawEvolutionChain {
 	chain: RawEvolutionChainLink;
 }
 
+export interface RawAbility {
+	name: string;
+	effect_entries: { effect: string; short_effect: string; language: NamedApiResource }[];
+}
+
 export interface RawPokemonListResponse {
 	count: number;
 	next: string | null;
@@ -100,6 +105,21 @@ export interface MoveEntry {
 	versionGroup: string;
 }
 
+export interface RawMove {
+	name: string;
+	power: number | null;
+	accuracy: number | null;
+	pp: number;
+	type: NamedApiResource;
+}
+
+export interface MoveDetail {
+	type: string;
+	power: number | null;
+	accuracy: number | null;
+	pp: number;
+}
+
 export interface EvYieldEntry {
 	stat: keyof StatBlock;
 	amount: number;
@@ -132,6 +152,7 @@ export interface PokedexEntry extends PokedexTableRow {
 	abilities: { name: string; isHidden: boolean }[];
 	artworkDataUri: string | null;
 	shinyDataUri: string | null;
+	shinyArtworkDataUri: string | null;
 	flavorText: string | null;
 	eggGroups: string[];
 	genderRate: number;

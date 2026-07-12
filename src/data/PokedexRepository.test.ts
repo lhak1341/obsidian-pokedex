@@ -148,6 +148,7 @@ describe("PokedexRepository", () => {
 
 		expect(entry.artworkDataUri).toBeNull();
 		expect(entry.shinyDataUri).toBeNull();
+		expect(entry.shinyArtworkDataUri).toBeNull();
 		expect(entry.spriteDataUri).not.toBeNull();
 		expect(entry.name).toBe("bulbasaur");
 	});
@@ -167,10 +168,11 @@ describe("PokedexRepository", () => {
 		expect(core.evolutionChain).toBeNull();
 		expect(core.artworkDataUri).toBeNull();
 		expect(core.shinyDataUri).toBeNull();
+		expect(core.shinyArtworkDataUri).toBeNull();
 		expect(client.fetchEvolutionChain).not.toHaveBeenCalled();
 	});
 
-	it("getEntryExtras resolves evolution chain, artwork, and shiny", async () => {
+	it("getEntryExtras resolves evolution chain, artwork, shiny, and shiny artwork", async () => {
 		const { repository } = makeRepository();
 
 		const extras = await repository.getEntryExtras(1);
@@ -178,5 +180,69 @@ describe("PokedexRepository", () => {
 		expect(extras.evolutionChain?.name).toBe("bulbasaur");
 		expect(extras.artworkDataUri).not.toBeNull();
 		expect(extras.shinyDataUri).not.toBeNull();
+		expect(extras.shinyArtworkDataUri).not.toBeNull();
+	});
+
+	it("getAbilityDescription fetches once per ability name, then serves cache on repeat calls", async () => {
+		const { client, repository } = makeRepository();
+
+		const first = await repository.getAbilityDescription("overgrow");
+		const second = await repository.getAbilityDescription("overgrow");
+
+		expect(first).toBe("overgrow short effect");
+		expect(second).toBe("overgrow short effect");
+		expect(client.fetchAbility).toHaveBeenCalledTimes(1);
+	});
+
+	it("getAbilityDescription serves a repeat call from the in-memory layer without touching disk", async () => {
+		const { cache, repository } = makeRepository();
+		await repository.getAbilityDescription("overgrow");
+
+		const readJsonSpy = vi.spyOn(cache, "readJson");
+		await repository.getAbilityDescription("overgrow");
+
+		expect(readJsonSpy).not.toHaveBeenCalled();
+	});
+
+	it("getAbilityDescription rejects when the fetch fails", async () => {
+		const { client, repository } = makeRepository();
+		client.failAbility = true;
+
+		await expect(repository.getAbilityDescription("overgrow")).rejects.toThrow();
+	});
+
+	it("getMoveDetails fetches once per move name, then serves cache on repeat calls", async () => {
+		const { client, repository } = makeRepository();
+
+		const first = await repository.getMoveDetails("tackle");
+		const second = await repository.getMoveDetails("tackle");
+
+		expect(first).toEqual({ type: "normal", power: 40, accuracy: 100, pp: 35 });
+		expect(second).toEqual({ type: "normal", power: 40, accuracy: 100, pp: 35 });
+		expect(client.fetchMove).toHaveBeenCalledTimes(1);
+	});
+
+	it("getMoveDetails serves a repeat call from the in-memory layer without touching disk", async () => {
+		const { cache, repository } = makeRepository();
+		await repository.getMoveDetails("tackle");
+
+		const readJsonSpy = vi.spyOn(cache, "readJson");
+		await repository.getMoveDetails("tackle");
+
+		expect(readJsonSpy).not.toHaveBeenCalled();
+	});
+
+	it("getMoveDetailsForMoves de-dupes names and skips a failed move without aborting the rest", async () => {
+		const { client, repository } = makeRepository();
+		client.failMoves.add("struggle");
+		const results: Record<string, unknown> = {};
+
+		await repository.getMoveDetailsForMoves(
+			["tackle", "tackle", "struggle", "growl"],
+			(name, detail) => { results[name] = detail; },
+		);
+
+		expect(Object.keys(results).sort()).toEqual(["growl", "tackle"]);
+		expect(client.fetchMove).toHaveBeenCalledTimes(3);
 	});
 });

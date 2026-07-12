@@ -1,7 +1,14 @@
 import { requestUrl } from "obsidian";
 import { withRetry } from "../utils/retry";
 import { POKEAPI_BASE } from "./constants";
-import type { RawEvolutionChain, RawPokemon, RawPokemonListResponse, RawSpecies } from "./types";
+import type {
+	RawAbility,
+	RawEvolutionChain,
+	RawMove,
+	RawPokemon,
+	RawPokemonListResponse,
+	RawSpecies,
+} from "./types";
 
 export class HttpError extends Error {
 	constructor(public status: number, url: string) {
@@ -35,6 +42,14 @@ export class PokeApiClient {
 
 	async fetchEvolutionChain(url: string): Promise<RawEvolutionChain> {
 		return this.getJson<RawEvolutionChain>(url);
+	}
+
+	async fetchAbility(name: string): Promise<RawAbility> {
+		return this.getJson<RawAbility>(`${POKEAPI_BASE}/ability/${name}`);
+	}
+
+	async fetchMove(name: string): Promise<RawMove> {
+		return this.getJson<RawMove>(`${POKEAPI_BASE}/move/${name}`);
 	}
 
 	async fetchPokemonList(limit: number, offset: number): Promise<RawPokemonListResponse> {

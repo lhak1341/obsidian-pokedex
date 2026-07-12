@@ -2,14 +2,26 @@
 	import { Notice } from "obsidian";
 	import { TYPE_COLORS } from "../../data/constants";
 	import type { PokedexRepository } from "../../data/PokedexRepository";
-	import type { EvolutionNode, PokedexEntry, PluginSettings } from "../../data/types";
+	import type { EvolutionNode, MoveDetail, PokedexEntry, PokedexTableRow, PluginSettings } from "../../data/types";
+	import BarRow from "./BarRow.svelte";
 	import EvolutionTree from "./EvolutionTree.svelte";
+	import Icon from "./Icon.svelte";
+	import QuickSearch from "./QuickSearch.svelte";
 	import StatBars from "./StatBars.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 
-	let { repository, id, spriteStyle, useTypeIcons, onBack, onSelect }: {
+	// True game ceilings (unlike StatBars' MAX_STAT, not compressed) —
+	// catch rate hits 255 for plenty of common early-route Pokemon (Caterpie,
+	// Pidgey, Rattata...) and hatch counter hits 120 for every
+	// Legendary/Mythical (e.g. Mewtwo), so both are commonly-reached, not
+	// rare outliers worth clipping.
+	const MAX_CATCH_RATE = 255;
+	const MAX_HATCH_COUNTER = 120;
+
+	let { repository, id, rows, spriteStyle, useTypeIcons, onBack, onSelect }: {
 		repository: PokedexRepository;
 		id: number;
+		rows: PokedexTableRow[];
 		spriteStyle: PluginSettings["spriteStyle"];
 		useTypeIcons: boolean;
 		onBack: () => void;
@@ -25,6 +37,85 @@
 	// table load that got the user here, so this resolves from mem cache —
 	// not a second round of real network requests.
 	let evolutionSprites = $state<Record<number, string | null>>({});
+	// Reset per-entry (see the id-keyed $effect below) so switching Pokemon
+	// never leaves a previous one's shiny toggle silently applied.
+	let showShiny = $state(false);
+
+	// Keyed by ability name, NOT reset on id change — abilities repeat
+	// heavily across species (e.g. "levitate"), so hovering one already seen
+	// on a previous Pokemon this session reuses the cached description
+	// instead of refetching (repository.getAbilityDescription also caches,
+	// but this avoids even the async round-trip).
+	let abilityDescriptions = $state<Record<string, { text: string | null } | { error: true }>>({});
+	let hoveredAbility = $state<string | null>(null);
+	let abilityPopoverPos = $state<{ top: number; left: number } | null>(null);
+
+	function showAbilityPopover(name: string, target: EventTarget | null) {
+		hoveredAbility = name;
+		const el = target as HTMLElement;
+		const rect = el.getBoundingClientRect();
+		// Positioned relative to .detail-screen (position: absolute, not
+		// fixed — see its CSS comment for why), so subtract that container's
+		// own viewport offset to get coordinates local to it.
+		const containerRect = el.closest(".detail-screen")?.getBoundingClientRect();
+		abilityPopoverPos = {
+			top: rect.bottom - (containerRect?.top ?? 0) + 6,
+			left: rect.left - (containerRect?.left ?? 0),
+		};
+		if (!(name in abilityDescriptions)) {
+			repository.getAbilityDescription(name)
+				.then((text) => {
+					abilityDescriptions = { ...abilityDescriptions, [name]: { text } };
+				})
+				.catch(() => {
+					abilityDescriptions = { ...abilityDescriptions, [name]: { error: true } };
+				});
+		}
+	}
+
+	function hideAbilityPopover() {
+		hoveredAbility = null;
+		abilityPopoverPos = null;
+	}
+
+	const MOVE_METHOD_TABS = [
+		{ key: "level-up", label: "Level-Up" },
+		{ key: "machine", label: "Machine" },
+		{ key: "egg", label: "Egg" },
+		{ key: "tutor", label: "Tutor" },
+	] as const;
+
+	// Not reset on id change — same reasoning as abilityDescriptions, moves
+	// repeat even more heavily across species (nearly everything learns
+	// Tackle or Growl), and activeMoveMethod persisting across navigation
+	// lets a user stay on e.g. "Machine" while browsing several Pokemon.
+	let moveDetails = $state<Record<string, MoveDetail>>({});
+	let activeMoveMethod = $state<(typeof MOVE_METHOD_TABS)[number]["key"]>("level-up");
+
+	const basePortraitUri = $derived(
+		(spriteStyle === "official-artwork" ? entry?.artworkDataUri : entry?.spriteDataUri) ??
+			entry?.spriteDataUri ??
+			null,
+	);
+	// Match the shiny variant to spriteStyle so toggling doesn't jump between
+	// art styles (e.g. artwork -> regular-sprite shiny). Falls back to the
+	// regular shiny sprite when spriteStyle is "official-artwork" but that
+	// particular Pokemon has no shiny artwork render on PokeAPI (rare, but
+	// happens) — still a visible shiny swap, just not artwork-styled.
+	const shinyPortraitUri = $derived(
+		spriteStyle === "official-artwork"
+			? entry?.shinyArtworkDataUri ?? entry?.shinyDataUri ?? null
+			: entry?.shinyDataUri ?? null,
+	);
+	const portraitUri = $derived(showShiny ? shinyPortraitUri ?? basePortraitUri : basePortraitUri);
+
+	// genderRate is eighths-female (0 = always male, 8 = always female);
+	// -1 means genderless. Eighths of 100 (12.5, 37.5, ...) are exact in
+	// binary floating point, so no rounding needed for display.
+	const femalePct = $derived(
+		entry && entry.genderRate >= 0 ? (entry.genderRate / 8) * 100 : null,
+	);
+	const malePct = $derived(femalePct === null ? null : 100 - femalePct);
 
 	function collectChainIds(node: EvolutionNode, ids: number[] = []): number[] {
 		ids.push(node.id);
@@ -40,6 +131,10 @@
 	// happens to clash with.
 	const accentColor = $derived(TYPE_COLORS[entry?.types[0] ?? ""] ?? "var(--interactive-accent)");
 
+	const filteredMoves = $derived(
+		entry?.moves.filter((m) => m.learnMethod === activeMoveMethod) ?? [],
+	);
+
 	$effect(() => {
 		const currentId = id;
 		void retryToken; // re-run this effect when retry() bumps the token
@@ -47,6 +142,7 @@
 		error = null;
 		entry = null;
 		evolutionSprites = {};
+		showShiny = false;
 		// Pokemon/species/sprite are already mem-cached from the table load
 		// that got the user to this row, so getEntryCore resolves almost
 		// immediately — render on that instead of waiting on the genuinely
@@ -60,6 +156,12 @@
 				if (id !== currentId) return;
 				entry = core;
 				loading = false;
+				repository.getMoveDetailsForMoves(
+					core.moves.map((m) => m.name),
+					(name, detail) => {
+						moveDetails = { ...moveDetails, [name]: detail };
+					},
+				);
 				repository.getEntryExtras(currentId).then((extras) => {
 					if (id !== currentId || !entry) return;
 					entry = { ...entry, ...extras };
@@ -86,12 +188,6 @@
 	function retry() {
 		retryToken++;
 	}
-
-	function genderLabel(rate: number): string {
-		if (rate === -1) return "Genderless";
-		const femalePct = (rate / 8) * 100;
-		return `${100 - femalePct}% male / ${femalePct}% female`;
-	}
 </script>
 
 <div class="detail-screen">
@@ -100,7 +196,10 @@
 	while this button didn't, so its left edge drifted away from the
 	identity column's once the grid was wide enough to center. -->
 	<div class="page">
-		<button class="back-button" onclick={onBack}>&larr; Back to list</button>
+		<div class="detail-header">
+			<button class="back-button" onclick={onBack}>&larr; Back to list</button>
+			<QuickSearch {rows} {onSelect} />
+		</div>
 
 		{#if loading}
 			<p>Loading #{String(id).padStart(3, "0")}...</p>
@@ -117,11 +216,18 @@
 			<div class="detail-grid" style:--accent={accentColor}>
 				<aside class="identity-col">
 				<div class="portrait-panel">
-					<img
-						src={(spriteStyle === "official-artwork" ? entry.artworkDataUri : entry.spriteDataUri) ?? entry.spriteDataUri ?? ""}
-						alt={entry.name}
-						class="portrait-image"
-					/>
+					<img src={portraitUri ?? ""} alt={entry.name} class="portrait-image" />
+					{#if entry.shinyDataUri || entry.shinyArtworkDataUri}
+						<button
+							class="shiny-toggle"
+							class:active={showShiny}
+							onclick={() => (showShiny = !showShiny)}
+							aria-label={showShiny ? "Show normal sprite" : "Show shiny sprite"}
+							title={showShiny ? "Show normal sprite" : "Show shiny sprite"}
+						>
+							<Icon name="sparkles" size={15} strokeWidth={2.25} />
+						</button>
+					{/if}
 				</div>
 
 				<div class="name-block">
@@ -165,39 +271,115 @@
 					<h3 class="section-heading">Abilities</h3>
 					<ul class="ability-list">
 						{#each entry.abilities as ability (ability.name)}
-							<li>{ability.name}{ability.isHidden ? " (hidden)" : ""}</li>
+							<li
+								onmouseenter={(e) => showAbilityPopover(ability.name, e.currentTarget)}
+								onmouseleave={hideAbilityPopover}
+							>
+								{ability.name}{ability.isHidden ? " (hidden)" : ""}
+							</li>
 						{/each}
 					</ul>
 				</section>
 
+				{#if hoveredAbility && abilityPopoverPos}
+					{@const state = abilityDescriptions[hoveredAbility]}
+					<div
+						class="ability-popover"
+						style="top: {abilityPopoverPos.top}px; left: {abilityPopoverPos.left}px;"
+					>
+						{#if !state}
+							Loading…
+						{:else if "error" in state}
+							Couldn't load description.
+						{:else}
+							{state.text ?? "No description available."}
+						{/if}
+					</div>
+				{/if}
+
 				<section class="panel">
-					<h3 class="section-heading">Breeding</h3>
+					<h3 class="section-heading">Breeding & Capture</h3>
 					<p class="breeding-line">Egg groups: {entry.eggGroups.join(", ") || "None"}</p>
-					<p class="breeding-line">{genderLabel(entry.genderRate)}</p>
-					<p class="breeding-line">Hatch counter: {entry.hatchCounter}</p>
+					{#if malePct === null || femalePct === null}
+						<p class="breeding-line">Genderless</p>
+					{:else}
+						<div class="gender-bar">
+							<div class="gender-fill-male" style:width="{malePct}%"></div>
+							<div class="gender-fill-female" style:width="{femalePct}%"></div>
+						</div>
+						<div class="gender-labels">
+							<span class="gender-male">
+								<Icon name="mars" size={13} strokeWidth={2.5} />
+								{malePct}%
+							</span>
+							<span class="gender-female">
+								{femalePct}%
+								<Icon name="venus" size={13} strokeWidth={2.5} />
+							</span>
+						</div>
+					{/if}
+					<div class="breeding-bars">
+						<BarRow label="Hatch counter" value={entry.hatchCounter} max={MAX_HATCH_COUNTER} />
+						<BarRow label="Catch rate" value={entry.catchRate} max={MAX_CATCH_RATE} />
+					</div>
 				</section>
 			</div>
 
 			<div class="moves-col">
 				<section class="panel">
-					<h3 class="section-heading">Moves (FireRed/LeafGreen/Emerald)</h3>
+					<h3 class="section-heading">Moves (Gen 3)</h3>
 					{#if entry.moves.length === 0}
 						<p class="text-muted">No move data for this version group.</p>
 					{:else}
-						<table class="move-table">
-							<thead>
-								<tr><th>Move</th><th>Method</th><th>Level</th></tr>
-							</thead>
-							<tbody>
-								{#each entry.moves as move (move.name + move.learnMethod + move.levelLearnedAt)}
+						<div class="move-tabs">
+							{#each MOVE_METHOD_TABS as tab (tab.key)}
+								<button
+									type="button"
+									class="move-tab"
+									class:active={activeMoveMethod === tab.key}
+									onclick={() => (activeMoveMethod = tab.key)}
+								>
+									{tab.label}
+								</button>
+							{/each}
+						</div>
+						{#if filteredMoves.length === 0}
+							<p class="text-muted">
+								No moves learned via {MOVE_METHOD_TABS.find((t) => t.key === activeMoveMethod)?.label}.
+							</p>
+						{:else}
+							<table class="move-table">
+								<thead>
 									<tr>
-										<td>{move.name}</td>
-										<td>{move.learnMethod}</td>
-										<td>{move.learnMethod === "level-up" ? move.levelLearnedAt : "-"}</td>
+										<th>Move</th>
+										{#if activeMoveMethod === "level-up"}<th>Level</th>{/if}
+										<th>Type</th>
+										<th>Power</th>
+										<th>Acc.</th>
+										<th>PP</th>
 									</tr>
-								{/each}
-							</tbody>
-						</table>
+								</thead>
+								<tbody>
+									{#each filteredMoves as move (move.name + move.levelLearnedAt)}
+										{@const detail = moveDetails[move.name]}
+										<tr>
+											<td>{move.name}</td>
+											{#if activeMoveMethod === "level-up"}<td>{move.levelLearnedAt}</td>{/if}
+											<td>
+												{#if detail}
+													<TypeBadge type={detail.type} useIcon={useTypeIcons} />
+												{:else}
+													…
+												{/if}
+											</td>
+											<td>{detail ? (detail.power ?? "-") : "…"}</td>
+											<td>{detail ? (detail.accuracy ?? "-") : "…"}</td>
+											<td>{detail ? detail.pp : "…"}</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						{/if}
 					{/if}
 				</section>
 			</div>
@@ -214,8 +396,19 @@
 		how big the window itself is. */
 		container-name: detail;
 		container-type: inline-size;
+		/* Also the ability-popover's positioning root (see .ability-popover):
+		Obsidian's .workspace-leaf has `contain: strict`, which (like a
+		transform) makes it the containing block for any `position: fixed`
+		descendant — so a fixed popover positioned from a viewport-relative
+		getBoundingClientRect() lands ~40px off (the tab-bar's height). A
+		`position: relative` ancestor we control sidesteps that entirely. */
+		position: relative;
 	}
-	.back-button {
+	.detail-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
 		margin-bottom: var(--size-4-3);
 	}
 
@@ -286,6 +479,31 @@
 		object-fit: contain;
 		image-rendering: pixelated;
 		filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.25));
+	}
+	.shiny-toggle {
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 26px;
+		height: auto;
+		padding: 5px;
+		background: var(--background-primary);
+		border: 1px solid var(--background-modifier-border);
+		border-radius: var(--radius-s, 6px);
+		color: var(--text-muted);
+		cursor: pointer;
+		box-shadow: var(--shadow-s);
+	}
+	.shiny-toggle:hover {
+		color: var(--text-normal);
+		background: var(--background-modifier-hover);
+	}
+	.shiny-toggle.active {
+		color: var(--color-yellow, gold);
+		border-color: var(--color-yellow, gold);
 	}
 
 	.name-block {
@@ -368,14 +586,98 @@
 	.ability-list {
 		text-transform: capitalize;
 		margin: 0;
+		/* Default UA/theme bullet indent is 40px — way out of proportion for
+		this compact panel (every other line here sits flush left). 18px
+		keeps the bullet marker but tightens the indent to match. */
+		padding-left: 18px;
+	}
+	.ability-list li {
+		cursor: help;
+	}
+	.ability-popover {
+		position: absolute;
+		z-index: 50;
+		max-width: 260px;
+		background: var(--background-primary);
+		border: 1px solid var(--background-modifier-border);
+		border-radius: var(--radius-m, 8px);
+		box-shadow: var(--shadow-s);
+		padding: 8px 10px;
+		font-size: 0.85em;
+		color: var(--text-normal);
+		pointer-events: none;
 	}
 	.breeding-line {
 		margin: 0 0 6px;
 	}
-	.breeding-line:last-child {
-		margin-bottom: 0;
+	.gender-bar {
+		display: flex;
+		height: 8px;
+		border-radius: 4px;
+		overflow: hidden;
+		background: var(--background-modifier-border);
+	}
+	.gender-fill-male {
+		background: #4a90d9;
+	}
+	.gender-fill-female {
+		background: #e0609e;
+	}
+	.gender-labels {
+		display: flex;
+		justify-content: space-between;
+		font-size: 0.85em;
+		margin-top: 4px;
+		margin-bottom: 6px;
+	}
+	.gender-male,
+	.gender-female {
+		display: flex;
+		align-items: center;
+		gap: 3px;
+		font-family: var(--font-monospace);
+	}
+	.gender-male {
+		color: #4a90d9;
+	}
+	.gender-female {
+		color: #e0609e;
+	}
+	.breeding-bars {
+		display: grid;
+		grid-template-columns: auto 34px 1fr;
+		align-items: center;
+		row-gap: 4px;
+		column-gap: 6px;
+		margin-top: 10px;
 	}
 
+	.move-tabs {
+		display: flex;
+		gap: 6px;
+		margin-bottom: 10px;
+	}
+	/* Same chip look as FilterBar's type/generation chips — kept visually
+	consistent rather than inventing a separate segmented-control style. */
+	.move-tab {
+		background: transparent;
+		border: 1px solid var(--background-modifier-border);
+		border-radius: 4px;
+		height: auto;
+		padding: 2px 8px;
+		cursor: pointer;
+		font-size: 0.85em;
+		opacity: 0.6;
+		transition: opacity 100ms ease-out, border-color 100ms ease-out;
+	}
+	.move-tab:hover {
+		opacity: 0.85;
+	}
+	.move-tab.active {
+		opacity: 1;
+		border-color: var(--interactive-accent);
+		box-shadow: 0 0 0 1px var(--interactive-accent);
+	}
 	.move-table {
 		width: 100%;
 		border-collapse: collapse;

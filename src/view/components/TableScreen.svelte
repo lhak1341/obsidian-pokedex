@@ -19,6 +19,26 @@
 	} = $props();
 
 	let hoveredSpriteId = $state<number | null>(null);
+	let previewPos = $state<{ top: number; left: number } | null>(null);
+
+	function showPreview(id: number, target: EventTarget | null) {
+		hoveredSpriteId = id;
+		const el = target as HTMLElement;
+		const rect = el.getBoundingClientRect();
+		// Positioned relative to .table-screen (position: absolute, not
+		// fixed — see its CSS comment for why), so subtract that container's
+		// own viewport offset to get coordinates local to it.
+		const containerRect = el.closest(".table-screen")?.getBoundingClientRect();
+		previewPos = {
+			top: rect.top + rect.height / 2 - (containerRect?.top ?? 0),
+			left: rect.right - (containerRect?.left ?? 0) + 6,
+		};
+	}
+
+	function hidePreview() {
+		hoveredSpriteId = null;
+		previewPos = null;
+	}
 
 	let filters = $state({ ...EMPTY_FILTERS, statRanges: {} });
 	// Only the initial value seeds local state — same reasoning as
@@ -138,14 +158,11 @@
 						<td>{String(row.id).padStart(3, "0")}</td>
 						<td
 							class="center sprite-cell"
-							onmouseenter={() => (hoveredSpriteId = row.id)}
-							onmouseleave={() => (hoveredSpriteId = null)}
+							onmouseenter={(e) => showPreview(row.id, e.currentTarget)}
+							onmouseleave={hidePreview}
 						>
 							{#if row.spriteDataUri}
 								<img src={row.spriteDataUri} alt={row.name} class="sprite-thumb" />
-								{#if hoveredSpriteId === row.id}
-									<img src={row.spriteDataUri} alt="" class="sprite-preview" />
-								{/if}
 							{/if}
 						</td>
 						<td class="name-cell">{row.name}</td>
@@ -162,6 +179,18 @@
 			</tbody>
 		</table>
 	</div>
+
+	{#if hoveredSpriteId !== null && previewPos}
+		{@const hoveredRow = visibleRows.find((r) => r.id === hoveredSpriteId)}
+		{#if hoveredRow?.spriteDataUri}
+			<img
+				src={hoveredRow.spriteDataUri}
+				alt=""
+				class="sprite-preview"
+				style="top: {previewPos.top}px; left: {previewPos.left}px;"
+			/>
+		{/if}
+	{/if}
 </div>
 
 <style>
@@ -266,6 +295,11 @@
 	.table-wrap {
 		overflow: auto;
 	}
+	.table-screen {
+		/* Positioning root for .sprite-preview (position: absolute, computed
+		relative to this element — see its CSS comment for why). */
+		position: relative;
+	}
 	table {
 		width: 100%;
 		border-collapse: collapse;
@@ -303,9 +337,6 @@
 		text-transform: capitalize;
 		font-weight: 600;
 	}
-	.sprite-cell {
-		position: relative;
-	}
 	.sprite-thumb {
 		width: 32px;
 		height: 32px;
@@ -315,19 +346,26 @@
 		/* 2x the sprite's native 96x96 resolution, not 200% of the 32px thumb.
 		!important: Obsidian's own `body:not(.zoom-off) .view-content img {
 		max-width: 100% }` (its click-to-zoom feature) outranks a plain
-		two-class selector on specificity (0,2,2 vs 0,2,0) and otherwise
-		squashes this against the narrow sprite column — its containing
-		block, since this is absolutely positioned. */
+		two-class selector on specificity (0,2,2 vs 0,2,0).
+		position: absolute, relative to .table-screen (not the immediate
+		.sprite-cell, and NOT position: fixed) — two separate bugs ruled
+		that out: (1) .table-wrap has `overflow: auto`, which clips any
+		descendant that pokes outside its box whenever the box is short
+		(e.g. a single filtered row) — rules out anchoring to .sprite-cell.
+		(2) Obsidian's .workspace-leaf has `contain: strict`, which (like a
+		transform) makes it the containing block for `position: fixed`
+		descendants instead of the viewport — so a fixed popover positioned
+		from a viewport-relative getBoundingClientRect() lands visibly off
+		(by however tall the tab bar is). Absolute positioning against a
+		container we control (.table-screen, computed at hover time —
+		see showPreview) sidesteps both. */
 		width: 192px;
 		height: 192px;
 		max-width: none !important;
 		max-height: none !important;
 		position: absolute;
 		z-index: 50;
-		left: 100%;
-		top: 50%;
 		transform: translateY(-50%);
-		margin-left: 6px;
 		image-rendering: pixelated;
 		background: var(--background-primary);
 		border: 1px solid var(--background-modifier-border);

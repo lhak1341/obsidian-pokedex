@@ -159,6 +159,7 @@
 			<DetailScreen
 				{repository}
 				id={selectedId}
+				{rows}
 				spriteStyle={settings.spriteStyle}
 				useTypeIcons={settings.useTypeIcons}
 				onBack={backToTable}

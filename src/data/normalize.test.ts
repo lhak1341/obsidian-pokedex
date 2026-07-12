@@ -3,13 +3,14 @@ import {
 	extractFlavorText,
 	normalizeEvolutionChain,
 	normalizeEvYield,
+	normalizeMoveDetail,
 	normalizeMoves,
 	normalizeStats,
 	toEntry,
 	toTableRow,
 	trimMovesToVersionGroups,
 } from "./normalize";
-import type { RawEvolutionChain, RawPokemon, RawSpecies } from "./types";
+import type { RawEvolutionChain, RawMove, RawPokemon, RawSpecies } from "./types";
 import bulbasaurChain from "./__fixtures__/bulbasaur-evolution-chain.json";
 import bulbasaurSpecies from "./__fixtures__/bulbasaur-species.json";
 import bulbasaur from "./__fixtures__/bulbasaur.json";
@@ -119,11 +120,40 @@ describe("toTableRow", () => {
 describe("toEntry", () => {
 	it("merges pokemon, species, and evolution chain into one record", () => {
 		const node = normalizeEvolutionChain(chain.chain);
-		const entry = toEntry(pokemon, species, node, { sprite: null, artwork: null, shiny: null });
+		const entry = toEntry(pokemon, species, node, {
+			sprite: null,
+			artwork: null,
+			shiny: null,
+			shinyArtwork: null,
+		});
 		expect(entry.eggGroups).toEqual(["monster", "plant"]);
 		expect(entry.hatchCounter).toBe(20);
 		expect(entry.catchRate).toBe(45);
 		expect(entry.evolutionChain?.children[0].name).toBe("ivysaur");
 		expect(entry.moves.some((m) => m.name === "vine-whip")).toBe(true);
+	});
+});
+
+describe("normalizeMoveDetail", () => {
+	it("flattens the raw move response to type/power/accuracy/pp", () => {
+		const raw: RawMove = {
+			name: "flamethrower",
+			power: 90,
+			accuracy: 100,
+			pp: 15,
+			type: { name: "fire", url: "" },
+		};
+		expect(normalizeMoveDetail(raw)).toEqual({ type: "fire", power: 90, accuracy: 100, pp: 15 });
+	});
+
+	it("passes through null power/accuracy for status moves", () => {
+		const raw: RawMove = {
+			name: "swords-dance",
+			power: null,
+			accuracy: null,
+			pp: 20,
+			type: { name: "normal", url: "" },
+		};
+		expect(normalizeMoveDetail(raw)).toEqual({ type: "normal", power: null, accuracy: null, pp: 20 });
 	});
 });

@@ -2,10 +2,12 @@ import { FLAVOR_TEXT_VERSION_GROUPS, MOVE_VERSION_GROUPS } from "./constants";
 import type {
 	EvolutionNode,
 	EvYieldEntry,
+	MoveDetail,
 	MoveEntry,
 	PokedexEntry,
 	PokedexTableRow,
 	RawEvolutionChainLink,
+	RawMove,
 	RawPokemon,
 	RawSpecies,
 	StatBlock,
@@ -86,6 +88,10 @@ export function trimMovesToVersionGroups(
 		.filter((entry) => entry.version_group_details.length > 0);
 }
 
+export function normalizeMoveDetail(raw: RawMove): MoveDetail {
+	return { type: raw.type.name, power: raw.power, accuracy: raw.accuracy, pp: raw.pp };
+}
+
 function idFromUrl(url: string): number {
 	const match = url.match(/\/(\d+)\/?$/);
 	return match ? Number(match[1]) : 0;
@@ -164,7 +170,7 @@ export function toEntry(
 	pokemon: RawPokemon,
 	species: RawSpecies,
 	evolutionChain: EvolutionNode | null,
-	images: { sprite: string | null; artwork: string | null; shiny: string | null },
+	images: { sprite: string | null; artwork: string | null; shiny: string | null; shinyArtwork: string | null },
 ): PokedexEntry {
 	return {
 		...toTableRow(pokemon, species, images.sprite),
@@ -173,6 +179,7 @@ export function toEntry(
 			.map((a) => ({ name: a.ability.name, isHidden: a.is_hidden })),
 		artworkDataUri: images.artwork,
 		shinyDataUri: images.shiny,
+		shinyArtworkDataUri: images.shinyArtwork,
 		flavorText: extractFlavorText(species),
 		eggGroups: species.egg_groups.map((g) => g.name),
 		genderRate: species.gender_rate,

@@ -2,6 +2,7 @@ import { mapWithConcurrency } from "../utils/concurrency";
 import { DiskCache } from "./Cache";
 import {
 	normalizeEvolutionChain,
+	normalizeMoveDetail,
 	toEntry,
 	toTableRow,
 	trimFlavorTextEntries,
@@ -10,6 +11,7 @@ import {
 import { PokeApiClient } from "./PokeApiClient";
 import type {
 	EvolutionNode,
+	MoveDetail,
 	PokedexEntry,
 	PokedexTableRow,
 	RawEvolutionChain,
@@ -46,6 +48,11 @@ export class PokedexRepository {
 	private speciesMemCache = new Map<number, RawSpecies>();
 	private evolutionChainMemCache = new Map<string, RawEvolutionChain>();
 	private imageMemCache = new Map<string, string>();
+	// Value is string | null (a real "no English description" result), so a
+	// plain Map.has/get check (not `!== undefined`) is needed to tell "not
+	// fetched yet" apart from "fetched, nothing found".
+	private abilityDescriptionMemCache = new Map<string, string | null>();
+	private moveDetailMemCache = new Map<string, MoveDetail>();
 
 	constructor(
 		private client: PokeApiClient,
@@ -136,6 +143,68 @@ export class PokedexRepository {
 		const dataUri = await this.cache.readImageDataUri(relPath);
 		if (dataUri) this.imageMemCache.set(relPath, dataUri);
 		return dataUri;
+	}
+
+	// Abilities repeat heavily across species (e.g. "levitate", "intimidate"),
+	// so this is cached by ability name rather than per-Pokemon — fetched once
+	// total across an entire browsing session, not once per entry. Called
+	// lazily on hover from the detail view, not prefetched with the rest of
+	// an entry's extras.
+	async getAbilityDescription(name: string): Promise<string | null> {
+		if (this.abilityDescriptionMemCache.has(name)) {
+			return this.abilityDescriptionMemCache.get(name) ?? null;
+		}
+		const cached = await this.cache.readJson<{ description: string | null }>(`abilities/${name}.json`);
+		if (cached) {
+			this.abilityDescriptionMemCache.set(name, cached.description);
+			return cached.description;
+		}
+		const fresh = await this.client.fetchAbility(name);
+		const description =
+			fresh.effect_entries.find((e) => e.language.name === "en")?.short_effect ?? null;
+		await this.cache.writeJson(`abilities/${name}.json`, { description });
+		this.abilityDescriptionMemCache.set(name, description);
+		return description;
+	}
+
+	// Moves repeat even more heavily than abilities across species (e.g.
+	// almost every Pokemon learns Tackle or Growl) — cached by move name for
+	// the same reason. Unlike getAbilityDescription, a fetch failure here
+	// isn't swallowed to null (there's no legitimate "empty" result for a
+	// move's type/power/accuracy/PP) — it's left to reject so
+	// getMoveDetailsForMoves' per-item error handling (via mapWithConcurrency)
+	// can tell "failed" apart from "successfully has no power" (status moves).
+	async getMoveDetails(name: string): Promise<MoveDetail> {
+		const mem = this.moveDetailMemCache.get(name);
+		if (mem) return mem;
+		const cached = await this.cache.readJson<MoveDetail>(`moves/${name}.json`);
+		if (cached) {
+			this.moveDetailMemCache.set(name, cached);
+			return cached;
+		}
+		const fresh = await this.client.fetchMove(name);
+		const detail = normalizeMoveDetail(fresh);
+		await this.cache.writeJson(`moves/${name}.json`, detail);
+		this.moveDetailMemCache.set(name, detail);
+		return detail;
+	}
+
+	// Fetches details for a whole movepool at FETCH_CONCURRENCY, reporting
+	// each through `onResult` as it settles rather than blocking on the
+	// slowest one — the detail view's move table can have 15-40+ rows, and
+	// showing rows progressively as their data arrives beats a single long
+	// wait. A move that fails to fetch is silently skipped (its row just
+	// keeps showing the "…" loading placeholder) rather than surfaced as an
+	// error — consistent with how a dropped shiny-sprite fetch elsewhere in
+	// this repository doesn't take down the rest of the entry.
+	async getMoveDetailsForMoves(
+		names: string[],
+		onResult: (name: string, detail: MoveDetail) => void,
+	): Promise<void> {
+		const uniqueNames = [...new Set(names)];
+		await mapWithConcurrency(uniqueNames, FETCH_CONCURRENCY, (name) => this.getMoveDetails(name), (result) => {
+			if ("value" in result) onResult(uniqueNames[result.index], result.value);
+		});
 	}
 
 	// Splits `ids` into ones already sitting in mem/disk cache vs ones that
@@ -255,12 +324,12 @@ export class PokedexRepository {
 		const pokemon = await this.getOrFetchPokemon(id);
 		const species = await this.getOrFetchSpecies(id);
 		const sprite = await this.getOrFetchImage(pokemon.sprites.front_default, `images/${id}-sprite.png`);
-		return toEntry(pokemon, species, null, { sprite, artwork: null, shiny: null });
+		return toEntry(pokemon, species, null, { sprite, artwork: null, shiny: null, shinyArtwork: null });
 	}
 
 	async getEntryExtras(
 		id: number,
-	): Promise<Pick<PokedexEntry, "artworkDataUri" | "shinyDataUri" | "evolutionChain">> {
+	): Promise<Pick<PokedexEntry, "artworkDataUri" | "shinyDataUri" | "shinyArtworkDataUri" | "evolutionChain">> {
 		const pokemon = await this.getOrFetchPokemon(id);
 		const species = await this.getOrFetchSpecies(id);
 
@@ -275,15 +344,19 @@ export class PokedexRepository {
 		// Each image fetch is caught independently — a dropped connection on
 		// just the shiny sprite, say, shouldn't take the artwork (or the rest
 		// of the already-rendered core view) down with it.
-		const [artworkDataUri, shinyDataUri] = await Promise.all([
+		const [artworkDataUri, shinyDataUri, shinyArtworkDataUri] = await Promise.all([
 			this.getOrFetchImage(
 				pokemon.sprites.other?.["official-artwork"]?.front_default ?? null,
 				`images/${id}-artwork.png`,
 			).catch(() => null),
 			this.getOrFetchImage(pokemon.sprites.front_shiny, `images/${id}-shiny.png`).catch(() => null),
+			this.getOrFetchImage(
+				pokemon.sprites.other?.["official-artwork"]?.front_shiny ?? null,
+				`images/${id}-shiny-artwork.png`,
+			).catch(() => null),
 		]);
 
-		return { artworkDataUri, shinyDataUri, evolutionChain };
+		return { artworkDataUri, shinyDataUri, shinyArtworkDataUri, evolutionChain };
 	}
 
 	async getEntry(id: number): Promise<PokedexEntry> {
