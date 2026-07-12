@@ -3,10 +3,12 @@
 	import type { EvolutionNode } from "../../data/types";
 	import EvolutionChain from "./EvolutionChain.svelte";
 
-	let { chain, onSelect, sprites }: {
+	let { chain, onSelect, sprites, types, useTypeIcons }: {
 		chain: EvolutionNode;
 		onSelect: (id: number) => void;
 		sprites: Record<number, string | null>;
+		types: Record<number, string[]>;
+		useTypeIcons: boolean;
 	} = $props();
 
 	let containerEl: HTMLDivElement | undefined;
@@ -31,7 +33,14 @@
 		const centerOf = (id: number) => {
 			const cardEl = containerEl?.querySelector<HTMLElement>(`[data-evo-id="${id}"]`);
 			if (!cardEl) return null;
-			const r = cardEl.getBoundingClientRect();
+			// Anchor to the sprite, not the whole card — the card also carries
+			// the method label above and name/types below, so its own center
+			// drifts away from the sprite (and looks visibly off) whenever
+			// those grow or shrink (e.g. the types row toggling on/off).
+			// Falls back to the card itself for the brief pre-sprite-load
+			// window (see EvolutionChain's sprites prop).
+			const anchorEl = cardEl.querySelector<HTMLElement>(".evo-sprite") ?? cardEl;
+			const r = anchorEl.getBoundingClientRect();
 			return { x: r.left + r.width / 2 - containerRect.left, y: r.top + r.height / 2 - containerRect.top };
 		};
 		const next: typeof lines = [];
@@ -68,7 +77,7 @@
 			<line x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} />
 		{/each}
 	</svg>
-	<EvolutionChain node={chain} {onSelect} {sprites} />
+	<EvolutionChain node={chain} {onSelect} {sprites} {types} {useTypeIcons} />
 </div>
 
 <style>

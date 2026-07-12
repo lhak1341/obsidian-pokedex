@@ -10,6 +10,7 @@ import {
 } from "./normalize";
 import { PokeApiClient } from "./PokeApiClient";
 import type {
+	EvolutionChainVisual,
 	EvolutionNode,
 	MoveDetail,
 	PokedexEntry,
@@ -93,7 +94,13 @@ export class PokedexRepository {
 		if (cached) {
 			// Self-heals a cache written before trimFlavorTextEntries existed (a
 			// full, untrimmed flavor_text_entries array) the same way
-			// getOrFetchPokemon does for moves.
+			// getOrFetchPokemon does for moves. Only ever shrinks, so a cache
+			// written under an older/smaller FLAVOR_TEXT_VERSION_GROUPS (e.g.
+			// before the Ruby/Sapphire tab existed) won't regain the trimmed-
+			// away versions this way — that needs the settings "Clear cache"
+			// button, the same manual step any other trimmed-field widening
+			// would need, rather than a forced refetch here that would turn
+			// every already-cached species into a slow reload.
 			const trimmedFlavorText = trimFlavorTextEntries(cached.flavor_text_entries);
 			if (trimmedFlavorText.length !== cached.flavor_text_entries.length) {
 				const migrated: RawSpecies = { ...cached, flavor_text_entries: trimmedFlavorText };
@@ -359,31 +366,34 @@ export class PokedexRepository {
 		return { artworkDataUri, shinyDataUri, shinyArtworkDataUri, evolutionChain };
 	}
 
-	// Sprites for evolution-chain partners shown alongside the currently
-	// viewed entry (see EvolutionTree/EvolutionChain). Every chain member was
-	// already fetched for the table load that got the user here, so this
-	// usually resolves from mem cache; a chain spanning outside the
+	// Sprite + types for evolution-chain partners shown alongside the
+	// currently viewed entry (see EvolutionTree/EvolutionChain). Every chain
+	// member was already fetched for the table load that got the user here,
+	// so this usually resolves from mem cache; a chain spanning outside the
 	// currently-browsed generation range is the one case that's a real
-	// network fetch. Skips species entirely, unlike getEntryCore — the
-	// evolution tree only ever renders a partner's id/name/sprite, name
-	// already comes free from the evolution-chain response itself (see
-	// normalizeEvolutionChain), so fetching a partner's whole species record
-	// just to throw away everything but a sprite URL isn't worth it. Each id
-	// resolves independently to null on failure rather than rejecting the
-	// whole set — a dropped connection on one partner's sprite shouldn't
-	// blank out the others.
-	async getEntrySprites(ids: number[]): Promise<Record<number, string | null>> {
+	// network fetch — but even then it's one fetch per partner id, not a
+	// separate one for sprite vs types, since both come off the same
+	// already-fetched RawPokemon. Skips species entirely, unlike
+	// getEntryCore — the evolution tree only ever renders a partner's
+	// id/name/sprite/types, name already comes free from the evolution-chain
+	// response itself (see normalizeEvolutionChain), so fetching a partner's
+	// whole species record just to throw away everything but that would be
+	// wasted work. Each id resolves independently to a null sprite / empty
+	// types on failure rather than rejecting the whole set — a dropped
+	// connection on one partner shouldn't blank out the others.
+	async getEntryChainVisuals(ids: number[]): Promise<Record<number, EvolutionChainVisual>> {
 		const pairs = await Promise.all(
-			ids.map(async (id): Promise<readonly [number, string | null]> => {
+			ids.map(async (id): Promise<readonly [number, EvolutionChainVisual]> => {
 				try {
 					const pokemon = await this.getOrFetchPokemon(id);
 					const sprite = await this.getOrFetchImage(
 						pokemon.sprites.front_default,
 						`images/${id}-sprite.png`,
 					);
-					return [id, sprite];
+					const types = pokemon.types.sort((a, b) => a.slot - b.slot).map((t) => t.type.name);
+					return [id, { sprite, types }];
 				} catch {
-					return [id, null];
+					return [id, { sprite: null, types: [] }];
 				}
 			}),
 		);

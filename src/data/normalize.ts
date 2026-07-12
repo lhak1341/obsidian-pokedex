@@ -1,4 +1,4 @@
-import { FLAVOR_TEXT_VERSION_GROUPS, MOVE_VERSION_GROUPS } from "./constants";
+import { FLAVOR_TEXT_TABS, FLAVOR_TEXT_VERSION_GROUPS, MOVE_VERSION_GROUPS } from "./constants";
 import type {
 	EvolutionNode,
 	EvYieldEntry,
@@ -37,15 +37,19 @@ export function normalizeMoves(
 	rawMoves: RawPokemon["moves"],
 	versionGroups: readonly string[] = MOVE_VERSION_GROUPS,
 ): MoveEntry[] {
-	// A move learned the same way at the same level in more than one of the
-	// requested version groups (e.g. FireRed/LeafGreen and Emerald both teach
-	// Vine Whip at level 13) should show up once, not once per group.
+	// Dedupe key includes versionGroup — FRLG and Emerald can teach the same
+	// move at *different* levels, and collapsing those into one row hid
+	// whichever group's level lost the race (see DetailScreen's version
+	// toggle, which needs each group's own entries to filter correctly).
+	// This only catches true duplicates: the same move/method/level/group
+	// appearing twice raw (e.g. PokeAPI listing a version group more than
+	// once for a move).
 	const seen = new Set<string>();
 	const moves: MoveEntry[] = [];
 	for (const entry of rawMoves) {
 		for (const detail of entry.version_group_details) {
 			if (!versionGroups.includes(detail.version_group.name)) continue;
-			const dedupeKey = `${entry.move.name}|${detail.move_learn_method.name}|${detail.level_learned_at}`;
+			const dedupeKey = `${entry.move.name}|${detail.move_learn_method.name}|${detail.level_learned_at}|${detail.version_group.name}`;
 			if (seen.has(dedupeKey)) continue;
 			seen.add(dedupeKey);
 			moves.push({
@@ -119,20 +123,30 @@ export function collectChainIds(node: EvolutionNode, ids: number[] = []): number
 	return ids;
 }
 
-export function extractFlavorText(
+// One entry per FLAVOR_TEXT_TABS tab that has a matching version in this
+// species' data (missing for a tab only if the species genuinely never
+// appeared in that game, which doesn't happen within this plugin's Gen 1-3
+// dex) — DetailScreen's version cycler reads straight off this map's keys.
+export function extractFlavorTexts(
 	species: RawSpecies,
-	versionGroups: readonly string[] = FLAVOR_TEXT_VERSION_GROUPS,
-): string | null {
+	tabs: readonly { key: string; versions: readonly string[] }[] = FLAVOR_TEXT_TABS,
+): Record<string, string> {
 	const english = species.flavor_text_entries.filter((e) => e.language.name === "en");
-	for (const version of versionGroups) {
-		const match = english.find((e) => e.version.name === version);
-		if (match) return match.flavor_text.replace(/[\n\f\r]+/g, " ").trim();
+	const texts: Record<string, string> = {};
+	for (const tab of tabs) {
+		for (const version of tab.versions) {
+			const match = english.find((e) => e.version.name === version);
+			if (match) {
+				texts[tab.key] = match.flavor_text.replace(/[\n\f\r]+/g, " ").trim();
+				break;
+			}
+		}
 	}
-	return english[0]?.flavor_text.replace(/[\n\f\r]+/g, " ").trim() ?? null;
+	return texts;
 }
 
 // PokeAPI's `flavor_text_entries` carries every language and every game the
-// species has ever appeared in — extractFlavorText only ever reads English
+// species has ever appeared in — extractFlavorTexts only ever reads English
 // entries from FLAVOR_TEXT_VERSION_GROUPS. Trimming it down before a raw
 // species response is cached keeps a table load of ~400 rows from parsing a
 // field that's only read once the detail view opens.
@@ -190,7 +204,7 @@ export function toEntry(
 		artworkDataUri: images.artwork,
 		shinyDataUri: images.shiny,
 		shinyArtworkDataUri: images.shinyArtwork,
-		flavorText: extractFlavorText(species),
+		flavorTexts: extractFlavorTexts(species),
 		eggGroups: species.egg_groups.map((g) => g.name),
 		genderRate: species.gender_rate,
 		moves: normalizeMoves(pokemon.moves),

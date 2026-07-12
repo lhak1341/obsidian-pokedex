@@ -5,10 +5,25 @@ export const POKEAPI_BASE = "https://pokeapi.co/api/v2";
 // dumping every game the species has ever appeared in.
 export const MOVE_VERSION_GROUPS = ["firered-leafgreen", "emerald"] as const;
 
-// Flavor text (Pokedex description) is filtered to these version groups so
-// the detail view's description matches Gen 3, same reasoning as
-// MOVE_VERSION_GROUPS above.
-export const FLAVOR_TEXT_VERSION_GROUPS = ["firered-leafgreen", "leafgreen", "firered", "emerald"] as const;
+// Pokedex description ("flavor text") is one tab per Gen 3 game the detail
+// view lets the user switch between — Ruby and Sapphire share a tab since
+// their text is identical for nearly every species. Flavor text is keyed by
+// individual game *version* on PokeAPI (e.g. "leafgreen"), not the version
+// *group* MOVE_VERSION_GROUPS above uses ("firered-leafgreen") — that string
+// never matches a flavor_text_entries.version.name, which is why the old
+// single-groups list silently always fell through to LeafGreen. `key` is
+// what DetailScreen's toggle state and PokedexEntry.flavorTexts use; each
+// tab's `versions` is the priority-ordered list of raw version names tried.
+export const FLAVOR_TEXT_TABS = [
+	{ key: "leafgreen", label: "Leaf Green", versions: ["leafgreen"] },
+	{ key: "firered", label: "Fire Red", versions: ["firered"] },
+	{ key: "emerald", label: "Emerald", versions: ["emerald"] },
+	{ key: "ruby-sapphire", label: "Ruby / Sapphire", versions: ["ruby", "sapphire"] },
+] as const;
+
+// Every raw version name any FLAVOR_TEXT_TABS entry reads — trimming/caching
+// keeps exactly this set instead of the ~20 games flavor_text_entries spans.
+export const FLAVOR_TEXT_VERSION_GROUPS: string[] = FLAVOR_TEXT_TABS.flatMap((tab) => tab.versions);
 
 export const TYPE_NAMES = [
 	"normal", "fire", "water", "electric", "grass", "ice",

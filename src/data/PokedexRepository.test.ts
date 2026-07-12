@@ -183,25 +183,27 @@ describe("PokedexRepository", () => {
 		expect(extras.shinyArtworkDataUri).not.toBeNull();
 	});
 
-	it("getEntrySprites resolves a sprite per id without fetching species", async () => {
+	it("getEntryChainVisuals resolves a sprite and types per id without fetching species", async () => {
 		const { client, repository } = makeRepository();
 
-		const sprites = await repository.getEntrySprites([1, 2]);
+		const visuals = await repository.getEntryChainVisuals([1, 2]);
 
-		expect(sprites[1]).not.toBeNull();
-		expect(sprites[2]).not.toBeNull();
+		expect(visuals[1].sprite).not.toBeNull();
+		expect(visuals[1].types.length).toBeGreaterThan(0);
+		expect(visuals[2].sprite).not.toBeNull();
 		expect(client.fetchSpecies).not.toHaveBeenCalled();
 	});
 
-	it("getEntrySprites resolves null for an id that fails, without dropping the others", async () => {
+	it("getEntryChainVisuals resolves a null sprite/empty types for an id that fails, without dropping the others", async () => {
 		const { client, repository } = makeRepository();
 		client.failIds.add(2);
 
-		const sprites = await repository.getEntrySprites([1, 2, 3]);
+		const visuals = await repository.getEntryChainVisuals([1, 2, 3]);
 
-		expect(sprites[1]).not.toBeNull();
-		expect(sprites[2]).toBeNull();
-		expect(sprites[3]).not.toBeNull();
+		expect(visuals[1].sprite).not.toBeNull();
+		expect(visuals[2].sprite).toBeNull();
+		expect(visuals[2].types).toEqual([]);
+		expect(visuals[3].sprite).not.toBeNull();
 	});
 
 	it("getAbilityDescription fetches once per ability name, then serves cache on repeat calls", async () => {

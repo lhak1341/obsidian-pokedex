@@ -1,8 +1,9 @@
 <script lang="ts">
 	import type { EvolutionNode } from "../../data/types";
 	import EvolutionChain from "./EvolutionChain.svelte";
+	import TypeBadge from "./TypeBadge.svelte";
 
-	let { node, onSelect, sprites, evolveLabel }: {
+	let { node, onSelect, sprites, types, useTypeIcons, evolveLabel }: {
 		node: EvolutionNode;
 		onSelect: (id: number) => void;
 		// Keyed by dex id. Evolution partners are always within the same
@@ -11,6 +12,10 @@
 		// mem cache — no separate loading state needed here, a node just shows
 		// text-only for the brief moment before its sprite lands.
 		sprites: Record<number, string | null>;
+		// Keyed by dex id, drawn from the already-loaded browse table (see
+		// DetailScreen's evoTypes) rather than a per-node fetch.
+		types: Record<number, string[]>;
+		useTypeIcons: boolean;
 		// The level/item/trigger that led INTO this node — computed by the
 		// parent (it's the parent that knows which of its evolution_details
 		// produced this child) and passed down rather than recursing on the
@@ -39,16 +44,30 @@
 		<!-- Always rendered (even for the root, which has no evolveLabel) so
 		every card reserves the same slot height — otherwise the root's
 		shorter card (no method line) throws its "No. Name" off the row all
-		the other stages line up on. -->
-		<span class="evo-method">{evolveLabel || " "}</span>
+		the other stages line up on. A plain " " collapses to 0 height here
+		(whitespace-only inline content gets trimmed away), which silently
+		defeated that — a non-breaking space renders like real text instead. -->
+		<span class="evo-method">{evolveLabel || " "}</span>
 		<span class="evo-label">#{String(node.id).padStart(3, "0")} {node.name}</span>
+		<span class="evo-types">
+			{#each types[node.id] ?? [] as type (type)}
+				<TypeBadge {type} useIcon={useTypeIcons} compact />
+			{/each}
+		</span>
 	</button>
 
 	{#if node.children.length > 0}
 		<div class="evo-children">
 			{#each node.children as child (child.id)}
 				<div class="evo-branch">
-					<EvolutionChain node={child} {onSelect} {sprites} evolveLabel={detailLabel(child)} />
+					<EvolutionChain
+						node={child}
+						{onSelect}
+						{sprites}
+						{types}
+						{useTypeIcons}
+						evolveLabel={detailLabel(child)}
+					/>
 				</div>
 			{/each}
 		</div>
@@ -67,7 +86,7 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 2px;
+		gap: 0;
 		padding: 4px;
 		/* Obsidian's own `button { height: var(--input-height) }` otherwise
 		clips this to ~30px regardless of the 92px sprite inside — height,
@@ -97,15 +116,24 @@
 	.evo-method {
 		font-size: 0.84em;
 		font-weight: 700;
+		line-height: 1.15;
 		color: var(--text-muted);
 		text-transform: capitalize;
 		white-space: nowrap;
 	}
 	.evo-label {
 		font-size: 0.78em;
+		line-height: 1.15;
 		text-transform: capitalize;
 		text-align: center;
 		white-space: nowrap;
+	}
+	.evo-types {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 3px;
+		margin-top: 1px;
 	}
 	.evo-children {
 		display: flex;

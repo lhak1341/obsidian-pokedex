@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	collectChainIds,
-	extractFlavorText,
+	extractFlavorTexts,
 	normalizeEvolutionChain,
 	normalizeEvYield,
 	normalizeMoveDetail,
@@ -46,7 +46,13 @@ describe("normalizeMoves", () => {
 	it("sorts level-up moves by level before other methods", () => {
 		const moves = normalizeMoves(pokemon.moves, ["firered-leafgreen", "emerald"]);
 		const levelUpMoves = moves.filter((m) => m.learnMethod === "level-up");
-		expect(levelUpMoves.map((m) => m.name)).toEqual(["tackle", "vine-whip"]);
+		expect(levelUpMoves.map((m) => m.name)).toEqual(["tackle", "vine-whip", "vine-whip"]);
+	});
+
+	it("keeps a move's entry for each version group separately, even at the same level", () => {
+		const moves = normalizeMoves(pokemon.moves, ["firered-leafgreen", "emerald"]);
+		const vineWhips = moves.filter((m) => m.name === "vine-whip");
+		expect(vineWhips.map((m) => m.versionGroup).sort()).toEqual(["emerald", "firered-leafgreen"]);
 	});
 
 	it("returns an empty list when no version group matches", () => {
@@ -77,13 +83,20 @@ describe("trimMovesToVersionGroups", () => {
 	});
 });
 
-describe("extractFlavorText", () => {
-	it("prefers the first matching version in priority order", () => {
-		expect(extractFlavorText(species)).toContain("without eating");
+describe("extractFlavorTexts", () => {
+	it("keys results by tab, using the first matching version per tab", () => {
+		expect(extractFlavorTexts(species).firered).toContain("without eating");
 	});
 
 	it("strips newline/formfeed characters", () => {
-		expect(extractFlavorText(species)).not.toMatch(/[\n\f\r]/);
+		const texts = extractFlavorTexts(species);
+		expect(Object.values(texts).join("")).not.toMatch(/[\n\f\r]/);
+	});
+
+	it("omits a tab when the species has no matching version for it", () => {
+		// Fixture only carries "red" and "firered" entries — "red" isn't any
+		// tab's version, so only the firered tab should be populated.
+		expect(extractFlavorTexts(species)).toEqual({ firered: expect.any(String) });
 	});
 });
 

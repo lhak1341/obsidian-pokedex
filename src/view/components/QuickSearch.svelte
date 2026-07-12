@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onDestroy, onMount } from "svelte";
 	import type { PokedexTableRow } from "../../data/types";
 	import { matchesSearch } from "../../utils/filterPokemon";
 
@@ -9,6 +10,11 @@
 
 	let query = $state("");
 	let open = $state(false);
+	let inputEl: HTMLInputElement | undefined;
+	// Which result Up/Down/Enter act on. Reset to 0 (not -1) whenever the
+	// match list changes, so Enter alone — no arrow keys needed — still
+	// selects the top match, same as before arrow navigation existed.
+	let activeIndex = $state(0);
 
 	// Same substring/exact-id matching as the browse table's own search (see
 	// matchesSearch in utils/filterPokemon.ts) — an empty query still means
@@ -19,6 +25,11 @@
 		return rows.filter((r) => matchesSearch(r, query)).slice(0, 8);
 	});
 
+	$effect(() => {
+		void matches;
+		activeIndex = 0;
+	});
+
 	function select(id: number) {
 		onSelect(id);
 		query = "";
@@ -26,18 +37,42 @@
 	}
 
 	function onKeydown(e: KeyboardEvent) {
-		if (e.key === "Enter" && matches.length > 0) {
-			select(matches[0].id);
+		if (e.key === "ArrowDown" && matches.length > 0) {
+			e.preventDefault();
+			activeIndex = (activeIndex + 1) % matches.length;
+		} else if (e.key === "ArrowUp" && matches.length > 0) {
+			e.preventDefault();
+			activeIndex = (activeIndex - 1 + matches.length) % matches.length;
+		} else if (e.key === "Enter" && matches.length > 0) {
+			select(matches[activeIndex].id);
 		} else if (e.key === "Escape") {
 			query = "";
 			open = false;
 			(e.currentTarget as HTMLInputElement).blur();
 		}
 	}
+
+	// Cmd/Ctrl+L jumps straight to this box from anywhere else in the detail
+	// screen (evolution cards, move tabs, ability list, ...) — a window
+	// listener rather than one scoped to this component's own DOM is what
+	// makes that work when focus currently isn't inside quick-search at all.
+	// Only live while this component is mounted (QuickSearch only renders on
+	// the detail screen), so it can't steal focus from the browse table.
+	function onGlobalKeydown(e: KeyboardEvent) {
+		if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "l") {
+			e.preventDefault();
+			inputEl?.focus();
+			inputEl?.select();
+		}
+	}
+
+	onMount(() => window.addEventListener("keydown", onGlobalKeydown));
+	onDestroy(() => window.removeEventListener("keydown", onGlobalKeydown));
 </script>
 
 <div class="quick-search">
 	<input
+		bind:this={inputEl}
 		type="text"
 		class="quick-search-input"
 		placeholder="Quick check a Pokemon..."
@@ -49,12 +84,17 @@
 	/>
 	{#if open && matches.length > 0}
 		<ul class="quick-search-results">
-			{#each matches as row (row.id)}
+			{#each matches as row, i (row.id)}
 				<li>
 					<!-- preventDefault keeps focus on the input instead of moving it
 					to this button, which would fire the input's onblur (closing this
 					list) before the click/select below ever runs. -->
-					<button type="button" onmousedown={(e) => { e.preventDefault(); select(row.id); }}>
+					<button
+						type="button"
+						class:active={i === activeIndex}
+						onmousedown={(e) => { e.preventDefault(); select(row.id); }}
+						onmouseenter={() => (activeIndex = i)}
+					>
 						<span class="quick-search-id">#{String(row.id).padStart(3, "0")}</span>
 						<span class="quick-search-name">{row.name}</span>
 					</button>
@@ -112,7 +152,7 @@
 		text-align: left;
 		cursor: pointer;
 	}
-	.quick-search-results button:hover {
+	.quick-search-results button:hover, .quick-search-results button.active {
 		background: var(--background-modifier-hover);
 	}
 	.quick-search-id {

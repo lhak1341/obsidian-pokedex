@@ -120,6 +120,15 @@ export interface MoveDetail {
 	pp: number;
 }
 
+// Per evolution-chain-member visuals (see PokedexRepository.getEntryChainVisuals) —
+// sprite AND types together so a partner outside the browsed dex range (id
+// beyond the plugin's configured range) still gets both, not just a sprite
+// with no type badges.
+export interface EvolutionChainVisual {
+	sprite: string | null;
+	types: string[];
+}
+
 export interface EvYieldEntry {
 	stat: keyof StatBlock;
 	amount: number;
@@ -153,7 +162,9 @@ export interface PokedexEntry extends PokedexTableRow {
 	artworkDataUri: string | null;
 	shinyDataUri: string | null;
 	shinyArtworkDataUri: string | null;
-	flavorText: string | null;
+	// Keyed by FLAVOR_TEXT_TABS' `key` (e.g. "leafgreen", "ruby-sapphire") —
+	// only present for tabs this species actually has a matching version for.
+	flavorTexts: Record<string, string>;
 	eggGroups: string[];
 	genderRate: number;
 	moves: MoveEntry[];

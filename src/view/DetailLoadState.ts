@@ -22,6 +22,11 @@ export class DetailLoadState {
 	loading = true;
 	error: string | null = null;
 	evolutionSprites: Record<number, string | null> = {};
+	// Keyed the same as evolutionSprites, kept as a separate map (not folded
+	// into PokedexEntry) since it covers every chain member — including ones
+	// outside the currently-browsed dex range, which never get a
+	// PokedexTableRow of their own to carry types on.
+	evolutionTypes: Record<number, string[]> = {};
 	// Not reset per load() call, unlike the fields above — moves repeat
 	// heavily across species (nearly everything learns Tackle or Growl), so
 	// this accumulates across every entry viewed this session rather than
@@ -55,6 +60,7 @@ export class DetailLoadState {
 		this.loading = true;
 		this.error = null;
 		this.evolutionSprites = {};
+		this.evolutionTypes = {};
 
 		try {
 			// Pokemon/species/sprite are already mem-cached from the table load
@@ -80,9 +86,14 @@ export class DetailLoadState {
 
 			if (!extras.evolutionChain) return;
 			const chainIds = collectChainIds(extras.evolutionChain);
-			const sprites = await this.repository.getEntrySprites(chainIds);
+			const visuals = await this.repository.getEntryChainVisuals(chainIds);
 			if (stale()) return;
-			this.evolutionSprites = sprites;
+			this.evolutionSprites = Object.fromEntries(
+				Object.entries(visuals).map(([id, v]) => [id, v.sprite]),
+			);
+			this.evolutionTypes = Object.fromEntries(
+				Object.entries(visuals).map(([id, v]) => [id, v.types]),
+			);
 			onUpdate?.();
 		} catch (err) {
 			if (stale()) return;

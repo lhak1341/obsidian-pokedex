@@ -2,21 +2,25 @@
 	import { TYPE_COLORS, TYPE_ICONS } from "../../data/constants";
 	import Icon from "./Icon.svelte";
 
-	let { type, useIcon = false, selected = false }: {
+	let { type, useIcon = false, selected = false, compact = false }: {
 		type: string;
 		useIcon?: boolean;
 		selected?: boolean;
+		// ~60% scale for contexts too small for the normal badge size (e.g.
+		// evolution chain cards, which need per-stage types but have nowhere
+		// near a table cell's or the header's width to spend on them).
+		compact?: boolean;
 	} = $props();
 
 	const color = $derived(TYPE_COLORS[type] ?? "#777");
 </script>
 
 {#if useIcon}
-	<span class="type-badge-icon" class:selected style:background-color={color} title={type}>
-		<Icon name={TYPE_ICONS[type] ?? "circle"} size={17} strokeWidth={2.25} />
+	<span class="type-badge-icon" class:selected class:compact style:background-color={color} title={type}>
+		<Icon name={TYPE_ICONS[type] ?? "circle"} size={compact ? 10 : 17} strokeWidth={2.25} />
 	</span>
 {:else}
-	<span class="type-badge" class:selected style:background-color={color}>
+	<span class="type-badge" class:selected class:compact style:background-color={color}>
 		{type}
 	</span>
 {/if}
@@ -40,6 +44,11 @@
 		opacity: 1;
 		box-shadow: 0 0 0 2px var(--interactive-accent);
 	}
+	.type-badge.compact {
+		padding: 2px 7px;
+		margin-right: 0;
+		font-size: 0.5em;
+	}
 	.type-badge-icon {
 		display: inline-flex;
 		align-items: center;
@@ -55,5 +64,10 @@
 	.type-badge-icon.selected {
 		opacity: 1;
 		box-shadow: 0 0 0 2px var(--interactive-accent);
+	}
+	.type-badge-icon.compact {
+		width: 16px;
+		height: 16px;
+		margin-right: 0;
 	}
 </style>

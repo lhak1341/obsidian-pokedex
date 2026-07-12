@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Notice } from "obsidian";
 	import { onDestroy } from "svelte";
-	import { TYPE_COLORS } from "../../data/constants";
+	import { FLAVOR_TEXT_TABS, TYPE_COLORS } from "../../data/constants";
 	import type { PokedexRepository } from "../../data/PokedexRepository";
 	import type { MoveDetail, PokedexEntry, PokedexTableRow, PluginSettings } from "../../data/types";
 	import BarRow from "./BarRow.svelte";
@@ -54,9 +54,15 @@
 	// here, so this resolves from mem cache — not a second round of real
 	// network requests.
 	let evolutionSprites = $state<Record<number, string | null>>({});
+	let evolutionTypes = $state<Record<number, string[]>>({});
 	// Reset per-entry (see startLoad below) so switching Pokemon never
 	// leaves a previous one's shiny toggle silently applied.
 	let showShiny = $state(false);
+	// Not reset on id change, same reasoning as activeMoveMethod below —
+	// stays on e.g. "Emerald" while browsing several Pokemon. Falls back to
+	// the first tab this entry actually has data for (see flavorTabs) if the
+	// remembered key isn't among them, so this never needs a null case.
+	let activeFlavorVersion = $state<string>(FLAVOR_TEXT_TABS[0].key);
 
 	// Keyed by ability name, NOT reset on id change — abilities repeat
 	// heavily across species (e.g. "levitate"), so hovering one already seen
@@ -96,12 +102,23 @@
 		{ key: "tutor", label: "Tutor" },
 	] as const;
 
+	// FRLG and Emerald sometimes teach the same move at different levels
+	// (e.g. a different level-up curve) — normalizeMoves keeps both rows
+	// since they're genuinely distinct data, which reads as a duplicate in
+	// the table. This toggle scopes the list to one game at a time instead.
+	const MOVE_VERSION_TABS = [
+		{ key: "firered-leafgreen", label: "FRLG" },
+		{ key: "emerald", label: "RSE" },
+	] as const;
+
 	// Not reset on id change — same reasoning as abilityDescriptions, moves
 	// repeat even more heavily across species (nearly everything learns
 	// Tackle or Growl), and activeMoveMethod persisting across navigation
 	// lets a user stay on e.g. "Machine" while browsing several Pokemon.
 	let moveDetails = $state<Record<string, MoveDetail>>({});
 	let activeMoveMethod = $state<(typeof MOVE_METHOD_TABS)[number]["key"]>("level-up");
+	let activeMoveVersion =
+		$state<(typeof MOVE_VERSION_TABS)[number]["key"]>("firered-leafgreen");
 
 	const basePortraitUri = $derived(
 		(spriteStyle === "official-artwork" ? entry?.artworkDataUri : entry?.spriteDataUri) ??
@@ -137,8 +154,31 @@
 	const accentColor = $derived(TYPE_COLORS[entry?.types[0] ?? ""] ?? "var(--interactive-accent)");
 
 	const filteredMoves = $derived(
-		entry?.moves.filter((m) => m.learnMethod === activeMoveMethod) ?? [],
+		entry?.moves.filter(
+			(m) => m.learnMethod === activeMoveMethod && m.versionGroup === activeMoveVersion,
+		) ?? [],
 	);
+
+	// Only tabs this species actually has flavor text for (every Gen 1-3 dex
+	// entry has all four in practice — see FLAVOR_TEXT_TABS — but a cache
+	// written before a tab existed can still be missing one until the user
+	// clears the cache, see PokedexRepository.getOrFetchSpecies).
+	const flavorTabs = $derived(
+		entry ? FLAVOR_TEXT_TABS.filter((tab) => entry.flavorTexts[tab.key]) : [],
+	);
+	const activeFlavorIndex = $derived(
+		Math.max(0, flavorTabs.findIndex((tab) => tab.key === activeFlavorVersion)),
+	);
+	const currentFlavorTab = $derived(flavorTabs[activeFlavorIndex] ?? null);
+	const currentFlavorText = $derived(
+		currentFlavorTab ? entry?.flavorTexts[currentFlavorTab.key] ?? null : null,
+	);
+
+	function cycleFlavorVersion(direction: 1 | -1) {
+		if (flavorTabs.length === 0) return;
+		const nextIndex = (activeFlavorIndex + direction + flavorTabs.length) % flavorTabs.length;
+		activeFlavorVersion = flavorTabs[nextIndex].key;
+	}
 
 	// Re-mirrors every DetailLoadState field wholesale — cheap (a handful of
 	// small objects), and simpler than a dedicated callback per field since
@@ -150,6 +190,7 @@
 		loading = loadState.loading;
 		error = loadState.error;
 		evolutionSprites = loadState.evolutionSprites;
+		evolutionTypes = loadState.evolutionTypes;
 	}
 
 	function startLoad(currentId: number) {
@@ -224,15 +265,12 @@
 				<div class="name-block">
 					<p class="dex-eyebrow">No. {String(entry.id).padStart(3, "0")}</p>
 					<h2 class="mon-name">{entry.name}</h2>
+					<div class="type-row">
+						{#each entry.types as type (type)}
+							<TypeBadge {type} useIcon={useTypeIcons} />
+						{/each}
+					</div>
 				</div>
-				<div class="type-row">
-					{#each entry.types as type (type)}
-						<TypeBadge {type} useIcon={useTypeIcons} />
-					{/each}
-				</div>
-				{#if entry.flavorText}
-					<p class="flavor-text">{entry.flavorText}</p>
-				{/if}
 				<dl class="physical-readout">
 					<div>
 						<dt>Height</dt>
@@ -243,34 +281,80 @@
 						<dd>{(entry.weight / 10).toFixed(1)} kg</dd>
 					</div>
 				</dl>
+				{#if currentFlavorText}
+					<div class="flavor-block">
+						<div class="flavor-version-toggle">
+							<button
+								type="button"
+								class="flavor-version-arrow"
+								onclick={() => cycleFlavorVersion(-1)}
+								disabled={flavorTabs.length < 2}
+								aria-label="Previous game version"
+							>
+								<Icon name="chevron-left" size={12} strokeWidth={2.5} />
+							</button>
+							<span class="flavor-version-label">{currentFlavorTab?.label}</span>
+							<button
+								type="button"
+								class="flavor-version-arrow"
+								onclick={() => cycleFlavorVersion(1)}
+								disabled={flavorTabs.length < 2}
+								aria-label="Next game version"
+							>
+								<Icon name="chevron-right" size={12} strokeWidth={2.5} />
+							</button>
+						</div>
+						<p class="flavor-text">{currentFlavorText}</p>
+					</div>
+				{/if}
 			</aside>
 
 			<div class="core-col">
 				{#if entry.evolutionChain}
 					<section class="panel">
 						<h3 class="section-heading">Evolution</h3>
-						<EvolutionTree chain={entry.evolutionChain} {onSelect} sprites={evolutionSprites} />
+						<EvolutionTree
+						chain={entry.evolutionChain}
+						{onSelect}
+						sprites={evolutionSprites}
+						types={evolutionTypes}
+						{useTypeIcons}
+					/>
 					</section>
 				{/if}
 
-				<section class="panel">
-					<h3 class="section-heading">Base stats</h3>
-					<StatBars stats={entry.stats} />
-				</section>
+				<div class="stats-abilities-row">
+					<section class="panel stats-panel">
+						<h3 class="section-heading">Base stats</h3>
+						<StatBars stats={entry.stats} />
+					</section>
 
-				<section class="panel">
-					<h3 class="section-heading">Abilities</h3>
-					<ul class="ability-list">
-						{#each entry.abilities as ability (ability.name)}
-							<li
-								onmouseenter={(e) => showAbilityPopover(ability.name, e.currentTarget)}
-								onmouseleave={hideAbilityPopover}
-							>
-								{ability.name}{ability.isHidden ? " (hidden)" : ""}
-							</li>
+					<section class="panel abilities-panel">
+						<h3 class="section-heading">Abilities</h3>
+						<ul class="ability-list">
+							{#each entry.abilities.filter((a) => !a.isHidden) as ability (ability.name)}
+								<li
+									onmouseenter={(e) => showAbilityPopover(ability.name, e.currentTarget)}
+									onmouseleave={hideAbilityPopover}
+								>
+									{ability.name}
+								</li>
+							{/each}
+						</ul>
+						{#each entry.abilities.filter((a) => a.isHidden) as ability (ability.name)}
+							<div class="hidden-ability-block">
+								<p class="hidden-ability-label">Hidden Ability</p>
+								<p
+									class="hidden-ability-name"
+									onmouseenter={(e) => showAbilityPopover(ability.name, e.currentTarget)}
+									onmouseleave={hideAbilityPopover}
+								>
+									{ability.name}
+								</p>
+							</div>
 						{/each}
-					</ul>
-				</section>
+					</section>
+				</div>
 
 				{#if hoveredAbility && abilityPopoverPos}
 					{@const state = abilityDescriptions[hoveredAbility]}
@@ -318,7 +402,21 @@
 
 			<div class="moves-col">
 				<section class="panel">
-					<h3 class="section-heading">Moves (Gen 3)</h3>
+					<div class="moves-heading-row">
+						<h3 class="section-heading">Moves (Gen 3)</h3>
+						<div class="move-tabs move-version-tabs">
+							{#each MOVE_VERSION_TABS as tab (tab.key)}
+								<button
+									type="button"
+									class="move-tab"
+									class:active={activeMoveVersion === tab.key}
+									onclick={() => (activeMoveVersion = tab.key)}
+								>
+									{tab.label}
+								</button>
+							{/each}
+						</div>
+					</div>
 					{#if entry.moves.length === 0}
 						<p class="text-muted">No move data for this version group.</p>
 					{:else}
@@ -343,11 +441,11 @@
 								<thead>
 									<tr>
 										<th>Move</th>
-										{#if activeMoveMethod === "level-up"}<th>Level</th>{/if}
-										<th>Type</th>
-										<th>Power</th>
-										<th>Acc.</th>
-										<th>PP</th>
+										{#if activeMoveMethod === "level-up"}<th class="col-right">Level</th>{/if}
+										<th class="col-center">Type</th>
+										<th class="col-right">Pow</th>
+										<th class="col-right">Acc</th>
+										<th class="col-right">PP</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -355,17 +453,17 @@
 										{@const detail = moveDetails[move.name]}
 										<tr>
 											<td>{move.name}</td>
-											{#if activeMoveMethod === "level-up"}<td>{move.levelLearnedAt}</td>{/if}
-											<td>
+											{#if activeMoveMethod === "level-up"}<td class="col-right">{move.levelLearnedAt}</td>{/if}
+											<td class="col-center">
 												{#if detail}
 													<TypeBadge type={detail.type} useIcon={useTypeIcons} />
 												{:else}
 													…
 												{/if}
 											</td>
-											<td>{detail ? (detail.power ?? "-") : "…"}</td>
-											<td>{detail ? (detail.accuracy ?? "-") : "…"}</td>
-											<td>{detail ? detail.pp : "…"}</td>
+											<td class="col-right">{detail ? (detail.power ?? "-") : "…"}</td>
+											<td class="col-right">{detail ? (detail.accuracy ?? "-") : "…"}</td>
+											<td class="col-right">{detail ? detail.pp : "…"}</td>
 										</tr>
 									{/each}
 								</tbody>
@@ -413,6 +511,11 @@
 		flex-direction: column;
 		gap: 20px;
 	}
+	.stats-abilities-row {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
 
 	@container detail (min-width: 920px) {
 		/* Capped and centered on .page (back-button + grid together), not just
@@ -425,21 +528,38 @@
 		}
 		.detail-grid {
 			display: grid;
-			/* Fixed identity rail; core and moves split the rest 1.3:1 (core
-			getting more room since stat bars/ability text/evolution nodes read
-			better with a bit of breathing room than a 3-column move table
-			needs). Both fr-based, not a fixed max-width, so the two columns
-			always consume exactly the remaining row width — a minmax(min, Npx)
-			pair stops growing once each hits its own cap and leaves whatever's
-			left unclaimed, which is what stranded ~70px of dead space after the
-			moves column instead of it being real, usable margin. */
-			grid-template-columns: 240px minmax(300px, 1.3fr) minmax(260px, 1fr);
+			/* Fixed identity rail; core and moves split the rest 1.15:1.15 —
+			was 1.3:1 (core getting more room since stat bars/ability text/
+			evolution nodes read better with breathing room than a 3-column
+			move table needs), narrowed toward moves so its 6-column table has
+			more room. Both fr-based, not a fixed max-width, so the two
+			columns always consume exactly the remaining row width — a
+			minmax(min, Npx) pair stops growing once each hits its own cap and
+			leaves whatever's left unclaimed, which is what stranded ~70px of
+			dead space after the moves column instead of it being real,
+			usable margin. */
+			grid-template-columns: 240px minmax(300px, 1.15fr) minmax(260px, 1.15fr);
 			align-items: start;
 			gap: 24px;
 		}
 		.identity-col {
 			position: sticky;
 			top: 0;
+		}
+	}
+
+	/* Separate, higher breakpoint than the 920px 3-column switch above —
+	core-col is only ~357px wide right at 920px (920 - 240px identity rail -
+	48px gaps, split 1.3:1 with moves-col), too cramped to fit stat bars and
+	the ability list side by side without wrapping. Row layout waits for
+	genuine breathing room instead of triggering right at the column split. */
+	@container detail (min-width: 1100px) {
+		.stats-abilities-row {
+			flex-direction: row;
+		}
+		.stats-panel, .abilities-panel {
+			flex: 1;
+			min-width: 0;
 		}
 	}
 
@@ -521,20 +641,72 @@
 		color: var(--text-normal);
 	}
 	.type-row {
-		margin-bottom: 8px;
+		/* A bit more separation than the number/name lines share (their 3px
+		.name-block gap already applies here too, as the third child) — enough
+		to read as its own line, not run together with the name. */
+		margin-top: 5px;
+	}
+	/* Toggle + description grouped in their own tight column so they read as
+	one unit, independent of identity-col's larger 20px rhythm between major
+	blocks (portrait / name / height-weight / description). */
+	.flavor-block {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
 	}
 	.flavor-text {
-		margin: 4px 0 12px;
+		margin: 0;
 		padding-left: 10px;
 		border-left: 2px solid var(--background-modifier-border);
 		color: var(--text-muted);
-		font-size: 0.88rem;
+		font-size: 0.82rem;
 		line-height: 1.45;
+	}
+	/* Spans the identity column's full width, like a carousel control —
+	arrows pinned to the edges, label centered between them. Text styling
+	matches BarRow's .bar-label (the HP/Atk/... stat labels) rather than
+	inventing a new one, since this plays the same "small muted caption"
+	role. */
+	.flavor-version-toggle {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 6px;
+	}
+	.flavor-version-arrow {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: auto;
+		height: auto;
+		padding: 2px;
+		background: none;
+		border: none;
+		color: var(--text-muted);
+		cursor: pointer;
+		opacity: 0.7;
+		transition: opacity 100ms ease-out;
+	}
+	.flavor-version-arrow:hover:not(:disabled) {
+		opacity: 1;
+	}
+	.flavor-version-arrow:disabled {
+		visibility: hidden;
+	}
+	.flavor-version-label {
+		flex: 1;
+		text-align: center;
+		font-weight: 600;
+		color: var(--text-muted);
+		font-size: 0.85em;
 	}
 
 	.physical-readout {
-		display: flex;
-		gap: 18px;
+		/* Two equal columns (not flex + gap) so Weight's box always starts
+		exactly at the column's halfway point, independent of how wide
+		Height's own value happens to render. */
+		display: grid;
+		grid-template-columns: 1fr 1fr;
 		margin: 0;
 	}
 	.physical-readout div {
@@ -583,6 +755,27 @@
 		padding-left: 18px;
 	}
 	.ability-list li {
+		cursor: help;
+	}
+	/* Same label/value pairing as .physical-readout's HEIGHT/WEIGHT (small
+	uppercase muted label over a value), not an inline "(hidden)" suffix —
+	the hidden ability is a distinct fact worth its own visual slot, same
+	reasoning that gave height/weight one. */
+	.hidden-ability-block {
+		margin-top: 8px;
+		padding-top: 8px;
+		border-top: 1px solid var(--background-modifier-border);
+	}
+	.hidden-ability-label {
+		margin: 0 0 2px;
+		font-size: 0.66rem;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--text-muted);
+	}
+	.hidden-ability-name {
+		margin: 0;
+		text-transform: capitalize;
 		cursor: help;
 	}
 	.ability-popover {
@@ -643,31 +836,64 @@
 		margin-top: 10px;
 	}
 
-	.move-tabs {
+	.moves-heading-row {
 		display: flex;
-		gap: 6px;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
 		margin-bottom: 10px;
 	}
-	/* Same chip look as FilterBar's type/generation chips — kept visually
-	consistent rather than inventing a separate segmented-control style. */
-	.move-tab {
-		background: transparent;
+	/* section-heading's own margin-bottom (used everywhere else it's a
+	standalone block) would offset it from center against the version
+	toggle's margin-less box here — zero it out and let the row's own
+	margin-bottom carry the spacing instead. */
+	.moves-heading-row .section-heading {
+		margin-bottom: 0;
+	}
+	/* Segmented-pill control, matching obsidian-calendar-notes'
+	GranularitySection tab bar (Daily/Weekly/.../Yearly) rather than the
+	outlined-chip look FilterBar uses elsewhere in this plugin — moves' two
+	tab rows read as one linked control, closer to a granularity switch than
+	a set of independent filter chips. */
+	.move-tabs {
+		display: flex;
+		gap: 4px;
+		padding: 4px;
+		margin-bottom: 10px;
+		background: var(--background-primary-alt);
 		border: 1px solid var(--background-modifier-border);
-		border-radius: 4px;
+		border-radius: 10px;
+	}
+	/* Compact, content-width variant for the FRLG/RSE game toggle — sits in
+	the section heading's corner rather than stretching like the method
+	tabs below it. */
+	.move-version-tabs {
+		display: inline-flex;
+		margin-bottom: 0;
+	}
+	.move-version-tabs .move-tab {
+		flex: none;
+		padding: 4px 10px;
+	}
+	.move-tab {
+		flex: 1;
+		background: transparent;
+		border: none;
+		border-radius: 7px;
 		height: auto;
-		padding: 2px 8px;
+		padding: 6px 4px;
 		cursor: pointer;
 		font-size: 0.85em;
-		opacity: 0.6;
-		transition: opacity 100ms ease-out, border-color 100ms ease-out;
+		font-weight: 500;
+		color: var(--text-normal);
+		transition: background 100ms ease-out, color 100ms ease-out;
 	}
-	.move-tab:hover {
-		opacity: 0.85;
+	.move-tab:hover:not(.active) {
+		background: var(--background-modifier-hover);
 	}
 	.move-tab.active {
-		opacity: 1;
-		border-color: var(--interactive-accent);
-		box-shadow: 0 0 0 1px var(--interactive-accent);
+		background: var(--background-primary);
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 	}
 	.move-table {
 		width: 100%;
@@ -677,6 +903,12 @@
 		text-align: left;
 		padding: 2px 8px;
 		text-transform: capitalize;
+	}
+	.move-table th.col-right, .move-table td.col-right {
+		text-align: right;
+	}
+	.move-table th.col-center, .move-table td.col-center {
+		text-align: center;
 	}
 	.move-table tbody tr:nth-child(odd) {
 		background: var(--background-primary);
