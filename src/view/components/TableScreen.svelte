@@ -18,6 +18,8 @@
 		onSelect: (id: number) => void;
 	} = $props();
 
+	let hoveredSpriteId = $state<number | null>(null);
+
 	let filters = $state({ ...EMPTY_FILTERS, statRanges: {} });
 	// Only the initial value seeds local state — same reasoning as
 	// defaultSortColumn below, this shouldn't get clobbered by prop identity
@@ -134,9 +136,16 @@
 				{#each visibleRows as row (row.id)}
 					<tr onclick={() => onSelect(row.id)}>
 						<td>{String(row.id).padStart(3, "0")}</td>
-						<td class="center">
+						<td
+							class="center sprite-cell"
+							onmouseenter={() => (hoveredSpriteId = row.id)}
+							onmouseleave={() => (hoveredSpriteId = null)}
+						>
 							{#if row.spriteDataUri}
 								<img src={row.spriteDataUri} alt={row.name} class="sprite-thumb" />
+								{#if hoveredSpriteId === row.id}
+									<img src={row.spriteDataUri} alt="" class="sprite-preview" />
+								{/if}
 							{/if}
 						</td>
 						<td class="name-cell">{row.name}</td>
@@ -294,10 +303,38 @@
 		text-transform: capitalize;
 		font-weight: 600;
 	}
+	.sprite-cell {
+		position: relative;
+	}
 	.sprite-thumb {
 		width: 32px;
 		height: 32px;
 		image-rendering: pixelated;
+	}
+	.sprite-preview {
+		/* 2x the sprite's native 96x96 resolution, not 200% of the 32px thumb.
+		!important: Obsidian's own `body:not(.zoom-off) .view-content img {
+		max-width: 100% }` (its click-to-zoom feature) outranks a plain
+		two-class selector on specificity (0,2,2 vs 0,2,0) and otherwise
+		squashes this against the narrow sprite column — its containing
+		block, since this is absolutely positioned. */
+		width: 192px;
+		height: 192px;
+		max-width: none !important;
+		max-height: none !important;
+		position: absolute;
+		z-index: 50;
+		left: 100%;
+		top: 50%;
+		transform: translateY(-50%);
+		margin-left: 6px;
+		image-rendering: pixelated;
+		background: var(--background-primary);
+		border: 1px solid var(--background-modifier-border);
+		border-radius: var(--radius-m, 8px);
+		box-shadow: var(--shadow-s);
+		padding: 6px;
+		pointer-events: none;
 	}
 	table.compact td, table.compact th {
 		padding: 2px 6px;

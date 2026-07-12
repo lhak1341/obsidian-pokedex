@@ -15,7 +15,7 @@ import bulbasaurSpecies from "./__fixtures__/bulbasaur-species.json";
 import bulbasaur from "./__fixtures__/bulbasaur.json";
 
 const pokemon = bulbasaur as unknown as RawPokemon;
-const species = bulbasaurSpecies as unknown as RawSpecies;
+const species: RawSpecies = bulbasaurSpecies;
 const chain = bulbasaurChain as unknown as RawEvolutionChain;
 
 describe("normalizeStats", () => {

@@ -31,7 +31,6 @@ export interface RawPokemon {
 			version_group: NamedApiResource;
 		}[];
 	}[];
-	cries: { latest: string | null; legacy: string | null };
 }
 
 export interface RawSpecies {
@@ -138,7 +137,6 @@ export interface PokedexEntry extends PokedexTableRow {
 	genderRate: number;
 	moves: MoveEntry[];
 	evolutionChain: EvolutionNode | null;
-	criesUrl: string | null;
 }
 
 export interface PluginSettings {

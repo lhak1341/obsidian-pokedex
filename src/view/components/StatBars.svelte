@@ -1,10 +1,16 @@
 <script lang="ts">
-	import { STAT_COLUMNS } from "../../data/constants";
+	import { STAT_COLORS, STAT_COLUMNS } from "../../data/constants";
 	import type { StatBlock } from "../../data/types";
+	import { totalStat } from "../../utils/stats";
 
 	let { stats }: { stats: StatBlock } = $props();
 
-	const MAX_STAT = 255; // ceiling used by the games for the base-stat bar scale
+	// 255 is the games' true ceiling, but scaling against it makes every
+	// ordinary stat (most sit well under half that) look barely filled.
+	// 200 comfortably covers all but a handful of real outliers (e.g.
+	// Chansey/Blissey's 250/255 HP) — those just cap at a full bar instead
+	// of overflowing it.
+	const MAX_STAT = 200;
 </script>
 
 <div class="stat-bars">
@@ -13,10 +19,18 @@
 			<span class="stat-label">{col.label}</span>
 			<span class="stat-value">{stats[col.key]}</span>
 			<div class="stat-track">
-				<div class="stat-fill" style:width="{(stats[col.key] / MAX_STAT) * 100}%"></div>
+				<div
+					class="stat-fill"
+					style:width="{Math.min((stats[col.key] / MAX_STAT) * 100, 100)}%"
+					style:background={STAT_COLORS[col.key]}
+				></div>
 			</div>
 		</div>
 	{/each}
+	<div class="stat-row stat-total">
+		<span class="stat-label">Total</span>
+		<span class="stat-value">{totalStat(stats)}</span>
+	</div>
 </div>
 
 <style>
@@ -24,7 +38,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: 4px;
-		max-width: 320px;
 	}
 	.stat-row {
 		display: grid;
@@ -39,6 +52,7 @@
 	}
 	.stat-value {
 		text-align: right;
+		font-family: var(--font-monospace);
 	}
 	.stat-track {
 		background: var(--background-modifier-border);
@@ -47,7 +61,15 @@
 		overflow: hidden;
 	}
 	.stat-fill {
-		background: var(--interactive-accent);
 		height: 100%;
+	}
+	.stat-total {
+		margin-top: 4px;
+		padding-top: 6px;
+		border-top: 1px solid var(--background-modifier-border);
+		font-weight: 700;
+	}
+	.stat-total .stat-label {
+		color: var(--text-normal);
 	}
 </style>

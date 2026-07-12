@@ -11,10 +11,20 @@ function extOf(path: string): string {
 	return path.split(".").pop()?.toLowerCase() ?? "png";
 }
 
+// 0x8000 bytes/call comfortably avoids blowing the engine's call-stack limit
+// on String.fromCharCode's spread args (unlike a single call over the whole
+// buffer), while still converting in large chunks instead of one
+// function-call-plus-concat per byte — most noticeable on the official
+// artwork/shiny images (detail view), which run tens of KB versus a sprite's
+// few KB.
+const BASE64_CHUNK_SIZE = 0x8000;
+
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
-	let binary = "";
 	const bytes = new Uint8Array(buffer);
-	for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+	let binary = "";
+	for (let i = 0; i < bytes.length; i += BASE64_CHUNK_SIZE) {
+		binary += String.fromCharCode(...bytes.subarray(i, i + BASE64_CHUNK_SIZE));
+	}
 	return btoa(binary);
 }
 

@@ -38,6 +38,23 @@ describe("DiskCache", () => {
 		expect(dataUri).toMatch(/^data:image\/png;base64,/);
 	});
 
+	it("round-trips an image spanning multiple base64 encode chunks byte-for-byte", async () => {
+		// Larger than BASE64_CHUNK_SIZE (0x8000) so the chunked loop in
+		// arrayBufferToBase64 has to stitch together more than one chunk —
+		// exercises the boundary rather than the single-chunk case every other
+		// test here uses.
+		const bytes = new Uint8Array(0x8000 * 2 + 137);
+		for (let i = 0; i < bytes.length; i++) bytes[i] = i % 256;
+		const cache = makeCache();
+
+		await cache.writeImageBinary("images/1-artwork.png", bytes.buffer);
+		const dataUri = await cache.readImageDataUri("images/1-artwork.png");
+
+		const base64 = dataUri?.split(",")[1] ?? "";
+		const decoded = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+		expect(decoded).toEqual(bytes);
+	});
+
 	it("picks jpeg MIME type for .jpg/.jpeg paths", async () => {
 		const cache = makeCache();
 		await cache.writeImageBinary("images/1-artwork.jpg", new ArrayBuffer(2));

@@ -1,4 +1,4 @@
-import { MOVE_VERSION_GROUPS } from "./constants";
+import { FLAVOR_TEXT_VERSION_GROUPS, MOVE_VERSION_GROUPS } from "./constants";
 import type {
 	EvolutionNode,
 	EvYieldEntry,
@@ -105,7 +105,7 @@ export function normalizeEvolutionChain(link: RawEvolutionChainLink): EvolutionN
 
 export function extractFlavorText(
 	species: RawSpecies,
-	versionGroups: readonly string[] = ["firered-leafgreen", "leafgreen", "firered", "emerald"],
+	versionGroups: readonly string[] = FLAVOR_TEXT_VERSION_GROUPS,
 ): string | null {
 	const english = species.flavor_text_entries.filter((e) => e.language.name === "en");
 	for (const version of versionGroups) {
@@ -113,6 +113,20 @@ export function extractFlavorText(
 		if (match) return match.flavor_text.replace(/[\n\f\r]+/g, " ").trim();
 	}
 	return english[0]?.flavor_text.replace(/[\n\f\r]+/g, " ").trim() ?? null;
+}
+
+// PokeAPI's `flavor_text_entries` carries every language and every game the
+// species has ever appeared in — extractFlavorText only ever reads English
+// entries from FLAVOR_TEXT_VERSION_GROUPS. Trimming it down before a raw
+// species response is cached keeps a table load of ~400 rows from parsing a
+// field that's only read once the detail view opens.
+export function trimFlavorTextEntries(
+	entries: RawSpecies["flavor_text_entries"],
+	versionGroups: readonly string[] = FLAVOR_TEXT_VERSION_GROUPS,
+): RawSpecies["flavor_text_entries"] {
+	return entries.filter(
+		(e) => e.language.name === "en" && versionGroups.includes(e.version.name),
+	);
 }
 
 export function normalizeEvYield(rawStats: RawPokemon["stats"]): EvYieldEntry[] {
@@ -164,6 +178,5 @@ export function toEntry(
 		genderRate: species.gender_rate,
 		moves: normalizeMoves(pokemon.moves),
 		evolutionChain,
-		criesUrl: pokemon.cries.latest ?? pokemon.cries.legacy ?? null,
 	};
 }

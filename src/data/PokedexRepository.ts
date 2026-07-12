@@ -1,6 +1,12 @@
 import { mapWithConcurrency } from "../utils/concurrency";
 import { DiskCache } from "./Cache";
-import { normalizeEvolutionChain, toEntry, toTableRow, trimMovesToVersionGroups } from "./normalize";
+import {
+	normalizeEvolutionChain,
+	toEntry,
+	toTableRow,
+	trimFlavorTextEntries,
+	trimMovesToVersionGroups,
+} from "./normalize";
 import { PokeApiClient } from "./PokeApiClient";
 import type {
 	EvolutionNode,
@@ -11,12 +17,16 @@ import type {
 	RawSpecies,
 } from "./types";
 
-// Applies to both a cold load (real PokeAPI requests) and a warm one (pure
-// disk reads once cached) — 10 is a modest increase over the previous 5 for
-// PokeAPI's sake, but doubles a warm reload's throughput where the only real
-// cost is disk I/O. withRetry's exponential backoff (see retry.ts) already
-// absorbs an occasional 429 at this concurrency.
+// Network path (real PokeAPI requests) — kept low and PokeAPI-friendly.
+// withRetry's exponential backoff (see retry.ts) already absorbs an
+// occasional 429 at this concurrency.
 const FETCH_CONCURRENCY = 10;
+
+// Disk-only path (every id already on disk from a previous session, just not
+// yet in this session's mem cache — e.g. every fresh Obsidian restart) has no
+// external rate limit to respect, only local file I/O, so it can run far more
+// in flight than the network path.
+const DISK_READ_CONCURRENCY = 50;
 
 export interface TableLoadResult {
 	rows: PokedexTableRow[];
@@ -74,13 +84,27 @@ export class PokedexRepository {
 		if (mem) return mem;
 		const cached = await this.cache.readJson<RawSpecies>(`species/${id}.json`);
 		if (cached) {
+			// Self-heals a cache written before trimFlavorTextEntries existed (a
+			// full, untrimmed flavor_text_entries array) the same way
+			// getOrFetchPokemon does for moves.
+			const trimmedFlavorText = trimFlavorTextEntries(cached.flavor_text_entries);
+			if (trimmedFlavorText.length !== cached.flavor_text_entries.length) {
+				const migrated: RawSpecies = { ...cached, flavor_text_entries: trimmedFlavorText };
+				await this.cache.writeJson(`species/${id}.json`, migrated);
+				this.speciesMemCache.set(id, migrated);
+				return migrated;
+			}
 			this.speciesMemCache.set(id, cached);
 			return cached;
 		}
 		const fresh = await this.client.fetchSpecies(id);
-		await this.cache.writeJson(`species/${id}.json`, fresh);
-		this.speciesMemCache.set(id, fresh);
-		return fresh;
+		const trimmed: RawSpecies = {
+			...fresh,
+			flavor_text_entries: trimFlavorTextEntries(fresh.flavor_text_entries),
+		};
+		await this.cache.writeJson(`species/${id}.json`, trimmed);
+		this.speciesMemCache.set(id, trimmed);
+		return trimmed;
 	}
 
 	private async getOrFetchEvolutionChain(url: string): Promise<RawEvolutionChain> {
@@ -114,6 +138,33 @@ export class PokedexRepository {
 		return dataUri;
 	}
 
+	// Splits `ids` into ones already sitting in mem/disk cache vs ones that
+	// still need a network round-trip, using a cheap existence check (no JSON
+	// parse) rather than actually reading either file. Lets the caller run the
+	// cache-hit half at DISK_READ_CONCURRENCY and the miss half at the slower,
+	// PokeAPI-friendly FETCH_CONCURRENCY instead of gating every id — cache hit
+	// or not — behind the same throttle.
+	private async partitionByCacheHit(
+		ids: number[],
+	): Promise<{ cached: number[]; uncached: number[] }> {
+		const cached: number[] = [];
+		const uncached: number[] = [];
+
+		await mapWithConcurrency(ids, DISK_READ_CONCURRENCY, async (id) => {
+			const hasPokemon =
+				this.pokemonMemCache.has(id) || (await this.cache.exists(`pokemon/${id}.json`));
+			const hasSpecies =
+				this.speciesMemCache.has(id) || (await this.cache.exists(`species/${id}.json`));
+			return hasPokemon && hasSpecies;
+		}, (result) => {
+			const id = ids[result.index];
+			if ("value" in result && result.value) cached.push(id);
+			else uncached.push(id);
+		});
+
+		return { cached, uncached };
+	}
+
 	// Fetches/caches table rows (pokemon + species, for catch rate/hatch
 	// counter columns) for an explicit list of ids. Bounded concurrency; per
 	// Q12, a single id failing doesn't abort the rest — it's reported in
@@ -125,37 +176,48 @@ export class PokedexRepository {
 	// `isCancelled` lets a caller whose view has since closed/remounted stop
 	// this from continuing to fetch ids nobody's waiting on anymore — see
 	// PokedexLoadState, which is the thing that actually goes stale.
+	//
+	// `onRow` fires as each row settles (not batched at the end) so a caller
+	// like PokedexApp can render rows as they arrive instead of blocking on
+	// the full batch.
 	private async getRowsForIds(
 		ids: number[],
 		onProgress?: (loaded: number, total: number) => void,
 		isCancelled?: () => boolean,
+		onRow?: (row: PokedexTableRow) => void,
 	): Promise<TableLoadResult> {
 		const rows: PokedexTableRow[] = [];
 		const failedIds: number[] = [];
 		let loaded = 0;
+		const total = ids.length;
 
-		await mapWithConcurrency(
-			ids,
-			FETCH_CONCURRENCY,
-			async (id) => {
-				const [pokemon, species] = await Promise.all([
-					this.getOrFetchPokemon(id),
-					this.getOrFetchSpecies(id),
-				]);
-				const sprite = await this.getOrFetchImage(
-					pokemon.sprites.front_default,
-					`images/${id}-sprite.png`,
-				);
-				return toTableRow(pokemon, species, sprite);
-			},
-			(result) => {
+		const fetchRow = async (id: number): Promise<PokedexTableRow> => {
+			const [pokemon, species] = await Promise.all([
+				this.getOrFetchPokemon(id),
+				this.getOrFetchSpecies(id),
+			]);
+			const sprite = await this.getOrFetchImage(
+				pokemon.sprites.front_default,
+				`images/${id}-sprite.png`,
+			);
+			return toTableRow(pokemon, species, sprite);
+		};
+
+		const handleResult = (source: number[]) =>
+			(result: { index: number; value: PokedexTableRow } | { index: number; error: unknown }) => {
 				loaded++;
-				onProgress?.(loaded, ids.length);
-				if ("value" in result) rows.push(result.value);
-				else failedIds.push(ids[result.index]);
-			},
-			isCancelled,
-		);
+				onProgress?.(loaded, total);
+				if ("value" in result) {
+					rows.push(result.value);
+					onRow?.(result.value);
+				} else {
+					failedIds.push(source[result.index]);
+				}
+			};
+
+		const { cached, uncached } = await this.partitionByCacheHit(ids);
+		await mapWithConcurrency(cached, DISK_READ_CONCURRENCY, fetchRow, handleResult(cached), isCancelled);
+		await mapWithConcurrency(uncached, FETCH_CONCURRENCY, fetchRow, handleResult(uncached), isCancelled);
 
 		rows.sort((a, b) => a.id - b.id);
 		return { rows, failedIds, servedFromCache: failedIds.length === 0 };
@@ -165,12 +227,13 @@ export class PokedexRepository {
 		range: { start: number; end: number },
 		onProgress?: (loaded: number, total: number) => void,
 		isCancelled?: () => boolean,
+		onRow?: (row: PokedexTableRow) => void,
 	): Promise<TableLoadResult> {
 		const ids = Array.from(
 			{ length: range.end - range.start + 1 },
 			(_, i) => range.start + i,
 		);
-		return this.getRowsForIds(ids, onProgress, isCancelled);
+		return this.getRowsForIds(ids, onProgress, isCancelled, onRow);
 	}
 
 	async retryRows(
@@ -181,7 +244,23 @@ export class PokedexRepository {
 		return this.getRowsForIds(ids, onProgress, isCancelled);
 	}
 
-	async getEntry(id: number): Promise<PokedexEntry> {
+	// Everything the detail view needs that's already sitting in mem cache by
+	// the time a row is clickable — pokemon + species were fetched for every
+	// visible row during the table load, and the sprite is the same file the
+	// table already showed. Resolves near-instantly; see getEntryExtras for
+	// the actually-slow, never-cached-until-now parts (evolution chain,
+	// official artwork, shiny) that the detail view was previously blocking on
+	// before showing anything at all.
+	async getEntryCore(id: number): Promise<PokedexEntry> {
+		const pokemon = await this.getOrFetchPokemon(id);
+		const species = await this.getOrFetchSpecies(id);
+		const sprite = await this.getOrFetchImage(pokemon.sprites.front_default, `images/${id}-sprite.png`);
+		return toEntry(pokemon, species, null, { sprite, artwork: null, shiny: null });
+	}
+
+	async getEntryExtras(
+		id: number,
+	): Promise<Pick<PokedexEntry, "artworkDataUri" | "shinyDataUri" | "evolutionChain">> {
 		const pokemon = await this.getOrFetchPokemon(id);
 		const species = await this.getOrFetchSpecies(id);
 
@@ -193,15 +272,22 @@ export class PokedexRepository {
 			evolutionChain = null; // non-fatal: detail view still renders without it
 		}
 
-		const [sprite, artwork, shiny] = await Promise.all([
-			this.getOrFetchImage(pokemon.sprites.front_default, `images/${id}-sprite.png`),
+		// Each image fetch is caught independently — a dropped connection on
+		// just the shiny sprite, say, shouldn't take the artwork (or the rest
+		// of the already-rendered core view) down with it.
+		const [artworkDataUri, shinyDataUri] = await Promise.all([
 			this.getOrFetchImage(
 				pokemon.sprites.other?.["official-artwork"]?.front_default ?? null,
 				`images/${id}-artwork.png`,
-			),
-			this.getOrFetchImage(pokemon.sprites.front_shiny, `images/${id}-shiny.png`),
+			).catch(() => null),
+			this.getOrFetchImage(pokemon.sprites.front_shiny, `images/${id}-shiny.png`).catch(() => null),
 		]);
 
-		return toEntry(pokemon, species, evolutionChain, { sprite, artwork, shiny });
+		return { artworkDataUri, shinyDataUri, evolutionChain };
+	}
+
+	async getEntry(id: number): Promise<PokedexEntry> {
+		const [core, extras] = await Promise.all([this.getEntryCore(id), this.getEntryExtras(id)]);
+		return { ...core, ...extras };
 	}
 }

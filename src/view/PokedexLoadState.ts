@@ -40,7 +40,15 @@ export class PokedexLoadState {
 	// mutating `this.progress` here is invisible to a Svelte view watching
 	// this instance. The callback lets the caller mirror progress into its
 	// own `$state` variable instead.
-	async load(onProgress?: (loaded: number, total: number) => void): Promise<void> {
+	//
+	// `onRow` fires per row as it settles, filtered through `includes` first
+	// since `fetchRange` is a contiguous span that can include ids from a
+	// disabled generation (see resolveGenerationScope) — those get fetched
+	// but must never reach the caller, even transiently.
+	async load(
+		onProgress?: (loaded: number, total: number) => void,
+		onRow?: (row: PokedexTableRow) => void,
+	): Promise<void> {
 		const result = await this.repository.getTableRows(
 			this.fetchRange,
 			(loaded, total) => {
@@ -48,6 +56,9 @@ export class PokedexLoadState {
 				onProgress?.(loaded, total);
 			},
 			() => this.cancelled,
+			(row) => {
+				if (this.includes(row.id)) onRow?.(row);
+			},
 		);
 		if (this.cancelled) return;
 		this.rows = result.rows.filter((row) => this.includes(row.id));

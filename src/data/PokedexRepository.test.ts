@@ -73,6 +73,60 @@ describe("PokedexRepository", () => {
 		expect(client.fetchPokemon).toHaveBeenCalledWith(2);
 	});
 
+	it("serves a fresh repository instance (e.g. plugin reload) from disk without refetching", async () => {
+		const { client, cache } = makeRepository();
+		const repoA = new PokedexRepository(client, cache);
+		await repoA.getTableRows({ start: 1, end: 3 });
+
+		// New instance = empty mem cache, same disk — exercises the disk-hit
+		// partition path rather than the mem-cache short-circuit.
+		const repoB = new PokedexRepository(client, cache);
+		const result = await repoB.getTableRows({ start: 1, end: 3 });
+
+		expect(client.fetchPokemon).toHaveBeenCalledTimes(3);
+		expect(result.rows.map((r) => r.id)).toEqual([1, 2, 3]);
+	});
+
+	it("splits a table load between cached and uncached ids, fetching only the uncached ones", async () => {
+		const { client, cache } = makeRepository();
+		const repoA = new PokedexRepository(client, cache);
+		await repoA.getTableRows({ start: 1, end: 2 });
+		client.fetchPokemon.mockClear();
+		client.fetchSpecies.mockClear();
+
+		const repoB = new PokedexRepository(client, cache);
+		const result = await repoB.getTableRows({ start: 1, end: 3 });
+
+		expect(client.fetchPokemon).toHaveBeenCalledTimes(1);
+		expect(client.fetchPokemon).toHaveBeenCalledWith(3);
+		expect(result.rows.map((r) => r.id).sort((a, b) => a - b)).toEqual([1, 2, 3]);
+	});
+
+	it("getTableRows' onRow callback fires once per successful row as it settles", async () => {
+		const { repository } = makeRepository();
+		const seen: number[] = [];
+
+		const result = await repository.getTableRows(
+			{ start: 1, end: 3 },
+			undefined,
+			undefined,
+			(row) => seen.push(row.id),
+		);
+
+		expect(seen.sort((a, b) => a - b)).toEqual([1, 2, 3]);
+		expect(seen.length).toBe(result.rows.length);
+	});
+
+	it("getTableRows' onRow callback is skipped for a failed id", async () => {
+		const { client, repository } = makeRepository();
+		client.failIds.add(2);
+		const seen: number[] = [];
+
+		await repository.getTableRows({ start: 1, end: 3 }, undefined, undefined, (row) => seen.push(row.id));
+
+		expect(seen.sort((a, b) => a - b)).toEqual([1, 3]);
+	});
+
 	it("getEntry swallows a failed evolution-chain fetch instead of rejecting", async () => {
 		const { client, repository } = makeRepository();
 		client.failEvolutionChain = true;
@@ -81,5 +135,48 @@ describe("PokedexRepository", () => {
 
 		expect(entry.evolutionChain).toBeNull();
 		expect(entry.name).toBe("bulbasaur");
+	});
+
+	it("getEntry swallows a failed artwork/shiny image fetch instead of rejecting the whole entry", async () => {
+		const { client, repository } = makeRepository();
+		// Sprite is already cached by the table load that got the user to this
+		// row — only the never-fetched-until-now artwork/shiny should fail here.
+		await repository.getTableRows({ start: 1, end: 1 });
+		client.failImage = true;
+
+		const entry = await repository.getEntry(1);
+
+		expect(entry.artworkDataUri).toBeNull();
+		expect(entry.shinyDataUri).toBeNull();
+		expect(entry.spriteDataUri).not.toBeNull();
+		expect(entry.name).toBe("bulbasaur");
+	});
+
+	it("getEntryCore resolves the fast fields without touching evolution chain or artwork/shiny", async () => {
+		const { client, repository } = makeRepository();
+		// Table load already cached pokemon/species/sprite for this id — the
+		// same state the detail view finds them in when a row is clicked.
+		await repository.getTableRows({ start: 1, end: 1 });
+		client.fetchEvolutionChain.mockClear();
+		client.fetchImageBinary.mockClear();
+
+		const core = await repository.getEntryCore(1);
+
+		expect(core.name).toBe("bulbasaur");
+		expect(core.spriteDataUri).not.toBeNull();
+		expect(core.evolutionChain).toBeNull();
+		expect(core.artworkDataUri).toBeNull();
+		expect(core.shinyDataUri).toBeNull();
+		expect(client.fetchEvolutionChain).not.toHaveBeenCalled();
+	});
+
+	it("getEntryExtras resolves evolution chain, artwork, and shiny", async () => {
+		const { repository } = makeRepository();
+
+		const extras = await repository.getEntryExtras(1);
+
+		expect(extras.evolutionChain?.name).toBe("bulbasaur");
+		expect(extras.artworkDataUri).not.toBeNull();
+		expect(extras.shinyDataUri).not.toBeNull();
 	});
 });

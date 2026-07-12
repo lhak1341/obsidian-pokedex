@@ -41,6 +41,15 @@ describe("PokedexLoadState", () => {
 		expect(loadState.failedIds).toEqual([2]);
 	});
 
+	it("load()'s onRow callback only fires for ids includes() allows", async () => {
+		const { loadState } = makeLoadState({ start: 1, end: 3 }, (id) => id !== 2);
+		const seen: number[] = [];
+
+		await loadState.load(undefined, (row) => seen.push(row.id));
+
+		expect(seen.sort((a, b) => a - b)).toEqual([1, 3]);
+	});
+
 	it("retry() merges recovered rows into the existing set and clears them from failedIds", async () => {
 		const { client, loadState } = makeLoadState({ start: 1, end: 3 });
 		client.failIds.add(2);

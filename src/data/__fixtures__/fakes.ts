@@ -81,6 +81,7 @@ export function createFakeDataAdapter(): DataAdapter {
 export class FakePokeApiClient extends PokeApiClient {
 	failIds = new Set<number>();
 	failEvolutionChain = false;
+	failImage = false;
 
 	fetchPokemon = vi.fn(async (idOrName: number | string): Promise<RawPokemon> => {
 		const id = Number(idOrName);
@@ -99,7 +100,10 @@ export class FakePokeApiClient extends PokeApiClient {
 		return bulbasaurChain;
 	});
 
-	fetchImageBinary = vi.fn(async (): Promise<ArrayBuffer> => new ArrayBuffer(4));
+	fetchImageBinary = vi.fn(async (): Promise<ArrayBuffer> => {
+		if (this.failImage) throw new Error("fake failure fetching image");
+		return new ArrayBuffer(4);
+	});
 
 	fetchPokemonList = vi.fn(async (): Promise<RawPokemonListResponse> => {
 		throw new Error("FakePokeApiClient.fetchPokemonList not implemented — unused by PokedexRepository");

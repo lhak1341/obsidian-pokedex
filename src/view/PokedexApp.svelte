@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Notice } from "obsidian";
-	import { onDestroy, onMount } from "svelte";
+	import { onDestroy, onMount, tick } from "svelte";
 	import type { PokedexRepository } from "../data/PokedexRepository";
 	import type { PluginSettings, PokedexTableRow } from "../data/types";
 	import { resolveGenerationScope } from "../utils/generationScope";
@@ -41,18 +41,30 @@
 	onMount(() => {
 		const { fetchRange, includes } = resolveGenerationScope(settings.enabledGenerations);
 		loadState = new PokedexLoadState(repository, fetchRange, includes);
-		loadState.load((loaded, total) => (progress = { loaded, total })).then(() => {
-			if (loadState.cancelled) return;
-			rows = loadState.rows;
-			failedIds = loadState.failedIds;
-			loading = false;
-			if (failedIds.length > 0) {
-				new Notice(
-					`Pokedex: showing ${rows.length} of ${rows.length + failedIds.length} ` +
-					"Pokemon; some entries couldn't be fetched (offline or PokeAPI unreachable).",
-				);
-			}
-		});
+		loadState
+			.load(
+				(loaded, total) => (progress = { loaded, total }),
+				// Render the table as soon as the first row lands instead of
+				// blocking on the whole batch — the rest streams in behind a slim
+				// progress indicator (see the template) rather than a full-screen
+				// loader.
+				(row) => {
+					rows = [...rows, row];
+					loading = false;
+				},
+			)
+			.then(() => {
+				if (loadState.cancelled) return;
+				rows = loadState.rows;
+				failedIds = loadState.failedIds;
+				loading = false;
+				if (failedIds.length > 0) {
+					new Notice(
+						`Pokedex: showing ${rows.length} of ${rows.length + failedIds.length} ` +
+						"Pokemon; some entries couldn't be fetched (offline or PokeAPI unreachable).",
+					);
+				}
+			});
 	});
 
 	function retryFailed() {
@@ -71,17 +83,39 @@
 		});
 	}
 
+	// This root div is the actual scroll container (Obsidian's own contentEl
+	// wrapping it fits exactly to the leaf and never overflows — verified via
+	// dev tools: contentEl's scrollHeight === clientHeight, while this element's
+	// doesn't). Table and detail share it, so entering/leaving detail has to
+	// manage scroll position explicitly rather than letting whatever position
+	// the table was left at carry straight over.
+	let rootEl: HTMLDivElement | undefined;
+	// Saved the moment the user leaves the table (not on every openDetail
+	// call — an evolution-chain click inside the detail view also calls
+	// openDetail, and that must not clobber this with the detail view's own
+	// scroll position).
+	let tableScrollTop = 0;
+
 	function openDetail(id: number) {
+		if (screen === "table") tableScrollTop = rootEl?.scrollTop ?? 0;
 		selectedId = id;
 		screen = "detail";
+		rootEl?.scrollTo(0, 0);
 	}
 
-	function backToTable() {
+	async function backToTable() {
 		screen = "table";
+		// TableScreen stays mounted (see template — it's hidden via CSS while
+		// viewing detail, not destroyed, so its filters/sort/column state
+		// survive) but restoring a non-zero scroll position still needs the
+		// DOM to have un-hidden it first, or the browser clamps the scrollTop
+		// write to whatever the still-collapsed height allows.
+		await tick();
+		rootEl?.scrollTo(0, tableScrollTop);
 	}
 </script>
 
-<div class="pokedex-view">
+<div class="pokedex-view" bind:this={rootEl}>
 	{#if loading}
 		<div class="loading-panel">
 			<p>Loading Pokedex&hellip; {progress.loaded}/{progress.total || "?"}</p>
@@ -92,33 +126,45 @@
 				></div>
 			</div>
 		</div>
-	{:else if screen === "table"}
-		{#if failedIds.length > 0}
-			<div class="fetch-failure-banner">
-				<span>{failedIds.length} Pokemon couldn't be fetched.</span>
-				<button onclick={retryFailed} disabled={retrying}>
-					{retrying ? "Retrying..." : `Retry ${failedIds.length}`}
-				</button>
-			</div>
+	{:else}
+		<!-- TableScreen stays mounted under both screens (display:none rather
+		than an {#if}/{:else if} swap) so its local filter/sort/column-visibility
+		state survives a round trip through the detail view instead of resetting
+		every time. -->
+		<div class:hidden-screen={screen !== "table"}>
+			{#if progress.loaded < progress.total}
+				<div class="loading-more-banner">
+					Loading more Pokemon&hellip; {progress.loaded}/{progress.total}
+				</div>
+			{/if}
+			{#if failedIds.length > 0}
+				<div class="fetch-failure-banner">
+					<span>{failedIds.length} Pokemon couldn't be fetched.</span>
+					<button onclick={retryFailed} disabled={retrying}>
+						{retrying ? "Retrying..." : `Retry ${failedIds.length}`}
+					</button>
+				</div>
+			{/if}
+			<TableScreen
+				{rows}
+				density={settings.gridDensity}
+				defaultSortColumn={settings.defaultSortColumn}
+				initialVisibleColumns={settings.visibleColumns}
+				useTypeIcons={settings.useTypeIcons}
+				{onColumnsChange}
+				onSelect={openDetail}
+			/>
+		</div>
+		{#if screen === "detail" && selectedId !== null}
+			<DetailScreen
+				{repository}
+				id={selectedId}
+				spriteStyle={settings.spriteStyle}
+				useTypeIcons={settings.useTypeIcons}
+				onBack={backToTable}
+				onSelect={openDetail}
+			/>
 		{/if}
-		<TableScreen
-			{rows}
-			density={settings.gridDensity}
-			defaultSortColumn={settings.defaultSortColumn}
-			initialVisibleColumns={settings.visibleColumns}
-			useTypeIcons={settings.useTypeIcons}
-			{onColumnsChange}
-			onSelect={openDetail}
-		/>
-	{:else if screen === "detail" && selectedId !== null}
-		<DetailScreen
-			{repository}
-			id={selectedId}
-			spriteStyle={settings.spriteStyle}
-			useTypeIcons={settings.useTypeIcons}
-			onBack={backToTable}
-			onSelect={openDetail}
-		/>
 	{/if}
 </div>
 
@@ -139,6 +185,15 @@
 		height: 100%;
 		background: var(--interactive-accent);
 		transition: width 120ms ease-out;
+	}
+	.hidden-screen {
+		display: none;
+	}
+	.loading-more-banner {
+		padding: 4px 10px;
+		margin-bottom: var(--size-4-3);
+		color: var(--text-muted);
+		font-size: 0.85em;
 	}
 	.fetch-failure-banner {
 		display: flex;

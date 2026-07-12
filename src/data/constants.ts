@@ -5,6 +5,11 @@ export const POKEAPI_BASE = "https://pokeapi.co/api/v2";
 // dumping every game the species has ever appeared in.
 export const MOVE_VERSION_GROUPS = ["firered-leafgreen", "emerald"] as const;
 
+// Flavor text (Pokedex description) is filtered to these version groups so
+// the detail view's description matches Gen 3, same reasoning as
+// MOVE_VERSION_GROUPS above.
+export const FLAVOR_TEXT_VERSION_GROUPS = ["firered-leafgreen", "leafgreen", "firered", "emerald"] as const;
+
 export const TYPE_NAMES = [
 	"normal", "fire", "water", "electric", "grass", "ice",
 	"fighting", "poison", "ground", "flying", "psychic", "bug",
@@ -42,6 +47,12 @@ export const STAT_COLUMNS = [
 // Browse-table columns shown by default before the user customizes them via
 // the Columns dropdown.
 export const DEFAULT_VISIBLE_COLUMNS: string[] = STAT_COLUMNS.map((c) => c.key);
+
+// Per-stat bar colors, matching Bulbapedia's own stat-bar convention.
+export const STAT_COLORS: Record<string, string> = {
+	hp: "#69DC12", attack: "#EFCC18", defense: "#E86412",
+	specialAttack: "#14C3F1", specialDefense: "#4A6ADF", speed: "#D51DAD",
+};
 
 export const TYPE_COLORS: Record<string, string> = {
 	normal: "#A8A878", fire: "#F08030", water: "#6890F0", electric: "#F8D030",
