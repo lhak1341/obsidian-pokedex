@@ -49,10 +49,12 @@ export class PokedexRepository {
 	private speciesMemCache = new Map<number, RawSpecies>();
 	private evolutionChainMemCache = new Map<string, RawEvolutionChain>();
 	private imageMemCache = new Map<string, string>();
-	// Value is string | null (a real "no English description" result), so a
-	// plain Map.has/get check (not `!== undefined`) is needed to tell "not
-	// fetched yet" apart from "fetched, nothing found".
-	private abilityDescriptionMemCache = new Map<string, string | null>();
+	// Wrapped in the same { description } shape the disk cache stores (see
+	// getAbilityDescription) so getOrFetch's mem/disk/return type lines up as
+	// one T throughout — a bare `string | null` would make a cached null
+	// indistinguishable from "not fetched yet" via Map.get, which is exactly
+	// why getOrFetch's own presence check uses .has() instead.
+	private abilityDescriptionMemCache = new Map<string, { description: string | null }>();
 	private moveDetailMemCache = new Map<string, MoveDetail>();
 
 	constructor(
@@ -60,38 +62,75 @@ export class PokedexRepository {
 		private cache: DiskCache,
 	) {}
 
-	private async getOrFetchPokemon(id: number): Promise<RawPokemon> {
-		const mem = this.pokemonMemCache.get(id);
-		if (mem) return mem;
-		const cached = await this.cache.readJson<RawPokemon>(`pokemon/${id}.json`);
+	// Shared shape behind every getOrFetch* method below: check the
+	// session-lifetime mem cache, fall back to disk (running `migrate` on
+	// what's found there — e.g. self-healing an older untrimmed shape —
+	// which persists back to disk only when it actually produced a
+	// different value than what was read), and only then hit the network,
+	// writing the fresh result through to both disk and mem cache.
+	//
+	// `.has()`/`.get()!` (not a truthy check on the mem value) because a
+	// cached value isn't always truthy — getAbilityDescription's `{
+	// description: null }` is a real, valid cached result, not "not fetched
+	// yet".
+	//
+	// getOrFetchImage isn't built on this shell — it caches a binary asset,
+	// not a JSON value, and has its own null-url short-circuit and
+	// re-read-after-write step, different enough that forcing it into this
+	// shape would cost more clarity than it'd save.
+	private async getOrFetch<K, T>(
+		memCache: Map<K, T>,
+		key: K,
+		cachePath: string,
+		fetch: () => Promise<T>,
+		migrate?: (cached: T) => T,
+	): Promise<T> {
+		if (memCache.has(key)) return memCache.get(key)!;
+		const cached = await this.cache.readJson<T>(cachePath);
 		if (cached) {
+			const value = migrate ? migrate(cached) : cached;
+			if (value !== cached) await this.cache.writeJson(cachePath, value);
+			memCache.set(key, value);
+			return value;
+		}
+		const fresh = await fetch();
+		await this.cache.writeJson(cachePath, fresh);
+		memCache.set(key, fresh);
+		return fresh;
+	}
+
+	private async getOrFetchPokemon(id: number): Promise<RawPokemon> {
+		return this.getOrFetch(
+			this.pokemonMemCache,
+			id,
+			`pokemon/${id}.json`,
+			async () => {
+				const fresh = await this.client.fetchPokemon(id);
+				// See trimMovesToVersionGroups: strips the ~20 version groups this
+				// plugin never reads before it's written to disk / kept in memory.
+				return { ...fresh, moves: trimMovesToVersionGroups(fresh.moves) };
+			},
 			// Self-heals a cache written before trimMovesToVersionGroups existed
 			// (a full, untrimmed moves array) by rewriting it trimmed the first
 			// time it's read, rather than requiring a manual cache clear.
-			const trimmedMoves = trimMovesToVersionGroups(cached.moves);
-			if (trimmedMoves.length !== cached.moves.length) {
-				const migrated: RawPokemon = { ...cached, moves: trimmedMoves };
-				await this.cache.writeJson(`pokemon/${id}.json`, migrated);
-				this.pokemonMemCache.set(id, migrated);
-				return migrated;
-			}
-			this.pokemonMemCache.set(id, cached);
-			return cached;
-		}
-		const fresh = await this.client.fetchPokemon(id);
-		// See trimMovesToVersionGroups: strips the ~20 version groups this
-		// plugin never reads before it's written to disk / kept in memory.
-		const trimmed: RawPokemon = { ...fresh, moves: trimMovesToVersionGroups(fresh.moves) };
-		await this.cache.writeJson(`pokemon/${id}.json`, trimmed);
-		this.pokemonMemCache.set(id, trimmed);
-		return trimmed;
+			(cached) => {
+				const trimmedMoves = trimMovesToVersionGroups(cached.moves);
+				return trimmedMoves.length !== cached.moves.length
+					? { ...cached, moves: trimmedMoves }
+					: cached;
+			},
+		);
 	}
 
 	private async getOrFetchSpecies(id: number): Promise<RawSpecies> {
-		const mem = this.speciesMemCache.get(id);
-		if (mem) return mem;
-		const cached = await this.cache.readJson<RawSpecies>(`species/${id}.json`);
-		if (cached) {
+		return this.getOrFetch(
+			this.speciesMemCache,
+			id,
+			`species/${id}.json`,
+			async () => {
+				const fresh = await this.client.fetchSpecies(id);
+				return { ...fresh, flavor_text_entries: trimFlavorTextEntries(fresh.flavor_text_entries) };
+			},
 			// Self-heals a cache written before trimFlavorTextEntries existed (a
 			// full, untrimmed flavor_text_entries array) the same way
 			// getOrFetchPokemon does for moves. Only ever shrinks, so a cache
@@ -101,39 +140,23 @@ export class PokedexRepository {
 			// button, the same manual step any other trimmed-field widening
 			// would need, rather than a forced refetch here that would turn
 			// every already-cached species into a slow reload.
-			const trimmedFlavorText = trimFlavorTextEntries(cached.flavor_text_entries);
-			if (trimmedFlavorText.length !== cached.flavor_text_entries.length) {
-				const migrated: RawSpecies = { ...cached, flavor_text_entries: trimmedFlavorText };
-				await this.cache.writeJson(`species/${id}.json`, migrated);
-				this.speciesMemCache.set(id, migrated);
-				return migrated;
-			}
-			this.speciesMemCache.set(id, cached);
-			return cached;
-		}
-		const fresh = await this.client.fetchSpecies(id);
-		const trimmed: RawSpecies = {
-			...fresh,
-			flavor_text_entries: trimFlavorTextEntries(fresh.flavor_text_entries),
-		};
-		await this.cache.writeJson(`species/${id}.json`, trimmed);
-		this.speciesMemCache.set(id, trimmed);
-		return trimmed;
+			(cached) => {
+				const trimmedFlavorText = trimFlavorTextEntries(cached.flavor_text_entries);
+				return trimmedFlavorText.length !== cached.flavor_text_entries.length
+					? { ...cached, flavor_text_entries: trimmedFlavorText }
+					: cached;
+			},
+		);
 	}
 
 	private async getOrFetchEvolutionChain(url: string): Promise<RawEvolutionChain> {
 		const chainId = url.match(/\/(\d+)\/?$/)?.[1] ?? "unknown";
-		const mem = this.evolutionChainMemCache.get(chainId);
-		if (mem) return mem;
-		const cached = await this.cache.readJson<RawEvolutionChain>(`evolution-chain/${chainId}.json`);
-		if (cached) {
-			this.evolutionChainMemCache.set(chainId, cached);
-			return cached;
-		}
-		const fresh = await this.client.fetchEvolutionChain(url);
-		await this.cache.writeJson(`evolution-chain/${chainId}.json`, fresh);
-		this.evolutionChainMemCache.set(chainId, fresh);
-		return fresh;
+		return this.getOrFetch(
+			this.evolutionChainMemCache,
+			chainId,
+			`evolution-chain/${chainId}.json`,
+			() => this.client.fetchEvolutionChain(url),
+		);
 	}
 
 	private async getOrFetchImage(url: string | null, relPath: string): Promise<string | null> {
@@ -158,20 +181,18 @@ export class PokedexRepository {
 	// lazily on hover from the detail view, not prefetched with the rest of
 	// an entry's extras.
 	async getAbilityDescription(name: string): Promise<string | null> {
-		if (this.abilityDescriptionMemCache.has(name)) {
-			return this.abilityDescriptionMemCache.get(name) ?? null;
-		}
-		const cached = await this.cache.readJson<{ description: string | null }>(`abilities/${name}.json`);
-		if (cached) {
-			this.abilityDescriptionMemCache.set(name, cached.description);
-			return cached.description;
-		}
-		const fresh = await this.client.fetchAbility(name);
-		const description =
-			fresh.effect_entries.find((e) => e.language.name === "en")?.short_effect ?? null;
-		await this.cache.writeJson(`abilities/${name}.json`, { description });
-		this.abilityDescriptionMemCache.set(name, description);
-		return description;
+		const result = await this.getOrFetch(
+			this.abilityDescriptionMemCache,
+			name,
+			`abilities/${name}.json`,
+			async () => {
+				const fresh = await this.client.fetchAbility(name);
+				const description =
+					fresh.effect_entries.find((e) => e.language.name === "en")?.short_effect ?? null;
+				return { description };
+			},
+		);
+		return result.description;
 	}
 
 	// Moves repeat even more heavily than abilities across species (e.g.
@@ -182,18 +203,12 @@ export class PokedexRepository {
 	// getMoveDetailsForMoves' per-item error handling (via mapWithConcurrency)
 	// can tell "failed" apart from "successfully has no power" (status moves).
 	async getMoveDetails(name: string): Promise<MoveDetail> {
-		const mem = this.moveDetailMemCache.get(name);
-		if (mem) return mem;
-		const cached = await this.cache.readJson<MoveDetail>(`moves/${name}.json`);
-		if (cached) {
-			this.moveDetailMemCache.set(name, cached);
-			return cached;
-		}
-		const fresh = await this.client.fetchMove(name);
-		const detail = normalizeMoveDetail(fresh);
-		await this.cache.writeJson(`moves/${name}.json`, detail);
-		this.moveDetailMemCache.set(name, detail);
-		return detail;
+		return this.getOrFetch(
+			this.moveDetailMemCache,
+			name,
+			`moves/${name}.json`,
+			async () => normalizeMoveDetail(await this.client.fetchMove(name)),
+		);
 	}
 
 	// Fetches details for a whole movepool at FETCH_CONCURRENCY, reporting

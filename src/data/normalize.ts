@@ -123,6 +123,31 @@ export function collectChainIds(node: EvolutionNode, ids: number[] = []): number
 	return ids;
 }
 
+function findEvolutionNode(node: EvolutionNode, id: number): EvolutionNode | null {
+	if (node.id === id) return node;
+	for (const child of node.children) {
+		const found = findEvolutionNode(child, id);
+		if (found) return found;
+	}
+	return null;
+}
+
+// Level(s) at which `id` next evolves, read off the matching node's own
+// children within the whole-family `root` tree — each child's minLevel
+// describes how IT was reached from its parent (see normalizeEvolutionChain),
+// not how `id` itself was reached. Empty for a final-stage member, or one
+// that only evolves via item/trade (no level threshold to show). Deduped and
+// sorted ascending since a branching evolution (e.g. Tyrogue) can have
+// several children sharing the same level.
+export function nextEvolutionLevels(root: EvolutionNode, id: number): number[] {
+	const node = findEvolutionNode(root, id);
+	if (!node) return [];
+	const levels = node.children
+		.map((child) => child.minLevel)
+		.filter((level): level is number => level != null);
+	return [...new Set(levels)].sort((a, b) => a - b);
+}
+
 // One entry per FLAVOR_TEXT_TABS tab that has a matching version in this
 // species' data (missing for a tab only if the species genuinely never
 // appeared in that game, which doesn't happen within this plugin's Gen 1-3

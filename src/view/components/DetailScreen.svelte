@@ -1,14 +1,18 @@
 <script lang="ts">
 	import { Notice } from "obsidian";
 	import { onDestroy } from "svelte";
-	import { FLAVOR_TEXT_TABS, TYPE_COLORS } from "../../data/constants";
+	import { TYPE_COLORS } from "../../data/constants";
+	import { nextEvolutionLevels } from "../../data/normalize";
 	import type { PokedexRepository } from "../../data/PokedexRepository";
 	import type { MoveDetail, PokedexEntry, PokedexTableRow, PluginSettings } from "../../data/types";
+	import AbilitiesPanel from "./AbilitiesPanel.svelte";
 	import BarRow from "./BarRow.svelte";
 	import { DetailLoadState } from "../DetailLoadState";
-	import { relativeRect } from "../domPosition";
+	import { mirrorInto } from "../../utils/mirrorState";
 	import EvolutionTree from "./EvolutionTree.svelte";
+	import FlavorTextPanel from "./FlavorTextPanel.svelte";
 	import Icon from "./Icon.svelte";
+	import MoveBrowser from "./MoveBrowser.svelte";
 	import QuickSearch from "./QuickSearch.svelte";
 	import StatBars from "./StatBars.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
@@ -34,9 +38,9 @@
 	// DetailLoadState is a plain, non-reactive class (tested with plain
 	// vitest, see DetailLoadState.test.ts) — Svelte 5's $state only
 	// deep-proxies plain objects/arrays, not class instances, so mutations
-	// to its fields wouldn't be visible to the template. These $state
-	// primitives are the reactive boundary instead, mirrored from its
-	// onUpdate/onMoveDetail callbacks (see PokedexApp.svelte for the same
+	// to its fields wouldn't be visible to the template. entryLoad is the
+	// reactive boundary instead, mirrored wholesale from DetailLoadState's
+	// onUpdate callback via mirrorInto (see PokedexApp.svelte for the same
 	// pattern applied to the browse table's load state).
 	// $derived (not a plain const) so Svelte doesn't warn about capturing the
 	// `repository` prop outside a reactive scope — it never actually changes
@@ -46,83 +50,51 @@
 	const loadState = $derived(new DetailLoadState(repository));
 	onDestroy(() => loadState.cancel());
 
-	let entry = $state<PokedexEntry | null>(null);
-	let loading = $state(true);
-	let error = $state<string | null>(null);
 	// Keyed by dex id, filled in once the evolution chain arrives. Every id
 	// in a chain was already fetched for the table load that got the user
 	// here, so this resolves from mem cache — not a second round of real
 	// network requests.
-	let evolutionSprites = $state<Record<number, string | null>>({});
-	let evolutionTypes = $state<Record<number, string[]>>({});
+	let entryLoad = $state<{
+		entry: PokedexEntry | null;
+		loading: boolean;
+		error: string | null;
+		evolutionSprites: Record<number, string | null>;
+		evolutionTypes: Record<number, string[]>;
+	}>({
+		entry: null,
+		loading: true,
+		error: null,
+		evolutionSprites: {},
+		evolutionTypes: {},
+	});
+	// Re-mirrors every DetailLoadState field wholesale via mirrorInto — cheap
+	// (a handful of small objects), and simpler than a dedicated callback per
+	// field since these fields only ever change at 2-3 discrete points per
+	// load rather than streaming (unlike moveDetails, which gets its own
+	// callback in startLoad below).
+	const entryLoadKeys = ["entry", "loading", "error", "evolutionSprites", "evolutionTypes"] as const;
+	function mirror() {
+		mirrorInto(entryLoad, loadState, entryLoadKeys);
+	}
+
 	// Reset per-entry (see startLoad below) so switching Pokemon never
 	// leaves a previous one's shiny toggle silently applied.
 	let showShiny = $state(false);
-	// Not reset on id change, same reasoning as activeMoveMethod below —
-	// stays on e.g. "Emerald" while browsing several Pokemon. Falls back to
-	// the first tab this entry actually has data for (see flavorTabs) if the
-	// remembered key isn't among them, so this never needs a null case.
-	let activeFlavorVersion = $state<string>(FLAVOR_TEXT_TABS[0].key);
 
-	// Keyed by ability name, NOT reset on id change — abilities repeat
-	// heavily across species (e.g. "levitate"), so hovering one already seen
-	// on a previous Pokemon this session reuses the cached description
-	// instead of refetching (repository.getAbilityDescription also caches,
-	// but this avoids even the async round-trip).
-	let abilityDescriptions = $state<Record<string, { text: string | null } | { error: true }>>({});
-	let hoveredAbility = $state<string | null>(null);
-	let abilityPopoverPos = $state<{ top: number; left: number } | null>(null);
-
-	function showAbilityPopover(name: string, target: EventTarget | null) {
-		hoveredAbility = name;
-		// Positioned relative to .detail-screen (position: absolute, not
-		// fixed — see its CSS comment for why), not the raw viewport rect.
-		const r = relativeRect(target as HTMLElement, ".detail-screen");
-		abilityPopoverPos = { top: r.bottom + 6, left: r.left };
-		if (!(name in abilityDescriptions)) {
-			repository.getAbilityDescription(name)
-				.then((text) => {
-					abilityDescriptions = { ...abilityDescriptions, [name]: { text } };
-				})
-				.catch(() => {
-					abilityDescriptions = { ...abilityDescriptions, [name]: { error: true } };
-				});
-		}
-	}
-
-	function hideAbilityPopover() {
-		hoveredAbility = null;
-		abilityPopoverPos = null;
-	}
-
-	const MOVE_METHOD_TABS = [
-		{ key: "level-up", label: "Level-Up" },
-		{ key: "machine", label: "Machine" },
-		{ key: "egg", label: "Egg" },
-		{ key: "tutor", label: "Tutor" },
-	] as const;
-
-	// FRLG and Emerald sometimes teach the same move at different levels
-	// (e.g. a different level-up curve) — normalizeMoves keeps both rows
-	// since they're genuinely distinct data, which reads as a duplicate in
-	// the table. This toggle scopes the list to one game at a time instead.
-	const MOVE_VERSION_TABS = [
-		{ key: "firered-leafgreen", label: "FRLG" },
-		{ key: "emerald", label: "RSE" },
-	] as const;
-
-	// Not reset on id change — same reasoning as abilityDescriptions, moves
-	// repeat even more heavily across species (nearly everything learns
-	// Tackle or Growl), and activeMoveMethod persisting across navigation
-	// lets a user stay on e.g. "Machine" while browsing several Pokemon.
+	// Not reset on id change — moves repeat heavily across species (nearly
+	// everything learns Tackle or Growl), so this accumulates across every
+	// entry viewed this session rather than discarding what's already been
+	// fetched each time `id` changes. Fed by startLoad's onMoveDetail
+	// callback below (streaming, one move at a time — not part of
+	// entryLoad's wholesale mirror, see mirror()/entryLoadKeys above), and
+	// passed down to MoveBrowser as a read-only snapshot; MoveBrowser owns
+	// its own tab-selection state but never triggers a fetch itself, since
+	// DetailLoadState.load() already fetches the whole movepool up front.
 	let moveDetails = $state<Record<string, MoveDetail>>({});
-	let activeMoveMethod = $state<(typeof MOVE_METHOD_TABS)[number]["key"]>("level-up");
-	let activeMoveVersion =
-		$state<(typeof MOVE_VERSION_TABS)[number]["key"]>("firered-leafgreen");
 
 	const basePortraitUri = $derived(
-		(spriteStyle === "official-artwork" ? entry?.artworkDataUri : entry?.spriteDataUri) ??
-			entry?.spriteDataUri ??
+		(spriteStyle === "official-artwork" ? entryLoad.entry?.artworkDataUri : entryLoad.entry?.spriteDataUri) ??
+			entryLoad.entry?.spriteDataUri ??
 			null,
 	);
 	// Match the shiny variant to spriteStyle so toggling doesn't jump between
@@ -132,8 +104,8 @@
 	// happens) — still a visible shiny swap, just not artwork-styled.
 	const shinyPortraitUri = $derived(
 		spriteStyle === "official-artwork"
-			? entry?.shinyArtworkDataUri ?? entry?.shinyDataUri ?? null
-			: entry?.shinyDataUri ?? null,
+			? entryLoad.entry?.shinyArtworkDataUri ?? entryLoad.entry?.shinyDataUri ?? null
+			: entryLoad.entry?.shinyDataUri ?? null,
 	);
 	const portraitUri = $derived(showShiny ? shinyPortraitUri ?? basePortraitUri : basePortraitUri);
 
@@ -141,7 +113,7 @@
 	// -1 means genderless. Eighths of 100 (12.5, 37.5, ...) are exact in
 	// binary floating point, so no rounding needed for display.
 	const femalePct = $derived(
-		entry && entry.genderRate >= 0 ? (entry.genderRate / 8) * 100 : null,
+		entryLoad.entry && entryLoad.entry.genderRate >= 0 ? (entryLoad.entry.genderRate / 8) * 100 : null,
 	);
 	const malePct = $derived(femalePct === null ? null : 100 - femalePct);
 
@@ -151,52 +123,22 @@
 	// ever used decoratively (glow, accent rule, eyebrow) — never as body
 	// text color — so it can't create a contrast problem in a theme it
 	// happens to clash with.
-	const accentColor = $derived(TYPE_COLORS[entry?.types[0] ?? ""] ?? "var(--interactive-accent)");
+	const accentColor = $derived(TYPE_COLORS[entryLoad.entry?.types[0] ?? ""] ?? "var(--interactive-accent)");
 
-	const filteredMoves = $derived(
-		entry?.moves.filter(
-			(m) => m.learnMethod === activeMoveMethod && m.versionGroup === activeMoveVersion,
-		) ?? [],
+	// Level(s) at which the CURRENTLY VIEWED entry itself next evolves — not
+	// the chain root's own level, see nextEvolutionLevels. Empty for a
+	// final-stage member or one whose next evolution is item/trade-driven
+	// (no level threshold to show).
+	const evolvesAtLevels = $derived(
+		entryLoad.entry?.evolutionChain
+			? nextEvolutionLevels(entryLoad.entry.evolutionChain, entryLoad.entry.id)
+			: [],
 	);
-
-	// Only tabs this species actually has flavor text for (every Gen 1-3 dex
-	// entry has all four in practice — see FLAVOR_TEXT_TABS — but a cache
-	// written before a tab existed can still be missing one until the user
-	// clears the cache, see PokedexRepository.getOrFetchSpecies).
-	const flavorTabs = $derived(
-		entry ? FLAVOR_TEXT_TABS.filter((tab) => entry.flavorTexts[tab.key]) : [],
-	);
-	const activeFlavorIndex = $derived(
-		Math.max(0, flavorTabs.findIndex((tab) => tab.key === activeFlavorVersion)),
-	);
-	const currentFlavorTab = $derived(flavorTabs[activeFlavorIndex] ?? null);
-	const currentFlavorText = $derived(
-		currentFlavorTab ? entry?.flavorTexts[currentFlavorTab.key] ?? null : null,
-	);
-
-	function cycleFlavorVersion(direction: 1 | -1) {
-		if (flavorTabs.length === 0) return;
-		const nextIndex = (activeFlavorIndex + direction + flavorTabs.length) % flavorTabs.length;
-		activeFlavorVersion = flavorTabs[nextIndex].key;
-	}
-
-	// Re-mirrors every DetailLoadState field wholesale — cheap (a handful of
-	// small objects), and simpler than a dedicated callback per field since
-	// entry/loading/error/evolutionSprites only ever change at 2-3 discrete
-	// points per load rather than streaming (unlike moveDetails, which gets
-	// its own callback below).
-	function mirror() {
-		entry = loadState.entry;
-		loading = loadState.loading;
-		error = loadState.error;
-		evolutionSprites = loadState.evolutionSprites;
-		evolutionTypes = loadState.evolutionTypes;
-	}
 
 	function startLoad(currentId: number) {
 		showShiny = false;
-		const result = loadState.load(currentId, mirror, (name, detail) => {
-			moveDetails = { ...moveDetails, [name]: detail };
+		const result = loadState.load(currentId, mirror, (name, moveDetail) => {
+			moveDetails = { ...moveDetails, [name]: moveDetail };
 		});
 		// The synchronous prefix of load() (up to its first await) has
 		// already run by the time it returns a pending promise, so this
@@ -233,12 +175,13 @@
 			<QuickSearch {rows} {onSelect} />
 		</div>
 
-		{#if loading}
+		{#if entryLoad.loading}
 			<p>Loading #{String(id).padStart(3, "0")}...</p>
-		{:else if error && !entry}
-			<p class="error">Couldn't load this Pokemon: {error}</p>
+		{:else if entryLoad.error && !entryLoad.entry}
+			<p class="error">Couldn't load this Pokemon: {entryLoad.error}</p>
 			<button onclick={retry}>Retry</button>
-		{:else if entry}
+		{:else if entryLoad.entry}
+			{@const entry = entryLoad.entry}
 			<!-- container-type (not a viewport media query) because this is an
 			Obsidian pane: it can be a narrow sidebar in a wide window or fill a
 			whole ultrawide window, independent of the window's own size. Three
@@ -281,32 +224,7 @@
 						<dd>{(entry.weight / 10).toFixed(1)} kg</dd>
 					</div>
 				</dl>
-				{#if currentFlavorText}
-					<div class="flavor-block">
-						<div class="flavor-version-toggle">
-							<button
-								type="button"
-								class="flavor-version-arrow"
-								onclick={() => cycleFlavorVersion(-1)}
-								disabled={flavorTabs.length < 2}
-								aria-label="Previous game version"
-							>
-								<Icon name="chevron-left" size={12} strokeWidth={2.5} />
-							</button>
-							<span class="flavor-version-label">{currentFlavorTab?.label}</span>
-							<button
-								type="button"
-								class="flavor-version-arrow"
-								onclick={() => cycleFlavorVersion(1)}
-								disabled={flavorTabs.length < 2}
-								aria-label="Next game version"
-							>
-								<Icon name="chevron-right" size={12} strokeWidth={2.5} />
-							</button>
-						</div>
-						<p class="flavor-text">{currentFlavorText}</p>
-					</div>
-				{/if}
+				<FlavorTextPanel flavorTexts={entry.flavorTexts} />
 			</aside>
 
 			<div class="core-col">
@@ -316,8 +234,8 @@
 						<EvolutionTree
 						chain={entry.evolutionChain}
 						{onSelect}
-						sprites={evolutionSprites}
-						types={evolutionTypes}
+						sprites={entryLoad.evolutionSprites}
+						types={entryLoad.evolutionTypes}
 						{useTypeIcons}
 					/>
 					</section>
@@ -331,46 +249,12 @@
 
 					<section class="panel abilities-panel">
 						<h3 class="section-heading">Abilities</h3>
-						<ul class="ability-list">
-							{#each entry.abilities.filter((a) => !a.isHidden) as ability (ability.name)}
-								<li
-									onmouseenter={(e) => showAbilityPopover(ability.name, e.currentTarget)}
-									onmouseleave={hideAbilityPopover}
-								>
-									{ability.name}
-								</li>
-							{/each}
-						</ul>
-						{#each entry.abilities.filter((a) => a.isHidden) as ability (ability.name)}
-							<div class="hidden-ability-block">
-								<p class="hidden-ability-label">Hidden Ability</p>
-								<p
-									class="hidden-ability-name"
-									onmouseenter={(e) => showAbilityPopover(ability.name, e.currentTarget)}
-									onmouseleave={hideAbilityPopover}
-								>
-									{ability.name}
-								</p>
-							</div>
-						{/each}
+						<AbilitiesPanel
+							abilities={entry.abilities}
+							getDescription={(name) => repository.getAbilityDescription(name)}
+						/>
 					</section>
 				</div>
-
-				{#if hoveredAbility && abilityPopoverPos}
-					{@const state = abilityDescriptions[hoveredAbility]}
-					<div
-						class="ability-popover"
-						style="top: {abilityPopoverPos.top}px; left: {abilityPopoverPos.left}px;"
-					>
-						{#if !state}
-							Loading…
-						{:else if "error" in state}
-							Couldn't load description.
-						{:else}
-							{state.text ?? "No description available."}
-						{/if}
-					</div>
-				{/if}
 
 				<section class="panel">
 					<h3 class="section-heading">Breeding & Capture</h3>
@@ -402,74 +286,7 @@
 
 			<div class="moves-col">
 				<section class="panel">
-					<div class="moves-heading-row">
-						<h3 class="section-heading">Moves (Gen 3)</h3>
-						<div class="move-tabs move-version-tabs">
-							{#each MOVE_VERSION_TABS as tab (tab.key)}
-								<button
-									type="button"
-									class="move-tab"
-									class:active={activeMoveVersion === tab.key}
-									onclick={() => (activeMoveVersion = tab.key)}
-								>
-									{tab.label}
-								</button>
-							{/each}
-						</div>
-					</div>
-					{#if entry.moves.length === 0}
-						<p class="text-muted">No move data for this version group.</p>
-					{:else}
-						<div class="move-tabs">
-							{#each MOVE_METHOD_TABS as tab (tab.key)}
-								<button
-									type="button"
-									class="move-tab"
-									class:active={activeMoveMethod === tab.key}
-									onclick={() => (activeMoveMethod = tab.key)}
-								>
-									{tab.label}
-								</button>
-							{/each}
-						</div>
-						{#if filteredMoves.length === 0}
-							<p class="text-muted">
-								No moves learned via {MOVE_METHOD_TABS.find((t) => t.key === activeMoveMethod)?.label}.
-							</p>
-						{:else}
-							<table class="move-table">
-								<thead>
-									<tr>
-										<th>Move</th>
-										{#if activeMoveMethod === "level-up"}<th class="col-right">Level</th>{/if}
-										<th class="col-center">Type</th>
-										<th class="col-right">Pow</th>
-										<th class="col-right">Acc</th>
-										<th class="col-right">PP</th>
-									</tr>
-								</thead>
-								<tbody>
-									{#each filteredMoves as move (move.name + move.levelLearnedAt)}
-										{@const detail = moveDetails[move.name]}
-										<tr>
-											<td>{move.name}</td>
-											{#if activeMoveMethod === "level-up"}<td class="col-right">{move.levelLearnedAt}</td>{/if}
-											<td class="col-center">
-												{#if detail}
-													<TypeBadge type={detail.type} useIcon={useTypeIcons} />
-												{:else}
-													…
-												{/if}
-											</td>
-											<td class="col-right">{detail ? (detail.power ?? "-") : "…"}</td>
-											<td class="col-right">{detail ? (detail.accuracy ?? "-") : "…"}</td>
-											<td class="col-right">{detail ? detail.pp : "…"}</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						{/if}
-					{/if}
+					<MoveBrowser moves={entry.moves} {moveDetails} {useTypeIcons} {evolvesAtLevels} />
 				</section>
 			</div>
 		</div>
@@ -646,61 +463,6 @@
 		to read as its own line, not run together with the name. */
 		margin-top: 5px;
 	}
-	/* Toggle + description grouped in their own tight column so they read as
-	one unit, independent of identity-col's larger 20px rhythm between major
-	blocks (portrait / name / height-weight / description). */
-	.flavor-block {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-	.flavor-text {
-		margin: 0;
-		padding-left: 10px;
-		border-left: 2px solid var(--background-modifier-border);
-		color: var(--text-muted);
-		font-size: 0.82rem;
-		line-height: 1.45;
-	}
-	/* Spans the identity column's full width, like a carousel control —
-	arrows pinned to the edges, label centered between them. Text styling
-	matches BarRow's .bar-label (the HP/Atk/... stat labels) rather than
-	inventing a new one, since this plays the same "small muted caption"
-	role. */
-	.flavor-version-toggle {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 6px;
-	}
-	.flavor-version-arrow {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: auto;
-		height: auto;
-		padding: 2px;
-		background: none;
-		border: none;
-		color: var(--text-muted);
-		cursor: pointer;
-		opacity: 0.7;
-		transition: opacity 100ms ease-out;
-	}
-	.flavor-version-arrow:hover:not(:disabled) {
-		opacity: 1;
-	}
-	.flavor-version-arrow:disabled {
-		visibility: hidden;
-	}
-	.flavor-version-label {
-		flex: 1;
-		text-align: center;
-		font-weight: 600;
-		color: var(--text-muted);
-		font-size: 0.85em;
-	}
-
 	.physical-readout {
 		/* Two equal columns (not flex + gap) so Weight's box always starts
 		exactly at the column's halfway point, independent of how wide
@@ -746,51 +508,6 @@
 		line-height: 1.3;
 	}
 
-	.ability-list {
-		text-transform: capitalize;
-		margin: 0;
-		/* Default UA/theme bullet indent is 40px — way out of proportion for
-		this compact panel (every other line here sits flush left). 18px
-		keeps the bullet marker but tightens the indent to match. */
-		padding-left: 18px;
-	}
-	.ability-list li {
-		cursor: help;
-	}
-	/* Same label/value pairing as .physical-readout's HEIGHT/WEIGHT (small
-	uppercase muted label over a value), not an inline "(hidden)" suffix —
-	the hidden ability is a distinct fact worth its own visual slot, same
-	reasoning that gave height/weight one. */
-	.hidden-ability-block {
-		margin-top: 8px;
-		padding-top: 8px;
-		border-top: 1px solid var(--background-modifier-border);
-	}
-	.hidden-ability-label {
-		margin: 0 0 2px;
-		font-size: 0.66rem;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		color: var(--text-muted);
-	}
-	.hidden-ability-name {
-		margin: 0;
-		text-transform: capitalize;
-		cursor: help;
-	}
-	.ability-popover {
-		position: absolute;
-		z-index: 50;
-		max-width: 260px;
-		background: var(--background-primary);
-		border: 1px solid var(--background-modifier-border);
-		border-radius: var(--radius-m, 8px);
-		box-shadow: var(--shadow-s);
-		padding: 8px 10px;
-		font-size: 0.85em;
-		color: var(--text-normal);
-		pointer-events: none;
-	}
 	.breeding-line {
 		margin: 0 0 6px;
 	}
@@ -834,84 +551,6 @@
 		row-gap: 4px;
 		column-gap: 6px;
 		margin-top: 10px;
-	}
-
-	.moves-heading-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 8px;
-		margin-bottom: 10px;
-	}
-	/* section-heading's own margin-bottom (used everywhere else it's a
-	standalone block) would offset it from center against the version
-	toggle's margin-less box here — zero it out and let the row's own
-	margin-bottom carry the spacing instead. */
-	.moves-heading-row .section-heading {
-		margin-bottom: 0;
-	}
-	/* Segmented-pill control, matching obsidian-calendar-notes'
-	GranularitySection tab bar (Daily/Weekly/.../Yearly) rather than the
-	outlined-chip look FilterBar uses elsewhere in this plugin — moves' two
-	tab rows read as one linked control, closer to a granularity switch than
-	a set of independent filter chips. */
-	.move-tabs {
-		display: flex;
-		gap: 4px;
-		padding: 4px;
-		margin-bottom: 10px;
-		background: var(--background-primary-alt);
-		border: 1px solid var(--background-modifier-border);
-		border-radius: 10px;
-	}
-	/* Compact, content-width variant for the FRLG/RSE game toggle — sits in
-	the section heading's corner rather than stretching like the method
-	tabs below it. */
-	.move-version-tabs {
-		display: inline-flex;
-		margin-bottom: 0;
-	}
-	.move-version-tabs .move-tab {
-		flex: none;
-		padding: 4px 10px;
-	}
-	.move-tab {
-		flex: 1;
-		background: transparent;
-		border: none;
-		border-radius: 7px;
-		height: auto;
-		padding: 6px 4px;
-		cursor: pointer;
-		font-size: 0.85em;
-		font-weight: 500;
-		color: var(--text-normal);
-		transition: background 100ms ease-out, color 100ms ease-out;
-	}
-	.move-tab:hover:not(.active) {
-		background: var(--background-modifier-hover);
-	}
-	.move-tab.active {
-		background: var(--background-primary);
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-	}
-	.move-table {
-		width: 100%;
-		border-collapse: collapse;
-	}
-	.move-table th, .move-table td {
-		text-align: left;
-		padding: 2px 8px;
-		text-transform: capitalize;
-	}
-	.move-table th.col-right, .move-table td.col-right {
-		text-align: right;
-	}
-	.move-table th.col-center, .move-table td.col-center {
-		text-align: center;
-	}
-	.move-table tbody tr:nth-child(odd) {
-		background: var(--background-primary);
 	}
 
 	.error {

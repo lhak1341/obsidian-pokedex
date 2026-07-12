@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	collectChainIds,
 	extractFlavorTexts,
+	nextEvolutionLevels,
 	normalizeEvolutionChain,
 	normalizeEvYield,
 	normalizeMoveDetail,
@@ -130,6 +131,53 @@ describe("collectChainIds", () => {
 			],
 		};
 		expect(collectChainIds(forked)).toEqual([1, 2, 3]);
+	});
+});
+
+describe("nextEvolutionLevels", () => {
+	it("returns the level of the id's own next evolution, not the root's", () => {
+		const node = normalizeEvolutionChain(chain.chain);
+		// bulbasaur (root) -> ivysaur (Lv.16) -> venusaur (Lv.32)
+		expect(nextEvolutionLevels(node, node.id)).toEqual([16]);
+		expect(nextEvolutionLevels(node, node.children[0].id)).toEqual([32]);
+	});
+
+	it("returns empty for a final-stage member", () => {
+		const node = normalizeEvolutionChain(chain.chain);
+		expect(nextEvolutionLevels(node, node.children[0].children[0].id)).toEqual([]);
+	});
+
+	it("returns empty for an id not in the chain", () => {
+		const node = normalizeEvolutionChain(chain.chain);
+		expect(nextEvolutionLevels(node, 999)).toEqual([]);
+	});
+
+	it("returns empty when the next evolution has no level threshold (item/trade)", () => {
+		const itemEvolution = {
+			id: 1,
+			name: "root",
+			minLevel: null,
+			trigger: null,
+			item: null,
+			children: [{ id: 2, name: "evolved", minLevel: null, trigger: "trade", item: null, children: [] }],
+		};
+		expect(nextEvolutionLevels(itemEvolution, 1)).toEqual([]);
+	});
+
+	it("dedupes and sorts levels across multiple branches (e.g. Tyrogue-shaped)", () => {
+		const forked = {
+			id: 1,
+			name: "root",
+			minLevel: null,
+			trigger: null,
+			item: null,
+			children: [
+				{ id: 2, name: "branch-a", minLevel: 20, trigger: "level-up", item: null, children: [] },
+				{ id: 3, name: "branch-b", minLevel: 10, trigger: "level-up", item: null, children: [] },
+				{ id: 4, name: "branch-c", minLevel: 20, trigger: "level-up", item: null, children: [] },
+			],
+		};
+		expect(nextEvolutionLevels(forked, 1)).toEqual([10, 20]);
 	});
 });
 
