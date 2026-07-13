@@ -240,8 +240,21 @@ describe("PokedexRepository", () => {
 		const first = await repository.getMoveDetails("tackle");
 		const second = await repository.getMoveDetails("tackle");
 
-		expect(first).toEqual({ type: "normal", power: 40, accuracy: 100, pp: 35 });
-		expect(second).toEqual({ type: "normal", power: 40, accuracy: 100, pp: 35 });
+		const expected = { type: "normal", power: 40, accuracy: 100, pp: 35, description: "tackle FRLG description" };
+		expect(first).toEqual(expected);
+		expect(second).toEqual(expected);
+		expect(client.fetchMove).toHaveBeenCalledTimes(1);
+	});
+
+	it("getMoveDetails refetches a moves/*.json cached before `description` existed", async () => {
+		const { client, cache, repository } = makeRepository();
+		// Simulate a cache written before this session's `description` field
+		// existed — the exact pre-widening shape moves/tackle.json used to have.
+		await cache.writeJson("moves/tackle.json", { type: "normal", power: 40, accuracy: 100, pp: 35 });
+
+		const result = await repository.getMoveDetails("tackle");
+
+		expect(result.description).toBe("tackle FRLG description");
 		expect(client.fetchMove).toHaveBeenCalledTimes(1);
 	});
 

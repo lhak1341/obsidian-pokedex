@@ -111,6 +111,10 @@ export interface RawMove {
 	accuracy: number | null;
 	pp: number;
 	type: NamedApiResource;
+	// Unlike species' flavor_text_entries (keyed by `version`, one entry per
+	// game), a move's is keyed by `version_group` (one entry per paired
+	// games, e.g. "firered-leafgreen" covers both) — see normalizeMoveDetail.
+	flavor_text_entries: { flavor_text: string; language: NamedApiResource; version_group: NamedApiResource }[];
 }
 
 export interface MoveDetail {
@@ -118,6 +122,10 @@ export interface MoveDetail {
 	power: number | null;
 	accuracy: number | null;
 	pp: number;
+	// FRLG-specific description (see MOVE_DESCRIPTION_VERSION_GROUP) shown as
+	// a hover tooltip on the move name — null when this move has no English
+	// FRLG flavor text entry at all (rare; PokeAPI gap, not a fetch failure).
+	description: string | null;
 }
 
 // Per evolution-chain-member visuals (see PokedexRepository.getEntryChainVisuals) —

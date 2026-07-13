@@ -151,7 +151,20 @@ export class FakePokeApiClient extends PokeApiClient {
 
 	fetchMove = vi.fn(async (name: string): Promise<RawMove> => {
 		if (this.failMoves.has(name)) throw new Error(`fake failure fetching move ${name}`);
-		return { name, power: 40, accuracy: 100, pp: 35, type: { name: "normal", url: "" } };
+		return {
+			name,
+			power: 40,
+			accuracy: 100,
+			pp: 35,
+			type: { name: "normal", url: "" },
+			flavor_text_entries: [
+				{
+					flavor_text: `${name} FRLG description`,
+					language: { name: "en", url: "" },
+					version_group: { name: "firered-leafgreen", url: "" },
+				},
+			],
+		};
 	});
 
 	fetchPokemonList = vi.fn(async (): Promise<RawPokemonListResponse> => {

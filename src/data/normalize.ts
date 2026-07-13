@@ -1,4 +1,9 @@
-import { FLAVOR_TEXT_TABS, FLAVOR_TEXT_VERSION_GROUPS, MOVE_VERSION_GROUPS } from "./constants";
+import {
+	FLAVOR_TEXT_TABS,
+	FLAVOR_TEXT_VERSION_GROUPS,
+	MOVE_DESCRIPTION_VERSION_GROUP,
+	MOVE_VERSION_GROUPS,
+} from "./constants";
 import type {
 	EvolutionNode,
 	EvYieldEntry,
@@ -93,7 +98,11 @@ export function trimMovesToVersionGroups(
 }
 
 export function normalizeMoveDetail(raw: RawMove): MoveDetail {
-	return { type: raw.type.name, power: raw.power, accuracy: raw.accuracy, pp: raw.pp };
+	const description =
+		raw.flavor_text_entries
+			.find((e) => e.language.name === "en" && e.version_group.name === MOVE_DESCRIPTION_VERSION_GROUP)
+			?.flavor_text.replace(/[\n\f\r]+/g, " ").trim() ?? null;
+	return { type: raw.type.name, power: raw.power, accuracy: raw.accuracy, pp: raw.pp, description };
 }
 
 function idFromUrl(url: string): number {

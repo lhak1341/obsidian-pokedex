@@ -55,6 +55,22 @@
 	const activeColumns = $derived(
 		TOGGLEABLE_COLUMNS.filter((col) => visibleColumnKeys.has(col.key)),
 	);
+	// No. is a dex number (up to 4 digits) vs a stat's 3; sprite/type widths
+	// swing with density and the icon-vs-text type display respectively —
+	// everything else has one fixed min regardless of row content (see each
+	// ColumnDef's own `widthPercent`/`minWidth` in tableColumns.ts). The table
+	// deliberately stays table-layout: auto (not fixed) — fixed's column
+	// sizing pass ignores min-width/max-width entirely by design (that's the
+	// point of "fixed"), which silently broke every column's floor. Under
+	// auto, `min` is a real min-width on each <th> (a designed buffer, e.g.
+	// EV's 3-chip case, or ch for Name's ~20-letter one) and `pct` is the
+	// <col>'s width — Name's larger share means it still absorbs most of any
+	// extra space on a wide pane, just no longer *all* of it. Cells must NOT
+	// get overflow/text-overflow: ellipsis (see td/th CSS) — that collapses
+	// a cell's intrinsic min-content width down to ~1 char, which defeats
+	// auto layout's real safety net: never shrinking below actual content.
+	const spriteColWidth = $derived(density === "compact" ? { pct: "3%", min: "40px" } : { pct: "4%", min: "48px" });
+	const typeColWidth = $derived(useTypeIcons ? { pct: "6%", min: "76px" } : { pct: "10%", min: "168px" });
 
 	function setSort(column: SortColumn) {
 		if (sortColumn === column) {
@@ -126,15 +142,26 @@
 
 	<div class="table-wrap">
 		<table class:compact={density === "compact"}>
+			<colgroup>
+				<col style:width="4%" />
+				<col style:width={spriteColWidth.pct} />
+				<col style:width="25%" />
+				<col style:width={typeColWidth.pct} />
+				{#each activeColumns as col (col.key)}
+					<col style:width={col.widthPercent} />
+				{/each}
+			</colgroup>
 			<thead>
 				<tr>
-					<th onclick={() => setSort("id")}>No.{sortIndicator("id")}</th>
-					<th class="center">Sprite</th>
-					<th onclick={() => setSort("name")}>Name{sortIndicator("name")}</th>
-					<th>Type</th>
+					<th style:min-width="60px" onclick={() => setSort("id")}>No.{sortIndicator("id")}</th>
+					<th class="center" style:min-width={spriteColWidth.min}>Sprite</th>
+					<th style:min-width="20ch" onclick={() => setSort("name")}>Name{sortIndicator("name")}</th>
+					<th style:min-width={typeColWidth.min}>Type</th>
 					{#each activeColumns as col (col.key)}
 						<th
 							class:center={!!col.headerIcon}
+							class:right={col.align === "right"}
+							style:min-width={col.minWidth}
 							onclick={() => col.sortKey && setSort(col.sortKey)}
 							title={col.label}
 						>
@@ -181,7 +208,7 @@
 									</div>
 								</td>
 							{:else}
-								<td>{col.render(row)}</td>
+								<td class:right={col.align === "right"}>{col.render(row)}</td>
 							{/if}
 						{/each}
 					</tr>
@@ -329,10 +356,14 @@
 	}
 	td {
 		padding: 4px 8px;
+		white-space: nowrap;
 		border-top: 1px solid var(--background-modifier-border);
 	}
 	.center {
 		text-align: center;
+	}
+	.right {
+		text-align: right;
 	}
 	tbody tr:nth-child(even) {
 		background: var(--background-secondary);

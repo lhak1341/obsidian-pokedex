@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { MoveDetail, MoveEntry } from "../../data/types";
+	import { relativeRect } from "../domPosition";
 	import TypeBadge from "./TypeBadge.svelte";
 
 	let { moves, moveDetails, useTypeIcons, evolvesAtLevels }: {
@@ -11,6 +12,26 @@
 		// member or an item/trade-driven evolution (no level to show).
 		evolvesAtLevels: number[];
 	} = $props();
+
+	// Unlike AbilitiesPanel's popover, no fetch-on-hover/loading state here —
+	// DetailLoadState.load() already prefetches the whole movepool up front,
+	// so moveDetails[name].description (or its absence) is already known by
+	// the time a row can be hovered.
+	let hoveredMove = $state<string | null>(null);
+	let movePopoverPos = $state<{ top: number; left: number } | null>(null);
+
+	function showMovePopover(name: string, target: EventTarget | null) {
+		hoveredMove = name;
+		// Positioned relative to .detail-screen, same reasoning as
+		// AbilitiesPanel's popover — see its comment.
+		const r = relativeRect(target as HTMLElement, ".detail-screen");
+		movePopoverPos = { top: r.bottom + 6, left: r.left };
+	}
+
+	function hideMovePopover() {
+		hoveredMove = null;
+		movePopoverPos = null;
+	}
 
 	const MOVE_METHOD_TABS = [
 		{ key: "level-up", label: "Level-Up" },
@@ -129,7 +150,13 @@
 						{@const move = row.move}
 						{@const detail = moveDetails[move.name]}
 						<tr class:row-shaded={row.moveIndex % 2 === 0}>
-							<td>{move.name}</td>
+							<td
+								class="move-name-cell"
+								onmouseenter={(e) => showMovePopover(move.name, e.currentTarget)}
+								onmouseleave={hideMovePopover}
+							>
+								{move.name}
+							</td>
 							{#if activeMoveMethod === "level-up"}<td class="col-right">{move.levelLearnedAt}</td>{/if}
 							<td class="col-center">
 								{#if detail}
@@ -147,6 +174,13 @@
 			</tbody>
 		</table>
 	{/if}
+{/if}
+
+{#if hoveredMove && movePopoverPos}
+	{@const description = moveDetails[hoveredMove]?.description}
+	<div class="move-popover" style="top: {movePopoverPos.top}px; left: {movePopoverPos.left}px;">
+		{description ?? "No description available."}
+	</div>
 {/if}
 
 <style>
@@ -233,6 +267,24 @@
 		text-align: left;
 		padding: 2px 8px;
 		text-transform: capitalize;
+	}
+	.move-name-cell {
+		cursor: help;
+	}
+	/* Same popover look as AbilitiesPanel's — positioned relative to
+	.detail-screen for the same reason (see showMovePopover). */
+	.move-popover {
+		position: absolute;
+		z-index: 50;
+		max-width: 260px;
+		background: var(--background-primary);
+		border: 1px solid var(--background-modifier-border);
+		border-radius: var(--radius-m, 8px);
+		box-shadow: var(--shadow-s);
+		padding: 8px 10px;
+		font-size: 0.85em;
+		color: var(--text-normal);
+		pointer-events: none;
 	}
 	.move-table th.col-right, .move-table td.col-right {
 		text-align: right;

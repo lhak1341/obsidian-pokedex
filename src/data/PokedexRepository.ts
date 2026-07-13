@@ -74,6 +74,16 @@ export class PokedexRepository {
 	// description: null }` is a real, valid cached result, not "not fetched
 	// yet".
 	//
+	// `isStale`, unlike `migrate`, can't be self-healed by transforming the
+	// cached value — it's for a field that genuinely isn't derivable from
+	// what's already on disk (e.g. getMoveDetails' `description`, added after
+	// plenty of moves were already cached without it) and needs a real
+	// network refetch, not a local transform. Trimming-only widenings (see
+	// getOrFetchSpecies' flavor-text comment) still rely on the settings
+	// "Clear cache" button instead — this is only worth the extra refetch
+	// when leaving it stale would silently blank out an entire feature for
+	// every already-cached item, not just narrow an edge case.
+	//
 	// getOrFetchImage isn't built on this shell — it caches a binary asset,
 	// not a JSON value, and has its own null-url short-circuit and
 	// re-read-after-write step, different enough that forcing it into this
@@ -84,10 +94,11 @@ export class PokedexRepository {
 		cachePath: string,
 		fetch: () => Promise<T>,
 		migrate?: (cached: T) => T,
+		isStale?: (cached: T) => boolean,
 	): Promise<T> {
 		if (memCache.has(key)) return memCache.get(key)!;
 		const cached = await this.cache.readJson<T>(cachePath);
-		if (cached) {
+		if (cached && !isStale?.(cached)) {
 			const value = migrate ? migrate(cached) : cached;
 			if (value !== cached) await this.cache.writeJson(cachePath, value);
 			memCache.set(key, value);
@@ -202,12 +213,19 @@ export class PokedexRepository {
 	// move's type/power/accuracy/PP) — it's left to reject so
 	// getMoveDetailsForMoves' per-item error handling (via mapWithConcurrency)
 	// can tell "failed" apart from "successfully has no power" (status moves).
+	//
+	// isStale refetches a move cached before `description` existed (the
+	// move-name hover tooltip) — see getOrFetch's comment on why this one
+	// gets a real refetch instead of the usual migrate-in-place/Clear-cache
+	// pattern.
 	async getMoveDetails(name: string): Promise<MoveDetail> {
 		return this.getOrFetch(
 			this.moveDetailMemCache,
 			name,
 			`moves/${name}.json`,
 			async () => normalizeMoveDetail(await this.client.fetchMove(name)),
+			undefined,
+			(cached) => !("description" in cached),
 		);
 	}
 

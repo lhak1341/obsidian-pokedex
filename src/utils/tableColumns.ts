@@ -17,6 +17,18 @@ export interface ColumnDef {
 	headerIcon?: string;
 	sortKey?: SortColumn;
 	render: (row: PokedexTableRow) => string;
+	// widthPercent becomes the <col>'s width (table stays table-layout: auto
+	// — see TableScreen's comment on why). minWidth becomes a real min-width
+	// on the <th>, sized to this column's actual max content (a 3-digit
+	// stat, a sort arrow's worst case, etc) as a deliberate floor/buffer;
+	// auto layout's own never-shrink-below-content behavior is what actually
+	// guarantees no wrapping. widthPercent just lets the column claim a
+	// share of extra space on a wide pane instead of all of it going to Name.
+	widthPercent: string;
+	minWidth: string;
+	// Right-align the cell so a variable-width number keeps its unit suffix
+	// (" m", " kg") lined up between rows instead of ragged.
+	align?: "right";
 }
 
 export const TOGGLEABLE_COLUMNS: ColumnDef[] = [
@@ -25,6 +37,9 @@ export const TOGGLEABLE_COLUMNS: ColumnDef[] = [
 		label: col.label,
 		sortKey: col.key,
 		render: (row: PokedexTableRow) => String(row.stats[col.key]),
+		widthPercent: "4%",
+		minWidth: "52px",
+		align: "right" as const,
 	})),
 	{
 		key: "total",
@@ -32,6 +47,9 @@ export const TOGGLEABLE_COLUMNS: ColumnDef[] = [
 		headerIcon: "sigma",
 		sortKey: "total",
 		render: (row) => String(totalStat(row.stats)),
+		widthPercent: "4%",
+		minWidth: "52px",
+		align: "right",
 	},
 	{
 		key: "ev",
@@ -41,6 +59,8 @@ export const TOGGLEABLE_COLUMNS: ColumnDef[] = [
 			row.evYield.length === 0
 				? "-"
 				: row.evYield.map((y) => `${y.amount} ${STAT_LABEL_BY_KEY.get(y.stat) ?? y.stat}`).join(", "),
+		widthPercent: "6%",
+		minWidth: "204px",
 	},
 	{
 		key: "catchRate",
@@ -48,6 +68,9 @@ export const TOGGLEABLE_COLUMNS: ColumnDef[] = [
 		headerIcon: "target",
 		sortKey: "catchRate",
 		render: (row) => String(row.catchRate),
+		widthPercent: "4%",
+		minWidth: "52px",
+		align: "right",
 	},
 	{
 		key: "hatchCounter",
@@ -55,6 +78,9 @@ export const TOGGLEABLE_COLUMNS: ColumnDef[] = [
 		headerIcon: "egg",
 		sortKey: "hatchCounter",
 		render: (row) => String(row.hatchCounter),
+		widthPercent: "4%",
+		minWidth: "52px",
+		align: "right",
 	},
 	{
 		key: "height",
@@ -62,6 +88,9 @@ export const TOGGLEABLE_COLUMNS: ColumnDef[] = [
 		headerIcon: "ruler",
 		sortKey: "height",
 		render: (row) => `${(row.height / 10).toFixed(1)} m`,
+		widthPercent: "5%",
+		minWidth: "76px",
+		align: "right",
 	},
 	{
 		key: "weight",
@@ -69,5 +98,8 @@ export const TOGGLEABLE_COLUMNS: ColumnDef[] = [
 		headerIcon: "weight",
 		sortKey: "weight",
 		render: (row) => `${(row.weight / 10).toFixed(1)} kg`,
+		widthPercent: "6%",
+		minWidth: "88px",
+		align: "right",
 	},
 ];

@@ -5,6 +5,12 @@ export const POKEAPI_BASE = "https://pokeapi.co/api/v2";
 // dumping every game the species has ever appeared in.
 export const MOVE_VERSION_GROUPS = ["firered-leafgreen", "emerald"] as const;
 
+// Which version group's flavor text backs the move-name hover tooltip (see
+// normalizeMoveDetail) — fixed to FRLG rather than following
+// MoveBrowser's own FRLG/RSE toggle, since a move's *description* barely
+// differs between the two and doesn't need its own toggle.
+export const MOVE_DESCRIPTION_VERSION_GROUP = "firered-leafgreen";
+
 // Pokedex description ("flavor text") is one tab per Gen 3 game the detail
 // view lets the user switch between — Ruby and Sapphire share a tab since
 // their text is identical for nearly every species. Flavor text is keyed by

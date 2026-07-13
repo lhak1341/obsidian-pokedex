@@ -231,8 +231,15 @@ describe("normalizeMoveDetail", () => {
 			accuracy: 100,
 			pp: 15,
 			type: { name: "fire", url: "" },
+			flavor_text_entries: [],
 		};
-		expect(normalizeMoveDetail(raw)).toEqual({ type: "fire", power: 90, accuracy: 100, pp: 15 });
+		expect(normalizeMoveDetail(raw)).toEqual({
+			type: "fire",
+			power: 90,
+			accuracy: 100,
+			pp: 15,
+			description: null,
+		});
 	});
 
 	it("passes through null power/accuracy for status moves", () => {
@@ -242,7 +249,44 @@ describe("normalizeMoveDetail", () => {
 			accuracy: null,
 			pp: 20,
 			type: { name: "normal", url: "" },
+			flavor_text_entries: [],
 		};
-		expect(normalizeMoveDetail(raw)).toEqual({ type: "normal", power: null, accuracy: null, pp: 20 });
+		expect(normalizeMoveDetail(raw)).toEqual({
+			type: "normal",
+			power: null,
+			accuracy: null,
+			pp: 20,
+			description: null,
+		});
+	});
+
+	it("picks the English FireRed/LeafGreen flavor text, ignoring other languages/version groups", () => {
+		const raw: RawMove = {
+			name: "tackle",
+			power: 40,
+			accuracy: 100,
+			pp: 35,
+			type: { name: "normal", url: "" },
+			flavor_text_entries: [
+				{ flavor_text: "Attaque physique.", language: { name: "fr", url: "" }, version_group: { name: "firered-leafgreen", url: "" } },
+				{ flavor_text: "A physical attack\nin Emerald.", language: { name: "en", url: "" }, version_group: { name: "emerald", url: "" } },
+				{ flavor_text: "A physical attack\nin FRLG.", language: { name: "en", url: "" }, version_group: { name: "firered-leafgreen", url: "" } },
+			],
+		};
+		expect(normalizeMoveDetail(raw).description).toBe("A physical attack in FRLG.");
+	});
+
+	it("falls back to null when there's no English FRLG flavor text entry", () => {
+		const raw: RawMove = {
+			name: "tackle",
+			power: 40,
+			accuracy: 100,
+			pp: 35,
+			type: { name: "normal", url: "" },
+			flavor_text_entries: [
+				{ flavor_text: "A physical attack in Emerald.", language: { name: "en", url: "" }, version_group: { name: "emerald", url: "" } },
+			],
+		};
+		expect(normalizeMoveDetail(raw).description).toBeNull();
 	});
 });
