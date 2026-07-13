@@ -70,7 +70,7 @@
 </script>
 
 <div class="moves-heading-row">
-	<h3 class="section-heading">Moves (Gen 3)</h3>
+	<h3 class="section-heading">Moves (G3)</h3>
 	<div class="move-tabs move-version-tabs">
 		{#each MOVE_VERSION_TABS as tab (tab.key)}
 			<button

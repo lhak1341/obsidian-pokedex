@@ -14,9 +14,10 @@ import bulbasaurSpecies from "./bulbasaur-species.json";
 import bulbasaur from "./bulbasaur.json";
 
 // In-memory DataAdapter covering only the methods DiskCache actually calls
-// (exists/read/write/readBinary/writeBinary/mkdir/rmdir/list/stat). Typed as
-// Partial<DataAdapter> and cast, rather than implementing Obsidian's full
-// ~15-method adapter interface for methods nothing here ever touches.
+// (exists/read/write/readBinary/writeBinary/mkdir/rmdir/list/stat/remove/
+// rename). Typed as Partial<DataAdapter> and cast, rather than implementing
+// Obsidian's full ~15-method adapter interface for methods nothing here ever
+// touches.
 export function createFakeDataAdapter(): DataAdapter {
 	const files = new Map<string, string | ArrayBuffer>();
 	const folders = new Set<string>();
@@ -74,6 +75,30 @@ export function createFakeDataAdapter(): DataAdapter {
 				const prefix = `${path}/`;
 				for (const p of [...files.keys()]) if (p.startsWith(prefix)) files.delete(p);
 				for (const p of folders) if (p.startsWith(prefix)) folders.delete(p);
+			}
+		},
+		async remove(path) {
+			files.delete(path);
+		},
+		async rename(path, newPath) {
+			const prefix = `${path}/`;
+			for (const [p, content] of [...files.entries()]) {
+				if (p === path) {
+					files.delete(p);
+					files.set(newPath, content);
+				} else if (p.startsWith(prefix)) {
+					files.delete(p);
+					files.set(`${newPath}/${p.slice(prefix.length)}`, content);
+				}
+			}
+			for (const p of [...folders]) {
+				if (p === path) {
+					folders.delete(p);
+					folders.add(newPath);
+				} else if (p.startsWith(prefix)) {
+					folders.delete(p);
+					folders.add(`${newPath}/${p.slice(prefix.length)}`);
+				}
 			}
 		},
 	};

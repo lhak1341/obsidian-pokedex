@@ -1,4 +1,4 @@
-import { Notice, PluginSettingTab, Setting, type SettingDefinitionItem } from "obsidian";
+import { Notice, PluginSettingTab, Setting, type ButtonComponent, type SettingDefinitionItem } from "obsidian";
 import { DEFAULT_ENABLED_GENERATIONS, DEFAULT_VISIBLE_COLUMNS, GENERATIONS } from "./data/constants";
 import type { PluginSettings } from "./data/types";
 import type PokedexPlugin from "./main";
@@ -35,27 +35,100 @@ export class PokedexSettingTab extends PluginSettingTab {
 		const generationItems = containerEl.createDiv("setting-group").createDiv("setting-items");
 
 		for (const gen of GENERATIONS) {
-			new Setting(generationItems)
-				.setName(gen.name)
-				.setDesc(`National dex #${gen.start}-${gen.end}.`)
-				.addToggle((toggle) =>
-					toggle
-						.setValue(this.plugin.settings.enabledGenerations.includes(gen.id))
-						.onChange(async (value) => {
-							const enabled = new Set(this.plugin.settings.enabledGenerations);
-							if (value) {
-								enabled.add(gen.id);
-							} else if (enabled.size === 1) {
-								new Notice("Pokedex: at least one generation must stay enabled.");
-								toggle.setValue(true);
-								return;
-							} else {
-								enabled.delete(gen.id);
-							}
-							this.plugin.settings.enabledGenerations = [...enabled].sort((a, b) => a - b);
-							await this.plugin.saveSettings();
-						})
-				);
+			const range = { start: gen.start, end: gen.end };
+			const baseDesc = `National dex #${gen.start}-${gen.end}.`;
+			const setting = new Setting(generationItems).setName(gen.name).setDesc(baseDesc);
+
+			let actionButton: ButtonComponent | undefined;
+			let deleteButton: ButtonComponent | undefined;
+			// Drives which action the single action button performs — not
+			// fully cached means there's something worth prefetching (download),
+			// fully cached means the only useful action left is a forced
+			// re-fetch (refresh). Recomputed by refreshCacheDesc, never toggled
+			// directly by the click handler, so it can't drift from the actual
+			// on-disk state.
+			let isFullyCached = false;
+
+			const applyActionButtonIcon = () => {
+				actionButton
+					?.setIcon(isFullyCached ? "refresh-cw" : "download")
+					.setTooltip(
+						isFullyCached
+							? "Re-fetch this generation from PokeAPI, bypassing the cache"
+							: "Prefetch this generation so browsing it is instant",
+					);
+			};
+
+			// Cache status is a disk-existence check per id (see
+			// getCacheStatus), not free — fetched once on open and again after
+			// this generation's own action/delete button finishes, not on every
+			// re-render of the tab.
+			const refreshCacheDesc = async () => {
+				const status = await this.plugin.repository.getCacheStatus(range);
+				isFullyCached = status.total > 0 && status.cached === status.total;
+				setting.setDesc(`${baseDesc} ${status.cached}/${status.total} cached.`);
+				applyActionButtonIcon();
+			};
+			void refreshCacheDesc();
+
+			setting.addButton((button) => {
+				actionButton = button;
+				button.setCta().onClick(async () => {
+					actionButton?.setDisabled(true);
+					deleteButton?.setDisabled(true);
+					if (isFullyCached) {
+						await this.plugin.repository.refreshRange(range, (loaded, total) => {
+							setting.setDesc(`${baseDesc} Refreshing... ${loaded}/${total}.`);
+						});
+						new Notice(`Pokedex: ${gen.name} refreshed.`);
+					} else {
+						await this.plugin.repository.cacheRange(range, (loaded, total) => {
+							setting.setDesc(`${baseDesc} Caching... ${loaded}/${total}.`);
+						});
+						new Notice(`Pokedex: ${gen.name} cached.`);
+					}
+					actionButton?.setDisabled(false);
+					deleteButton?.setDisabled(false);
+					await refreshCacheDesc();
+				});
+				applyActionButtonIcon();
+			});
+
+			setting.addButton((button) => {
+				deleteButton = button;
+				button
+					.setIcon("trash-2")
+					.setTooltip("Delete this generation's cached data")
+					.setDestructive()
+					.onClick(async () => {
+						actionButton?.setDisabled(true);
+						deleteButton?.setDisabled(true);
+						await this.plugin.repository.clearRange(range);
+						new Notice(`Pokedex: ${gen.name} cache cleared.`);
+						actionButton?.setDisabled(false);
+						deleteButton?.setDisabled(false);
+						await refreshCacheDesc();
+					});
+			});
+
+			setting.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.enabledGenerations.includes(gen.id))
+					.onChange(async (value) => {
+						const enabled = new Set(this.plugin.settings.enabledGenerations);
+						if (value) {
+							enabled.add(gen.id);
+						} else if (enabled.size === 1) {
+							new Notice("Pokedex: at least one generation must stay enabled.");
+							toggle.setValue(true);
+							return;
+						} else {
+							enabled.delete(gen.id);
+						}
+						this.plugin.settings.enabledGenerations = [...enabled].sort((a, b) => a - b);
+						await this.plugin.saveSettings();
+					})
+			);
 		}
 
 		new Setting(containerEl).setName("Display").setHeading();

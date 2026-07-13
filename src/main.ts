@@ -14,7 +14,7 @@ export default class PokedexPlugin extends Plugin {
 	async onload(): Promise<void> {
 		await this.loadSettings();
 
-		this.cache = DiskCache.forPlugin(this.app, this.manifest.id);
+		this.cache = await DiskCache.forPlugin(this.app, this.manifest);
 		this.repository = new PokedexRepository(new PokeApiClient(), this.cache);
 
 		this.registerView(

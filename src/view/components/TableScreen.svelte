@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { STAT_COLORS } from "../../data/constants";
 	import type { PokedexTableRow } from "../../data/types";
 	import { EMPTY_FILTERS, filterPokemon } from "../../utils/filterPokemon";
 	import { sortPokemon, type SortColumn, type SortDirection } from "../../utils/sortPokemon";
-	import { TOGGLEABLE_COLUMNS } from "../../utils/tableColumns";
+	import { STAT_LABEL_BY_KEY, TOGGLEABLE_COLUMNS } from "../../utils/tableColumns";
 	import { untrack } from "svelte";
 	import { relativeRect } from "../domPosition";
 	import FilterBar from "./FilterBar.svelte";
@@ -79,7 +80,7 @@
 </script>
 
 <div class="table-screen">
-	<FilterBar bind:filters {abilityOptions} {useTypeIcons} />
+	<FilterBar bind:filters {abilityOptions} {useTypeIcons} {rows} onQuickSelect={onSelect} />
 
 	<details class="column-toggle">
 		<summary>
@@ -167,7 +168,21 @@
 							{/each}
 						</td>
 						{#each activeColumns as col (col.key)}
-							<td>{col.render(row)}</td>
+							{#if col.key === "ev"}
+								<td title={col.render(row)}>
+									<div class="ev-cell">
+										{#each row.evYield as y (y.stat)}
+											<span class="ev-chip" style:--ev-color={STAT_COLORS[y.stat]}>
+												{y.amount} {STAT_LABEL_BY_KEY.get(y.stat) ?? y.stat}
+											</span>
+										{:else}
+											<span class="ev-empty">-</span>
+										{/each}
+									</div>
+								</td>
+							{:else}
+								<td>{col.render(row)}</td>
+							{/if}
 						{/each}
 					</tr>
 				{/each}
@@ -331,6 +346,40 @@
 	.name-cell {
 		text-transform: capitalize;
 		font-weight: 600;
+	}
+	.ev-cell {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+	}
+	/* Same STAT_COLORS hue per stat as the detail screen's StatBars/BarRow —
+	but, like BarRow, that color stays an accent (dot + tinted background/
+	border via color-mix) rather than the text fill: several of these hues
+	(hp's lime, attack's yellow) read poorly as small text on a light theme's
+	near-white background, so the label itself stays var(--text-normal). */
+	.ev-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		padding: 2px 8px 2px 6px;
+		border-radius: 999px;
+		font-size: 0.78em;
+		font-weight: 600;
+		white-space: nowrap;
+		color: var(--text-normal);
+		background: color-mix(in srgb, var(--ev-color) 14%, var(--background-primary));
+		border: 1px solid color-mix(in srgb, var(--ev-color) 45%, var(--background-modifier-border));
+	}
+	.ev-chip::before {
+		content: "";
+		width: 7px;
+		height: 7px;
+		flex-shrink: 0;
+		border-radius: 50%;
+		background: var(--ev-color);
+	}
+	.ev-empty {
+		color: var(--text-faint);
 	}
 	.sprite-thumb {
 		width: 32px;

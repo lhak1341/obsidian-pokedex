@@ -10,6 +10,7 @@ function makeRow(overrides: Partial<PokedexTableRow> = {}): PokedexTableRow {
 		stats: { hp: 45, attack: 49, defense: 49, specialAttack: 65, specialDefense: 65, speed: 45 },
 		evYield: [],
 		abilityNames: ["overgrow"],
+		levelUpMoveNames: [],
 		spriteDataUri: null,
 		height: 7,
 		weight: 69,

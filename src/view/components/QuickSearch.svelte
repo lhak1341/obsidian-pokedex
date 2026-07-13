@@ -52,22 +52,37 @@
 		}
 	}
 
-	// Cmd/Ctrl+L jumps straight to this box from anywhere else in the detail
-	// screen (evolution cards, move tabs, ability list, ...) — a window
-	// listener rather than one scoped to this component's own DOM is what
-	// makes that work when focus currently isn't inside quick-search at all.
-	// Only live while this component is mounted (QuickSearch only renders on
-	// the detail screen), so it can't steal focus from the browse table.
+	// Cmd/Ctrl+Shift+L jumps straight to this box from anywhere else in the
+	// detail screen (evolution cards, move tabs, ability list, ...) — a
+	// window listener rather than one scoped to this component's own DOM is
+	// what makes that work when focus currently isn't inside quick-search at
+	// all. Only live while this component is mounted (QuickSearch only
+	// renders on the detail screen), so it can't steal focus from the browse
+	// table.
+	// Plain Mod+L (no Shift) is unusable here: Electron's native app menu
+	// binds "CommandOrControl+L" to *two* menu items (Insert Link, Task
+	// List). That's an OS/main-process-level accelerator — no
+	// preventDefault/stopPropagation/capture-phase trick in the renderer
+	// can intercept it, and the same accelerator string blocks whichever
+	// modifier is "Mod" on every platform (Cmd+L on Mac, Ctrl+L on
+	// Windows/Linux). Shift+L has no such *native* menu binding, but
+	// Obsidian's own core command "editor:insert-embed" is baked to
+	// Mod+Shift+L via its HotkeyManager, which listens on `document` during
+	// the capture phase — that one IS just JS, so registering our window
+	// listener with capture:true (fires window -> document, ahead of
+	// Obsidian's document-level listener) plus stopPropagation lets us grab
+	// the chord first.
 	function onGlobalKeydown(e: KeyboardEvent) {
-		if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "l") {
+		if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "l") {
 			e.preventDefault();
+			e.stopPropagation();
 			inputEl?.focus();
 			inputEl?.select();
 		}
 	}
 
-	onMount(() => window.addEventListener("keydown", onGlobalKeydown));
-	onDestroy(() => window.removeEventListener("keydown", onGlobalKeydown));
+	onMount(() => window.addEventListener("keydown", onGlobalKeydown, true));
+	onDestroy(() => window.removeEventListener("keydown", onGlobalKeydown, true));
 </script>
 
 <div class="quick-search">

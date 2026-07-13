@@ -229,6 +229,18 @@ export class PokedexRepository {
 		});
 	}
 
+	// Shared by partitionByCacheHit and getCacheStatus — an id counts as
+	// cached once both its pokemon and species JSON are on disk (or already
+	// in this session's mem cache), the same two files getRowsForIds' fetchRow
+	// needs to build a table row.
+	private async isIdCached(id: number): Promise<boolean> {
+		const hasPokemon =
+			this.pokemonMemCache.has(id) || (await this.cache.exists(`pokemon/${id}.json`));
+		const hasSpecies =
+			this.speciesMemCache.has(id) || (await this.cache.exists(`species/${id}.json`));
+		return hasPokemon && hasSpecies;
+	}
+
 	// Splits `ids` into ones already sitting in mem/disk cache vs ones that
 	// still need a network round-trip, using a cheap existence check (no JSON
 	// parse) rather than actually reading either file. Lets the caller run the
@@ -241,19 +253,110 @@ export class PokedexRepository {
 		const cached: number[] = [];
 		const uncached: number[] = [];
 
-		await mapWithConcurrency(ids, DISK_READ_CONCURRENCY, async (id) => {
-			const hasPokemon =
-				this.pokemonMemCache.has(id) || (await this.cache.exists(`pokemon/${id}.json`));
-			const hasSpecies =
-				this.speciesMemCache.has(id) || (await this.cache.exists(`species/${id}.json`));
-			return hasPokemon && hasSpecies;
-		}, (result) => {
+		await mapWithConcurrency(ids, DISK_READ_CONCURRENCY, (id) => this.isIdCached(id), (result) => {
 			const id = ids[result.index];
 			if ("value" in result && result.value) cached.push(id);
 			else uncached.push(id);
 		});
 
 		return { cached, uncached };
+	}
+
+	// Whether opening this id's detail screen would still hit the network —
+	// i.e. whether getEntryExtras(id) (official artwork, shiny, shiny artwork,
+	// evolution chain) has already landed on disk, not just the table-row
+	// core. Checked via the artwork file specifically as a proxy for "extras
+	// were fetched at least once" (shiny/shinyArtwork/evolutionChain always
+	// land in that same getEntryExtras call, so they arrive together) —
+	// falls back to reading the already-cached pokemon record (never a
+	// network call at this point, core is confirmed cached by the caller
+	// first) to tell a genuine cache miss apart from a species with no
+	// official-artwork render at all (rare, but real — nothing to cache
+	// there, so it shouldn't block "fully cached").
+	private async isExtrasCached(id: number): Promise<boolean> {
+		if (this.imageMemCache.has(`images/${id}-artwork.png`)) return true;
+		if (await this.cache.exists(`images/${id}-artwork.png`)) return true;
+		const pokemon = await this.getOrFetchPokemon(id);
+		return !pokemon.sprites.other?.["official-artwork"]?.front_default;
+	}
+
+	// Powers the settings page's per-generation cache status (e.g. "142/151
+	// cached") and decides whether its action button offers to cache or
+	// refresh — an id only counts as cached once both the table-row core
+	// (isIdCached) and the detail-screen extras (isExtrasCached) are on disk,
+	// since "cached" here means "opening this Pokemon is instant," not just
+	// "the browse table has a row for it."
+	async getCacheStatus(range: { start: number; end: number }): Promise<{ cached: number; total: number }> {
+		const ids = Array.from({ length: range.end - range.start + 1 }, (_, i) => range.start + i);
+		let cached = 0;
+		await mapWithConcurrency(ids, DISK_READ_CONCURRENCY, async (id) => {
+			return (await this.isIdCached(id)) && (await this.isExtrasCached(id));
+		}, (result) => {
+			if ("value" in result && result.value) cached++;
+		});
+		return { cached, total: ids.length };
+	}
+
+	// Settings page's "Delete cache" action for a generation: evicts every
+	// id's mem-cache entries and cached disk files (both the table-row core
+	// and the detail-screen extras), without re-fetching — the generation
+	// just goes back to 0/N cached until it's browsed or cached again.
+	// Evolution-chain JSON is deliberately left alone — it's keyed by chain
+	// id, not Pokemon id, and shared across every member of a family, so
+	// deleting it here could evict data a sibling species outside this range
+	// still depends on.
+	async clearRange(range: { start: number; end: number }): Promise<void> {
+		const ids = Array.from({ length: range.end - range.start + 1 }, (_, i) => range.start + i);
+		for (const id of ids) {
+			this.pokemonMemCache.delete(id);
+			this.speciesMemCache.delete(id);
+			for (const suffix of ["sprite", "artwork", "shiny", "shiny-artwork"]) {
+				this.imageMemCache.delete(`images/${id}-${suffix}.png`);
+				await this.cache.remove(`images/${id}-${suffix}.png`);
+			}
+			await this.cache.remove(`pokemon/${id}.json`);
+			await this.cache.remove(`species/${id}.json`);
+		}
+	}
+
+	// Settings page's "Cache" action for a generation: the normal getTableRows
+	// path (table-row core) followed by getEntryExtras for every id (official
+	// artwork, shiny, shiny artwork, evolution chain) — the same data
+	// DetailLoadState.load() would otherwise fetch on first click into that
+	// Pokemon, done ahead of time instead. Reports one combined progress
+	// count across both phases (ids.length each) rather than restarting the
+	// counter at the halfway point.
+	async cacheRange(
+		range: { start: number; end: number },
+		onProgress?: (loaded: number, total: number) => void,
+		isCancelled?: () => boolean,
+		onRow?: (row: PokedexTableRow) => void,
+	): Promise<TableLoadResult> {
+		const ids = Array.from({ length: range.end - range.start + 1 }, (_, i) => range.start + i);
+		const totalSteps = ids.length * 2;
+
+		const result = await this.getTableRows(range, (loaded) => onProgress?.(loaded, totalSteps), isCancelled, onRow);
+
+		let extrasLoaded = ids.length;
+		await mapWithConcurrency(ids, FETCH_CONCURRENCY, (id) => this.getEntryExtras(id), () => {
+			extrasLoaded++;
+			onProgress?.(extrasLoaded, totalSteps);
+		}, isCancelled);
+
+		return result;
+	}
+
+	// Settings page's "Refresh" action for a generation: clearRange followed
+	// by cacheRange — same network/disk-concurrency split, just forced past
+	// the cache instead of short-circuited by it, and covering extras too.
+	async refreshRange(
+		range: { start: number; end: number },
+		onProgress?: (loaded: number, total: number) => void,
+		isCancelled?: () => boolean,
+		onRow?: (row: PokedexTableRow) => void,
+	): Promise<TableLoadResult> {
+		await this.clearRange(range);
+		return this.cacheRange(range, onProgress, isCancelled, onRow);
 	}
 
 	// Fetches/caches table rows (pokemon + species, for catch rate/hatch

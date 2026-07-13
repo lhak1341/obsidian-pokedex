@@ -148,6 +148,11 @@ export interface PokedexTableRow {
 	stats: StatBlock;
 	evYield: EvYieldEntry[];
 	abilityNames: string[];
+	// Deduped move names learned via level-up (across MOVE_VERSION_GROUPS) —
+	// powers the Quirks filter's Thief/Trick/Covet toggles without a
+	// per-Pokemon detail fetch, since the underlying move data is already
+	// part of the same RawPokemon response abilityNames/stats come from.
+	levelUpMoveNames: string[];
 	spriteDataUri: string | null;
 	height: number;
 	weight: number;

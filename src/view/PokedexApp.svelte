@@ -17,6 +17,14 @@
 	let screen = $state<"table" | "detail">("table");
 	let selectedId = $state<number | null>(null);
 
+	// Browser-style back/forward through previously-viewed Pokemon (see
+	// openDetail/goBack/goForward below), bound to plain "[" / "]" — no
+	// modifier is free of conflict with any existing hotkey (unlike Cmd+L
+	// and Cmd+[/Cmd+], which collide with Obsidian's/Electron's own bindings;
+	// see QuickSearch.svelte's comment for that whole saga).
+	let history = $state<number[]>([]);
+	let historyIndex = $state(-1);
+
 	// PokedexLoadState is a plain, non-reactive class (tested with plain
 	// vitest, see PokedexLoadState.test.ts) — Svelte 5's $state only
 	// deep-proxies plain objects/arrays, not class instances, so mutations
@@ -101,7 +109,67 @@
 		selectedId = id;
 		screen = "detail";
 		rootEl?.scrollTo(0, 0);
+		// Same truncate-then-push semantics as a browser's history stack: a
+		// fresh navigation (table row, evolution card, quick search, ...)
+		// drops any forward entries past the current point rather than
+		// leaving them reachable via goForward.
+		history = [...history.slice(0, historyIndex + 1), id];
+		historyIndex = history.length - 1;
 	}
+
+	// Past the oldest viewed Pokemon, "[" steps out one more level to the
+	// table itself — same destination as the "Back to list" button, just
+	// reusing backToTable() rather than duplicating its scroll-restore logic.
+	function goBack() {
+		if (historyIndex <= 0) {
+			if (screen === "detail") void backToTable();
+			return;
+		}
+		historyIndex -= 1;
+		selectedId = history[historyIndex];
+		rootEl?.scrollTo(0, 0);
+	}
+
+	// Symmetric counterpart: from the table (having arrived there via goBack,
+	// not the explicit "Back to list" button), "]" re-enters detail at
+	// whatever Pokemon history was last pointing at.
+	function goForward() {
+		if (screen === "table") {
+			if (historyIndex < 0 || historyIndex >= history.length) return;
+			selectedId = history[historyIndex];
+			screen = "detail";
+			rootEl?.scrollTo(0, 0);
+			return;
+		}
+		if (historyIndex >= history.length - 1) return;
+		historyIndex += 1;
+		selectedId = history[historyIndex];
+		rootEl?.scrollTo(0, 0);
+	}
+
+	function isEditableTarget(target: EventTarget | null): boolean {
+		if (!(target instanceof HTMLElement)) return false;
+		return target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
+	}
+
+	// Verified against both Obsidian's HotkeyManager and Electron's native
+	// app menu (app.hotkeyManager.bakedHotkeys / Menu.getApplicationMenu())
+	// that plain "[" and "]" have zero existing bindings, so this needs
+	// neither the capture-phase trick nor stopPropagation that Mod+Shift+L
+	// required.
+	function onGlobalKeydown(e: KeyboardEvent) {
+		if (isEditableTarget(e.target)) return;
+		if (e.key === "[") {
+			e.preventDefault();
+			goBack();
+		} else if (e.key === "]") {
+			e.preventDefault();
+			goForward();
+		}
+	}
+
+	onMount(() => window.addEventListener("keydown", onGlobalKeydown));
+	onDestroy(() => window.removeEventListener("keydown", onGlobalKeydown));
 
 	async function backToTable() {
 		screen = "table";

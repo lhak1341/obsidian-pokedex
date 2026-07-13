@@ -3,7 +3,10 @@ import type { PokedexTableRow } from "../data/types";
 import type { SortColumn } from "./sortPokemon";
 import { totalStat } from "./stats";
 
-const STAT_LABEL_BY_KEY = new Map(STAT_COLUMNS.map((c) => [c.key, c.label]));
+// Exported for TableScreen's EV yield column, which renders colored chips
+// (see STAT_COLORS) rather than this plain-text join, but still needs the
+// same stat-key-to-abbreviation lookup.
+export const STAT_LABEL_BY_KEY = new Map(STAT_COLUMNS.map((c) => [c.key, c.label]));
 
 export interface ColumnDef {
 	key: string;

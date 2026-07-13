@@ -1,4 +1,4 @@
-import type { App, DataAdapter } from "obsidian";
+import type { App, DataAdapter, PluginManifest } from "obsidian";
 
 const MIME_BY_EXT: Record<string, string> = {
 	png: "image/png",
@@ -28,15 +28,39 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 	return btoa(binary);
 }
 
-// Persists PokeAPI JSON + images under the plugin's own folder inside
-// .obsidian/plugins/<id>/cache/ — hidden from the vault's note explorer and
-// never written as vault files/notes.
+// Persists PokeAPI JSON + images under the plugin's own actual deployed
+// folder (manifest.dir) inside .obsidian/plugins/<folder>/cache/ — hidden
+// from the vault's note explorer and never written as vault files/notes.
 export class DiskCache {
 	private constructor(private adapter: DataAdapter, private cacheDir: string) {}
 
-	static forPlugin(app: App, pluginId: string): DiskCache {
-		const cacheDir = `${app.vault.configDir}/plugins/${pluginId}/cache`;
-		return new DiskCache(app.vault.adapter, cacheDir);
+	// manifest.dir (not manifest.id) is load-bearing: a vault can deploy a
+	// plugin under a folder name that differs from its manifest id (this
+	// repo's own dev vault deploys to .obsidian/plugins/pokedex/ while
+	// manifest.id stays "obsidian-pokedex" — see CLAUDE.md). Keying the cache
+	// path off manifest.id instead used to leave the cache sitting in an
+	// orphaned sibling folder the deployed plugin folder never contained —
+	// invisible next to main.js/manifest.json, and never cleaned up if that
+	// folder were ever deleted. Falls back to the old id-based path only if
+	// manifest.dir is ever genuinely absent.
+	static async forPlugin(app: App, manifest: PluginManifest): Promise<DiskCache> {
+		const cacheDir = `${manifest.dir ?? `${app.vault.configDir}/plugins/${manifest.id}`}/cache`;
+		const cache = new DiskCache(app.vault.adapter, cacheDir);
+		await cache.migrateFromLegacyIdPath(app, manifest);
+		return cache;
+	}
+
+	// One-time move for any install (like this repo's own dev vault) whose
+	// cache was already written under the old configDir/plugins/{manifest.id}
+	// path before forPlugin switched to manifest.dir. No-ops immediately once
+	// the legacy directory is gone, or if this plugin's id and deployed
+	// folder happen to already match.
+	private async migrateFromLegacyIdPath(app: App, manifest: PluginManifest): Promise<void> {
+		const legacyDir = `${app.vault.configDir}/plugins/${manifest.id}/cache`;
+		if (legacyDir === this.cacheDir) return;
+		if (await this.adapter.exists(this.cacheDir)) return;
+		if (!(await this.adapter.exists(legacyDir))) return;
+		await this.adapter.rename(legacyDir, this.cacheDir);
 	}
 
 	// Second adapter at the same seam: tests construct a DiskCache against a
@@ -103,6 +127,17 @@ export class DiskCache {
 	async clear(): Promise<void> {
 		if (await this.adapter.exists(this.cacheDir)) {
 			await this.adapter.rmdir(this.cacheDir, true);
+		}
+	}
+
+	// Scoped counterpart to clear() — deletes one cached file (e.g. a single
+	// generation's worth of pokemon/species/sprite entries for a settings
+	// "Refresh" action) rather than the whole cache directory. Silently no-ops
+	// on a file that was never cached, same as clear()'s own exists() guard.
+	async remove(relPath: string): Promise<void> {
+		const path = this.resolve(relPath);
+		if (await this.adapter.exists(path)) {
+			await this.adapter.remove(path);
 		}
 	}
 

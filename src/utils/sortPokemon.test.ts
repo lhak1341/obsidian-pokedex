@@ -10,6 +10,7 @@ function row(id: number, name: string, speed: number, overrides: Partial<Pokedex
 		stats: { hp: 0, attack: 0, defense: 0, specialAttack: 0, specialDefense: 0, speed },
 		evYield: [],
 		abilityNames: [],
+		levelUpMoveNames: [],
 		spriteDataUri: null,
 		height: 0,
 		weight: 0,

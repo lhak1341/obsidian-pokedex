@@ -206,6 +206,11 @@ export function toTableRow(
 		stats: normalizeStats(pokemon.stats),
 		evYield: normalizeEvYield(pokemon.stats),
 		abilityNames: pokemon.abilities.sort((a, b) => a.slot - b.slot).map((a) => a.ability.name),
+		levelUpMoveNames: [...new Set(
+			normalizeMoves(pokemon.moves)
+				.filter((m) => m.learnMethod === "level-up")
+				.map((m) => m.name),
+		)],
 		spriteDataUri,
 		height: pokemon.height,
 		weight: pokemon.weight,

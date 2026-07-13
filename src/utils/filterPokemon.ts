@@ -1,4 +1,4 @@
-import { GENERATIONS } from "../data/constants";
+import { FOSSIL_IDS, GENERATIONS } from "../data/constants";
 import type { PokedexTableRow, StatBlock } from "../data/types";
 
 export interface StatRange {
@@ -18,6 +18,13 @@ export interface PokedexFilters {
 	abilities: string[];
 	// OR semantics: matches if the Pokemon's rarity is ANY of the selected ones.
 	rarities: string[];
+	// OR semantics: matches if the Pokemon's EV yield includes ANY of the
+	// selected stats (e.g. selecting SpA finds every Pokemon that yields at
+	// least one SpA EV, regardless of amount or what else it yields).
+	evStats: string[];
+	// OR semantics: matches if the Pokemon has ANY of the selected quirks
+	// (see QUIRKS in data/constants.ts and matchesQuirk below).
+	quirks: string[];
 }
 
 export const EMPTY_FILTERS: PokedexFilters = {
@@ -27,6 +34,8 @@ export const EMPTY_FILTERS: PokedexFilters = {
 	statRanges: {},
 	abilities: [],
 	rarities: [],
+	evStats: [],
+	quirks: [],
 };
 
 // Exported for QuickSearch.svelte's quick-check input, which needs the same
@@ -73,6 +82,36 @@ function matchesRarities(row: PokedexTableRow, rarities: string[]): boolean {
 	return rarities.includes(row.rarity);
 }
 
+function matchesEvStats(row: PokedexTableRow, evStats: string[]): boolean {
+	if (evStats.length === 0) return true;
+	return row.evYield.some((y) => evStats.includes(y.stat));
+}
+
+// Each quirk key checks a different underlying field — a curated id list
+// (fossil), an ability name (compound-eyes/pickup), or a level-up move name
+// (thief/trick/covet) — see QUIRKS in data/constants.ts for the definitions
+// this switch's keys must stay in sync with.
+function matchesQuirk(row: PokedexTableRow, quirk: string): boolean {
+	switch (quirk) {
+		case "fossil":
+			return FOSSIL_IDS.has(row.id);
+		case "compound-eyes":
+		case "pickup":
+			return row.abilityNames.includes(quirk);
+		case "thief":
+		case "trick":
+		case "covet":
+			return row.levelUpMoveNames.includes(quirk);
+		default:
+			return false;
+	}
+}
+
+function matchesQuirks(row: PokedexTableRow, quirks: string[]): boolean {
+	if (quirks.length === 0) return true;
+	return quirks.some((q) => matchesQuirk(row, q));
+}
+
 export function filterPokemon(rows: PokedexTableRow[], filters: PokedexFilters): PokedexTableRow[] {
 	return rows.filter((row) =>
 		matchesSearch(row, filters.search) &&
@@ -80,6 +119,8 @@ export function filterPokemon(rows: PokedexTableRow[], filters: PokedexFilters):
 		matchesGenerations(row, filters.generations) &&
 		matchesStatRanges(row, filters.statRanges) &&
 		matchesAbilities(row, filters.abilities) &&
-		matchesRarities(row, filters.rarities)
+		matchesRarities(row, filters.rarities) &&
+		matchesEvStats(row, filters.evStats) &&
+		matchesQuirks(row, filters.quirks)
 	);
 }

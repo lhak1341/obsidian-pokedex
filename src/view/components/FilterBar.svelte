@@ -1,14 +1,17 @@
 <script lang="ts">
-	import { GENERATIONS, RARITIES, STAT_COLUMNS, TYPE_NAMES } from "../../data/constants";
-	import { EMPTY_FILTERS, type PokedexFilters } from "../../utils/filterPokemon";
-	import type { StatBlock } from "../../data/types";
+	import { onDestroy, onMount } from "svelte";
+	import { GENERATIONS, QUIRKS, RARITIES, STAT_COLORS, STAT_COLUMNS, TYPE_NAMES } from "../../data/constants";
+	import { EMPTY_FILTERS, matchesSearch, type PokedexFilters } from "../../utils/filterPokemon";
+	import type { PokedexTableRow, StatBlock } from "../../data/types";
 	import TypeBadge from "./TypeBadge.svelte";
 	import Icon from "./Icon.svelte";
 
-	let { filters = $bindable(), abilityOptions, useTypeIcons }: {
+	let { filters = $bindable(), abilityOptions, useTypeIcons, rows, onQuickSelect }: {
 		filters: PokedexFilters;
 		abilityOptions: string[];
 		useTypeIcons: boolean;
+		rows: PokedexTableRow[];
+		onQuickSelect: (id: number) => void;
 	} = $props();
 
 	function toggle(list: string[], value: string): string[] {
@@ -46,15 +49,102 @@
 		const rest = matches.filter((a) => !filters.abilities.includes(a));
 		return [...selected, ...rest];
 	});
+
+	// Quick-jump dropdown on the main search box, mirroring QuickSearch.svelte
+	// on the detail screen (same matchesSearch predicate, same Up/Down/Enter
+	// nav). Kept separate from filters.search's own live-filtering of the
+	// table below rather than replacing it — typing still filters the table
+	// as before, this dropdown just offers a faster way to jump straight into
+	// a result's detail page instead of scrolling to its row.
+	let searchInputEl: HTMLInputElement | undefined;
+	let quickOpen = $state(false);
+	let quickActiveIndex = $state(0);
+
+	const quickMatches = $derived.by(() => {
+		if (!filters.search.trim()) return [];
+		return rows.filter((r) => matchesSearch(r, filters.search)).slice(0, 8);
+	});
+
+	$effect(() => {
+		void quickMatches;
+		quickActiveIndex = 0;
+	});
+
+	function quickSelect(id: number) {
+		onQuickSelect(id);
+		quickOpen = false;
+	}
+
+	function onSearchKeydown(e: KeyboardEvent) {
+		if (e.key === "ArrowDown" && quickMatches.length > 0) {
+			e.preventDefault();
+			quickActiveIndex = (quickActiveIndex + 1) % quickMatches.length;
+		} else if (e.key === "ArrowUp" && quickMatches.length > 0) {
+			e.preventDefault();
+			quickActiveIndex = (quickActiveIndex - 1 + quickMatches.length) % quickMatches.length;
+		} else if (e.key === "Enter" && quickMatches.length > 0) {
+			quickSelect(quickMatches[quickActiveIndex].id);
+		} else if (e.key === "Escape") {
+			// Unlike QuickSearch's own Escape, this doesn't clear filters.search
+			// — that's the table's real live filter, not an ephemeral query, so
+			// Escape here only dismisses the dropdown.
+			quickOpen = false;
+			(e.currentTarget as HTMLInputElement).blur();
+		}
+	}
+
+	// Same Cmd/Ctrl+Shift+L global hotkey as QuickSearch.svelte, and the same
+	// capture-phase + stopPropagation requirement — see that component's
+	// comment for why plain Mod+L is unusable (Electron's native menu) and
+	// why Mod+Shift+L needs capture phase (Obsidian's own HotkeyManager bakes
+	// it to "editor:insert-embed" and listens on `document` during capture).
+	function onGlobalKeydown(e: KeyboardEvent) {
+		if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "l") {
+			e.preventDefault();
+			e.stopPropagation();
+			searchInputEl?.focus();
+			searchInputEl?.select();
+		}
+	}
+
+	onMount(() => window.addEventListener("keydown", onGlobalKeydown, true));
+	onDestroy(() => window.removeEventListener("keydown", onGlobalKeydown, true));
 </script>
 
 <div class="filter-bar">
-	<input
-		type="text"
-		placeholder="Search by name or #..."
-		bind:value={filters.search}
-		class="filter-search"
-	/>
+	<div class="filter-search-wrapper">
+		<input
+			bind:this={searchInputEl}
+			type="text"
+			placeholder="Search by name or #..."
+			bind:value={filters.search}
+			class="filter-search"
+			onfocus={() => (quickOpen = true)}
+			oninput={() => (quickOpen = true)}
+			onblur={() => (quickOpen = false)}
+			onkeydown={onSearchKeydown}
+		/>
+		{#if quickOpen && quickMatches.length > 0}
+			<ul class="quick-jump-results">
+				{#each quickMatches as row, i (row.id)}
+					<li>
+						<!-- preventDefault keeps focus on the input instead of moving it
+						to this button, which would fire the input's onblur (closing this
+						list) before the click/select below ever runs. -->
+						<button
+							type="button"
+							class:active={i === quickActiveIndex}
+							onmousedown={(e) => { e.preventDefault(); quickSelect(row.id); }}
+							onmouseenter={() => (quickActiveIndex = i)}
+						>
+							<span class="quick-jump-id">#{String(row.id).padStart(3, "0")}</span>
+							<span class="quick-jump-name">{row.name}</span>
+						</button>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</div>
 
 	<div class="filter-rail">
 		<details class="filter-group">
@@ -82,7 +172,7 @@
 		<details class="filter-group">
 			<summary>
 				<Icon name="layers" size={14} strokeWidth={2} />
-				<span>Generation</span>
+				<span>Gen</span>
 				{#if filters.generations.length}<span class="filter-count">{filters.generations.length}</span>{/if}
 			</summary>
 			<div class="filter-chips">
@@ -175,6 +265,46 @@
 				{/each}
 			</div>
 		</details>
+
+		<details class="filter-group">
+			<summary>
+				<Icon name="dumbbell" size={14} strokeWidth={2} />
+				<span>EV</span>
+				{#if filters.evStats.length}<span class="filter-count">{filters.evStats.length}</span>{/if}
+			</summary>
+			<div class="filter-chips">
+				{#each STAT_COLUMNS as col (col.key)}
+					<button
+						class="stat-chip"
+						class:active={filters.evStats.includes(col.key)}
+						style:--ev-color={STAT_COLORS[col.key]}
+						onclick={() => (filters.evStats = toggle(filters.evStats, col.key))}
+					>
+						{col.label}
+					</button>
+				{/each}
+			</div>
+		</details>
+
+		<details class="filter-group filter-group-last">
+			<summary>
+				<Icon name="glasses" size={14} strokeWidth={2} />
+				<span>Quirks</span>
+				{#if filters.quirks.length}<span class="filter-count">{filters.quirks.length}</span>{/if}
+			</summary>
+			<div class="filter-chips">
+				{#each QUIRKS as quirk (quirk.key)}
+					<button
+						class="chip quirk-chip"
+						class:active={filters.quirks.includes(quirk.key)}
+						onclick={() => (filters.quirks = toggle(filters.quirks, quirk.key))}
+					>
+						<Icon name={quirk.icon} size={13} strokeWidth={2} />
+						{quirk.label}
+					</button>
+				{/each}
+			</div>
+		</details>
 	</div>
 
 	<button class="filter-reset" onclick={reset}>
@@ -191,9 +321,69 @@
 		gap: 8px;
 		margin-bottom: var(--size-4-3);
 	}
-	.filter-search {
+	/* Named "filter-search-wrapper", not the more obvious "search-wrapper" —
+	that name collides with an unscoped global class Obsidian's own core
+	search UI already defines (display:flex + padding: 8px 14px). Svelte's
+	scoping only strengthens *our* rules with a hash suffix; it can't stop an
+	external, unscoped ".search-wrapper" selector from also matching this
+	div. That collision was inflating this element's height and breaking
+	.filter-bar's flex-start row alignment against .filter-rail/.filter-reset
+	until it was renamed. */
+	.filter-search-wrapper {
+		position: relative;
 		flex: 1 1 220px;
 		min-width: 180px;
+	}
+	.filter-search {
+		width: 100%;
+	}
+	.quick-jump-results {
+		position: absolute;
+		top: calc(100% + 4px);
+		left: 0;
+		right: 0;
+		z-index: 50;
+		margin: 0;
+		padding: 4px;
+		list-style: none;
+		background: var(--background-primary);
+		border: 1px solid var(--background-modifier-border);
+		border-radius: var(--radius-m, 8px);
+		box-shadow: var(--shadow-s);
+		max-height: 260px;
+		overflow-y: auto;
+	}
+	.quick-jump-results li {
+		display: block;
+	}
+	.quick-jump-results button {
+		display: flex;
+		align-items: baseline;
+		/* Obsidian's own button CSS sets justify-content: center — harmless
+		to override since we declare it ourselves, same as QuickSearch's
+		identical override. */
+		justify-content: flex-start;
+		gap: 8px;
+		width: 100%;
+		height: auto;
+		padding: 6px 8px;
+		background: transparent;
+		border: none;
+		border-radius: var(--radius-s, 4px);
+		box-shadow: none;
+		text-align: left;
+		cursor: pointer;
+	}
+	.quick-jump-results button:hover, .quick-jump-results button.active {
+		background: var(--background-modifier-hover);
+	}
+	.quick-jump-id {
+		font-family: var(--font-monospace);
+		font-size: 0.8em;
+		color: var(--text-muted);
+	}
+	.quick-jump-name {
+		text-transform: capitalize;
 	}
 	.filter-rail {
 		display: inline-flex;
@@ -280,6 +470,14 @@
 		border-radius: 4px;
 		box-shadow: var(--shadow-s);
 	}
+	/* Every other filter-group's dropdown opens flush against its own left
+	edge, which is fine as long as there's 320px of room to its right — the
+	rightmost group in the rail doesn't have that, so it opens flush against
+	its own right edge instead (see Quirks, currently the last group). */
+	.filter-group-last .filter-chips {
+		left: auto;
+		right: 0;
+	}
 	.type-chips {
 		width: 260px;
 		row-gap: 4px;
@@ -336,6 +534,49 @@
 	.chip.active {
 		opacity: 1;
 		border-color: var(--interactive-accent);
+		box-shadow: 0 0 0 1px var(--interactive-accent);
+	}
+	/* Each quirk gets its own Lucide icon (per the user's request, "for the
+	sake of organization") ahead of its label — plain .chip is text-only, so
+	this just adds the icon+label flex layout on top of that shared look. */
+	.quirk-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		text-transform: none;
+	}
+	/* Same --ev-color idiom as TableScreen's .ev-chip (dot + tint, not the
+	raw hue as text fill — see that file's comment on why some of these
+	stat colors read poorly as small text). Toggled/active state borrows
+	.chip.active's accent-outline treatment instead of inventing a new one. */
+	.stat-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		padding: 2px 8px 2px 6px;
+		border-radius: 999px;
+		font-size: 0.85em;
+		font-weight: 600;
+		cursor: pointer;
+		color: var(--text-normal);
+		background: color-mix(in srgb, var(--ev-color) 14%, var(--background-primary));
+		border: 1px solid color-mix(in srgb, var(--ev-color) 45%, var(--background-modifier-border));
+		opacity: 0.75;
+		transition: opacity 100ms ease-out, box-shadow 100ms ease-out;
+	}
+	.stat-chip::before {
+		content: "";
+		width: 7px;
+		height: 7px;
+		flex-shrink: 0;
+		border-radius: 50%;
+		background: var(--ev-color);
+	}
+	.stat-chip:hover {
+		opacity: 0.9;
+	}
+	.stat-chip.active {
+		opacity: 1;
 		box-shadow: 0 0 0 1px var(--interactive-accent);
 	}
 	.stat-filters {

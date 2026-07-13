@@ -199,6 +199,11 @@ describe("toTableRow", () => {
 		expect(row.hatchCounter).toBe(20);
 		expect(row.evYield).toEqual([{ stat: "specialAttack", amount: 1 }]);
 	});
+
+	it("dedupes level-up move names across version groups", () => {
+		const row = toTableRow(pokemon, species, null);
+		expect(row.levelUpMoveNames).toEqual(["tackle", "vine-whip"]);
+	});
 });
 
 describe("toEntry", () => {

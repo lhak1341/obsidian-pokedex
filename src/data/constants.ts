@@ -37,6 +37,30 @@ export const RARITIES = [
 	{ key: "mythical", label: "Mythical" },
 ] as const;
 
+// Gen 1-3 fossil Pokemon (revived from a fossil item at a Pokemon Lab, not
+// found or evolved any other way). PokeAPI has no explicit "is_fossil"
+// species flag, so this is a curated list rather than a derived one.
+export const FOSSIL_IDS = new Set([138, 139, 140, 141, 142, 345, 346, 347, 348]);
+
+export interface QuirkDef {
+	key: string;
+	label: string;
+	icon: string;
+}
+
+// A personal shortlist of specific traits (not a formal in-game category) —
+// mixes an ability check (compoundEyes/pickup), a level-up-learnset check
+// (thief/trick/covet), and the curated FOSSIL_IDS list above. See
+// matchesQuirk in filterPokemon.ts for how each key is actually evaluated.
+export const QUIRKS: QuirkDef[] = [
+	{ key: "fossil", label: "Fossil", icon: "bone" },
+	{ key: "compound-eyes", label: "Compound Eyes", icon: "eye" },
+	{ key: "pickup", label: "Pickup", icon: "boxes" },
+	{ key: "thief", label: "Thief", icon: "package" },
+	{ key: "trick", label: "Trick", icon: "package" },
+	{ key: "covet", label: "Covet", icon: "package" },
+];
+
 export const GENERATIONS = [
 	{ id: 1, name: "Gen 1 (Kanto)", start: 1, end: 151 },
 	{ id: 2, name: "Gen 2 (Johto)", start: 152, end: 251 },
