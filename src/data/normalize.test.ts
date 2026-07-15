@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	collectChainIds,
+	describeEvolutionRequirement,
 	extractFlavorTexts,
 	nextEvolutionLevels,
 	normalizeEvolutionChain,
@@ -14,7 +15,7 @@ import {
 	toTableRow,
 	trimMovesToVersionGroups,
 } from "./normalize";
-import type { RawEvolutionChain, RawMove, RawPokemon, RawSpecies } from "./types";
+import type { EvolutionNode, RawEvolutionChain, RawMove, RawPokemon, RawSpecies } from "./types";
 import bulbasaurChain from "./__fixtures__/bulbasaur-evolution-chain.json";
 import bulbasaurSpecies from "./__fixtures__/bulbasaur-species.json";
 import bulbasaur from "./__fixtures__/bulbasaur.json";
@@ -257,6 +258,111 @@ describe("nextEvolutionLevels", () => {
 			],
 		};
 		expect(nextEvolutionLevels(forked, 1)).toEqual([10, 20]);
+	});
+});
+
+describe("describeEvolutionRequirement", () => {
+	function node(overrides: Partial<EvolutionNode>): EvolutionNode {
+		return {
+			id: 2,
+			name: "evolved",
+			minLevel: null,
+			trigger: null,
+			item: null,
+			minHappiness: null,
+			timeOfDay: null,
+			heldItem: null,
+			minBeauty: null,
+			relativePhysicalStats: null,
+			location: null,
+			knownMove: null,
+			partySpecies: null,
+			gender: null,
+			children: [],
+			...overrides,
+		};
+	}
+
+	it("labels a level-up evolution", () => {
+		expect(describeEvolutionRequirement(node({ minLevel: 16, trigger: "level-up" }))).toBe("Lv. 16");
+	});
+
+	it("labels an item evolution", () => {
+		expect(describeEvolutionRequirement(node({ item: "thunder-stone", trigger: "use-item" }))).toBe(
+			"thunder stone",
+		);
+	});
+
+	it("labels a friendship evolution", () => {
+		expect(describeEvolutionRequirement(node({ minHappiness: 220, trigger: "level-up" }))).toBe("Friendship");
+	});
+
+	it("labels a beauty evolution", () => {
+		expect(describeEvolutionRequirement(node({ minBeauty: 170, trigger: "level-up" }))).toBe("Beauty");
+	});
+
+	it("labels a known-move evolution", () => {
+		expect(describeEvolutionRequirement(node({ knownMove: "mimic", trigger: "level-up" }))).toBe("Knows mimic");
+	});
+
+	it("labels a party-species evolution", () => {
+		expect(describeEvolutionRequirement(node({ partySpecies: "remoraid", trigger: "level-up" }))).toBe(
+			"remoraid in party",
+		);
+	});
+
+	it("labels a location evolution", () => {
+		expect(describeEvolutionRequirement(node({ location: "mount-coronet", trigger: "level-up" }))).toBe(
+			"mount coronet",
+		);
+	});
+
+	it("labels a non-level-up trigger with no other requirement (e.g. shed)", () => {
+		expect(describeEvolutionRequirement(node({ trigger: "shed" }))).toBe("shed");
+	});
+
+	it("returns an empty string for a plain level-up with no threshold (root node)", () => {
+		expect(describeEvolutionRequirement(node({ trigger: "level-up" }))).toBe("");
+	});
+
+	it("appends a relative-physical-stats suffix to a base label", () => {
+		expect(
+			describeEvolutionRequirement(node({ minLevel: 20, trigger: "level-up", relativePhysicalStats: 1 })),
+		).toBe("Lv. 20 (Atk > Def)");
+		expect(
+			describeEvolutionRequirement(node({ minLevel: 20, trigger: "level-up", relativePhysicalStats: -1 })),
+		).toBe("Lv. 20 (Def > Atk)");
+		expect(
+			describeEvolutionRequirement(node({ minLevel: 20, trigger: "level-up", relativePhysicalStats: 0 })),
+		).toBe("Lv. 20 (Atk = Def)");
+	});
+
+	it("overrides an already-matched base label when trigger is trade with a held item", () => {
+		expect(
+			describeEvolutionRequirement(node({ minLevel: 1, trigger: "trade", heldItem: "metal-coat" })),
+		).toBe("Trade (metal coat)");
+	});
+
+	it("appends a gender suffix to a base label", () => {
+		expect(describeEvolutionRequirement(node({ minLevel: 30, trigger: "level-up", gender: 1 }))).toBe(
+			"Lv. 30 (Female)",
+		);
+		expect(describeEvolutionRequirement(node({ minLevel: 30, trigger: "level-up", gender: 2 }))).toBe(
+			"Lv. 30 (Male)",
+		);
+	});
+
+	it("appends a time-of-day suffix to a base label, last in the chain", () => {
+		expect(
+			describeEvolutionRequirement(node({ minLevel: 30, trigger: "level-up", timeOfDay: "day" })),
+		).toBe("Lv. 30 (Day)");
+		expect(
+			describeEvolutionRequirement(node({ minLevel: 30, trigger: "level-up", timeOfDay: "night" })),
+		).toBe("Lv. 30 (Night)");
+	});
+
+	it("returns a bare time-of-day label when no base label matched", () => {
+		expect(describeEvolutionRequirement(node({ trigger: "level-up", timeOfDay: "day" }))).toBe("Day");
 	});
 });
 

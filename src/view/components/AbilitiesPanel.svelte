@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { relativeRect } from "../domPosition";
+	import { createHoverPopover } from "../hoverPopover.svelte";
 
 	let { abilities, getDescription }: {
 		abilities: { name: string; isHidden: boolean }[];
@@ -15,16 +15,13 @@
 	// caches on the repository side, but this avoids even the async
 	// round-trip).
 	let abilityDescriptions = $state<Record<string, { text: string | null } | { error: true }>>({});
-	let hoveredAbility = $state<string | null>(null);
-	let abilityPopoverPos = $state<{ top: number; left: number } | null>(null);
+	// Positioned relative to .detail-screen (position: absolute, not fixed —
+	// see DetailScreen's .detail-screen CSS comment for why), not the raw
+	// viewport rect.
+	const popover = createHoverPopover(".detail-screen");
 
 	function showAbilityPopover(name: string, target: EventTarget | null) {
-		hoveredAbility = name;
-		// Positioned relative to .detail-screen (position: absolute, not
-		// fixed — see DetailScreen's .detail-screen CSS comment for why), not
-		// the raw viewport rect.
-		const r = relativeRect(target as HTMLElement, ".detail-screen");
-		abilityPopoverPos = { top: r.bottom + 6, left: r.left };
+		popover.show(name, target);
 		if (!(name in abilityDescriptions)) {
 			getDescription(name)
 				.then((text) => {
@@ -35,18 +32,13 @@
 				});
 		}
 	}
-
-	function hideAbilityPopover() {
-		hoveredAbility = null;
-		abilityPopoverPos = null;
-	}
 </script>
 
 <ul class="ability-list">
 	{#each abilities.filter((a) => !a.isHidden) as ability (ability.name)}
 		<li
 			onmouseenter={(e) => showAbilityPopover(ability.name, e.currentTarget)}
-			onmouseleave={hideAbilityPopover}
+			onmouseleave={popover.hide}
 		>
 			{ability.name}
 		</li>
@@ -58,16 +50,16 @@
 		<p
 			class="hidden-ability-name"
 			onmouseenter={(e) => showAbilityPopover(ability.name, e.currentTarget)}
-			onmouseleave={hideAbilityPopover}
+			onmouseleave={popover.hide}
 		>
 			{ability.name}
 		</p>
 	</div>
 {/each}
 
-{#if hoveredAbility && abilityPopoverPos}
-	{@const state = abilityDescriptions[hoveredAbility]}
-	<div class="ability-popover" style="top: {abilityPopoverPos.top}px; left: {abilityPopoverPos.left}px;">
+{#if popover.hovered && popover.pos}
+	{@const state = abilityDescriptions[popover.hovered]}
+	<div class="ability-popover" style="top: {popover.pos.top}px; left: {popover.pos.left}px;">
 		{#if !state}
 			Loading…
 		{:else if "error" in state}

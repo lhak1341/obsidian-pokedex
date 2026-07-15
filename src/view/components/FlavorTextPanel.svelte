@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { FLAVOR_TEXT_TABS_BY_GEN, GENERATIONS } from "../../data/constants";
+	import { FLAVOR_TEXT_TABS_BY_GEN } from "../../data/constants";
+	import { resolveTabsForGen } from "../../utils/generationFallback";
 	import Icon from "./Icon.svelte";
-
-	const LATEST_GEN = Math.max(...GENERATIONS.map((g) => g.id));
 
 	let { flavorTexts, activeGen }: { flavorTexts: Record<string, string>; activeGen: number } = $props();
 
@@ -20,13 +19,11 @@
 	// until the user clears the cache, see PokedexRepository.getOrFetchSpecies)
 	// — falling back to the latest supported generation's tabs when the
 	// active generation predates this species (e.g. viewing a Gen 4 mon with
-	// Active Gen set to Gen 3, which has no data for it at all), same
-	// "prioritize active gen, fall back to latest" rule as resolveStatsForGen.
-	const flavorTabs = $derived.by(() => {
-		const primary = (FLAVOR_TEXT_TABS_BY_GEN[activeGen] ?? []).filter((tab) => flavorTexts[tab.key]);
-		if (primary.length > 0) return primary;
-		return (FLAVOR_TEXT_TABS_BY_GEN[LATEST_GEN] ?? []).filter((tab) => flavorTexts[tab.key]);
-	});
+	// Active Gen set to Gen 3, which has no data for it at all), see
+	// resolveTabsForGen.
+	const flavorTabs = $derived.by(() =>
+		resolveTabsForGen(FLAVOR_TEXT_TABS_BY_GEN, activeGen, (tab) => !!flavorTexts[tab.key]),
+	);
 	const activeFlavorIndex = $derived(
 		Math.max(0, flavorTabs.findIndex((tab) => tab.key === activeFlavorVersion)),
 	);

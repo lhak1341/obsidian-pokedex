@@ -43,8 +43,12 @@
 	// deep-proxies plain objects/arrays, not class instances, so mutations
 	// to its fields wouldn't be visible to the template. entryLoad is the
 	// reactive boundary instead, mirrored wholesale from DetailLoadState's
-	// onUpdate callback via mirrorInto (see PokedexApp.svelte for the same
-	// pattern applied to the browse table's load state).
+	// onUpdate callback via mirrorInto. PokedexLoadState (the browse table's
+	// equivalent, see PokedexApp.svelte) solves the same "plain class into
+	// $state" problem but doesn't use mirrorInto — its load() callbacks are
+	// payload-carrying and row-streaming-shaped (built for incremental
+	// render-as-you-go), not this class's payload-free wholesale-refresh
+	// shape, so PokedexApp mirrors by hand instead.
 	// $derived (not a plain const) so Svelte doesn't warn about capturing the
 	// `repository` prop outside a reactive scope — it never actually changes
 	// across this component's lifetime (see PokedexApp's template, which

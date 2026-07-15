@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { onDestroy, onMount } from "svelte";
+	import { onMount } from "svelte";
 	import type { PokedexTableRow } from "../../data/types";
-	import { matchesSearch } from "../../utils/filterPokemon";
+	import { quickJumpMatches, stepQuickJumpNav } from "../../utils/quickJump";
+	import { registerGlobalHotkey } from "../globalHotkey";
 
 	let { rows, onSelect }: {
 		rows: PokedexTableRow[];
@@ -16,14 +17,7 @@
 	// selects the top match, same as before arrow navigation existed.
 	let activeIndex = $state(0);
 
-	// Same substring/exact-id matching as the browse table's own search (see
-	// matchesSearch in utils/filterPokemon.ts) — an empty query still means
-	// "show nothing" here (unlike matchesSearch's own no-op-filter default),
-	// so that guard stays local rather than folding into the shared predicate.
-	const matches = $derived.by(() => {
-		if (!query.trim()) return [];
-		return rows.filter((r) => matchesSearch(r, query)).slice(0, 8);
-	});
+	const matches = $derived.by(() => quickJumpMatches(rows, query));
 
 	$effect(() => {
 		void matches;
@@ -37,14 +31,12 @@
 	}
 
 	function onKeydown(e: KeyboardEvent) {
-		if (e.key === "ArrowDown" && matches.length > 0) {
+		const result = stepQuickJumpNav(e.key, activeIndex, matches.length);
+		if (result.action === "move") {
 			e.preventDefault();
-			activeIndex = (activeIndex + 1) % matches.length;
-		} else if (e.key === "ArrowUp" && matches.length > 0) {
-			e.preventDefault();
-			activeIndex = (activeIndex - 1 + matches.length) % matches.length;
-		} else if (e.key === "Enter" && matches.length > 0) {
-			select(matches[activeIndex].id);
+			activeIndex = result.index;
+		} else if (result.action === "select") {
+			select(matches[result.index].id);
 		} else if (e.key === "Escape") {
 			query = "";
 			open = false;
@@ -58,31 +50,9 @@
 	// what makes that work when focus currently isn't inside quick-search at
 	// all. Only live while this component is mounted (QuickSearch only
 	// renders on the detail screen), so it can't steal focus from the browse
-	// table.
-	// Plain Mod+L (no Shift) is unusable here: Electron's native app menu
-	// binds "CommandOrControl+L" to *two* menu items (Insert Link, Task
-	// List). That's an OS/main-process-level accelerator — no
-	// preventDefault/stopPropagation/capture-phase trick in the renderer
-	// can intercept it, and the same accelerator string blocks whichever
-	// modifier is "Mod" on every platform (Cmd+L on Mac, Ctrl+L on
-	// Windows/Linux). Shift+L has no such *native* menu binding, but
-	// Obsidian's own core command "editor:insert-embed" is baked to
-	// Mod+Shift+L via its HotkeyManager, which listens on `document` during
-	// the capture phase — that one IS just JS, so registering our window
-	// listener with capture:true (fires window -> document, ahead of
-	// Obsidian's document-level listener) plus stopPropagation lets us grab
-	// the chord first.
-	function onGlobalKeydown(e: KeyboardEvent) {
-		if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "l") {
-			e.preventDefault();
-			e.stopPropagation();
-			inputEl?.focus();
-			inputEl?.select();
-		}
-	}
-
-	onMount(() => window.addEventListener("keydown", onGlobalKeydown, true));
-	onDestroy(() => window.removeEventListener("keydown", onGlobalKeydown, true));
+	// table. See registerGlobalHotkey for why this needs Shift and
+	// capture-phase.
+	onMount(() => registerGlobalHotkey("l", () => { inputEl?.focus(); inputEl?.select(); }));
 </script>
 
 <div class="quick-search">

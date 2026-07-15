@@ -2,6 +2,8 @@ import { Notice, PluginSettingTab, Setting, type ButtonComponent, type SettingDe
 import { DEFAULT_ENABLED_GENERATIONS, DEFAULT_VISIBLE_COLUMNS, GENERATIONS } from "./data/constants";
 import type { PluginSettings } from "./data/types";
 import type PokedexPlugin from "./main";
+import { formatBytes } from "./utils/formatBytes";
+import { resolveGenerationToggle } from "./utils/generationToggle";
 
 export const DEFAULT_SETTINGS: PluginSettings = {
 	enabledGenerations: DEFAULT_ENABLED_GENERATIONS,
@@ -15,12 +17,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	// stats/moves/flavor text as before this setting existed.
 	activeGen: Math.max(...GENERATIONS.map((g) => g.id)),
 };
-
-function formatBytes(bytes: number): string {
-	if (bytes < 1024) return `${bytes} B`;
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 export class PokedexSettingTab extends PluginSettingTab {
 	constructor(app: import("obsidian").App, private plugin: PokedexPlugin) {
@@ -119,17 +115,13 @@ export class PokedexSettingTab extends PluginSettingTab {
 				toggle
 					.setValue(this.plugin.settings.enabledGenerations.includes(gen.id))
 					.onChange(async (value) => {
-						const enabled = new Set(this.plugin.settings.enabledGenerations);
-						if (value) {
-							enabled.add(gen.id);
-						} else if (enabled.size === 1) {
+						const result = resolveGenerationToggle(this.plugin.settings.enabledGenerations, gen.id, value);
+						if (!result.allowed) {
 							new Notice("Pokedex: at least one generation must stay enabled.");
 							toggle.setValue(true);
 							return;
-						} else {
-							enabled.delete(gen.id);
 						}
-						this.plugin.settings.enabledGenerations = [...enabled].sort((a, b) => a - b);
+						this.plugin.settings.enabledGenerations = result.enabled;
 						await this.plugin.saveSettings();
 					})
 			);

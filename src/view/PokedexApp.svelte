@@ -4,6 +4,7 @@
 	import type { PokedexRepository } from "../data/PokedexRepository";
 	import type { PluginSettings, PokedexTableRow } from "../data/types";
 	import { resolveGenerationScope } from "../utils/generationScope";
+	import { describePartialLoadOutcome, describeRetryOutcome } from "../utils/loadNotices";
 	import DetailScreen from "./components/DetailScreen.svelte";
 	import { PokedexLoadState } from "./PokedexLoadState";
 	import TableScreen from "./components/TableScreen.svelte";
@@ -67,10 +68,7 @@
 				failedIds = loadState.failedIds;
 				loading = false;
 				if (failedIds.length > 0) {
-					new Notice(
-						`Pokedex: showing ${rows.length} of ${rows.length + failedIds.length} ` +
-						"Pokemon; some entries couldn't be fetched (offline or PokeAPI unreachable).",
-					);
+					new Notice(describePartialLoadOutcome(rows.length, failedIds.length));
 				}
 			});
 	});
@@ -83,11 +81,7 @@
 			if (!result || loadState.cancelled) return;
 			rows = loadState.rows;
 			failedIds = loadState.failedIds;
-			if (result.failedIds.length > 0) {
-				new Notice(`Pokedex: ${result.rows.length} of ${attempted} retried entries loaded; ${result.failedIds.length} still unreachable.`);
-			} else {
-				new Notice("Pokedex: all entries loaded.");
-			}
+			new Notice(describeRetryOutcome(attempted, result.rows.length, result.failedIds.length));
 		});
 	}
 

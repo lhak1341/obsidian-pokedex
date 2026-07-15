@@ -32,4 +32,23 @@ export default defineConfig([
 			}],
 		},
 	},
+	// .svelte.ts modules (Svelte 5's pattern for reactive state shared
+	// outside a component file) use runes the same as .svelte files do —
+	// but unlike .svelte files, they match the "src/**/*.ts" glob above, so
+	// eslint actually parses them, and no-undef doesn't know these
+	// compiler-injected globals without this.
+	{
+		files: ["src/**/*.svelte.ts"],
+		languageOptions: {
+			globals: {
+				$state: "readonly",
+				$derived: "readonly",
+				$effect: "readonly",
+				$props: "readonly",
+				$bindable: "readonly",
+				$inspect: "readonly",
+				$host: "readonly",
+			},
+		},
+	},
 ]);

@@ -1,8 +1,10 @@
 <script lang="ts">
-	import { onDestroy, onMount } from "svelte";
+	import { onMount } from "svelte";
 	import { GENERATIONS, QUIRKS, RARITIES, STAT_COLORS, STAT_COLUMNS, TYPE_NAMES } from "../../data/constants";
-	import { EMPTY_FILTERS, matchesSearch, type PokedexFilters } from "../../utils/filterPokemon";
+	import { EMPTY_FILTERS, type PokedexFilters } from "../../utils/filterPokemon";
+	import { quickJumpMatches, stepQuickJumpNav } from "../../utils/quickJump";
 	import type { PokedexTableRow, StatBlock } from "../../data/types";
+	import { registerGlobalHotkey } from "../globalHotkey";
 	import TypeBadge from "./TypeBadge.svelte";
 	import Icon from "./Icon.svelte";
 
@@ -60,10 +62,7 @@
 	let quickOpen = $state(false);
 	let quickActiveIndex = $state(0);
 
-	const quickMatches = $derived.by(() => {
-		if (!filters.search.trim()) return [];
-		return rows.filter((r) => matchesSearch(r, filters.search)).slice(0, 8);
-	});
+	const quickMatches = $derived.by(() => quickJumpMatches(rows, filters.search));
 
 	$effect(() => {
 		void quickMatches;
@@ -76,14 +75,12 @@
 	}
 
 	function onSearchKeydown(e: KeyboardEvent) {
-		if (e.key === "ArrowDown" && quickMatches.length > 0) {
+		const result = stepQuickJumpNav(e.key, quickActiveIndex, quickMatches.length);
+		if (result.action === "move") {
 			e.preventDefault();
-			quickActiveIndex = (quickActiveIndex + 1) % quickMatches.length;
-		} else if (e.key === "ArrowUp" && quickMatches.length > 0) {
-			e.preventDefault();
-			quickActiveIndex = (quickActiveIndex - 1 + quickMatches.length) % quickMatches.length;
-		} else if (e.key === "Enter" && quickMatches.length > 0) {
-			quickSelect(quickMatches[quickActiveIndex].id);
+			quickActiveIndex = result.index;
+		} else if (result.action === "select") {
+			quickSelect(quickMatches[result.index].id);
 		} else if (e.key === "Escape") {
 			// Unlike QuickSearch's own Escape, this doesn't clear filters.search
 			// — that's the table's real live filter, not an ephemeral query, so
@@ -93,22 +90,9 @@
 		}
 	}
 
-	// Same Cmd/Ctrl+Shift+L global hotkey as QuickSearch.svelte, and the same
-	// capture-phase + stopPropagation requirement — see that component's
-	// comment for why plain Mod+L is unusable (Electron's native menu) and
-	// why Mod+Shift+L needs capture phase (Obsidian's own HotkeyManager bakes
-	// it to "editor:insert-embed" and listens on `document` during capture).
-	function onGlobalKeydown(e: KeyboardEvent) {
-		if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "l") {
-			e.preventDefault();
-			e.stopPropagation();
-			searchInputEl?.focus();
-			searchInputEl?.select();
-		}
-	}
-
-	onMount(() => window.addEventListener("keydown", onGlobalKeydown, true));
-	onDestroy(() => window.removeEventListener("keydown", onGlobalKeydown, true));
+	// Same Cmd/Ctrl+Shift+L global hotkey as QuickSearch.svelte — see
+	// registerGlobalHotkey for why this needs Shift and capture-phase.
+	onMount(() => registerGlobalHotkey("l", () => { searchInputEl?.focus(); searchInputEl?.select(); }));
 </script>
 
 <div class="filter-bar">

@@ -168,6 +168,45 @@ export function nextEvolutionLevels(root: EvolutionNode, id: number): number[] {
 	return [...new Set(levels)].sort((a, b) => a - b);
 }
 
+// Human-readable label for what triggers `node`'s own evolution (e.g. "Lv.
+// 16", "Thunder Stone", "Trade (metal-coat)") — used as the method line on
+// EvolutionChain's card for this node. Priority-ordered: the base label
+// checks minLevel > item > minHappiness > minBeauty > knownMove >
+// partySpecies > location > trigger (excluding level-up, which needs no
+// label of its own), first match wins. relativePhysicalStats, gender, and
+// timeOfDay are independent suffixes layered on top of whichever base label
+// (if any) matched. trigger==="trade" && heldItem is a hard override — it
+// replaces the base label entirely rather than layering, since "Trade
+// (item)" is a more complete description than whatever base branch also
+// happened to match (e.g. a trade evolution can carry a minHappiness value
+// on some species without happiness actually being the real requirement).
+export function describeEvolutionRequirement(node: EvolutionNode): string {
+	let base = "";
+	if (node.minLevel) base = `Lv. ${node.minLevel}`;
+	else if (node.item) base = node.item.replace(/-/g, " ");
+	else if (node.minHappiness) base = "Friendship";
+	else if (node.minBeauty) base = "Beauty";
+	else if (node.knownMove) base = `Knows ${node.knownMove.replace(/-/g, " ")}`;
+	else if (node.partySpecies) base = `${node.partySpecies.replace(/-/g, " ")} in party`;
+	else if (node.location) base = node.location.replace(/-/g, " ");
+	else if (node.trigger && node.trigger !== "level-up") base = node.trigger.replace(/-/g, " ");
+
+	if (node.relativePhysicalStats === 1) base = base ? `${base} (Atk > Def)` : "Atk > Def";
+	else if (node.relativePhysicalStats === -1) base = base ? `${base} (Def > Atk)` : "Def > Atk";
+	else if (node.relativePhysicalStats === 0) base = base ? `${base} (Atk = Def)` : "Atk = Def";
+
+	if (node.trigger === "trade" && node.heldItem) {
+		base = `Trade (${node.heldItem.replace(/-/g, " ")})`;
+	}
+
+	if (node.gender === 1) base = base ? `${base} (Female)` : "Female";
+	else if (node.gender === 2) base = base ? `${base} (Male)` : "Male";
+
+	if (!node.timeOfDay) return base;
+	const timeLabel = node.timeOfDay === "day" ? "Day" : node.timeOfDay === "night" ? "Night" : node.timeOfDay;
+	return base ? `${base} (${timeLabel})` : timeLabel;
+}
+
 // One entry per tab (across every generation's FLAVOR_TEXT_TABS_BY_GEN
 // entry) that has a matching version in this species' data — missing for a
 // tab only if the species genuinely never appeared in that game (always

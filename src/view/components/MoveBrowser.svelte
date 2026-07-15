@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { GENERATIONS, MOVE_VERSION_TABS_BY_GEN } from "../../data/constants";
+	import { MOVE_VERSION_TABS_BY_GEN } from "../../data/constants";
 	import type { MoveDetail, MoveEntry } from "../../data/types";
-	import { relativeRect } from "../domPosition";
+	import { createHoverPopover } from "../hoverPopover.svelte";
+	import { resolveTabsForGen } from "../../utils/generationFallback";
+	import { buildMoveRows, type MoveRow } from "../../utils/moveRows";
 	import TypeBadge from "./TypeBadge.svelte";
-
-	const LATEST_GEN = Math.max(...GENERATIONS.map((g) => g.id));
 
 	let { moves, moveDetails, useTypeIcons, evolvesAtLevels, activeGen }: {
 		moves: MoveEntry[];
@@ -21,21 +21,7 @@
 	// DetailLoadState.load() already prefetches the whole movepool up front,
 	// so moveDetails[name].description (or its absence) is already known by
 	// the time a row can be hovered.
-	let hoveredMove = $state<string | null>(null);
-	let movePopoverPos = $state<{ top: number; left: number } | null>(null);
-
-	function showMovePopover(name: string, target: EventTarget | null) {
-		hoveredMove = name;
-		// Positioned relative to .detail-screen, same reasoning as
-		// AbilitiesPanel's popover — see its comment.
-		const r = relativeRect(target as HTMLElement, ".detail-screen");
-		movePopoverPos = { top: r.bottom + 6, left: r.left };
-	}
-
-	function hideMovePopover() {
-		hoveredMove = null;
-		movePopoverPos = null;
-	}
+	const popover = createHoverPopover(".detail-screen");
 
 	const MOVE_METHOD_TABS = [
 		{ key: "level-up", label: "Level-Up" },
@@ -62,13 +48,10 @@
 	// list to one game at a time instead) — falling back to the latest
 	// supported generation's games when the active generation predates this
 	// species (e.g. viewing a Gen 4 mon with Active Gen set to Gen 3, which
-	// has no data for it at all), same "prioritize active gen, fall back to
-	// latest" rule as resolveStatsForGen.
+	// has no data for it at all), see resolveTabsForGen.
 	const moveVersionTabs = $derived.by(() => {
 		const versionsWithMoves = new Set(moves.map((m) => m.versionGroup));
-		const primary = (MOVE_VERSION_TABS_BY_GEN[activeGen] ?? []).filter((tab) => versionsWithMoves.has(tab.key));
-		if (primary.length > 0) return primary;
-		return (MOVE_VERSION_TABS_BY_GEN[LATEST_GEN] ?? []).filter((tab) => versionsWithMoves.has(tab.key));
+		return resolveTabsForGen(MOVE_VERSION_TABS_BY_GEN, activeGen, (tab) => versionsWithMoves.has(tab.key));
 	});
 	const effectiveMoveVersion = $derived(
 		moveVersionTabs.some((t) => t.key === activeMoveVersion) ? activeMoveVersion : (moveVersionTabs[0]?.key ?? ""),
@@ -78,34 +61,7 @@
 		moves.filter((m) => m.learnMethod === activeMoveMethod && m.versionGroup === effectiveMoveVersion),
 	);
 
-	// moveIndex (not the raw position in displayRows) drives the alternating
-	// row shade below — a plain `tr:nth-child(odd)` would count the divider
-	// row too, shifting every real move row's shade by one past it.
-	type MoveRow =
-		| { kind: "move"; move: MoveEntry; moveIndex: number }
-		| { kind: "divider"; level: number };
-
-	// Only meaningful on the Level-Up tab (the only one ordered by level —
-	// see normalizeMoves, which sorts level-up moves ascending by
-	// levelLearnedAt before anything else). Interleaves a divider row right
-	// before the first move learned past each evolution level, so it reads
-	// as "these moves came before the evolution, these after" without
-	// needing a second pass over the rendered table.
-	const displayRows = $derived.by((): MoveRow[] => {
-		if (activeMoveMethod !== "level-up" || evolvesAtLevels.length === 0) {
-			return filteredMoves.map((move, moveIndex) => ({ kind: "move", move, moveIndex }));
-		}
-		const remainingLevels = [...evolvesAtLevels];
-		const rows: MoveRow[] = [];
-		filteredMoves.forEach((move, moveIndex) => {
-			while (remainingLevels.length > 0 && move.levelLearnedAt > remainingLevels[0]) {
-				rows.push({ kind: "divider", level: remainingLevels.shift()! });
-			}
-			rows.push({ kind: "move", move, moveIndex });
-		});
-		for (const level of remainingLevels) rows.push({ kind: "divider", level });
-		return rows;
-	});
+	const displayRows = $derived(buildMoveRows(filteredMoves, evolvesAtLevels, activeMoveMethod === "level-up"));
 </script>
 
 <div class="moves-heading-row">
@@ -170,8 +126,8 @@
 						<tr class:row-shaded={row.moveIndex % 2 === 0}>
 							<td
 								class="move-name-cell"
-								onmouseenter={(e) => showMovePopover(move.name, e.currentTarget)}
-								onmouseleave={hideMovePopover}
+								onmouseenter={(e) => popover.show(move.name, e.currentTarget)}
+								onmouseleave={popover.hide}
 							>
 								{move.name}
 							</td>
@@ -194,9 +150,9 @@
 	{/if}
 {/if}
 
-{#if hoveredMove && movePopoverPos}
-	{@const description = moveDetails[hoveredMove]?.description}
-	<div class="move-popover" style="top: {movePopoverPos.top}px; left: {movePopoverPos.left}px;">
+{#if popover.hovered && popover.pos}
+	{@const description = moveDetails[popover.hovered]?.description}
+	<div class="move-popover" style="top: {popover.pos.top}px; left: {popover.pos.left}px;">
 		{description ?? "No description available."}
 	</div>
 {/if}
@@ -290,7 +246,7 @@
 		cursor: help;
 	}
 	/* Same popover look as AbilitiesPanel's — positioned relative to
-	.detail-screen for the same reason (see showMovePopover). */
+	.detail-screen for the same reason (see hoverPopover.svelte.ts). */
 	.move-popover {
 		position: absolute;
 		z-index: 50;
