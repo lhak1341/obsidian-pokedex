@@ -51,6 +51,12 @@ export interface RawSpecies {
 	is_legendary: boolean;
 	is_mythical: boolean;
 	egg_groups: NamedApiResource[];
+	// Alternate forms of this species — most species have only the default
+	// entry (is_default: true, pokemon.name === species.name); a Mega/Gigantamax
+	// variety shows up here as an extra non-default entry with its own
+	// `pokemon` resource (e.g. "charizard-mega-x"), never its own dex number
+	// or species record (see deriveMegaForms in normalize.ts).
+	varieties: { is_default: boolean; pokemon: NamedApiResource }[];
 	flavor_text_entries: {
 		flavor_text: string;
 		language: NamedApiResource;
@@ -75,6 +81,20 @@ export interface RawEvolutionChainLink {
 		known_move: NamedApiResource | null;
 		party_species: NamedApiResource | null;
 		gender: number | null;
+		trade_species: NamedApiResource | null;
+		needs_overworld_rain: boolean;
+		turn_upside_down: boolean;
+		// Present only on a form-divergent evolution (e.g. Meowth -> Persian has
+		// two evolution_details entries: one for the regular line, one with
+		// base_form: "meowth-alola" / evolved_form: "persian-alola" for the
+		// Alolan line, which also happens to use a different trigger —
+		// friendship instead of level). null on every entry for a species with
+		// no regional-form-specific divergence (the common case — most Alolan
+		// species share their evolution requirement with the base form, just
+		// re-recorded per version_group). See normalizeEvolutionChain's
+		// currentFormSuffix parameter for how these are selected per-row.
+		base_form: NamedApiResource | null;
+		evolved_form: NamedApiResource | null;
 	}[];
 	evolves_to: RawEvolutionChainLink[];
 }
@@ -85,6 +105,15 @@ export interface RawEvolutionChain {
 }
 
 export interface RawAbility {
+	name: string;
+	effect_entries: { effect: string; short_effect: string; language: NamedApiResource }[];
+}
+
+// Same effect_entries.short_effect shape as RawAbility (verified live against
+// /item/{name}) — kept as its own type rather than reusing RawAbility since
+// the two are semantically distinct raw responses that happen to share a
+// field shape today.
+export interface RawItem {
 	name: string;
 	effect_entries: { effect: string; short_effect: string; language: NamedApiResource }[];
 }
@@ -108,8 +137,22 @@ export interface StatBlock {
 }
 
 export interface EvolutionNode {
+	// PokeAPI's own numeric pokemon id for whichever form this node
+	// represents — the species' default-variety id for a regular node, or a
+	// variety's own id (e.g. 10104 for ninetales-alola) when the chain was
+	// normalized for a regional-form-aware traversal (see
+	// normalizeEvolutionChain's currentFormSuffix parameter). Always safe to
+	// pass straight into PokedexRepository fetch calls either way.
 	id: number;
+	// Same split as PokedexTableRow: the National Dex number ("No. 038"),
+	// identical for every variety of a species — id above is what's actually
+	// fetched/clicked/keyed-by, dexNumber is what's displayed. See
+	// buildEvolutionNode in normalize.ts.
+	dexNumber: number;
 	name: string;
+	// Human label for a regional-form node ("Alolan"), null for a default
+	// one — mirrors PokedexTableRow.formLabel; see formatPokemonDisplayName.
+	formLabel: string | null;
 	minLevel: number | null;
 	trigger: string | null;
 	item: string | null;
@@ -122,6 +165,16 @@ export interface EvolutionNode {
 	knownMove: string | null;
 	partySpecies: string | null;
 	gender: number | null;
+	// The specific species that must be traded for (Gen 5+, e.g. Karrablast <->
+	// Shelmet) — distinct from heldItem, which is the item carried during a
+	// generic trade evolution. Mutually exclusive with heldItem in practice.
+	tradeSpecies: string | null;
+	// Gen 6+ level-up conditions (Sliggoo -> Goodra needs rain; Inkay ->
+	// Malamar needs the device held upside down) — independent boolean
+	// suffixes layered onto whatever base label matched, same treatment as
+	// gender/timeOfDay below.
+	needsOverworldRain: boolean;
+	turnUpsideDown: boolean;
 	children: EvolutionNode[];
 }
 
@@ -177,8 +230,30 @@ export interface EvYieldEntry {
 export type PokemonRarity = "normal" | "legendary" | "mythical";
 
 export interface PokedexTableRow {
+	// PokeAPI's own numeric pokemon id — the fetch/cache key and the sort
+	// tiebreaker within a shared dexNumber, NOT what's shown as "No. XXX" or
+	// what row-visibility/search-by-number/range filtering key off (see
+	// dexNumber below). A regional-form row's id is its own variety pseudo-id
+	// (e.g. 10091 for rattata-alola), never the base species' id.
 	id: number;
+	// The National Dex number ("No. 019") — identical across a species'
+	// default row and every regional-form row it has, unlike id above. This
+	// is what search-by-number, dex-range display, and Quirks' FOSSIL_IDS
+	// lookup should compare against.
+	dexNumber: number;
 	name: string;
+	// Human label for a regional/alternate form ("Alolan"), null for a
+	// species' default row — see formatPokemonDisplayName in
+	// utils/pokemonDisplay.ts for how this composes with `name` for display.
+	formLabel: string | null;
+	// Precomputed generation membership for the enabledGenerations
+	// row-visibility filter: a default row's is derived from dexNumber
+	// falling inside a GENERATIONS range (today's behavior); a regional-form
+	// row's is looked up from REGIONAL_FORM_GENERATIONS instead, since a form
+	// belongs to whichever generation actually introduced it (Alolan forms
+	// are Gen 7) regardless of its base species' original dex number/gen —
+	// disabling Gen 7 should hide Alolan Rattata even with Gen 1 enabled.
+	generationId: number;
 	types: string[];
 	stats: StatBlock;
 	evYield: EvYieldEntry[];
@@ -219,6 +294,40 @@ export interface PokedexEntry extends PokedexTableRow {
 	// rare case it does. Table column (heldItemNames on PokedexTableRow)
 	// deliberately stays name-only; this richer shape is detail-view-only.
 	heldItems: { name: string; rarities: number[] }[];
+	// Mega Evolution varieties this species has, if any (empty for the ~95%
+	// of species that don't) — cheap to derive from species.varieties at
+	// getEntryCore time, no extra fetch. Selecting one lazily fetches the
+	// full MegaFormDetail (see PokedexRepository.getMegaForm) only when the
+	// user actually picks that tab, same lazy-on-interaction shape as
+	// ability/move descriptions.
+	megaForms: MegaFormSummary[];
+}
+
+// key is the raw PokeAPI variety name (e.g. "charizard-mega-x") — used both
+// as the display-agnostic identity for caching/lookup and as the literal
+// fetch target (GET /pokemon/{key}). label is the short human tab text
+// derived from it ("Mega X").
+export interface MegaFormSummary {
+	key: string;
+	label: string;
+}
+
+// Everything that visibly differs on a Mega form vs its base species —
+// deliberately NOT extending PokedexEntry: a Mega form has no breeding data,
+// no wild held items, no independent movepool/evolution/flavor text of its
+// own (it's a battle-only transform of the base species, not a distinct
+// dex entry), so there's nothing to inherit. Same four image fields as
+// PokedexEntry (spriteDataUri/artworkDataUri/shinyDataUri/shinyArtworkDataUri)
+// so DetailScreen's existing portrait/shiny-toggle derivation can treat
+// either shape interchangeably (see basePortrait/shinyPortrait helpers).
+export interface MegaFormDetail {
+	types: string[];
+	abilities: { name: string; isHidden: boolean }[];
+	stats: StatBlock;
+	spriteDataUri: string | null;
+	artworkDataUri: string | null;
+	shinyDataUri: string | null;
+	shinyArtworkDataUri: string | null;
 }
 
 export interface PluginSettings {

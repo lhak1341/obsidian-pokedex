@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import bulbasaur from "./__fixtures__/bulbasaur.json";
+import bulbasaurSpecies from "./__fixtures__/bulbasaur-species.json";
 import { createFakeDataAdapter, FakePokeApiClient } from "./__fixtures__/fakes";
 import { DiskCache } from "./Cache";
 import { PokedexRepository } from "./PokedexRepository";
-import type { RawPokemon } from "./types";
+import type { RawPokemon, RawSpecies } from "./types";
 
 function makeRepository() {
 	const client = new FakePokeApiClient();
@@ -37,7 +38,7 @@ describe("PokedexRepository", () => {
 		const { cache, repository } = makeRepository();
 		// Simulate a cache written before trimMovesToVersionGroups existed: the
 		// full fixture still has out-of-scope version groups (e.g. solar-beam,
-		// black-white only).
+		// sword-shield only).
 		await cache.writeJson("pokemon/1.json", bulbasaur);
 		expect((bulbasaur as unknown as RawPokemon).moves.some((m) => m.move.name === "solar-beam")).toBe(true);
 
@@ -111,6 +112,74 @@ describe("PokedexRepository", () => {
 		expect(client.fetchPokemon).toHaveBeenCalledTimes(1);
 		expect(client.fetchPokemon).toHaveBeenCalledWith(3);
 		expect(result.rows.map((r) => r.id).sort((a, b) => a - b)).toEqual([1, 2, 3]);
+	});
+
+	it("produces one row per regional-form variety alongside the base row, sharing dexNumber", async () => {
+		const { client, cache, repository } = makeRepository();
+		// Bypasses the fake client's numeric/name fetch branches directly via
+		// disk cache (same technique as the untrimmed-cache-migration test
+		// above) — sets up dex #19 as "rattata" with an Alolan variety, since
+		// the default bulbasaur fixture's species is obviously not one.
+		const rattataSpecies: RawSpecies = {
+			...bulbasaurSpecies,
+			id: 19,
+			name: "rattata",
+			varieties: [
+				{ is_default: true, pokemon: { name: "rattata", url: "" } },
+				{ is_default: false, pokemon: { name: "rattata-alola", url: "" } },
+			],
+		};
+		await cache.writeJson("species/19.json", rattataSpecies);
+		await cache.writeJson("pokemon/19.json", {
+			...(bulbasaur as unknown as RawPokemon),
+			id: 19,
+			name: "rattata",
+			species: { name: "rattata", url: "" },
+		});
+		client.variantPokemon.set("rattata-alola", {
+			...(bulbasaur as unknown as RawPokemon),
+			id: 10091,
+			name: "rattata-alola",
+			species: { name: "rattata", url: "" },
+			types: [{ slot: 1, type: { name: "dark", url: "" } }],
+		});
+
+		const result = await repository.getTableRows({ start: 19, end: 19 });
+
+		expect(
+			result.rows.map((r) => ({ id: r.id, dexNumber: r.dexNumber, formLabel: r.formLabel, name: r.name })),
+		).toEqual([
+			{ id: 19, dexNumber: 19, formLabel: null, name: "rattata" },
+			{ id: 10091, dexNumber: 19, formLabel: "Alolan", name: "rattata" },
+		]);
+		expect(result.rows[1].types).toEqual(["dark"]);
+	});
+
+	it("skips a failed regional-form variant without dropping the base row", async () => {
+		const { cache, repository } = makeRepository();
+		const rattataSpecies: RawSpecies = {
+			...bulbasaurSpecies,
+			id: 19,
+			name: "rattata",
+			varieties: [
+				{ is_default: true, pokemon: { name: "rattata", url: "" } },
+				{ is_default: false, pokemon: { name: "rattata-alola", url: "" } },
+			],
+		};
+		await cache.writeJson("species/19.json", rattataSpecies);
+		await cache.writeJson("pokemon/19.json", {
+			...(bulbasaur as unknown as RawPokemon),
+			id: 19,
+			name: "rattata",
+			species: { name: "rattata", url: "" },
+		});
+		// No client.variantPokemon entry set for "rattata-alola" -> the fake
+		// throws when fetchPokemon is called with that name.
+
+		const result = await repository.getTableRows({ start: 19, end: 19 });
+
+		expect(result.rows.map((r) => r.id)).toEqual([19]);
+		expect(result.failedIds).toEqual([]);
 	});
 
 	it("getTableRows' onRow callback fires once per successful row as it settles", async () => {

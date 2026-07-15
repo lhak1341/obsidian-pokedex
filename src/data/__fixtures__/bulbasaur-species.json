@@ -16,5 +16,8 @@
 		{ "flavor_text": "Bulbasaur peut etre\nvu somnolant sous\nle soleil.", "language": { "name": "fr", "url": "" }, "version": { "name": "emerald", "url": "" } }
 	],
 	"evolution_chain": { "url": "https://pokeapi.co/api/v2/evolution-chain/1/" },
-	"generation": { "name": "generation-i", "url": "" }
+	"generation": { "name": "generation-i", "url": "" },
+	"varieties": [
+		{ "is_default": true, "pokemon": { "name": "bulbasaur", "url": "https://pokeapi.co/api/v2/pokemon/1/" } }
+	]
 }

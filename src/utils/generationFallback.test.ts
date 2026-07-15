@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
+import { GENERATIONS } from "../data/constants";
 import { resolveTabsForGen } from "./generationFallback";
+
+// resolveTabsForGen's fallback target is GENERATIONS' own max id, not a
+// fixed number — keying this mock's "latest" entry off the same constant
+// (rather than a hardcoded gen number) means this test doesn't need a
+// re-fix every time a new generation phase ships and GENERATIONS grows.
+const LATEST_GEN = Math.max(...GENERATIONS.map((g) => g.id));
 
 const MOVE_TABS_BY_GEN: Record<number, readonly { key: string; label: string }[]> = {
 	3: [
 		{ key: "firered-leafgreen", label: "FRLG" },
 		{ key: "emerald", label: "RSE" },
 	],
-	4: [
+	[LATEST_GEN]: [
 		{ key: "diamond-pearl", label: "D/P" },
 		{ key: "platinum", label: "Platinum" },
 	],
@@ -17,7 +24,7 @@ const FLAVOR_TABS_BY_GEN: Record<number, readonly { key: string; label: string; 
 		{ key: "leafgreen", label: "Leaf Green", versions: ["leafgreen"] },
 		{ key: "firered", label: "Fire Red", versions: ["firered"] },
 	],
-	4: [{ key: "platinum", label: "Platinum", versions: ["platinum"] }],
+	[LATEST_GEN]: [{ key: "platinum", label: "Platinum", versions: ["platinum"] }],
 };
 
 describe("resolveTabsForGen", () => {

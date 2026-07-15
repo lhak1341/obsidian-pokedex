@@ -1,9 +1,12 @@
 import { mapWithConcurrency } from "../utils/concurrency";
 import { DiskCache } from "./Cache";
 import {
+	deriveRegionalForms,
 	normalizeEvolutionChain,
 	normalizeMoveDetail,
+	resolveRegionalFormSuffix,
 	toEntry,
+	toMegaFormDetail,
 	toTableRow,
 	trimFlavorTextEntries,
 	trimMovesToVersionGroups,
@@ -12,6 +15,7 @@ import { PokeApiClient } from "./PokeApiClient";
 import type {
 	EvolutionChainVisual,
 	EvolutionNode,
+	MegaFormDetail,
 	MoveDetail,
 	PokedexEntry,
 	PokedexTableRow,
@@ -46,6 +50,11 @@ export class PokedexRepository {
 	// re-parses/re-base64-encodes the same ~400 files from disk even though
 	// nothing on disk changed since the last read a moment ago.
 	private pokemonMemCache = new Map<number, RawPokemon>();
+	// Regional-form varieties (e.g. "rattata-alola") are fetched by PokeAPI
+	// *name*, not a numeric dex id — a separate cache/map so a variety name
+	// can never collide with a numeric pokemonMemCache key, and so
+	// `pokemon/{name}.json` and `pokemon/{id}.json` stay distinct disk paths.
+	private pokemonVariantMemCache = new Map<string, RawPokemon>();
 	private speciesMemCache = new Map<number, RawSpecies>();
 	private evolutionChainMemCache = new Map<string, RawEvolutionChain>();
 	private imageMemCache = new Map<string, string>();
@@ -55,7 +64,9 @@ export class PokedexRepository {
 	// indistinguishable from "not fetched yet" via Map.get, which is exactly
 	// why getOrFetch's own presence check uses .has() instead.
 	private abilityDescriptionMemCache = new Map<string, { description: string | null }>();
+	private itemDescriptionMemCache = new Map<string, { description: string | null }>();
 	private moveDetailMemCache = new Map<string, MoveDetail>();
+	private megaFormMemCache = new Map<string, MegaFormDetail>();
 
 	constructor(
 		private client: PokeApiClient,
@@ -110,32 +121,62 @@ export class PokedexRepository {
 		return fresh;
 	}
 
+	// Shared fetch/migrate/isStale logic behind getOrFetchPokemon (numeric id)
+	// and getOrFetchPokemonVariant (name) below — both fetch the exact same
+	// /pokemon/{idOrName} shape and need the exact same trim/self-heal
+	// treatment, just keyed differently.
+	private async fetchAndTrimPokemon(idOrName: number | string): Promise<RawPokemon> {
+		const fresh = await this.client.fetchPokemon(idOrName);
+		// See trimMovesToVersionGroups: strips the ~20 version groups this
+		// plugin never reads before it's written to disk / kept in memory.
+		return { ...fresh, moves: trimMovesToVersionGroups(fresh.moves) };
+	}
+	// Self-heals a cache written before trimMovesToVersionGroups existed (a
+	// full, untrimmed moves array) by rewriting it trimmed the first time
+	// it's read, rather than requiring a manual cache clear.
+	private trimCachedPokemonMoves(cached: RawPokemon): RawPokemon {
+		const trimmedMoves = trimMovesToVersionGroups(cached.moves);
+		return trimmedMoves.length !== cached.moves.length ? { ...cached, moves: trimmedMoves } : cached;
+	}
+	// held_items is new data, not a trim-down of something already on disk
+	// (unlike moves/flavor text above) — same as getMoveDetails' `description`
+	// field, a cache written before it existed can't self-heal via a local
+	// transform and needs a real refetch.
+	private pokemonIsStale(cached: RawPokemon): boolean {
+		return !("held_items" in cached);
+	}
+
 	private async getOrFetchPokemon(id: number): Promise<RawPokemon> {
 		return this.getOrFetch(
 			this.pokemonMemCache,
 			id,
 			`pokemon/${id}.json`,
-			async () => {
-				const fresh = await this.client.fetchPokemon(id);
-				// See trimMovesToVersionGroups: strips the ~20 version groups this
-				// plugin never reads before it's written to disk / kept in memory.
-				return { ...fresh, moves: trimMovesToVersionGroups(fresh.moves) };
-			},
-			// Self-heals a cache written before trimMovesToVersionGroups existed
-			// (a full, untrimmed moves array) by rewriting it trimmed the first
-			// time it's read, rather than requiring a manual cache clear.
-			(cached) => {
-				const trimmedMoves = trimMovesToVersionGroups(cached.moves);
-				return trimmedMoves.length !== cached.moves.length
-					? { ...cached, moves: trimmedMoves }
-					: cached;
-			},
-			// held_items is new data, not a trim-down of something already on
-			// disk (unlike moves/flavor text above) — same as getMoveDetails'
-			// `description` field, a cache written before it existed can't
-			// self-heal via a local transform and needs a real refetch.
-			(cached) => !("held_items" in cached),
+			() => this.fetchAndTrimPokemon(id),
+			(cached) => this.trimCachedPokemonMoves(cached),
+			(cached) => this.pokemonIsStale(cached),
 		);
+	}
+
+	private async getOrFetchPokemonVariant(name: string): Promise<RawPokemon> {
+		return this.getOrFetch(
+			this.pokemonVariantMemCache,
+			name,
+			`pokemon/${name}.json`,
+			() => this.fetchAndTrimPokemon(name),
+			(cached) => this.trimCachedPokemonMoves(cached),
+			(cached) => this.pokemonIsStale(cached),
+		);
+	}
+
+	// Every RawPokemon carries its own species reference (name + URL) —
+	// resolving the species id from *that* rather than assuming it equals
+	// the pokemon's own id is what lets every call site below work
+	// uniformly for both a default variety (where they're numerically the
+	// same anyway) and a regional-form variety (where they're not: Alolan
+	// Rattata's own id is 10091, but its species is still #19).
+	private speciesIdFromPokemon(pokemon: RawPokemon): number {
+		const match = pokemon.species.url.match(/\/(\d+)\/?$/);
+		return match ? Number(match[1]) : pokemon.id;
 	}
 
 	private async getOrFetchSpecies(id: number): Promise<RawSpecies> {
@@ -211,6 +252,25 @@ export class PokedexRepository {
 		return result.description;
 	}
 
+	// Wild held items repeat across species (e.g. "oran-berry") the same way
+	// abilities do — cached by item name, fetched lazily on hover from the
+	// detail view's held-item line, same shape/caching approach as
+	// getAbilityDescription above.
+	async getItemDescription(name: string): Promise<string | null> {
+		const result = await this.getOrFetch(
+			this.itemDescriptionMemCache,
+			name,
+			`items/${name}.json`,
+			async () => {
+				const fresh = await this.client.fetchItem(name);
+				const description =
+					fresh.effect_entries.find((e) => e.language.name === "en")?.short_effect ?? null;
+				return { description };
+			},
+		);
+		return result.description;
+	}
+
 	// Moves repeat even more heavily than abilities across species (e.g.
 	// almost every Pokemon learns Tackle or Growl) — cached by move name for
 	// the same reason. Unlike getAbilityDescription, a fetch failure here
@@ -250,6 +310,42 @@ export class PokedexRepository {
 		await mapWithConcurrency(uniqueNames, FETCH_CONCURRENCY, (name) => this.getMoveDetails(name), (result) => {
 			if ("value" in result) onResult(uniqueNames[result.index], result.value);
 		});
+	}
+
+	// Mega forms are rare (<40 species out of 900+) and only ever needed when
+	// a user actually clicks that species' Mega tab — fetched lazily here
+	// rather than eagerly during getEntryCore/getEntryExtras, same reasoning
+	// as ability/item descriptions above. Not built on the generic getOrFetch
+	// shell: like getEntryCore/getEntryExtras, this combines one JSON fetch
+	// with several image fetches, a different shape than getOrFetch's
+	// single-value cache. `varietyKey` (e.g. "charizard-mega-x") is a PokeAPI
+	// pokemon name, never a numeric id, so it can't collide with the
+	// `pokemon/{id}.json` cache getOrFetchPokemon uses.
+	async getMegaForm(varietyKey: string): Promise<MegaFormDetail> {
+		const mem = this.megaFormMemCache.get(varietyKey);
+		if (mem) return mem;
+		const cached = await this.cache.readJson<MegaFormDetail>(`mega-forms/${varietyKey}.json`);
+		if (cached) {
+			this.megaFormMemCache.set(varietyKey, cached);
+			return cached;
+		}
+		const pokemon = await this.client.fetchPokemon(varietyKey);
+		const [sprite, artwork, shiny, shinyArtwork] = await Promise.all([
+			this.getOrFetchImage(pokemon.sprites.front_default, `images/${varietyKey}-sprite.png`).catch(() => null),
+			this.getOrFetchImage(
+				pokemon.sprites.other?.["official-artwork"]?.front_default ?? null,
+				`images/${varietyKey}-artwork.png`,
+			).catch(() => null),
+			this.getOrFetchImage(pokemon.sprites.front_shiny, `images/${varietyKey}-shiny.png`).catch(() => null),
+			this.getOrFetchImage(
+				pokemon.sprites.other?.["official-artwork"]?.front_shiny ?? null,
+				`images/${varietyKey}-shiny-artwork.png`,
+			).catch(() => null),
+		]);
+		const detail = toMegaFormDetail(pokemon, { sprite, artwork, shiny, shinyArtwork });
+		await this.cache.writeJson(`mega-forms/${varietyKey}.json`, detail);
+		this.megaFormMemCache.set(varietyKey, detail);
+		return detail;
 	}
 
 	// Shared by partitionByCacheHit and getCacheStatus — an id counts as
@@ -308,7 +404,13 @@ export class PokedexRepository {
 	// refresh — an id only counts as cached once both the table-row core
 	// (isIdCached) and the detail-screen extras (isExtrasCached) are on disk,
 	// since "cached" here means "opening this Pokemon is instant," not just
-	// "the browse table has a row for it."
+	// "the browse table has a row for it." Known, intentionally-scoped gap:
+	// this counts base dex ids only, not the regional-form rows they may
+	// also produce (see getRowsForIds) — the Cache/Refresh/Delete actions
+	// below don't reach into pokemonVariantMemCache or a variety's own
+	// pokemon/{name}.json either. A regional variant still gets cached
+	// normally the first time its table row loads; it just isn't reflected
+	// in this counter or swept by these bulk actions yet.
 	async getCacheStatus(range: { start: number; end: number }): Promise<{ cached: number; total: number }> {
 		const ids = Array.from({ length: range.end - range.start + 1 }, (_, i) => range.start + i);
 		let cached = 0;
@@ -408,25 +510,44 @@ export class PokedexRepository {
 		let loaded = 0;
 		const total = ids.length;
 
-		const fetchRow = async (id: number): Promise<PokedexTableRow> => {
-			const [pokemon, species] = await Promise.all([
-				this.getOrFetchPokemon(id),
-				this.getOrFetchSpecies(id),
-			]);
-			const sprite = await this.getOrFetchImage(
-				pokemon.sprites.front_default,
-				`images/${id}-sprite.png`,
-			);
-			return toTableRow(pokemon, species, sprite);
+		// One base id can now produce multiple rows: the species' own default
+		// row plus one per regional-form variety it has (e.g. id 19 -> Rattata
+		// AND Alolan Rattata) — see deriveRegionalForms. A dropped fetch for
+		// one variant is swallowed rather than failing the whole id: the base
+		// row (already built above it) still renders, just without that one
+		// regional sibling this load — same "a partial miss shouldn't take
+		// down what did succeed" reasoning as getEntryExtras' per-image
+		// .catch(() => null) below.
+		const fetchRow = async (id: number): Promise<PokedexTableRow[]> => {
+			const pokemon = await this.getOrFetchPokemon(id);
+			const species = await this.getOrFetchSpecies(this.speciesIdFromPokemon(pokemon));
+			const sprite = await this.getOrFetchImage(pokemon.sprites.front_default, `images/${id}-sprite.png`);
+			const builtRows = [toTableRow(pokemon, species, sprite)];
+
+			for (const form of deriveRegionalForms(species)) {
+				try {
+					const formPokemon = await this.getOrFetchPokemonVariant(form.key);
+					const formSprite = await this.getOrFetchImage(
+						formPokemon.sprites.front_default,
+						`images/${form.key}-sprite.png`,
+					);
+					builtRows.push(toTableRow(formPokemon, species, formSprite));
+				} catch {
+					// skip this one regional variant; the base row above is unaffected
+				}
+			}
+			return builtRows;
 		};
 
 		const handleResult = (source: number[]) =>
-			(result: { index: number; value: PokedexTableRow } | { index: number; error: unknown }) => {
+			(result: { index: number; value: PokedexTableRow[] } | { index: number; error: unknown }) => {
 				loaded++;
 				onProgress?.(loaded, total);
 				if ("value" in result) {
-					rows.push(result.value);
-					onRow?.(result.value);
+					for (const row of result.value) {
+						rows.push(row);
+						onRow?.(row);
+					}
 				} else {
 					failedIds.push(source[result.index]);
 				}
@@ -436,7 +557,11 @@ export class PokedexRepository {
 		await mapWithConcurrency(cached, DISK_READ_CONCURRENCY, fetchRow, handleResult(cached), isCancelled);
 		await mapWithConcurrency(uncached, FETCH_CONCURRENCY, fetchRow, handleResult(uncached), isCancelled);
 
-		rows.sort((a, b) => a.id - b.id);
+		// dexNumber first (so a regional-form row sits next to its base
+		// species), id as the tiebreaker within a shared dexNumber — a
+		// default variety's own numeric id (1-1025ish) always sorts before
+		// its regional siblings' variety pseudo-ids (10001+).
+		rows.sort((a, b) => a.dexNumber - b.dexNumber || a.id - b.id);
 		return { rows, failedIds, servedFromCache: failedIds.length === 0 };
 	}
 
@@ -470,7 +595,7 @@ export class PokedexRepository {
 	// before showing anything at all.
 	async getEntryCore(id: number): Promise<PokedexEntry> {
 		const pokemon = await this.getOrFetchPokemon(id);
-		const species = await this.getOrFetchSpecies(id);
+		const species = await this.getOrFetchSpecies(this.speciesIdFromPokemon(pokemon));
 		const sprite = await this.getOrFetchImage(pokemon.sprites.front_default, `images/${id}-sprite.png`);
 		return toEntry(pokemon, species, null, { sprite, artwork: null, shiny: null, shinyArtwork: null });
 	}
@@ -479,12 +604,19 @@ export class PokedexRepository {
 		id: number,
 	): Promise<Pick<PokedexEntry, "artworkDataUri" | "shinyDataUri" | "shinyArtworkDataUri" | "evolutionChain">> {
 		const pokemon = await this.getOrFetchPokemon(id);
-		const species = await this.getOrFetchSpecies(id);
+		const species = await this.getOrFetchSpecies(this.speciesIdFromPokemon(pokemon));
+		// Scopes the chain to whichever variety `id` actually is — undefined
+		// (the default/base behavior) for a normal row, or { formSuffix,
+		// rootId: id } for a regional-form row, so e.g. Alolan Vulpix's
+		// evolution card shows the Ice Stone requirement and links onward to
+		// Alolan Ninetales rather than the base Fire-Stone line. See
+		// normalizeEvolutionChain's own comment for the selection rules.
+		const formSuffix = resolveRegionalFormSuffix(pokemon, species);
 
 		let evolutionChain: EvolutionNode | null = null;
 		try {
 			const rawChain = await this.getOrFetchEvolutionChain(species.evolution_chain.url);
-			evolutionChain = normalizeEvolutionChain(rawChain.chain);
+			evolutionChain = normalizeEvolutionChain(rawChain.chain, formSuffix ? { formSuffix, rootId: id } : undefined);
 		} catch {
 			evolutionChain = null; // non-fatal: detail view still renders without it
 		}

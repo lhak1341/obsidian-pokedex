@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
+import { resolveGenerationId } from "../data/constants";
 import type { PokedexTableRow } from "../data/types";
 import { EMPTY_FILTERS, filterPokemon } from "./filterPokemon";
 
+// dexNumber/generationId default to matching `id` (overridable, but derived
+// from it when not explicit) since every row here models a plain
+// default-variety Pokemon, where those three are always equal/consistent —
+// no fixture here exercises a regional-form row's id !== dexNumber split.
 function row(overrides: Partial<PokedexTableRow>): PokedexTableRow {
+	const id = overrides.id ?? 1;
 	return {
-		id: 1,
+		id,
+		dexNumber: id,
+		formLabel: null,
+		generationId: resolveGenerationId(id),
 		name: "bulbasaur",
 		types: ["grass", "poison"],
 		stats: { hp: 45, attack: 49, defense: 49, specialAttack: 65, specialDefense: 65, speed: 45 },
@@ -108,5 +117,35 @@ describe("filterPokemon", () => {
 			statRanges: { hp: { min: 50, max: 255 } },
 		});
 		expect(result.map((r) => r.name)).toEqual(["charizard"]);
+	});
+
+	describe("regional-form rows", () => {
+		const regionalRows: PokedexTableRow[] = [
+			row({ id: 19, dexNumber: 19, formLabel: null, generationId: 1, name: "rattata" }),
+			row({ id: 10091, dexNumber: 19, formLabel: "Alolan", generationId: 7, name: "rattata", types: ["dark", "normal"] }),
+		];
+
+		it("search by exact dex number matches every form sharing it", () => {
+			const result = filterPokemon(regionalRows, { ...EMPTY_FILTERS, search: "19" });
+			expect(result.map((r) => r.id)).toEqual([19, 10091]);
+		});
+
+		it("search by form label matches only the regional-form row", () => {
+			const result = filterPokemon(regionalRows, { ...EMPTY_FILTERS, search: "alolan" });
+			expect(result.map((r) => r.id)).toEqual([10091]);
+		});
+
+		it("generation filter hides a regional-form row by its OWN generation, not its dex number's", () => {
+			// Gen 1 enabled, Gen 7 not — base Rattata (dex #019, a Gen 1 number)
+			// stays visible; Alolan Rattata (also dex #019, but a Gen 7 form)
+			// does not, since its generationId (7) isn't in the enabled list.
+			const result = filterPokemon(regionalRows, { ...EMPTY_FILTERS, generations: [1] });
+			expect(result.map((r) => r.id)).toEqual([19]);
+		});
+
+		it("generation filter shows the regional-form row once its own generation is enabled", () => {
+			const result = filterPokemon(regionalRows, { ...EMPTY_FILTERS, generations: [7] });
+			expect(result.map((r) => r.id)).toEqual([10091]);
+		});
 	});
 });

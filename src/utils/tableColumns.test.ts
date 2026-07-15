@@ -5,6 +5,9 @@ import { TOGGLEABLE_COLUMNS } from "./tableColumns";
 function makeRow(overrides: Partial<PokedexTableRow> = {}): PokedexTableRow {
 	return {
 		id: 1,
+		dexNumber: 1,
+		formLabel: null,
+		generationId: 1,
 		name: "bulbasaur",
 		types: ["grass", "poison"],
 		stats: { hp: 45, attack: 49, defense: 49, specialAttack: 65, specialDefense: 65, speed: 45 },

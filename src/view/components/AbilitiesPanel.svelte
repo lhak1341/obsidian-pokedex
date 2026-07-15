@@ -46,7 +46,7 @@
 </ul>
 {#each abilities.filter((a) => a.isHidden) as ability (ability.name)}
 	<div class="hidden-ability-block">
-		<p class="hidden-ability-label">Hidden Ability (G5)</p>
+		<p class="hidden-ability-label">Hidden Ability (G5+)</p>
 		<p
 			class="hidden-ability-name"
 			onmouseenter={(e) => showAbilityPopover(ability.name, e.currentTarget)}

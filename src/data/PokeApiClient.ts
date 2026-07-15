@@ -4,6 +4,7 @@ import { POKEAPI_BASE } from "./constants";
 import type {
 	RawAbility,
 	RawEvolutionChain,
+	RawItem,
 	RawMove,
 	RawPokemon,
 	RawPokemonListResponse,
@@ -46,6 +47,10 @@ export class PokeApiClient {
 
 	async fetchAbility(name: string): Promise<RawAbility> {
 		return this.getJson<RawAbility>(`${POKEAPI_BASE}/ability/${name}`);
+	}
+
+	async fetchItem(name: string): Promise<RawItem> {
+		return this.getJson<RawItem>(`${POKEAPI_BASE}/item/${name}`);
 	}
 
 	async fetchMove(name: string): Promise<RawMove> {

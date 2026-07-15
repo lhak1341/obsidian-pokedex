@@ -2,6 +2,7 @@
 	import { onMount } from "svelte";
 	import { GENERATIONS, QUIRKS, RARITIES, STAT_COLORS, STAT_COLUMNS, TYPE_NAMES } from "../../data/constants";
 	import { EMPTY_FILTERS, type PokedexFilters } from "../../utils/filterPokemon";
+	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { quickJumpMatches, stepQuickJumpNav } from "../../utils/quickJump";
 	import type { PokedexTableRow, StatBlock } from "../../data/types";
 	import { registerGlobalHotkey } from "../globalHotkey";
@@ -121,8 +122,8 @@
 							onmousedown={(e) => { e.preventDefault(); quickSelect(row.id); }}
 							onmouseenter={() => (quickActiveIndex = i)}
 						>
-							<span class="quick-jump-id">#{String(row.id).padStart(3, "0")}</span>
-							<span class="quick-jump-name">{row.name}</span>
+							<span class="quick-jump-id">#{String(row.dexNumber).padStart(3, "0")}</span>
+							<span class="quick-jump-name">{formatPokemonDisplayName(row)}</span>
 						</button>
 					</li>
 				{/each}

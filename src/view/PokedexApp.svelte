@@ -50,7 +50,7 @@
 
 	onMount(() => {
 		const { fetchRange, includes } = resolveGenerationScope(settings.enabledGenerations);
-		loadState = new PokedexLoadState(repository, fetchRange, includes);
+		loadState = new PokedexLoadState(repository, fetchRange, includes, settings.enabledGenerations);
 		loadState
 			.load(
 				(loaded, total) => (progress = { loaded, total }),

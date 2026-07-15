@@ -2,13 +2,20 @@ import { describe, expect, it } from "vitest";
 import { createFakeDataAdapter, FakePokeApiClient } from "../data/__fixtures__/fakes";
 import { DiskCache } from "../data/Cache";
 import { PokedexRepository } from "../data/PokedexRepository";
+import type { PokedexTableRow } from "../data/types";
 import { PokedexLoadState } from "./PokedexLoadState";
 
-function makeLoadState(range: { start: number; end: number }, includes: (id: number) => boolean = () => true) {
+function makeLoadState(
+	range: { start: number; end: number },
+	includes: (row: PokedexTableRow) => boolean = () => true,
+	// Empty = unfiltered (matches EMPTY_FILTERS semantics) — only the
+	// generation-filter-specific tests need a real list.
+	enabledGenerations: number[] = [],
+) {
 	const client = new FakePokeApiClient();
 	const cache = DiskCache.forTest(createFakeDataAdapter(), "cache");
 	const repository = new PokedexRepository(client, cache);
-	return { client, loadState: new PokedexLoadState(repository, range, includes) };
+	return { client, loadState: new PokedexLoadState(repository, range, includes, enabledGenerations) };
 }
 
 describe("PokedexLoadState", () => {
@@ -24,7 +31,7 @@ describe("PokedexLoadState", () => {
 	});
 
 	it("load() filters the fetched range down to whatever includes() allows", async () => {
-		const { loadState } = makeLoadState({ start: 1, end: 3 }, (id) => id !== 2);
+		const { loadState } = makeLoadState({ start: 1, end: 3 }, (row) => row.id !== 2);
 
 		await loadState.load();
 
@@ -42,7 +49,7 @@ describe("PokedexLoadState", () => {
 	});
 
 	it("load()'s onRow callback only fires for ids includes() allows", async () => {
-		const { loadState } = makeLoadState({ start: 1, end: 3 }, (id) => id !== 2);
+		const { loadState } = makeLoadState({ start: 1, end: 3 }, (row) => row.id !== 2);
 		const seen: number[] = [];
 
 		await loadState.load(undefined, (row) => seen.push(row.id));

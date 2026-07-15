@@ -18,6 +18,19 @@ export const MOVE_VERSION_TABS_BY_GEN: Record<number, readonly { key: string; la
 		{ key: "platinum", label: "Platinum" },
 		{ key: "heartgold-soulsilver", label: "HG/SS" },
 	],
+	5: [
+		{ key: "black-white", label: "B/W" },
+		{ key: "black-2-white-2", label: "B2/W2" },
+	],
+	6: [
+		{ key: "x-y", label: "X/Y" },
+		{ key: "omega-ruby-alpha-sapphire", label: "ORAS" },
+	],
+	7: [
+		{ key: "sun-moon", label: "S/M" },
+		{ key: "ultra-sun-ultra-moon", label: "USUM" },
+		{ key: "lets-go-pikachu-lets-go-eevee", label: "LGPE" },
+	],
 };
 
 // Every version group any tab above reads, across every supported
@@ -60,6 +73,31 @@ export const FLAVOR_TEXT_TABS_BY_GEN: Record<
 		{ key: "diamond-pearl", label: "Diamond / Pearl", versions: ["diamond", "pearl"] },
 		{ key: "platinum", label: "Platinum", versions: ["platinum"] },
 		{ key: "heartgold-soulsilver", label: "HeartGold / SoulSilver", versions: ["heartgold", "soulsilver"] },
+	],
+	5: [
+		{ key: "black-white", label: "Black / White", versions: ["black", "white"] },
+		{ key: "black-2-white-2", label: "Black 2 / White 2", versions: ["black-2", "white-2"] },
+	],
+	6: [
+		{ key: "x-y", label: "X / Y", versions: ["x", "y"] },
+		{
+			key: "omega-ruby-alpha-sapphire",
+			label: "Omega Ruby / Alpha Sapphire",
+			versions: ["omega-ruby", "alpha-sapphire"],
+		},
+	],
+	7: [
+		{ key: "sun-moon", label: "Sun / Moon", versions: ["sun", "moon"] },
+		{
+			key: "ultra-sun-ultra-moon",
+			label: "Ultra Sun / Ultra Moon",
+			versions: ["ultra-sun", "ultra-moon"],
+		},
+		{
+			key: "lets-go-pikachu-lets-go-eevee",
+			label: "Let's Go Pikachu / Eevee",
+			versions: ["lets-go-pikachu", "lets-go-eevee"],
+		},
 	],
 };
 
@@ -111,10 +149,37 @@ export const GENERATIONS = [
 	{ id: 2, name: "Gen 2 (Johto)", start: 152, end: 251 },
 	{ id: 3, name: "Gen 3 (Hoenn)", start: 252, end: 386 },
 	{ id: 4, name: "Gen 4 (Sinnoh)", start: 387, end: 493 },
+	{ id: 5, name: "Gen 5 (Unova)", start: 494, end: 649 },
+	{ id: 6, name: "Gen 6 (Kalos)", start: 650, end: 721 },
+	{ id: 7, name: "Gen 7 (Alola)", start: 722, end: 809 },
 ] as const;
 
-// All generations enabled by default (dex #1-493, Gen 1 through Gen 4).
+// All generations enabled by default (dex #1-809, Gen 1 through Gen 7).
 export const DEFAULT_ENABLED_GENERATIONS: number[] = GENERATIONS.map((g) => g.id);
+
+// Which GENERATIONS entry a dex number falls in — shared by toTableRow (to
+// precompute PokedexTableRow.generationId for a default/base row) and
+// filterPokemon's isIdInGenerations (which used to re-scan GENERATIONS on
+// every filter check; now just compares against this precomputed value).
+// -1 for a dex number outside every configured range, which can't happen for
+// data this app actually fetches but keeps the return type a plain number
+// rather than number | undefined for callers.
+export function resolveGenerationId(dexNumber: number): number {
+	return GENERATIONS.find((g) => dexNumber >= g.start && dexNumber <= g.end)?.id ?? -1;
+}
+
+// Regional/alternate forms don't belong to their base species' original
+// generation — an Alolan form is a Gen 7 creature regardless of its base
+// species' dex number (e.g. Alolan Rattata is dex #019, a Gen 1 number, but
+// disabling Gen 7 in the generations filter should still hide it), and needs
+// its own human label ("Alolan") distinct from the plain suffix PokeAPI uses
+// in the variety name ("alola"). Keyed by that PokeAPI variety-name suffix
+// (e.g. "rattata-alola" -> suffix "alola") — see deriveRegionalForms in
+// normalize.ts. Curated the same way FOSSIL_IDS is: PokeAPI has neither a
+// "which generation introduced this form" nor a "display label" field.
+export const REGIONAL_FORMS: Record<string, { label: string; generationId: number }> = {
+	alola: { label: "Alolan", generationId: 7 },
+};
 
 export const STAT_NAMES = [
 	"hp", "attack", "defense", "special-attack", "special-defense", "speed",
@@ -149,10 +214,17 @@ export const STAT_COLORS: Record<string, string> = {
 // current stats when the active generation predates the buff
 // (validThroughGen: the last generation that still used the old value).
 // Sourced from https://bulbapedia.bulbagarden.net/wiki/Base_stats
-// ("Between generations" > Generation VI), restricted to dex #1-493 (the
-// generations this plugin currently supports) — re-check that page and
-// extend this table if a later phase's dex range pulls in the rest of the
-// Gen 6 list (nothing beyond #407 is affected within Gen 1-4 anyway).
+// ("Between generations" > Generation VI), restricted to dex #1-809 (the
+// generations this plugin currently supports) — re-check that page for any
+// future phase, though nothing beyond #553 is affected: a species can only
+// diverge from its own current stats if it existed *before* the Gen 6 buff
+// wave, so nothing native to Gen 6+ (dex #650 onward) is ever eligible.
+// Keyed by PokedexTableRow.id (a specific form's own fetch id), not
+// dexNumber — Alolan Raichu (#26, same dexNumber as regular Raichu, which
+// IS in this table below) never existed pre-Gen 6 in any form, so it must
+// NOT inherit regular Raichu's pre-buff speed value; keying by id rather
+// than dexNumber keeps that correct for free (Alolan Raichu's own id simply
+// never matches a key here).
 export const STAT_OVERRIDES: Record<number, { validThroughGen: number; deltas: Partial<StatBlock> }> = {
 	12: { validThroughGen: 5, deltas: { specialAttack: 80 } }, // Butterfree
 	15: { validThroughGen: 5, deltas: { attack: 80 } }, // Beedrill
@@ -176,6 +248,13 @@ export const STAT_OVERRIDES: Record<number, { validThroughGen: number; deltas: P
 	295: { validThroughGen: 5, deltas: { specialDefense: 63 } }, // Exploud
 	398: { validThroughGen: 5, deltas: { specialDefense: 50 } }, // Staraptor
 	407: { validThroughGen: 5, deltas: { defense: 55 } }, // Roserade
+	508: { validThroughGen: 5, deltas: { attack: 100 } }, // Stoutland
+	521: { validThroughGen: 5, deltas: { attack: 105 } }, // Unfezant
+	526: { validThroughGen: 5, deltas: { specialDefense: 70 } }, // Gigalith
+	537: { validThroughGen: 5, deltas: { attack: 85 } }, // Seismitoad
+	542: { validThroughGen: 5, deltas: { specialDefense: 70 } }, // Leavanny
+	545: { validThroughGen: 5, deltas: { attack: 90 } }, // Scolipede
+	553: { validThroughGen: 5, deltas: { defense: 70 } }, // Krookodile
 };
 
 export const TYPE_COLORS: Record<string, string> = {

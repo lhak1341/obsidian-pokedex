@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { resolveGenerationId } from "../data/constants";
 import type { PokedexTableRow } from "../data/types";
 import { sortPokemon } from "./sortPokemon";
 
 function row(id: number, name: string, speed: number, overrides: Partial<PokedexTableRow> = {}): PokedexTableRow {
+	const dexNumber = overrides.dexNumber ?? id;
 	return {
 		id,
+		dexNumber,
+		formLabel: null,
+		generationId: resolveGenerationId(dexNumber),
 		name,
 		types: [],
 		stats: { hp: 0, attack: 0, defense: 0, specialAttack: 0, specialDefense: 0, speed },
@@ -62,5 +67,19 @@ describe("sortPokemon", () => {
 		const original = [...rows];
 		sortPokemon(rows, "name", "desc");
 		expect(rows).toEqual(original);
+	});
+
+	it("groups a regional-form row with its base species when sorting by dex number, in either direction", () => {
+		// Alolan Rattata (fetch id 10091) shares dexNumber 19 with base Rattata
+		// (fetch id 19) — the base row's own lower numeric id should still put
+		// it first within that tied pair, regardless of asc/desc.
+		const regionalRows = [
+			row(6, "charizard", 100),
+			row(10091, "rattata", 72, { dexNumber: 19, formLabel: "Alolan" }),
+			row(19, "rattata", 56, { dexNumber: 19 }),
+			row(1, "bulbasaur", 45),
+		];
+		expect(sortPokemon(regionalRows, "id", "asc").map((r) => r.id)).toEqual([1, 6, 19, 10091]);
+		expect(sortPokemon(regionalRows, "id", "desc").map((r) => r.id)).toEqual([19, 10091, 6, 1]);
 	});
 });

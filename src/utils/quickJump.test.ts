@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { resolveGenerationId } from "../data/constants";
 import type { PokedexTableRow } from "../data/types";
 import { quickJumpMatches, stepQuickJumpNav } from "./quickJump";
 
 function row(id: number, name: string): PokedexTableRow {
 	return {
 		id,
+		dexNumber: id,
+		formLabel: null,
+		generationId: resolveGenerationId(id),
 		name,
 		types: [],
 		stats: { hp: 0, attack: 0, defense: 0, specialAttack: 0, specialDefense: 0, speed: 0 },

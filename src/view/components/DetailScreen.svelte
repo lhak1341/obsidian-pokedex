@@ -4,20 +4,23 @@
 	import { TYPE_COLORS } from "../../data/constants";
 	import { nextEvolutionLevels } from "../../data/normalize";
 	import type { PokedexRepository } from "../../data/PokedexRepository";
-	import type { MoveDetail, PokedexEntry, PokedexTableRow, PluginSettings } from "../../data/types";
+	import type { MegaFormDetail, MoveDetail, PokedexEntry, PokedexTableRow, PluginSettings } from "../../data/types";
 	import AbilitiesPanel from "./AbilitiesPanel.svelte";
 	import BarRow from "./BarRow.svelte";
 	import { DetailLoadState } from "../DetailLoadState";
 	import { mirrorInto } from "../../utils/mirrorState";
 	import EvolutionTree from "./EvolutionTree.svelte";
 	import FlavorTextPanel from "./FlavorTextPanel.svelte";
+	import HeldItemsPanel from "./HeldItemsPanel.svelte";
 	import Icon from "./Icon.svelte";
+	import MegaFormToggle from "./MegaFormToggle.svelte";
 	import MoveBrowser from "./MoveBrowser.svelte";
 	import QuickSearch from "./QuickSearch.svelte";
+	import RegionalFormNav from "./RegionalFormNav.svelte";
 	import StatBars from "./StatBars.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
+	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { resolveStatsForGen } from "../../utils/stats";
-	import { formatItemName } from "../../utils/tableColumns";
 
 	// True game ceilings (unlike StatBars' MAX_STAT, not compressed) —
 	// catch rate hits 255 for plenty of common early-route Pokemon (Caterpie,
@@ -99,20 +102,59 @@
 	// DetailLoadState.load() already fetches the whole movepool up front.
 	let moveDetails = $state<Record<string, MoveDetail>>({});
 
+	// Which Mega variety (if any) is currently displayed — null means the
+	// base species. Reset per-entry in startLoad below, same as showShiny.
+	// megaFormCache is NOT reset per entry: each key is a globally unique
+	// PokeAPI variety name (e.g. "charizard-mega-x"), so nothing to discard
+	// or collide across species — same "accumulate for the session" shape as
+	// moveDetails above.
+	let activeMegaKey = $state<string | null>(null);
+	let megaFormCache = $state<Record<string, MegaFormDetail>>({});
+	const activeMegaData = $derived(activeMegaKey ? megaFormCache[activeMegaKey] ?? null : null);
+
+	// Fetch is fire-and-forget: a dropped connection just means the tab click
+	// silently doesn't change anything (activeMegaData stays null until a
+	// retry click succeeds) — consistent with how a dropped shiny/artwork
+	// fetch elsewhere in this view doesn't take down the rest of the entry.
+	function selectMegaForm(key: string | null) {
+		activeMegaKey = key;
+		if (key && !(key in megaFormCache)) {
+			repository.getMegaForm(key).then((detail) => {
+				megaFormCache = { ...megaFormCache, [key]: detail };
+			});
+		}
+	}
+
+	// Shared by the base-species and Mega-form image sets (see
+	// MegaFormDetail's comment on why it mirrors PokedexEntry's four image
+	// fields) so switching the Mega tab and the shiny toggle compose freely.
+	function basePortrait(
+		source: { spriteDataUri: string | null; artworkDataUri: string | null },
+		style: PluginSettings["spriteStyle"],
+	): string | null {
+		return (style === "official-artwork" ? source.artworkDataUri : source.spriteDataUri) ??
+			source.spriteDataUri ??
+			null;
+	}
+	// Falls back to the regular shiny sprite when spriteStyle is
+	// "official-artwork" but that particular render has no shiny artwork on
+	// PokeAPI (rare, but happens) — still a visible shiny swap, just not
+	// artwork-styled.
+	function shinyPortrait(
+		source: { shinyDataUri: string | null; shinyArtworkDataUri: string | null },
+		style: PluginSettings["spriteStyle"],
+	): string | null {
+		return style === "official-artwork"
+			? source.shinyArtworkDataUri ?? source.shinyDataUri ?? null
+			: source.shinyDataUri ?? null;
+	}
+
+	const activePortraitSource = $derived(activeMegaData ?? entryLoad.entry);
 	const basePortraitUri = $derived(
-		(spriteStyle === "official-artwork" ? entryLoad.entry?.artworkDataUri : entryLoad.entry?.spriteDataUri) ??
-			entryLoad.entry?.spriteDataUri ??
-			null,
+		activePortraitSource ? basePortrait(activePortraitSource, spriteStyle) : null,
 	);
-	// Match the shiny variant to spriteStyle so toggling doesn't jump between
-	// art styles (e.g. artwork -> regular-sprite shiny). Falls back to the
-	// regular shiny sprite when spriteStyle is "official-artwork" but that
-	// particular Pokemon has no shiny artwork render on PokeAPI (rare, but
-	// happens) — still a visible shiny swap, just not artwork-styled.
 	const shinyPortraitUri = $derived(
-		spriteStyle === "official-artwork"
-			? entryLoad.entry?.shinyArtworkDataUri ?? entryLoad.entry?.shinyDataUri ?? null
-			: entryLoad.entry?.shinyDataUri ?? null,
+		activePortraitSource ? shinyPortrait(activePortraitSource, spriteStyle) : null,
 	);
 	const portraitUri = $derived(showShiny ? shinyPortraitUri ?? basePortraitUri : basePortraitUri);
 
@@ -130,7 +172,9 @@
 	// ever used decoratively (glow, accent rule, eyebrow) — never as body
 	// text color — so it can't create a contrast problem in a theme it
 	// happens to clash with.
-	const accentColor = $derived(TYPE_COLORS[entryLoad.entry?.types[0] ?? ""] ?? "var(--interactive-accent)");
+	const accentColor = $derived(
+		TYPE_COLORS[(activeMegaData ?? entryLoad.entry)?.types[0] ?? ""] ?? "var(--interactive-accent)",
+	);
 
 	// Level(s) at which the CURRENTLY VIEWED entry itself next evolves — not
 	// the chain root's own level, see nextEvolutionLevels. Empty for a
@@ -144,6 +188,7 @@
 
 	function startLoad(currentId: number) {
 		showShiny = false;
+		activeMegaKey = null;
 		const result = loadState.load(currentId, mirror, (name, moveDetail) => {
 			moveDetails = { ...moveDetails, [name]: moveDetail };
 		});
@@ -183,7 +228,11 @@
 		</div>
 
 		{#if entryLoad.loading}
-			<p>Loading #{String(id).padStart(3, "0")}...</p>
+			<!-- `rows` (already in hand — the browse table that got us here) has
+			this row's dexNumber before the entry itself finishes loading; a
+			regional-form row's own `id` (e.g. 10091) would otherwise flash as
+			the "No." briefly, which isn't what a user typed/clicked to get here. -->
+			<p>Loading #{String(rows.find((r) => r.id === id)?.dexNumber ?? id).padStart(3, "0")}...</p>
 		{:else if entryLoad.error && !entryLoad.entry}
 			<p class="error">Couldn't load this Pokemon: {entryLoad.error}</p>
 			<button onclick={retry}>Retry</button>
@@ -198,8 +247,8 @@
 			<div class="detail-grid" style:--accent={accentColor}>
 				<aside class="identity-col">
 				<div class="portrait-panel">
-					<img src={portraitUri ?? ""} alt={entry.name} class="portrait-image" />
-					{#if entry.shinyDataUri || entry.shinyArtworkDataUri}
+					<img src={portraitUri ?? ""} alt={formatPokemonDisplayName(entry)} class="portrait-image" />
+					{#if (activeMegaData ?? entry).shinyDataUri || (activeMegaData ?? entry).shinyArtworkDataUri}
 						<button
 							class="shiny-toggle"
 							class:active={showShiny}
@@ -210,16 +259,18 @@
 							<Icon name="sparkles" size={15} strokeWidth={2.25} />
 						</button>
 					{/if}
+					<MegaFormToggle megaForms={entry.megaForms} activeKey={activeMegaKey} onSelect={selectMegaForm} />
 				</div>
 
 				<div class="name-block">
-					<p class="dex-eyebrow">No. {String(entry.id).padStart(3, "0")}</p>
-					<h2 class="mon-name">{entry.name}</h2>
+					<p class="dex-eyebrow">No. {String(entry.dexNumber).padStart(3, "0")}</p>
+					<h2 class="mon-name">{formatPokemonDisplayName(entry)}</h2>
 					<div class="type-row">
-						{#each entry.types as type (type)}
+						{#each (activeMegaData ?? entry).types as type (type)}
 							<TypeBadge {type} useIcon={useTypeIcons} />
 						{/each}
 					</div>
+					<RegionalFormNav {rows} currentId={entry.id} dexNumber={entry.dexNumber} {onSelect} />
 				</div>
 				<dl class="physical-readout">
 					<div>
@@ -251,13 +302,18 @@
 				<div class="stats-abilities-row">
 					<section class="panel stats-panel">
 						<h3 class="section-heading">Base stats</h3>
-						<StatBars stats={resolveStatsForGen(entry.stats, entry.id, activeGen)} />
+						<!-- Mega stats are PokeAPI's current value for that variety
+						already — no historical divergence is possible (Mega Evolution
+						has only ever existed since its Gen 6 introduction), so unlike
+						the base species this skips resolveStatsForGen's Active Gen
+						override lookup entirely. -->
+						<StatBars stats={activeMegaData ? activeMegaData.stats : resolveStatsForGen(entry.stats, entry.id, activeGen)} />
 					</section>
 
 					<section class="panel abilities-panel">
 						<h3 class="section-heading">Abilities</h3>
 						<AbilitiesPanel
-							abilities={entry.abilities}
+							abilities={activeMegaData ? activeMegaData.abilities : entry.abilities}
 							getDescription={(name) => repository.getAbilityDescription(name)}
 						/>
 					</section>
@@ -269,7 +325,10 @@
 					{#if entry.heldItems.length > 0}
 						<p class="breeding-line">
 							Wild held item:
-							{entry.heldItems.map((h) => `${formatItemName(h.name)} (${h.rarities.join("/")}%)`).join(", ")}
+							<HeldItemsPanel
+								heldItems={entry.heldItems}
+								getDescription={(name) => repository.getItemDescription(name)}
+							/>
 						</p>
 					{/if}
 					{#if malePct === null || femalePct === null}

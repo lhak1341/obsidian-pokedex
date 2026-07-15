@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import type { PokedexTableRow } from "../../data/types";
+	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { quickJumpMatches, stepQuickJumpNav } from "../../utils/quickJump";
 	import { registerGlobalHotkey } from "../globalHotkey";
 
@@ -85,8 +86,8 @@
 						onmousedown={(e) => { e.preventDefault(); select(row.id); }}
 						onmouseenter={() => (activeIndex = i)}
 					>
-						<span class="quick-search-id">#{String(row.id).padStart(3, "0")}</span>
-						<span class="quick-search-name">{row.name}</span>
+						<span class="quick-search-id">#{String(row.dexNumber).padStart(3, "0")}</span>
+						<span class="quick-search-name">{formatPokemonDisplayName(row)}</span>
 					</button>
 				</li>
 			{/each}

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
 	collectChainIds,
+	deriveMegaForms,
+	deriveRegionalForms,
 	describeEvolutionRequirement,
 	extractFlavorTexts,
 	nextEvolutionLevels,
@@ -11,11 +13,12 @@ import {
 	normalizeMoveDetail,
 	normalizeMoves,
 	normalizeStats,
+	resolveRegionalFormSuffix,
 	toEntry,
 	toTableRow,
 	trimMovesToVersionGroups,
 } from "./normalize";
-import type { EvolutionNode, RawEvolutionChain, RawMove, RawPokemon, RawSpecies } from "./types";
+import type { EvolutionNode, RawEvolutionChain, RawEvolutionChainLink, RawMove, RawPokemon, RawSpecies } from "./types";
 import bulbasaurChain from "./__fixtures__/bulbasaur-evolution-chain.json";
 import bulbasaurSpecies from "./__fixtures__/bulbasaur-species.json";
 import bulbasaur from "./__fixtures__/bulbasaur.json";
@@ -163,6 +166,55 @@ describe("normalizeEvolutionChain", () => {
 		expect(node.children[0].children[0].name).toBe("venusaur");
 		expect(node.children[0].children[0].minLevel).toBe(32);
 	});
+
+	// Meowth-shaped: two evolution_details entries on the same evolves_to
+	// node, one for the regular line (Lv. 28), one form-divergent (Alolan,
+	// friendship) — verified live against the real Meowth evolution-chain
+	// response (see docs/multi-gen-expansion-plan.md Phase 4 log).
+	function evolutionDetail(overrides: Partial<RawEvolutionChainLink["evolution_details"][number]>) {
+		return {
+			min_level: null, trigger: null, item: null, min_happiness: null, time_of_day: "",
+			held_item: null, min_beauty: null, relative_physical_stats: null, location: null,
+			known_move: null, party_species: null, gender: null, trade_species: null,
+			needs_overworld_rain: false, turn_upside_down: false, base_form: null, evolved_form: null,
+			...overrides,
+		};
+	}
+	const meowthChain: RawEvolutionChainLink = {
+		species: { name: "meowth", url: "https://pokeapi.co/api/v2/pokemon-species/52/" },
+		evolution_details: [],
+		evolves_to: [
+			{
+				species: { name: "persian", url: "https://pokeapi.co/api/v2/pokemon-species/53/" },
+				evolution_details: [
+					evolutionDetail({ min_level: 28, trigger: { name: "level-up", url: "" } }),
+					evolutionDetail({
+						min_happiness: 160,
+						trigger: { name: "level-up", url: "" },
+						base_form: { name: "meowth-alola", url: "https://pokeapi.co/api/v2/pokemon/10107/" },
+						evolved_form: { name: "persian-alola", url: "https://pokeapi.co/api/v2/pokemon/10108/" },
+					}),
+				],
+				evolves_to: [],
+			},
+		],
+	};
+
+	it("picks the base (null base_form) entry when no context is given", () => {
+		const node = normalizeEvolutionChain(meowthChain);
+		expect(node.id).toBe(52);
+		expect(node.children[0].minLevel).toBe(28);
+		expect(node.children[0].minHappiness).toBeNull();
+		expect(node.children[0].id).toBe(53);
+	});
+
+	it("picks the form-matching entry and resolves the variety's own id when a context is given", () => {
+		const node = normalizeEvolutionChain(meowthChain, { formSuffix: "alola", rootId: 10107 });
+		expect(node.id).toBe(10107);
+		expect(node.children[0].minLevel).toBeNull();
+		expect(node.children[0].minHappiness).toBe(160);
+		expect(node.children[0].id).toBe(10108);
+	});
 });
 
 describe("collectChainIds", () => {
@@ -174,6 +226,8 @@ describe("collectChainIds", () => {
 	it("walks every branch of a forked chain (e.g. Eevee-shaped)", () => {
 		const forked = {
 			id: 1,
+			dexNumber: 1,
+			formLabel: null,
 			name: "root",
 			minLevel: null,
 			trigger: null,
@@ -187,9 +241,12 @@ describe("collectChainIds", () => {
 			knownMove: null,
 			partySpecies: null,
 			gender: null,
+			tradeSpecies: null,
+			needsOverworldRain: false,
+			turnUpsideDown: false,
 			children: [
-				{ id: 2, name: "branch-a", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, children: [] },
-				{ id: 3, name: "branch-b", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, children: [] },
+				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, children: [] },
+				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, children: [] },
 			],
 		};
 		expect(collectChainIds(forked)).toEqual([1, 2, 3]);
@@ -217,6 +274,8 @@ describe("nextEvolutionLevels", () => {
 	it("returns empty when the next evolution has no level threshold (item/trade)", () => {
 		const itemEvolution = {
 			id: 1,
+			dexNumber: 1,
+			formLabel: null,
 			name: "root",
 			minLevel: null,
 			trigger: null,
@@ -230,7 +289,10 @@ describe("nextEvolutionLevels", () => {
 			knownMove: null,
 			partySpecies: null,
 			gender: null,
-			children: [{ id: 2, name: "evolved", minLevel: null, trigger: "trade", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, children: [] }],
+			tradeSpecies: null,
+			needsOverworldRain: false,
+			turnUpsideDown: false,
+			children: [{ id: 2, dexNumber: 2, formLabel: null, name: "evolved", minLevel: null, trigger: "trade", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, children: [] }],
 		};
 		expect(nextEvolutionLevels(itemEvolution, 1)).toEqual([]);
 	});
@@ -238,6 +300,8 @@ describe("nextEvolutionLevels", () => {
 	it("dedupes and sorts levels across multiple branches (e.g. Tyrogue-shaped)", () => {
 		const forked = {
 			id: 1,
+			dexNumber: 1,
+			formLabel: null,
 			name: "root",
 			minLevel: null,
 			trigger: null,
@@ -251,10 +315,13 @@ describe("nextEvolutionLevels", () => {
 			knownMove: null,
 			partySpecies: null,
 			gender: null,
+			tradeSpecies: null,
+			needsOverworldRain: false,
+			turnUpsideDown: false,
 			children: [
-				{ id: 2, name: "branch-a", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, children: [] },
-				{ id: 3, name: "branch-b", minLevel: 10, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, children: [] },
-				{ id: 4, name: "branch-c", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, children: [] },
+				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, children: [] },
+				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: 10, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, children: [] },
+				{ id: 4, dexNumber: 4, formLabel: null, name: "branch-c", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, children: [] },
 			],
 		};
 		expect(nextEvolutionLevels(forked, 1)).toEqual([10, 20]);
@@ -265,6 +332,8 @@ describe("describeEvolutionRequirement", () => {
 	function node(overrides: Partial<EvolutionNode>): EvolutionNode {
 		return {
 			id: 2,
+			dexNumber: 2,
+			formLabel: null,
 			name: "evolved",
 			minLevel: null,
 			trigger: null,
@@ -278,6 +347,9 @@ describe("describeEvolutionRequirement", () => {
 			knownMove: null,
 			partySpecies: null,
 			gender: null,
+			tradeSpecies: null,
+			needsOverworldRain: false,
+			turnUpsideDown: false,
 			children: [],
 			...overrides,
 		};
@@ -343,6 +415,24 @@ describe("describeEvolutionRequirement", () => {
 		).toBe("Trade (metal coat)");
 	});
 
+	it("labels a trade-for-species evolution (e.g. Karrablast <-> Shelmet)", () => {
+		expect(
+			describeEvolutionRequirement(node({ trigger: "trade", tradeSpecies: "shelmet" })),
+		).toBe("Trade (for shelmet)");
+	});
+
+	it("appends a rain suffix to a base label (e.g. Sliggoo -> Goodra)", () => {
+		expect(
+			describeEvolutionRequirement(node({ minLevel: 50, trigger: "level-up", needsOverworldRain: true })),
+		).toBe("Lv. 50 (Rain)");
+	});
+
+	it("appends an upside-down suffix to a base label (e.g. Inkay -> Malamar)", () => {
+		expect(
+			describeEvolutionRequirement(node({ minLevel: 30, trigger: "level-up", turnUpsideDown: true })),
+		).toBe("Lv. 30 (Upside-down)");
+	});
+
 	it("appends a gender suffix to a base label", () => {
 		expect(describeEvolutionRequirement(node({ minLevel: 30, trigger: "level-up", gender: 1 }))).toBe(
 			"Lv. 30 (Female)",
@@ -376,6 +466,10 @@ describe("toTableRow", () => {
 	it("produces a lightweight row with ability names for filtering and species-level fields", () => {
 		const row = toTableRow(pokemon, species, null);
 		expect(row.id).toBe(1);
+		expect(row.dexNumber).toBe(1);
+		expect(row.formLabel).toBeNull();
+		expect(row.generationId).toBe(1);
+		expect(row.name).toBe("bulbasaur");
 		expect(row.types).toEqual(["grass", "poison"]);
 		expect(row.abilityNames).toEqual(["overgrow", "chlorophyll"]);
 		expect(row.height).toBe(7);
@@ -389,6 +483,27 @@ describe("toTableRow", () => {
 	it("dedupes level-up move names across version groups", () => {
 		const row = toTableRow(pokemon, species, null);
 		expect(row.levelUpMoveNames).toEqual(["tackle", "vine-whip"]);
+	});
+
+	it("derives dexNumber/formLabel/generationId/name from the base species for a regional-form pokemon", () => {
+		const alolanRattataSpecies = {
+			...species,
+			id: 19,
+			dexNumber: 19,
+			formLabel: null,
+			name: "rattata",
+			varieties: [
+				{ is_default: true, pokemon: { name: "rattata", url: "" } },
+				{ is_default: false, pokemon: { name: "rattata-alola", url: "" } },
+			],
+		} as unknown as RawSpecies;
+		const alolanRattataPokemon = { ...pokemon, id: 10091, name: "rattata-alola" };
+		const row = toTableRow(alolanRattataPokemon, alolanRattataSpecies, null);
+		expect(row.id).toBe(10091);
+		expect(row.dexNumber).toBe(19);
+		expect(row.formLabel).toBe("Alolan");
+		expect(row.generationId).toBe(7);
+		expect(row.name).toBe("rattata");
 	});
 });
 
@@ -485,9 +600,93 @@ describe("normalizeMoveDetail", () => {
 			type: { name: "normal", url: "" },
 			flavor_text_entries: [
 				{ flavor_text: "Attaque physique.", language: { name: "fr", url: "" }, version_group: { name: "firered-leafgreen", url: "" } },
-				{ flavor_text: "A physical attack.", language: { name: "en", url: "" }, version_group: { name: "black-white", url: "" } },
+				{ flavor_text: "A physical attack.", language: { name: "en", url: "" }, version_group: { name: "sword-shield", url: "" } },
 			],
 		};
 		expect(normalizeMoveDetail(raw).description).toBeNull();
+	});
+});
+
+describe("deriveMegaForms", () => {
+	function speciesWithVarieties(name: string, varietyNames: string[]): RawSpecies {
+		return {
+			name,
+			varieties: [
+				{ is_default: true, pokemon: { name, url: "" } },
+				...varietyNames.map((n) => ({ is_default: false, pokemon: { name: n, url: "" } })),
+			],
+		} as unknown as RawSpecies;
+	}
+
+	it("returns empty for a species with no Mega variety", () => {
+		expect(deriveMegaForms(speciesWithVarieties("bulbasaur", []))).toEqual([]);
+	});
+
+	it("labels a single Mega variety as just 'Mega'", () => {
+		expect(deriveMegaForms(speciesWithVarieties("gengar", ["gengar-mega", "gengar-gmax"]))).toEqual([
+			{ key: "gengar-mega", label: "Mega" },
+		]);
+	});
+
+	it("labels an X/Y-split Mega pair and excludes Gigantamax", () => {
+		expect(
+			deriveMegaForms(speciesWithVarieties("charizard", ["charizard-mega-x", "charizard-mega-y", "charizard-gmax"])),
+		).toEqual([
+			{ key: "charizard-mega-x", label: "Mega X" },
+			{ key: "charizard-mega-y", label: "Mega Y" },
+		]);
+	});
+});
+
+describe("deriveRegionalForms", () => {
+	function speciesWithVarieties(name: string, varietyNames: string[]): RawSpecies {
+		return {
+			name,
+			varieties: [
+				{ is_default: true, pokemon: { name, url: "" } },
+				...varietyNames.map((n) => ({ is_default: false, pokemon: { name: n, url: "" } })),
+			],
+		} as unknown as RawSpecies;
+	}
+
+	it("returns empty for a species with no regional form", () => {
+		expect(deriveRegionalForms(speciesWithVarieties("bulbasaur", []))).toEqual([]);
+	});
+
+	it("labels an Alolan variety", () => {
+		expect(deriveRegionalForms(speciesWithVarieties("rattata", ["rattata-alola"]))).toEqual([
+			{ key: "rattata-alola", suffix: "alola", label: "Alolan" },
+		]);
+	});
+
+	// "raticate-totem-alola" ends with "-alola" but its real suffix (the
+	// part after "raticate-") is "totem-alola", not "alola" — an
+	// endsWith-based filter would wrongly include this SM trial-battle-only,
+	// unplayable variant.
+	it("excludes a Totem variant despite it ending in the same suffix string", () => {
+		expect(deriveRegionalForms(speciesWithVarieties("raticate", ["raticate-alola", "raticate-totem-alola"]))).toEqual([
+			{ key: "raticate-alola", suffix: "alola", label: "Alolan" },
+		]);
+	});
+});
+
+describe("resolveRegionalFormSuffix", () => {
+	function pokemonNamed(name: string): RawPokemon {
+		return { name } as unknown as RawPokemon;
+	}
+	function speciesNamed(name: string): RawSpecies {
+		return { name } as unknown as RawSpecies;
+	}
+
+	it("returns undefined for a species' own default variety", () => {
+		expect(resolveRegionalFormSuffix(pokemonNamed("rattata"), speciesNamed("rattata"))).toBeUndefined();
+	});
+
+	it("returns the suffix for a known regional variety", () => {
+		expect(resolveRegionalFormSuffix(pokemonNamed("rattata-alola"), speciesNamed("rattata"))).toBe("alola");
+	});
+
+	it("returns undefined for a Mega variety (not a regional form)", () => {
+		expect(resolveRegionalFormSuffix(pokemonNamed("charizard-mega-x"), speciesNamed("charizard"))).toBeUndefined();
 	});
 });

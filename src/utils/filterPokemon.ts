@@ -1,5 +1,6 @@
 import { FOSSIL_IDS, GENERATIONS } from "../data/constants";
 import type { PokedexTableRow, StatBlock } from "../data/types";
+import { formatPokemonDisplayName } from "./pokemonDisplay";
 
 export interface StatRange {
 	min: number;
@@ -40,11 +41,16 @@ export const EMPTY_FILTERS: PokedexFilters = {
 
 // Exported for QuickSearch.svelte's quick-check input, which needs the same
 // substring/exact-id match as the browse table's own search rather than a
-// separate reimplementation that could silently drift from it.
+// separate reimplementation that could silently drift from it. Matches
+// against the *display* name ("Alolan Rattata"), not the shared base `name`
+// alone, so typing "alola" finds only the regional-form row while typing
+// "rattata" still finds both it and the base row. Exact-number search keys
+// off dexNumber (the shared "No. 019"), not `id` (each row's own distinct
+// fetch id) — typing "19" should surface every form at that dex number.
 export function matchesSearch(row: PokedexTableRow, search: string): boolean {
 	if (!search.trim()) return true;
 	const needle = search.trim().toLowerCase();
-	return row.name.toLowerCase().includes(needle) || String(row.id) === needle;
+	return formatPokemonDisplayName(row).toLowerCase().includes(needle) || String(row.dexNumber) === needle;
 }
 
 function matchesTypes(row: PokedexTableRow, types: string[]): boolean {
@@ -52,6 +58,11 @@ function matchesTypes(row: PokedexTableRow, types: string[]): boolean {
 	return types.every((type) => row.types.includes(type));
 }
 
+// Pure dex-*number* range membership — used by generationScope.ts to decide
+// which base ids to fetch at all, before any row exists yet. Deliberately
+// NOT used for row-visibility filtering (see matchesGenerations below): a
+// regional-form row's own generation membership isn't derivable from a dex
+// range at all (see PokedexTableRow.generationId's own doc comment).
 export function isIdInGenerations(id: number, generations: number[]): boolean {
 	if (generations.length === 0) return true;
 	return generations.some((genId) => {
@@ -60,8 +71,17 @@ export function isIdInGenerations(id: number, generations: number[]): boolean {
 	});
 }
 
-export function matchesGenerations(row: PokedexTableRow, generations: number[]): boolean {
-	return isIdInGenerations(row.id, generations);
+// A regional-form row is always fetched alongside its base species (see
+// PokedexRepository.getRowsForIds) regardless of whether the form's own
+// generation is enabled — cheap since only ~18 species currently have one —
+// so this is the actual gate that hides it from view when e.g. Gen 7 is
+// disabled even though Gen 1 (its base dex number's generation) isn't.
+// Narrowed to just the one field it reads (rather than the full row) so
+// PokedexLoadState can also check a bare failed id's generation membership
+// without needing to fabricate a whole fake row — see generationScope.ts.
+export function matchesGenerations(row: Pick<PokedexTableRow, "generationId">, generations: number[]): boolean {
+	if (generations.length === 0) return true;
+	return generations.includes(row.generationId);
 }
 
 function matchesStatRanges(row: PokedexTableRow, ranges: PokedexFilters["statRanges"]): boolean {
@@ -94,7 +114,7 @@ function matchesEvStats(row: PokedexTableRow, evStats: string[]): boolean {
 function matchesQuirk(row: PokedexTableRow, quirk: string): boolean {
 	switch (quirk) {
 		case "fossil":
-			return FOSSIL_IDS.has(row.id);
+			return FOSSIL_IDS.has(row.dexNumber);
 		case "compound-eyes":
 		case "pickup":
 			return row.abilityNames.includes(quirk);

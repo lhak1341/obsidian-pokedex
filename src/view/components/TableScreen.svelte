@@ -2,6 +2,7 @@
 	import { STAT_COLORS } from "../../data/constants";
 	import type { PokedexTableRow } from "../../data/types";
 	import { EMPTY_FILTERS, filterPokemon } from "../../utils/filterPokemon";
+	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { sortPokemon, type SortColumn, type SortDirection } from "../../utils/sortPokemon";
 	import { STAT_LABEL_BY_KEY, TOGGLEABLE_COLUMNS } from "../../utils/tableColumns";
 	import { untrack } from "svelte";
@@ -178,17 +179,17 @@
 			<tbody>
 				{#each visibleRows as row (row.id)}
 					<tr onclick={() => onSelect(row.id)}>
-						<td>{String(row.id).padStart(3, "0")}</td>
+						<td>{String(row.dexNumber).padStart(3, "0")}</td>
 						<td
 							class="center sprite-cell"
 							onmouseenter={(e) => showPreview(row.id, e.currentTarget)}
 							onmouseleave={hidePreview}
 						>
 							{#if row.spriteDataUri}
-								<img src={row.spriteDataUri} alt={row.name} class="sprite-thumb" />
+								<img src={row.spriteDataUri} alt={formatPokemonDisplayName(row)} class="sprite-thumb" />
 							{/if}
 						</td>
-						<td class="name-cell">{row.name}</td>
+						<td class="name-cell">{formatPokemonDisplayName(row)}</td>
 						<td>
 							{#each row.types as type (type)}
 								<TypeBadge {type} useIcon={useTypeIcons} />

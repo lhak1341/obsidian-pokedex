@@ -1,5 +1,6 @@
 import type { PokedexRepository, TableLoadResult } from "../data/PokedexRepository";
 import type { PokedexTableRow } from "../data/types";
+import { isIdInGenerations } from "../utils/filterPokemon";
 
 // Owns the fetch/retry lifecycle for the browse table: which rows are
 // loaded, which ids failed, and progress while fetching. Presentation
@@ -21,7 +22,11 @@ export class PokedexLoadState {
 	constructor(
 		private repository: PokedexRepository,
 		private fetchRange: { start: number; end: number },
-		private includes: (id: number) => boolean,
+		private includes: (row: PokedexTableRow) => boolean,
+		// A failed id never became a row (nothing to check generationId on),
+		// so its own dex-range membership is checked directly here instead of
+		// through `includes` — see the failedIds line below.
+		private enabledGenerations: number[],
 	) {}
 
 	cancel(): void {
@@ -57,12 +62,17 @@ export class PokedexLoadState {
 			},
 			() => this.cancelled,
 			(row) => {
-				if (this.includes(row.id)) onRow?.(row);
+				if (this.includes(row)) onRow?.(row);
 			},
 		);
 		if (this.cancelled) return;
-		this.rows = result.rows.filter((row) => this.includes(row.id));
-		this.failedIds = result.failedIds.filter(this.includes);
+		this.rows = result.rows.filter((row) => this.includes(row));
+		// failedIds are bare ids (a row never got built, nothing to check
+		// generationId on) — a failure always happens on the *base* fetch id
+		// (see getRowsForIds: a regional-variant failure is caught separately
+		// and never propagates here), which is always a plain dex number, so
+		// this stays the simple dex-range check.
+		this.failedIds = result.failedIds.filter((id) => isIdInGenerations(id, this.enabledGenerations));
 		this.loading = false;
 	}
 

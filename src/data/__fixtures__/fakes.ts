@@ -116,9 +116,19 @@ export class FakePokeApiClient extends PokeApiClient {
 	failImage = false;
 	failAbility = false;
 	failMoves = new Set<string>();
+	// Name-keyed fetches (Mega/regional-form varieties, e.g. "rattata-alola")
+	// go through here instead of the numeric-id branch below — a test
+	// populates this directly with whatever RawPokemon it wants that name to
+	// resolve to, rather than this fake trying to synthesize one generically.
+	variantPokemon = new Map<string, RawPokemon>();
 
 	fetchPokemon = vi.fn(async (idOrName: number | string): Promise<RawPokemon> => {
-		const id = Number(idOrName);
+		if (typeof idOrName === "string") {
+			const variant = this.variantPokemon.get(idOrName);
+			if (!variant) throw new Error(`fake failure fetching pokemon variant ${idOrName}`);
+			return variant;
+		}
+		const id = idOrName;
 		if (this.failIds.has(id)) throw new Error(`fake failure fetching pokemon ${id}`);
 		return { ...(bulbasaur as unknown as RawPokemon), id };
 	});
