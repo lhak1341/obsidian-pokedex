@@ -28,6 +28,11 @@
 		onSelect(id);
 		query = "";
 		open = false;
+		// Both the mousedown and Enter paths land here — without this, focus
+		// stays in the input after jumping to a result, so isEditableTarget
+		// blocks PokedexApp's global "["/"]" view-history hotkey right after
+		// the exact navigation it's meant to step back through.
+		inputEl?.blur();
 	}
 
 	function onKeydown(e: KeyboardEvent) {

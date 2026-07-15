@@ -23,3 +23,11 @@ The Cmd/Ctrl+Shift+L global hotkey registration is a separate shared seam, `regi
 The human-readable description of what triggers a node's own evolution (e.g. "Lv. 16", "Thunder Stone", "Trade (metal coat)", "Lv. 30 (Female)") — shown as the method line on `EvolutionChain.svelte`'s card for that node.
 
 Computed by `describeEvolutionRequirement` in `src/data/normalize.ts`, tested in `normalize.test.ts` alongside every other pure function derived from `EvolutionNode` (`normalizeEvolutionChain`, `collectChainIds`, `nextEvolutionLevels`). Priority-ordered base label (minLevel > item > minHappiness > minBeauty > knownMove > partySpecies > location > trigger), then relativePhysicalStats/trade+heldItem-override/gender/timeOfDay layered on top in that fixed order — see the function's own comment for why trade+heldItem is a hard override rather than a suffix.
+
+## View history
+
+A browser-style back/forward stack of previously-viewed Pokemon on the detail screen, bound to `[`/`]`. Stepping back past the oldest entry exits to the table (same destination as the "Back to list" button); stepping forward from the table re-enters detail at wherever the stack was last pointing. Distinct from Quick jump: quick jump searches and jumps into a result, view history steps through Pokemon already visited.
+
+Opening a mon from the table always starts a fresh chain (like navigating to a new page from the browser's home page) — it does not resume whatever was left over from an earlier chain you'd already stepped out of. Opening from inside detail (evolution card, quick search, or resuming into detail via `]`) continues the current chain instead: truncate-then-push, same as a browser tab's forward history being dropped once you navigate somewhere new mid-stack.
+
+Implemented once, generically, as `pushHistory`/`stepBack`/`stepForward` in `src/utils/viewHistory.ts` — tested in `viewHistory.test.ts`. Used by `PokedexApp.svelte`'s `openDetail`/`goBack`/`goForward`, which apply the returned action (`select`/`exitToTable`/`none`) as `screen`/`selectedId`/scroll writes.

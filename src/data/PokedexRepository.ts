@@ -540,9 +540,4 @@ export class PokedexRepository {
 		);
 		return Object.fromEntries(pairs);
 	}
-
-	async getEntry(id: number): Promise<PokedexEntry> {
-		const [core, extras] = await Promise.all([this.getEntryCore(id), this.getEntryExtras(id)]);
-		return { ...core, ...extras };
-	}
 }

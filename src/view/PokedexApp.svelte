@@ -5,6 +5,7 @@
 	import type { PluginSettings, PokedexTableRow } from "../data/types";
 	import { resolveGenerationScope } from "../utils/generationScope";
 	import { describePartialLoadOutcome, describeRetryOutcome } from "../utils/loadNotices";
+	import { pushHistory, stepBack, stepForward } from "../utils/viewHistory";
 	import DetailScreen from "./components/DetailScreen.svelte";
 	import { PokedexLoadState } from "./PokedexLoadState";
 	import TableScreen from "./components/TableScreen.svelte";
@@ -99,46 +100,34 @@
 	let tableScrollTop = 0;
 
 	function openDetail(id: number) {
-		if (screen === "table") tableScrollTop = rootEl?.scrollTop ?? 0;
+		const fromScreen = screen;
+		if (fromScreen === "table") tableScrollTop = rootEl?.scrollTop ?? 0;
 		selectedId = id;
 		screen = "detail";
 		rootEl?.scrollTo(0, 0);
-		// Same truncate-then-push semantics as a browser's history stack: a
-		// fresh navigation (table row, evolution card, quick search, ...)
-		// drops any forward entries past the current point rather than
-		// leaving them reachable via goForward.
-		history = [...history.slice(0, historyIndex + 1), id];
-		historyIndex = history.length - 1;
+		({ history, historyIndex } = pushHistory(history, historyIndex, id, fromScreen));
 	}
 
-	// Past the oldest viewed Pokemon, "[" steps out one more level to the
-	// table itself — same destination as the "Back to list" button, just
-	// reusing backToTable() rather than duplicating its scroll-restore logic.
 	function goBack() {
-		if (historyIndex <= 0) {
-			if (screen === "detail") void backToTable();
-			return;
-		}
-		historyIndex -= 1;
-		selectedId = history[historyIndex];
-		rootEl?.scrollTo(0, 0);
-	}
-
-	// Symmetric counterpart: from the table (having arrived there via goBack,
-	// not the explicit "Back to list" button), "]" re-enters detail at
-	// whatever Pokemon history was last pointing at.
-	function goForward() {
-		if (screen === "table") {
-			if (historyIndex < 0 || historyIndex >= history.length) return;
-			selectedId = history[historyIndex];
+		const step = stepBack(history, historyIndex, screen);
+		if (step.action === "exitToTable") {
+			void backToTable();
+		} else if (step.action === "select") {
+			historyIndex = step.historyIndex;
+			selectedId = step.id;
 			screen = "detail";
 			rootEl?.scrollTo(0, 0);
-			return;
 		}
-		if (historyIndex >= history.length - 1) return;
-		historyIndex += 1;
-		selectedId = history[historyIndex];
-		rootEl?.scrollTo(0, 0);
+	}
+
+	function goForward() {
+		const step = stepForward(history, historyIndex, screen);
+		if (step.action === "select") {
+			historyIndex = step.historyIndex;
+			selectedId = step.id;
+			screen = "detail";
+			rootEl?.scrollTo(0, 0);
+		}
 	}
 
 	function isEditableTarget(target: EventTarget | null): boolean {

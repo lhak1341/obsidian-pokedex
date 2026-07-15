@@ -138,30 +138,24 @@ describe("PokedexRepository", () => {
 		expect(seen.sort((a, b) => a - b)).toEqual([1, 3]);
 	});
 
-	it("getEntry swallows a failed evolution-chain fetch instead of rejecting", async () => {
+	it("getEntryExtras swallows a failed evolution-chain fetch instead of rejecting", async () => {
 		const { client, repository } = makeRepository();
 		client.failEvolutionChain = true;
 
-		const entry = await repository.getEntry(1);
+		const extras = await repository.getEntryExtras(1);
 
-		expect(entry.evolutionChain).toBeNull();
-		expect(entry.name).toBe("bulbasaur");
+		expect(extras.evolutionChain).toBeNull();
 	});
 
-	it("getEntry swallows a failed artwork/shiny image fetch instead of rejecting the whole entry", async () => {
+	it("getEntryExtras swallows a failed artwork/shiny image fetch, returning null per field", async () => {
 		const { client, repository } = makeRepository();
-		// Sprite is already cached by the table load that got the user to this
-		// row — only the never-fetched-until-now artwork/shiny should fail here.
-		await repository.getTableRows({ start: 1, end: 1 });
 		client.failImage = true;
 
-		const entry = await repository.getEntry(1);
+		const extras = await repository.getEntryExtras(1);
 
-		expect(entry.artworkDataUri).toBeNull();
-		expect(entry.shinyDataUri).toBeNull();
-		expect(entry.shinyArtworkDataUri).toBeNull();
-		expect(entry.spriteDataUri).not.toBeNull();
-		expect(entry.name).toBe("bulbasaur");
+		expect(extras.artworkDataUri).toBeNull();
+		expect(extras.shinyDataUri).toBeNull();
+		expect(extras.shinyArtworkDataUri).toBeNull();
 	});
 
 	it("getEntryCore resolves the fast fields without touching evolution chain or artwork/shiny", async () => {
