@@ -16,6 +16,8 @@
 	import QuickSearch from "./QuickSearch.svelte";
 	import StatBars from "./StatBars.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
+	import { resolveStatsForGen } from "../../utils/stats";
+	import { formatItemName } from "../../utils/tableColumns";
 
 	// True game ceilings (unlike StatBars' MAX_STAT, not compressed) —
 	// catch rate hits 255 for plenty of common early-route Pokemon (Caterpie,
@@ -25,12 +27,13 @@
 	const MAX_CATCH_RATE = 255;
 	const MAX_HATCH_COUNTER = 120;
 
-	let { repository, id, rows, spriteStyle, useTypeIcons, onBack, onSelect }: {
+	let { repository, id, rows, spriteStyle, useTypeIcons, activeGen, onBack, onSelect }: {
 		repository: PokedexRepository;
 		id: number;
 		rows: PokedexTableRow[];
 		spriteStyle: PluginSettings["spriteStyle"];
 		useTypeIcons: boolean;
+		activeGen: number;
 		onBack: () => void;
 		onSelect: (id: number) => void;
 	} = $props();
@@ -224,7 +227,7 @@
 						<dd>{(entry.weight / 10).toFixed(1)} kg</dd>
 					</div>
 				</dl>
-				<FlavorTextPanel flavorTexts={entry.flavorTexts} />
+				<FlavorTextPanel flavorTexts={entry.flavorTexts} {activeGen} />
 			</aside>
 
 			<div class="core-col">
@@ -244,7 +247,7 @@
 				<div class="stats-abilities-row">
 					<section class="panel stats-panel">
 						<h3 class="section-heading">Base stats</h3>
-						<StatBars stats={entry.stats} />
+						<StatBars stats={resolveStatsForGen(entry.stats, entry.id, activeGen)} />
 					</section>
 
 					<section class="panel abilities-panel">
@@ -259,6 +262,12 @@
 				<section class="panel">
 					<h3 class="section-heading">Breeding & Capture</h3>
 					<p class="breeding-line">Egg groups: {entry.eggGroups.join(", ") || "None"}</p>
+					{#if entry.heldItems.length > 0}
+						<p class="breeding-line">
+							Wild held item:
+							{entry.heldItems.map((h) => `${formatItemName(h.name)} (${h.rarities.join("/")}%)`).join(", ")}
+						</p>
+					{/if}
 					{#if malePct === null || femalePct === null}
 						<p class="breeding-line">Genderless</p>
 					{:else}
@@ -286,7 +295,7 @@
 
 			<div class="moves-col">
 				<section class="panel">
-					<MoveBrowser moves={entry.moves} {moveDetails} {useTypeIcons} {evolvesAtLevels} />
+					<MoveBrowser moves={entry.moves} {moveDetails} {useTypeIcons} {evolvesAtLevels} {activeGen} />
 				</section>
 			</div>
 		</div>

@@ -25,10 +25,30 @@
 	} = $props();
 
 	function detailLabel(child: EvolutionNode): string {
-		if (child.minLevel) return `Lv. ${child.minLevel}`;
-		if (child.item) return child.item.replace(/-/g, " ");
-		if (child.trigger && child.trigger !== "level-up") return child.trigger.replace(/-/g, " ");
-		return "";
+		let base = "";
+		if (child.minLevel) base = `Lv. ${child.minLevel}`;
+		else if (child.item) base = child.item.replace(/-/g, " ");
+		else if (child.minHappiness) base = "Friendship";
+		else if (child.minBeauty) base = "Beauty";
+		else if (child.knownMove) base = `Knows ${child.knownMove.replace(/-/g, " ")}`;
+		else if (child.partySpecies) base = `${child.partySpecies.replace(/-/g, " ")} in party`;
+		else if (child.location) base = child.location.replace(/-/g, " ");
+		else if (child.trigger && child.trigger !== "level-up") base = child.trigger.replace(/-/g, " ");
+
+		if (child.relativePhysicalStats === 1) base = base ? `${base} (Atk > Def)` : "Atk > Def";
+		else if (child.relativePhysicalStats === -1) base = base ? `${base} (Def > Atk)` : "Def > Atk";
+		else if (child.relativePhysicalStats === 0) base = base ? `${base} (Atk = Def)` : "Atk = Def";
+
+		if (child.trigger === "trade" && child.heldItem) {
+			base = `Trade (${child.heldItem.replace(/-/g, " ")})`;
+		}
+
+		if (child.gender === 1) base = base ? `${base} (Female)` : "Female";
+		else if (child.gender === 2) base = base ? `${base} (Male)` : "Male";
+
+		if (!child.timeOfDay) return base;
+		const timeLabel = child.timeOfDay === "day" ? "Day" : child.timeOfDay === "night" ? "Night" : child.timeOfDay;
+		return base ? `${base} (${timeLabel})` : timeLabel;
 	}
 </script>
 

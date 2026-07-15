@@ -8,6 +8,15 @@ import { totalStat } from "./stats";
 // same stat-key-to-abbreviation lookup.
 export const STAT_LABEL_BY_KEY = new Map(STAT_COLUMNS.map((c) => [c.key, c.label]));
 
+// PokeAPI item/move/etc names are lowercase-hyphenated ("oran-berry") — most
+// name-like cells in this app get capitalized via CSS (see CLAUDE.md's
+// text-transform gotcha), but a plain-text table cell with no dedicated
+// class is simplest to just format directly rather than adding CSS for one
+// column. Exported so DetailScreen's held-item display matches exactly.
+export function formatItemName(name: string): string {
+	return name.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" ");
+}
+
 export interface ColumnDef {
 	key: string;
 	label: string;
@@ -61,6 +70,17 @@ export const TOGGLEABLE_COLUMNS: ColumnDef[] = [
 				: row.evYield.map((y) => `${y.amount} ${STAT_LABEL_BY_KEY.get(y.stat) ?? y.stat}`).join(", "),
 		widthPercent: "6%",
 		minWidth: "204px",
+	},
+	{
+		key: "heldItems",
+		label: "Held item",
+		headerIcon: "gift",
+		render: (row) =>
+			row.heldItemNames.length === 0
+				? "-"
+				: row.heldItemNames.map((name) => formatItemName(name)).join(", "),
+		widthPercent: "6%",
+		minWidth: "140px",
 	},
 	{
 		key: "catchRate",

@@ -230,6 +230,7 @@
 				{rows}
 				spriteStyle={settings.spriteStyle}
 				useTypeIcons={settings.useTypeIcons}
+				activeGen={settings.activeGen}
 				onBack={backToTable}
 				onSelect={openDetail}
 			/>

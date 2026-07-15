@@ -11,6 +11,7 @@ function row(id: number, name: string, speed: number, overrides: Partial<Pokedex
 		evYield: [],
 		abilityNames: [],
 		levelUpMoveNames: [],
+		heldItemNames: [],
 		spriteDataUri: null,
 		height: 0,
 		weight: 0,

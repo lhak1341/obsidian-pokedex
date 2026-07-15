@@ -5,6 +5,8 @@ import {
 	nextEvolutionLevels,
 	normalizeEvolutionChain,
 	normalizeEvYield,
+	normalizeHeldItemDetails,
+	normalizeHeldItems,
 	normalizeMoveDetail,
 	normalizeMoves,
 	normalizeStats,
@@ -20,6 +22,50 @@ import bulbasaur from "./__fixtures__/bulbasaur.json";
 const pokemon = bulbasaur as unknown as RawPokemon;
 const species: RawSpecies = bulbasaurSpecies;
 const chain = bulbasaurChain as unknown as RawEvolutionChain;
+
+describe("normalizeHeldItems", () => {
+	it("returns an empty list for a species with no wild held items", () => {
+		expect(normalizeHeldItems(pokemon.held_items)).toEqual([]);
+	});
+
+	it("extracts item names, ignoring per-version rarity", () => {
+		const heldItems = [
+			{ item: { name: "oran-berry", url: "" }, version_details: [{ rarity: 50, version: { name: "ruby", url: "" } }] },
+			{ item: { name: "leftovers", url: "" }, version_details: [{ rarity: 5, version: { name: "emerald", url: "" } }] },
+		];
+		expect(normalizeHeldItems(heldItems)).toEqual(["oran-berry", "leftovers"]);
+	});
+
+	it("drops an item that only exists in an out-of-scope generation (e.g. Parasect's Balm Mushroom, Gen 5 only)", () => {
+		const heldItems = [
+			{ item: { name: "tiny-mushroom", url: "" }, version_details: [{ rarity: 50, version: { name: "platinum", url: "" } }] },
+			{ item: { name: "balm-mushroom", url: "" }, version_details: [{ rarity: 1, version: { name: "black", url: "" } }] },
+		];
+		expect(normalizeHeldItems(heldItems, ["platinum"])).toEqual(["tiny-mushroom"]);
+	});
+});
+
+describe("normalizeHeldItemDetails", () => {
+	it("keeps only distinct rarities from in-scope versions, dropping items with none left", () => {
+		const heldItems = [
+			{
+				item: { name: "tiny-mushroom", url: "" },
+				version_details: [
+					{ rarity: 50, version: { name: "ruby", url: "" } },
+					{ rarity: 50, version: { name: "emerald", url: "" } },
+					{ rarity: 100, version: { name: "black", url: "" } }, // out of scope, ignored
+				],
+			},
+			{
+				item: { name: "balm-mushroom", url: "" },
+				version_details: [{ rarity: 1, version: { name: "black", url: "" } }], // entirely out of scope
+			},
+		];
+		expect(normalizeHeldItemDetails(heldItems, ["ruby", "emerald"])).toEqual([
+			{ name: "tiny-mushroom", rarities: [50] },
+		]);
+	});
+});
 
 describe("normalizeStats", () => {
 	it("maps PokeAPI stat names to camelCase keys", () => {
@@ -41,7 +87,7 @@ describe("normalizeMoves", () => {
 		expect(names).toContain("tackle");
 		expect(names).toContain("vine-whip");
 		expect(names).toContain("razor-wind"); // emerald-only egg move
-		expect(names).not.toContain("solar-beam"); // diamond-pearl only
+		expect(names).not.toContain("solar-beam"); // black-white only
 	});
 
 	it("sorts level-up moves by level before other methods", () => {
@@ -73,7 +119,7 @@ describe("trimMovesToVersionGroups", () => {
 
 	it("drops a move entirely once it has no remaining version_group_details", () => {
 		const trimmed = trimMovesToVersionGroups(pokemon.moves, ["firered-leafgreen", "emerald"]);
-		expect(trimmed.some((m) => m.move.name === "solar-beam")).toBe(false); // diamond-pearl only
+		expect(trimmed.some((m) => m.move.name === "solar-beam")).toBe(false); // black-white only
 	});
 
 	it("produces output normalizeMoves still resolves the same way", () => {
@@ -97,7 +143,13 @@ describe("extractFlavorTexts", () => {
 	it("omits a tab when the species has no matching version for it", () => {
 		// Fixture only carries "red" and "firered" entries — "red" isn't any
 		// tab's version, so only the firered tab should be populated.
-		expect(extractFlavorTexts(species)).toEqual({ firered: expect.any(String) });
+		// (Not `toEqual({ firered: expect.any(String) })` — vitest types
+		// expect.any's return as `any`, which trips
+		// @typescript-eslint/no-unsafe-assignment, and this repo's eslint
+		// config blocks disabling any rule via inline comment.)
+		const texts = extractFlavorTexts(species);
+		expect(Object.keys(texts)).toEqual(["firered"]);
+		expect(typeof texts.firered).toBe("string");
 	});
 });
 
@@ -125,9 +177,18 @@ describe("collectChainIds", () => {
 			minLevel: null,
 			trigger: null,
 			item: null,
+			minHappiness: null,
+			timeOfDay: null,
+			heldItem: null,
+			minBeauty: null,
+			relativePhysicalStats: null,
+			location: null,
+			knownMove: null,
+			partySpecies: null,
+			gender: null,
 			children: [
-				{ id: 2, name: "branch-a", minLevel: null, trigger: null, item: null, children: [] },
-				{ id: 3, name: "branch-b", minLevel: null, trigger: null, item: null, children: [] },
+				{ id: 2, name: "branch-a", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, children: [] },
+				{ id: 3, name: "branch-b", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, children: [] },
 			],
 		};
 		expect(collectChainIds(forked)).toEqual([1, 2, 3]);
@@ -159,7 +220,16 @@ describe("nextEvolutionLevels", () => {
 			minLevel: null,
 			trigger: null,
 			item: null,
-			children: [{ id: 2, name: "evolved", minLevel: null, trigger: "trade", item: null, children: [] }],
+			minHappiness: null,
+			timeOfDay: null,
+			heldItem: null,
+			minBeauty: null,
+			relativePhysicalStats: null,
+			location: null,
+			knownMove: null,
+			partySpecies: null,
+			gender: null,
+			children: [{ id: 2, name: "evolved", minLevel: null, trigger: "trade", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, children: [] }],
 		};
 		expect(nextEvolutionLevels(itemEvolution, 1)).toEqual([]);
 	});
@@ -171,10 +241,19 @@ describe("nextEvolutionLevels", () => {
 			minLevel: null,
 			trigger: null,
 			item: null,
+			minHappiness: null,
+			timeOfDay: null,
+			heldItem: null,
+			minBeauty: null,
+			relativePhysicalStats: null,
+			location: null,
+			knownMove: null,
+			partySpecies: null,
+			gender: null,
 			children: [
-				{ id: 2, name: "branch-a", minLevel: 20, trigger: "level-up", item: null, children: [] },
-				{ id: 3, name: "branch-b", minLevel: 10, trigger: "level-up", item: null, children: [] },
-				{ id: 4, name: "branch-c", minLevel: 20, trigger: "level-up", item: null, children: [] },
+				{ id: 2, name: "branch-a", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, children: [] },
+				{ id: 3, name: "branch-b", minLevel: 10, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, children: [] },
+				{ id: 4, name: "branch-c", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, children: [] },
 			],
 		};
 		expect(nextEvolutionLevels(forked, 1)).toEqual([10, 20]);
@@ -198,6 +277,7 @@ describe("toTableRow", () => {
 		expect(row.catchRate).toBe(45);
 		expect(row.hatchCounter).toBe(20);
 		expect(row.evYield).toEqual([{ stat: "specialAttack", amount: 1 }]);
+		expect(row.heldItemNames).toEqual([]);
 	});
 
 	it("dedupes level-up move names across version groups", () => {
@@ -276,7 +356,7 @@ describe("normalizeMoveDetail", () => {
 		expect(normalizeMoveDetail(raw).description).toBe("A physical attack in FRLG.");
 	});
 
-	it("falls back to null when there's no English FRLG flavor text entry", () => {
+	it("falls through to the next known version group when there's no FRLG entry (e.g. a Gen 4+ signature move)", () => {
 		const raw: RawMove = {
 			name: "tackle",
 			power: 40,
@@ -285,6 +365,21 @@ describe("normalizeMoveDetail", () => {
 			type: { name: "normal", url: "" },
 			flavor_text_entries: [
 				{ flavor_text: "A physical attack in Emerald.", language: { name: "en", url: "" }, version_group: { name: "emerald", url: "" } },
+			],
+		};
+		expect(normalizeMoveDetail(raw).description).toBe("A physical attack in Emerald.");
+	});
+
+	it("falls back to null when no English entry exists in any known version group", () => {
+		const raw: RawMove = {
+			name: "tackle",
+			power: 40,
+			accuracy: 100,
+			pp: 35,
+			type: { name: "normal", url: "" },
+			flavor_text_entries: [
+				{ flavor_text: "Attaque physique.", language: { name: "fr", url: "" }, version_group: { name: "firered-leafgreen", url: "" } },
+				{ flavor_text: "A physical attack.", language: { name: "en", url: "" }, version_group: { name: "black-white", url: "" } },
 			],
 		};
 		expect(normalizeMoveDetail(raw).description).toBeNull();

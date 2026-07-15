@@ -22,8 +22,12 @@ export class PokedexView extends ItemView {
 		return VIEW_TYPE_POKEDEX;
 	}
 
+	// Active Gen is a Settings-tab control (see PokedexSettingTab), not an
+	// in-view one — showing it here instead of a persistent toolbar keeps
+	// the main UI free of a control aimed at "occasionally switch which
+	// era's data you're browsing" rather than "flip constantly mid-session".
 	getDisplayText(): string {
-		return "Pokedex";
+		return `Pokedex • Gen ${this.getSettings().activeGen}`;
 	}
 
 	getIcon(): string {
@@ -38,11 +42,24 @@ export class PokedexView extends ItemView {
 		if (this.appInstance) await unmount(this.appInstance);
 	}
 
-	// Called after settings change (e.g. dex range) so the table reloads
-	// with the new configuration instead of requiring the tab to be closed
-	// and reopened.
+	// Called after settings change (e.g. dex range, Active Gen) so the table
+	// reloads with the new configuration instead of requiring the tab to be
+	// closed and reopened. Two separate title surfaces need refreshing, and
+	// neither is covered by re-mounting the Svelte content (which only
+	// touches `contentEl`, not the header bar that lives alongside it in
+	// `containerEl`):
+	//  - the tab-strip chip, refreshed by leaf.updateHeader() (not part of
+	//    Obsidian's public API surface / obsidian.d.ts, but a long-standing,
+	//    widely-relied-on method — verified live that it exists and works)
+	//  - the larger `.view-header-title` shown when the pane is focused,
+	//    which updateHeader() does NOT touch (confirmed live: after an
+	//    Active Gen change, the tab chip updated but this element stayed on
+	//    the old value) — set directly instead.
 	refresh(): void {
 		this.mountApp();
+		(this.leaf as unknown as { updateHeader: () => void }).updateHeader();
+		const titleEl = this.containerEl.querySelector(".view-header-title");
+		if (titleEl) titleEl.textContent = this.getDisplayText();
 	}
 
 	// Defensively unmounts any existing instance first — Obsidian can call

@@ -131,7 +131,7 @@ export class FakePokeApiClient extends PokeApiClient {
 
 	fetchEvolutionChain = vi.fn(async (): Promise<RawEvolutionChain> => {
 		if (this.failEvolutionChain) throw new Error("fake failure fetching evolution chain");
-		return bulbasaurChain;
+		return bulbasaurChain as unknown as RawEvolutionChain;
 	});
 
 	fetchImageBinary = vi.fn(async (): Promise<ArrayBuffer> => {

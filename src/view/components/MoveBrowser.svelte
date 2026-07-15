@@ -1,9 +1,12 @@
 <script lang="ts">
+	import { GENERATIONS, MOVE_VERSION_TABS_BY_GEN } from "../../data/constants";
 	import type { MoveDetail, MoveEntry } from "../../data/types";
 	import { relativeRect } from "../domPosition";
 	import TypeBadge from "./TypeBadge.svelte";
 
-	let { moves, moveDetails, useTypeIcons, evolvesAtLevels }: {
+	const LATEST_GEN = Math.max(...GENERATIONS.map((g) => g.id));
+
+	let { moves, moveDetails, useTypeIcons, evolvesAtLevels, activeGen }: {
 		moves: MoveEntry[];
 		moveDetails: Record<string, MoveDetail>;
 		useTypeIcons: boolean;
@@ -11,6 +14,7 @@
 		// nextEvolutionLevels in data/normalize.ts. Empty for a final-stage
 		// member or an item/trade-driven evolution (no level to show).
 		evolvesAtLevels: number[];
+		activeGen: number;
 	} = $props();
 
 	// Unlike AbilitiesPanel's popover, no fetch-on-hover/loading state here —
@@ -40,24 +44,38 @@
 		{ key: "tutor", label: "Tutor" },
 	] as const;
 
-	// FRLG and Emerald sometimes teach the same move at different levels
-	// (e.g. a different level-up curve) — normalizeMoves keeps both rows
-	// since they're genuinely distinct data, which reads as a duplicate in
-	// the table. This toggle scopes the list to one game at a time instead.
-	const MOVE_VERSION_TABS = [
-		{ key: "firered-leafgreen", label: "FRLG" },
-		{ key: "emerald", label: "RSE" },
-	] as const;
-
 	// Not reset on id change (this component instance persists across
 	// Pokemon navigation — see DetailScreen, which doesn't remount this
 	// panel when `id` changes, only when entry itself becomes null) — lets
 	// a user stay on e.g. "Machine" while browsing several Pokemon.
 	let activeMoveMethod = $state<(typeof MOVE_METHOD_TABS)[number]["key"]>("level-up");
-	let activeMoveVersion = $state<(typeof MOVE_VERSION_TABS)[number]["key"]>("firered-leafgreen");
+	// Remembered raw key (not derived from any one generation's tab set) —
+	// see moveVersionTabs/effectiveMoveVersion below for what happens when a
+	// navigation or Active Gen switch leaves it pointing at a game this
+	// entry/generation doesn't have.
+	let activeMoveVersion = $state<string>("firered-leafgreen");
+
+	// Games within the active generation this species actually has moves
+	// for (e.g. FRLG/Emerald teach the same move at different levels
+	// sometimes — normalizeMoves keeps both rows since they're genuinely
+	// distinct data, which reads as a duplicate here; this toggle scopes the
+	// list to one game at a time instead) — falling back to the latest
+	// supported generation's games when the active generation predates this
+	// species (e.g. viewing a Gen 4 mon with Active Gen set to Gen 3, which
+	// has no data for it at all), same "prioritize active gen, fall back to
+	// latest" rule as resolveStatsForGen.
+	const moveVersionTabs = $derived.by(() => {
+		const versionsWithMoves = new Set(moves.map((m) => m.versionGroup));
+		const primary = (MOVE_VERSION_TABS_BY_GEN[activeGen] ?? []).filter((tab) => versionsWithMoves.has(tab.key));
+		if (primary.length > 0) return primary;
+		return (MOVE_VERSION_TABS_BY_GEN[LATEST_GEN] ?? []).filter((tab) => versionsWithMoves.has(tab.key));
+	});
+	const effectiveMoveVersion = $derived(
+		moveVersionTabs.some((t) => t.key === activeMoveVersion) ? activeMoveVersion : (moveVersionTabs[0]?.key ?? ""),
+	);
 
 	const filteredMoves = $derived(
-		moves.filter((m) => m.learnMethod === activeMoveMethod && m.versionGroup === activeMoveVersion),
+		moves.filter((m) => m.learnMethod === activeMoveMethod && m.versionGroup === effectiveMoveVersion),
 	);
 
 	// moveIndex (not the raw position in displayRows) drives the alternating
@@ -91,13 +109,13 @@
 </script>
 
 <div class="moves-heading-row">
-	<h3 class="section-heading">Moves (G3)</h3>
+	<h3 class="section-heading">Moves (G{activeGen})</h3>
 	<div class="move-tabs move-version-tabs">
-		{#each MOVE_VERSION_TABS as tab (tab.key)}
+		{#each moveVersionTabs as tab (tab.key)}
 			<button
 				type="button"
 				class="move-tab"
-				class:active={activeMoveVersion === tab.key}
+				class:active={effectiveMoveVersion === tab.key}
 				onclick={() => (activeMoveVersion = tab.key)}
 			>
 				{tab.label}

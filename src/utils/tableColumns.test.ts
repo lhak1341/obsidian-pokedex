@@ -11,6 +11,7 @@ function makeRow(overrides: Partial<PokedexTableRow> = {}): PokedexTableRow {
 		evYield: [],
 		abilityNames: ["overgrow"],
 		levelUpMoveNames: [],
+		heldItemNames: [],
 		spriteDataUri: null,
 		height: 7,
 		weight: 69,
@@ -57,5 +58,14 @@ describe("TOGGLEABLE_COLUMNS", () => {
 
 	it("converts weight from hectograms to kilograms", () => {
 		expect(renderOf("weight", makeRow({ weight: 690 }))).toBe("69.0 kg");
+	});
+
+	it("renders '-' for no wild held items", () => {
+		expect(renderOf("heldItems", makeRow({ heldItemNames: [] }))).toBe("-");
+	});
+
+	it("renders wild held item names, formatted and comma-joined", () => {
+		const row = makeRow({ heldItemNames: ["oran-berry", "leftovers"] });
+		expect(renderOf("heldItems", row)).toBe("Oran Berry, Leftovers");
 	});
 });

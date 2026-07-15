@@ -31,6 +31,15 @@ export interface RawPokemon {
 			version_group: NamedApiResource;
 		}[];
 	}[];
+	// Items a wild-encountered individual of this species may be holding —
+	// most species have none (empty array), not every entry has this field
+	// populated. Per-game rarity % lives in version_details but isn't
+	// currently surfaced (see normalizeHeldItems) — same simplicity level as
+	// abilityNames/levelUpMoveNames below, not version/generation-scoped.
+	held_items: {
+		item: NamedApiResource;
+		version_details: { rarity: number; version: NamedApiResource }[];
+	}[];
 }
 
 export interface RawSpecies {
@@ -57,6 +66,15 @@ export interface RawEvolutionChainLink {
 		min_level: number | null;
 		trigger: NamedApiResource | null;
 		item: NamedApiResource | null;
+		min_happiness: number | null;
+		time_of_day: string;
+		held_item: NamedApiResource | null;
+		min_beauty: number | null;
+		relative_physical_stats: number | null;
+		location: NamedApiResource | null;
+		known_move: NamedApiResource | null;
+		party_species: NamedApiResource | null;
+		gender: number | null;
 	}[];
 	evolves_to: RawEvolutionChainLink[];
 }
@@ -95,6 +113,15 @@ export interface EvolutionNode {
 	minLevel: number | null;
 	trigger: string | null;
 	item: string | null;
+	minHappiness: number | null;
+	timeOfDay: string | null;
+	heldItem: string | null;
+	minBeauty: number | null;
+	relativePhysicalStats: number | null;
+	location: string | null;
+	knownMove: string | null;
+	partySpecies: string | null;
+	gender: number | null;
 	children: EvolutionNode[];
 }
 
@@ -161,6 +188,9 @@ export interface PokedexTableRow {
 	// per-Pokemon detail fetch, since the underlying move data is already
 	// part of the same RawPokemon response abilityNames/stats come from.
 	levelUpMoveNames: string[];
+	// Wild-encounter held items (see RawPokemon.held_items) — empty for most
+	// species, which is a real fact (nothing to hold), not missing data.
+	heldItemNames: string[];
 	spriteDataUri: string | null;
 	height: number;
 	weight: number;
@@ -182,6 +212,13 @@ export interface PokedexEntry extends PokedexTableRow {
 	genderRate: number;
 	moves: MoveEntry[];
 	evolutionChain: EvolutionNode | null;
+	// Rarity is per PokeAPI game *version*, scoped down to the ones this app
+	// currently supports (see normalizeHeldItemDetails) — `rarities` is
+	// almost always one value (an item's drop % rarely differs across a
+	// species' supported games), kept as a list of distinct values for the
+	// rare case it does. Table column (heldItemNames on PokedexTableRow)
+	// deliberately stays name-only; this richer shape is detail-view-only.
+	heldItems: { name: string; rarities: number[] }[];
 }
 
 export interface PluginSettings {
@@ -191,4 +228,11 @@ export interface PluginSettings {
 	defaultSortColumn: "id" | "name";
 	visibleColumns: string[];
 	useTypeIcons: boolean;
+	// Which generation's stats/moves/flavor text to prioritize for display,
+	// independent of enabledGenerations (which only controls which dex rows
+	// are fetched/visible at all) — see resolveStatsForGen and docs/
+	// multi-gen-expansion-plan.md's "Active Gen dropdown" design. Falls back
+	// to the latest supported generation's data wherever the active
+	// generation has nothing of its own for a given species.
+	activeGen: number;
 }

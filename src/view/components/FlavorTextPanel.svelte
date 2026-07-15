@@ -1,22 +1,32 @@
 <script lang="ts">
-	import { FLAVOR_TEXT_TABS } from "../../data/constants";
+	import { FLAVOR_TEXT_TABS_BY_GEN, GENERATIONS } from "../../data/constants";
 	import Icon from "./Icon.svelte";
 
-	let { flavorTexts }: { flavorTexts: Record<string, string> } = $props();
+	const LATEST_GEN = Math.max(...GENERATIONS.map((g) => g.id));
+
+	let { flavorTexts, activeGen }: { flavorTexts: Record<string, string>; activeGen: number } = $props();
 
 	// Not reset on id change (this component instance persists across
 	// Pokemon navigation — see DetailScreen, which doesn't remount this
 	// panel when `id` changes, only when entry itself becomes null) — stays
-	// on e.g. "Emerald" while browsing several Pokemon. Falls back to the
-	// first tab this entry actually has data for (see flavorTabs) if the
-	// remembered key isn't among them, so this never needs a null case.
-	let activeFlavorVersion = $state<string>(FLAVOR_TEXT_TABS[0].key);
+	// on e.g. "Emerald" while browsing several Pokemon, and also survives an
+	// Active Gen switch. Falls back to the first tab this entry actually has
+	// data for (see flavorTabs) if the remembered key isn't among them, so
+	// this never needs a null case.
+	let activeFlavorVersion = $state<string>("");
 
-	// Only tabs this species actually has flavor text for (every Gen 1-3 dex
-	// entry has all four in practice — see FLAVOR_TEXT_TABS — but a cache
-	// written before a tab existed can still be missing one until the user
-	// clears the cache, see PokedexRepository.getOrFetchSpecies).
-	const flavorTabs = $derived(FLAVOR_TEXT_TABS.filter((tab) => flavorTexts[tab.key]));
+	// Tabs for the active generation that this species actually has flavor
+	// text for (a cache written before a tab existed can be missing one
+	// until the user clears the cache, see PokedexRepository.getOrFetchSpecies)
+	// — falling back to the latest supported generation's tabs when the
+	// active generation predates this species (e.g. viewing a Gen 4 mon with
+	// Active Gen set to Gen 3, which has no data for it at all), same
+	// "prioritize active gen, fall back to latest" rule as resolveStatsForGen.
+	const flavorTabs = $derived.by(() => {
+		const primary = (FLAVOR_TEXT_TABS_BY_GEN[activeGen] ?? []).filter((tab) => flavorTexts[tab.key]);
+		if (primary.length > 0) return primary;
+		return (FLAVOR_TEXT_TABS_BY_GEN[LATEST_GEN] ?? []).filter((tab) => flavorTexts[tab.key]);
+	});
 	const activeFlavorIndex = $derived(
 		Math.max(0, flavorTabs.findIndex((tab) => tab.key === activeFlavorVersion)),
 	);

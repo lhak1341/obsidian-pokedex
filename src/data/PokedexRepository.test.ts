@@ -37,7 +37,7 @@ describe("PokedexRepository", () => {
 		const { cache, repository } = makeRepository();
 		// Simulate a cache written before trimMovesToVersionGroups existed: the
 		// full fixture still has out-of-scope version groups (e.g. solar-beam,
-		// diamond-pearl only).
+		// black-white only).
 		await cache.writeJson("pokemon/1.json", bulbasaur);
 		expect((bulbasaur as unknown as RawPokemon).moves.some((m) => m.move.name === "solar-beam")).toBe(true);
 
@@ -45,6 +45,17 @@ describe("PokedexRepository", () => {
 
 		const migrated = await cache.readJson<RawPokemon>("pokemon/1.json");
 		expect(migrated?.moves.some((m) => m.move.name === "solar-beam")).toBe(false);
+	});
+
+	it("refetches a pokemon.json cached before held_items existed instead of crashing on undefined", async () => {
+		const { client, cache, repository } = makeRepository();
+		const { held_items: _heldItems, ...withoutHeldItems } = bulbasaur as unknown as RawPokemon;
+		await cache.writeJson("pokemon/1.json", withoutHeldItems);
+
+		const result = await repository.getTableRows({ start: 1, end: 1 });
+
+		expect(client.fetchPokemon).toHaveBeenCalledTimes(1);
+		expect(result.rows[0].heldItemNames).toEqual([]);
 	});
 
 	it("tracks per-id failures without aborting the rest of the batch", async () => {

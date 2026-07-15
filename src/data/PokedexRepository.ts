@@ -130,6 +130,11 @@ export class PokedexRepository {
 					? { ...cached, moves: trimmedMoves }
 					: cached;
 			},
+			// held_items is new data, not a trim-down of something already on
+			// disk (unlike moves/flavor text above) — same as getMoveDetails'
+			// `description` field, a cache written before it existed can't
+			// self-heal via a local transform and needs a real refetch.
+			(cached) => !("held_items" in cached),
 		);
 	}
 

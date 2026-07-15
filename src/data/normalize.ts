@@ -1,7 +1,7 @@
 import {
-	FLAVOR_TEXT_TABS,
+	FLAVOR_TEXT_TABS_BY_GEN,
 	FLAVOR_TEXT_VERSION_GROUPS,
-	MOVE_DESCRIPTION_VERSION_GROUP,
+	MOVE_DESCRIPTION_VERSION_GROUPS,
 	MOVE_VERSION_GROUPS,
 } from "./constants";
 import type {
@@ -98,10 +98,12 @@ export function trimMovesToVersionGroups(
 }
 
 export function normalizeMoveDetail(raw: RawMove): MoveDetail {
-	const description =
-		raw.flavor_text_entries
-			.find((e) => e.language.name === "en" && e.version_group.name === MOVE_DESCRIPTION_VERSION_GROUP)
-			?.flavor_text.replace(/[\n\f\r]+/g, " ").trim() ?? null;
+	let entry: RawMove["flavor_text_entries"][number] | undefined;
+	for (const group of MOVE_DESCRIPTION_VERSION_GROUPS) {
+		entry = raw.flavor_text_entries.find((e) => e.language.name === "en" && e.version_group.name === group);
+		if (entry) break;
+	}
+	const description = entry?.flavor_text.replace(/[\n\f\r]+/g, " ").trim() ?? null;
 	return { type: raw.type.name, power: raw.power, accuracy: raw.accuracy, pp: raw.pp, description };
 }
 
@@ -118,6 +120,15 @@ export function normalizeEvolutionChain(link: RawEvolutionChainLink): EvolutionN
 		minLevel: detail?.min_level ?? null,
 		trigger: detail?.trigger?.name ?? null,
 		item: detail?.item?.name ?? null,
+		minHappiness: detail?.min_happiness ?? null,
+		timeOfDay: detail?.time_of_day || null,
+		heldItem: detail?.held_item?.name ?? null,
+		minBeauty: detail?.min_beauty ?? null,
+		relativePhysicalStats: detail?.relative_physical_stats ?? null,
+		location: detail?.location?.name ?? null,
+		knownMove: detail?.known_move?.name ?? null,
+		partySpecies: detail?.party_species?.name ?? null,
+		gender: detail?.gender ?? null,
 		children: link.evolves_to.map(normalizeEvolutionChain),
 	};
 }
@@ -157,13 +168,18 @@ export function nextEvolutionLevels(root: EvolutionNode, id: number): number[] {
 	return [...new Set(levels)].sort((a, b) => a - b);
 }
 
-// One entry per FLAVOR_TEXT_TABS tab that has a matching version in this
-// species' data (missing for a tab only if the species genuinely never
-// appeared in that game, which doesn't happen within this plugin's Gen 1-3
-// dex) — DetailScreen's version cycler reads straight off this map's keys.
+// One entry per tab (across every generation's FLAVOR_TEXT_TABS_BY_GEN
+// entry) that has a matching version in this species' data — missing for a
+// tab only if the species genuinely never appeared in that game (always
+// true for a species older than the tab's generation, e.g. a Gen 1-3 mon
+// has no diamond-pearl entry). DetailScreen's version cycler filters this
+// map's keys down to whichever generation is currently active.
 export function extractFlavorTexts(
 	species: RawSpecies,
-	tabs: readonly { key: string; versions: readonly string[] }[] = FLAVOR_TEXT_TABS,
+	tabs: readonly {
+		key: string;
+		versions: readonly string[];
+	}[] = Object.values(FLAVOR_TEXT_TABS_BY_GEN).flat(),
 ): Record<string, string> {
 	const english = species.flavor_text_entries.filter((e) => e.language.name === "en");
 	const texts: Record<string, string> = {};
@@ -193,6 +209,39 @@ export function trimFlavorTextEntries(
 	);
 }
 
+// Rarity is per game version, scoped down to `supportedVersions` (defaults
+// to every version this app currently supports across all generations) so
+// an item only appearing in an out-of-scope game (a spinoff like
+// Colosseum/XD, or a future generation not yet added — e.g. Parasect's
+// Balm Mushroom, Gen 5 (Black/White) only) doesn't show at all while this
+// app is capped at Gen 4, and doesn't pollute an in-scope item's rarity
+// with that other game's possibly-different number. An item with no
+// version_details left after filtering is dropped entirely.
+export function normalizeHeldItemDetails(
+	heldItems: RawPokemon["held_items"],
+	supportedVersions: readonly string[] = FLAVOR_TEXT_VERSION_GROUPS,
+): { name: string; rarities: number[] }[] {
+	return heldItems
+		.map((h) => ({
+			name: h.item.name,
+			rarities: [...new Set(
+				h.version_details
+					.filter((v) => supportedVersions.includes(v.version.name))
+					.map((v) => v.rarity),
+			)].sort((a, b) => a - b),
+		}))
+		.filter((h) => h.rarities.length > 0);
+}
+
+// Table-column shape (see PokedexTableRow.heldItemNames) — same era scope as
+// normalizeHeldItemDetails above, just names instead of rarity.
+export function normalizeHeldItems(
+	heldItems: RawPokemon["held_items"],
+	supportedVersions: readonly string[] = FLAVOR_TEXT_VERSION_GROUPS,
+): string[] {
+	return normalizeHeldItemDetails(heldItems, supportedVersions).map((h) => h.name);
+}
+
 export function normalizeEvYield(rawStats: RawPokemon["stats"]): EvYieldEntry[] {
 	const yields: EvYieldEntry[] = [];
 	for (const entry of rawStats) {
@@ -220,6 +269,7 @@ export function toTableRow(
 				.filter((m) => m.learnMethod === "level-up")
 				.map((m) => m.name),
 		)],
+		heldItemNames: normalizeHeldItems(pokemon.held_items),
 		spriteDataUri,
 		height: pokemon.height,
 		weight: pokemon.weight,
@@ -248,5 +298,6 @@ export function toEntry(
 		genderRate: species.gender_rate,
 		moves: normalizeMoves(pokemon.moves),
 		evolutionChain,
+		heldItems: normalizeHeldItemDetails(pokemon.held_items),
 	};
 }

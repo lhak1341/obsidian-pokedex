@@ -10,6 +10,10 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	defaultSortColumn: "id",
 	visibleColumns: DEFAULT_VISIBLE_COLUMNS,
 	useTypeIcons: false,
+	// Latest supported generation by default, so a fresh install (or anyone
+	// who never touches the Active Gen selector) sees exactly the same
+	// stats/moves/flavor text as before this setting existed.
+	activeGen: Math.max(...GENERATIONS.map((g) => g.id)),
 };
 
 function formatBytes(bytes: number): string {
@@ -133,6 +137,19 @@ export class PokedexSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl).setName("Display").setHeading();
 		const displayItems = containerEl.createDiv("setting-group").createDiv("setting-items");
+
+		new Setting(displayItems)
+			.setName("Active gen")
+			.setDesc(
+				"Which generation's stats/moves/flavor text to prioritize (e.g. set to Gen 3 to see FireRed/LeafGreen/Emerald-era data). Falls back to the latest generation wherever the chosen one has nothing of its own for a species. Independent of which generations are enabled above.",
+			)
+			.addDropdown((dropdown) => {
+				for (const gen of GENERATIONS) dropdown.addOption(String(gen.id), gen.name);
+				dropdown.setValue(String(this.plugin.settings.activeGen)).onChange(async (value) => {
+					this.plugin.settings.activeGen = Number(value);
+					await this.plugin.saveSettings();
+				});
+			});
 
 		new Setting(displayItems)
 			.setName("Sprite style")

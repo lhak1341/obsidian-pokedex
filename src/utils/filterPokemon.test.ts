@@ -11,6 +11,7 @@ function row(overrides: Partial<PokedexTableRow>): PokedexTableRow {
 		evYield: [],
 		abilityNames: ["overgrow", "chlorophyll"],
 		levelUpMoveNames: [],
+		heldItemNames: [],
 		spriteDataUri: null,
 		height: 7,
 		weight: 69,

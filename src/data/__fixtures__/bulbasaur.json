@@ -56,10 +56,11 @@
 		{
 			"move": { "name": "solar-beam", "url": "" },
 			"version_group_details": [
-				{ "level_learned_at": 0, "move_learn_method": { "name": "tutor", "url": "" }, "version_group": { "name": "diamond-pearl", "url": "" } }
+				{ "level_learned_at": 0, "move_learn_method": { "name": "tutor", "url": "" }, "version_group": { "name": "black-white", "url": "" } }
 			]
 		}
 	],
+	"held_items": [],
 	"cries": {
 		"latest": "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/1.ogg",
 		"legacy": "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/legacy/1.ogg"
