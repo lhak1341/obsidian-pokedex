@@ -1,11 +1,9 @@
 <script lang="ts">
-	import { onMount } from "svelte";
 	import { GENERATIONS, QUIRKS, RARITIES, STAT_COLORS, STAT_COLUMNS, TYPE_NAMES } from "../../data/constants";
 	import { EMPTY_FILTERS, type PokedexFilters } from "../../utils/filterPokemon";
-	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
-	import { quickJumpMatches, stepQuickJumpNav } from "../../utils/quickJump";
 	import type { PokedexTableRow, StatBlock } from "../../data/types";
-	import { registerGlobalHotkey } from "../globalHotkey";
+	import { createQuickJumpDropdown } from "../quickJumpDropdown.svelte";
+	import QuickJumpDropdown from "./QuickJumpDropdown.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 	import Icon from "./Icon.svelte";
 
@@ -53,47 +51,28 @@
 		return [...selected, ...rest];
 	});
 
-	// Quick-jump dropdown on the main search box, mirroring QuickSearch.svelte
-	// on the detail screen (same matchesSearch predicate, same Up/Down/Enter
-	// nav). Kept separate from filters.search's own live-filtering of the
-	// table below rather than replacing it — typing still filters the table
-	// as before, this dropdown just offers a faster way to jump straight into
-	// a result's detail page instead of scrolling to its row.
+	// Quick-jump dropdown on the main search box, sharing createQuickJumpDropdown
+	// with QuickSearch.svelte on the detail screen (same matchesSearch
+	// predicate, same Up/Down/Enter nav, same hotkey). Kept separate from
+	// filters.search's own live-filtering of the table below rather than
+	// replacing it — typing still filters the table as before, this dropdown
+	// just offers a faster way to jump straight into a result's detail page
+	// instead of scrolling to its row.
 	let searchInputEl: HTMLInputElement | undefined;
-	let quickOpen = $state(false);
-	let quickActiveIndex = $state(0);
 
-	const quickMatches = $derived.by(() => quickJumpMatches(rows, filters.search));
-
-	$effect(() => {
-		void quickMatches;
-		quickActiveIndex = 0;
+	const quickJump = createQuickJumpDropdown({
+		rows: () => rows,
+		query: () => filters.search,
+		inputRef: () => searchInputEl,
+		// onQuickSelect navigates away to the detail screen entirely, so
+		// unlike QuickSearch's onSelect this doesn't need to blur — the
+		// search input (and this whole screen) leaves the DOM on select.
+		onSelect: (id) => onQuickSelect(id),
+		// Unlike QuickSearch's own Escape, this doesn't clear filters.search
+		// — that's the table's real live filter, not an ephemeral query, so
+		// Escape here only dismisses the dropdown (handled by the hook).
+		onEscape: () => {},
 	});
-
-	function quickSelect(id: number) {
-		onQuickSelect(id);
-		quickOpen = false;
-	}
-
-	function onSearchKeydown(e: KeyboardEvent) {
-		const result = stepQuickJumpNav(e.key, quickActiveIndex, quickMatches.length);
-		if (result.action === "move") {
-			e.preventDefault();
-			quickActiveIndex = result.index;
-		} else if (result.action === "select") {
-			quickSelect(quickMatches[result.index].id);
-		} else if (e.key === "Escape") {
-			// Unlike QuickSearch's own Escape, this doesn't clear filters.search
-			// — that's the table's real live filter, not an ephemeral query, so
-			// Escape here only dismisses the dropdown.
-			quickOpen = false;
-			(e.currentTarget as HTMLInputElement).blur();
-		}
-	}
-
-	// Same Cmd/Ctrl+Shift+L global hotkey as QuickSearch.svelte — see
-	// registerGlobalHotkey for why this needs Shift and capture-phase.
-	onMount(() => registerGlobalHotkey("l", () => { searchInputEl?.focus(); searchInputEl?.select(); }));
 </script>
 
 <div class="filter-bar">
@@ -104,30 +83,18 @@
 			placeholder="Search by name or #..."
 			bind:value={filters.search}
 			class="filter-search"
-			onfocus={() => (quickOpen = true)}
-			oninput={() => (quickOpen = true)}
-			onblur={() => (quickOpen = false)}
-			onkeydown={onSearchKeydown}
+			onfocus={quickJump.onFocus}
+			oninput={quickJump.onInput}
+			onblur={quickJump.onBlur}
+			onkeydown={quickJump.onKeydown}
 		/>
-		{#if quickOpen && quickMatches.length > 0}
-			<ul class="quick-jump-results">
-				{#each quickMatches as row, i (row.id)}
-					<li>
-						<!-- preventDefault keeps focus on the input instead of moving it
-						to this button, which would fire the input's onblur (closing this
-						list) before the click/select below ever runs. -->
-						<button
-							type="button"
-							class:active={i === quickActiveIndex}
-							onmousedown={(e) => { e.preventDefault(); quickSelect(row.id); }}
-							onmouseenter={() => (quickActiveIndex = i)}
-						>
-							<span class="quick-jump-id">#{String(row.dexNumber).padStart(3, "0")}</span>
-							<span class="quick-jump-name">{formatPokemonDisplayName(row)}</span>
-						</button>
-					</li>
-				{/each}
-			</ul>
+		{#if quickJump.open && quickJump.matches.length > 0}
+			<QuickJumpDropdown
+				matches={quickJump.matches}
+				activeIndex={quickJump.activeIndex}
+				onSelect={quickJump.select}
+				onHover={(i) => (quickJump.activeIndex = i)}
+			/>
 		{/if}
 	</div>
 
@@ -321,54 +288,6 @@
 	}
 	.filter-search {
 		width: 100%;
-	}
-	.quick-jump-results {
-		position: absolute;
-		top: calc(100% + 4px);
-		left: 0;
-		right: 0;
-		z-index: 50;
-		margin: 0;
-		padding: 4px;
-		list-style: none;
-		background: var(--background-primary);
-		border: 1px solid var(--background-modifier-border);
-		border-radius: var(--radius-m, 8px);
-		box-shadow: var(--shadow-s);
-		max-height: 260px;
-		overflow-y: auto;
-	}
-	.quick-jump-results li {
-		display: block;
-	}
-	.quick-jump-results button {
-		display: flex;
-		align-items: baseline;
-		/* Obsidian's own button CSS sets justify-content: center — harmless
-		to override since we declare it ourselves, same as QuickSearch's
-		identical override. */
-		justify-content: flex-start;
-		gap: 8px;
-		width: 100%;
-		height: auto;
-		padding: 6px 8px;
-		background: transparent;
-		border: none;
-		border-radius: var(--radius-s, 4px);
-		box-shadow: none;
-		text-align: left;
-		cursor: pointer;
-	}
-	.quick-jump-results button:hover, .quick-jump-results button.active {
-		background: var(--background-modifier-hover);
-	}
-	.quick-jump-id {
-		font-family: var(--font-monospace);
-		font-size: 0.8em;
-		color: var(--text-muted);
-	}
-	.quick-jump-name {
-		text-transform: capitalize;
 	}
 	.filter-rail {
 		display: inline-flex;

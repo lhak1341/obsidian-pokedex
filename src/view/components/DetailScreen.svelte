@@ -20,6 +20,7 @@
 	import StatBars from "./StatBars.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
+	import { resolvePortrait } from "../../utils/portrait";
 	import { resolveStatsForGen } from "../../utils/stats";
 
 	// True game ceilings (unlike StatBars' MAX_STAT, not compressed) —
@@ -118,35 +119,10 @@
 	// Shared by the base-species and Mega-form image sets (see
 	// MegaFormDetail's comment on why it mirrors PokedexEntry's four image
 	// fields) so switching the Mega tab and the shiny toggle compose freely.
-	function basePortrait(
-		source: { spriteDataUri: string | null; artworkDataUri: string | null },
-		style: PluginSettings["spriteStyle"],
-	): string | null {
-		return (style === "official-artwork" ? source.artworkDataUri : source.spriteDataUri) ??
-			source.spriteDataUri ??
-			null;
-	}
-	// Falls back to the regular shiny sprite when spriteStyle is
-	// "official-artwork" but that particular render has no shiny artwork on
-	// PokeAPI (rare, but happens) — still a visible shiny swap, just not
-	// artwork-styled.
-	function shinyPortrait(
-		source: { shinyDataUri: string | null; shinyArtworkDataUri: string | null },
-		style: PluginSettings["spriteStyle"],
-	): string | null {
-		return style === "official-artwork"
-			? source.shinyArtworkDataUri ?? source.shinyDataUri ?? null
-			: source.shinyDataUri ?? null;
-	}
-
 	const activePortraitSource = $derived(activeMegaData ?? entryLoad.entry);
-	const basePortraitUri = $derived(
-		activePortraitSource ? basePortrait(activePortraitSource, spriteStyle) : null,
+	const portraitUri = $derived(
+		activePortraitSource ? resolvePortrait(activePortraitSource, spriteStyle, showShiny) : null,
 	);
-	const shinyPortraitUri = $derived(
-		activePortraitSource ? shinyPortrait(activePortraitSource, spriteStyle) : null,
-	);
-	const portraitUri = $derived(showShiny ? shinyPortraitUri ?? basePortraitUri : basePortraitUri);
 
 	// genderRate is eighths-female (0 = always male, 8 = always female);
 	// -1 means genderless. Eighths of 100 (12.5, 37.5, ...) are exact in

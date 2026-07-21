@@ -312,22 +312,29 @@ export interface MegaFormSummary {
 	label: string;
 }
 
+// The four image fields PokedexEntry and MegaFormDetail both carry, named so
+// utils/portrait.ts's resolvePortrait can treat either shape interchangeably
+// (DetailScreen.svelte passes whichever is currently active — base species
+// or a selected Mega form — as this type).
+export interface PortraitImageSource {
+	spriteDataUri: string | null;
+	artworkDataUri: string | null;
+	shinyDataUri: string | null;
+	shinyArtworkDataUri: string | null;
+}
+
 // Everything that visibly differs on a Mega form vs its base species —
 // deliberately NOT extending PokedexEntry: a Mega form has no breeding data,
 // no wild held items, no independent movepool/evolution/flavor text of its
 // own (it's a battle-only transform of the base species, not a distinct
 // dex entry), so there's nothing to inherit. Same four image fields as
-// PokedexEntry (spriteDataUri/artworkDataUri/shinyDataUri/shinyArtworkDataUri)
-// so DetailScreen's existing portrait/shiny-toggle derivation can treat
-// either shape interchangeably (see basePortrait/shinyPortrait helpers).
-export interface MegaFormDetail {
+// PokedexEntry — see PortraitImageSource — so DetailScreen's portrait/
+// shiny-toggle derivation (resolvePortrait) can treat either shape
+// interchangeably.
+export interface MegaFormDetail extends PortraitImageSource {
 	types: string[];
 	abilities: { name: string; isHidden: boolean }[];
 	stats: StatBlock;
-	spriteDataUri: string | null;
-	artworkDataUri: string | null;
-	shinyDataUri: string | null;
-	shinyArtworkDataUri: string | null;
 }
 
 export interface PluginSettings {

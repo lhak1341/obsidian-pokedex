@@ -24,12 +24,35 @@
 	let hoveredSpriteId = $state<number | null>(null);
 	let previewPos = $state<{ top: number; left: number } | null>(null);
 
+	// Half of .sprite-preview's fixed 192px height (see its CSS comment) —
+	// the preview is vertically centered via translateY(-50%), so this is how
+	// far it can extend above/below its anchor point before clipping.
+	const PREVIEW_HALF_HEIGHT = 96;
+
 	function showPreview(id: number, target: EventTarget | null) {
 		hoveredSpriteId = id;
+		const targetEl = target as HTMLElement;
 		// Positioned relative to .table-screen (position: absolute, not
 		// fixed — see its CSS comment for why), not the raw viewport rect.
-		const r = relativeRect(target as HTMLElement, ".table-screen");
-		previewPos = { top: r.top + r.height / 2, left: r.right + 6 };
+		const r = relativeRect(targetEl, ".table-screen");
+		// A row near the top or bottom edge of the visible viewport would
+		// otherwise center the preview off-screen (same class of bug
+		// hoverPopover.svelte.ts's MIN_SPACE_BELOW flip already prevents for
+		// AbilitiesPanel/MoveBrowser/HeldItemsPanel — this is a different
+		// placement shape though, a side-anchored vertical center rather
+		// than a below/above corner flip, so it gets its own clamp instead
+		// of reusing that hook). Clamped in viewport-relative terms (matching
+		// hoverPopover.svelte.ts's own window.innerHeight convention), then
+		// the resulting shift is applied to the container-relative position
+		// actually used for rendering.
+		const viewportRect = targetEl.getBoundingClientRect();
+		const desiredCenter = viewportRect.top + viewportRect.height / 2;
+		const clampedCenter = Math.min(
+			Math.max(desiredCenter, PREVIEW_HALF_HEIGHT),
+			window.innerHeight - PREVIEW_HALF_HEIGHT,
+		);
+		const shift = clampedCenter - desiredCenter;
+		previewPos = { top: r.top + r.height / 2 + shift, left: r.right + 6 };
 	}
 
 	function hidePreview() {

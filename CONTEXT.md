@@ -14,9 +14,13 @@ Not the same rule as `resolveStatsForGen` in `src/utils/stats.ts`, despite the s
 
 A small always-visible search box (FilterBar's main search input, QuickSearch on the detail screen) that offers a live dropdown of up to 8 matching Pokemon, navigable with Up/Down/Enter, opened from anywhere via Cmd/Ctrl+Shift+L. Distinct from the browse table's own live filtering (`filters.search`) — quick jump is a fast way to jump straight into a result's detail page, not the table's row filter, even on FilterBar where both live in the same input.
 
-Match derivation and Up/Down/Enter nav are implemented once in `src/utils/quickJump.ts` (`quickJumpMatches`, `stepQuickJumpNav` — tested in `quickJump.test.ts`), used by `QuickSearch.svelte` and `FilterBar.svelte`. Escape stays caller-local — the two components deliberately diverge there (QuickSearch clears its ephemeral query; FilterBar's dropdown dismisses without touching `filters.search`).
+Match derivation and Up/Down/Enter nav are implemented once in `src/utils/quickJump.ts` (`quickJumpMatches`, `stepQuickJumpNav` — tested in `quickJump.test.ts`). The dropdown orchestration built on top of those primitives — open/activeIndex state, DOM event wiring, the Cmd/Ctrl+Shift+L hotkey registration — used to be duplicated between `QuickSearch.svelte` and `FilterBar.svelte`; it's now a single shared seam, `createQuickJumpDropdown` in `src/view/quickJumpDropdown.svelte.ts` (runes-based, untested by convention — same DOM-bound category as `hoverPopover.svelte.ts`), paired with a shared `QuickJumpDropdown.svelte` for the list markup itself.
 
-The Cmd/Ctrl+Shift+L global hotkey registration is a separate shared seam, `registerGlobalHotkey` in `src/view/globalHotkey.ts` — DOM-bound, untested by convention (same as `domPosition.ts`'s `relativeRect`).
+The two callers diverge in exactly two caller-supplied places, both taken as callbacks by the hook rather than hardcoded:
+- **On Select** — QuickSearch's `onSelect` blurs the input (so `isEditableTarget` doesn't block PokedexApp's `"["`/`"]"` view-history hotkey right after navigating, since QuickSearch stays mounted on the same detail screen); FilterBar's `onSelect` navigates away to the detail screen entirely, so it doesn't need to blur at all — the search input leaves the DOM anyway.
+- **On Escape** — the hook itself does the (identical, unconditional) blur; only the text-clearing is caller-specific, via `onEscape` (QuickSearch clears its ephemeral `query`; FilterBar's `onEscape` is a no-op, since `filters.search` is the table's real live filter, not an ephemeral query).
+
+The search text itself (`query()` in the hook's options) also stays caller-owned rather than moving into the hook — QuickSearch's is a local ephemeral string, FilterBar's is `filters.search`, which the table's own live filter also reads.
 
 ## Evolution requirement
 
