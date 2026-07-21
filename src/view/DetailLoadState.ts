@@ -17,6 +17,14 @@ import type { MoveDetail, PokedexEntry } from "../data/types";
 // clobber newer state. A retry is just calling `load(id)` again — there's
 // no separate retry() method like PokedexLoadState's, since a failed
 // detail load has no partial-success set to narrow a retry down to.
+export interface DetailEntrySnapshot {
+	entry: PokedexEntry | null;
+	loading: boolean;
+	error: string | null;
+	evolutionSprites: Record<number, string | null>;
+	evolutionTypes: Record<number, string[]>;
+}
+
 export class DetailLoadState {
 	entry: PokedexEntry | null = null;
 	loading = true;
@@ -40,6 +48,20 @@ export class DetailLoadState {
 
 	cancel(): void {
 		this.cancelled = true;
+	}
+
+	// Wholesale-refresh shape (unlike PokedexLoadState, which is
+	// payload-carrying/row-streaming instead) — a Svelte caller re-assigns
+	// its own $state object from this after every onUpdate, since $state
+	// only deep-proxies plain objects/arrays, not class instances.
+	snapshot(): DetailEntrySnapshot {
+		return {
+			entry: this.entry,
+			loading: this.loading,
+			error: this.error,
+			evolutionSprites: this.evolutionSprites,
+			evolutionTypes: this.evolutionTypes,
+		};
 	}
 
 	// onUpdate fires whenever entry/loading/error/evolutionSprites changes —

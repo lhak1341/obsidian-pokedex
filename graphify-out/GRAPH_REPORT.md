@@ -1,16 +1,16 @@
-# Graph Report - obsidian-pokedex  (2026-07-21)
+# Graph Report - obsidian-pokedex  (2026-07-22)
 
 ## Corpus Check
-- 85 files · ~51,200 words
+- 88 files · ~52,162 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 455 nodes · 925 edges · 27 communities (23 shown, 4 thin omitted)
+- 466 nodes · 942 edges · 34 communities (28 shown, 6 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 3 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `0ca898c6`
+- Built from commit: `faafefeb`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -35,6 +35,13 @@
 - hoverPopover.svelte.ts
 - CLAUDE.md
 - generationFallback.test.ts
+- PokedexTableRow
+- resolveGenerationId
+- generationScope.ts
+- dexNav.test.ts
+- 0001-two-generation-membership-checks.md
+- 0002-mega-form-cache-not-on-getOrFetch.md
+- 0003-pokedexview-stays-untested.md
 
 ## God Nodes (most connected - your core abstractions)
 1. `PokedexRepository` - 41 edges
@@ -49,44 +56,44 @@
 10. `filterPokemon()` - 10 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `row()` --calls--> `resolveGenerationId()`  [EXTRACTED]
+  src/utils/filterPokemon.test.ts → src/data/constants.ts
+- `GenerationScope` --references--> `PokedexTableRow`  [EXTRACTED]
+  src/utils/generationScope.ts → src/data/types.ts
 - `PokedexPlugin` --references--> `DiskCache`  [EXTRACTED]
   src/main.ts → src/data/Cache.ts
 - `FakePokeApiClient` --inherits--> `PokeApiClient`  [EXTRACTED]
   src/data/__fixtures__/fakes.ts → src/data/PokeApiClient.ts
-- `TableLoadResult` --references--> `PokedexTableRow`  [EXTRACTED]
-  src/data/PokedexRepository.ts → src/data/types.ts
 - `PokedexPlugin` --references--> `PokedexRepository`  [EXTRACTED]
   src/main.ts → src/data/PokedexRepository.ts
-- `toTableRow()` --calls--> `resolveGenerationId()`  [EXTRACTED]
-  src/data/normalize.ts → src/data/constants.ts
 
 ## Import Cycles
 - 1-file cycle: `src/view/components/EvolutionChain.svelte -> src/view/components/EvolutionChain.svelte`
 
-## Communities (27 total, 4 thin omitted)
+## Communities (34 total, 6 thin omitted)
 
 ### Community 0 - "constants.ts"
-Cohesion: 0.07
-Nodes (35): FOSSIL_IDS, GENERATIONS, resolveGenerationId(), PokedexTableRow, StatBlock, DexNavEntry, getAdjacentDexEntries(), row() (+27 more)
+Cohesion: 0.18
+Nodes (16): FOSSIL_IDS, StatBlock, EMPTY_FILTERS, filterPokemon(), matchesAbilities(), matchesEvStats(), matchesQuirk(), matchesQuirks() (+8 more)
 
 ### Community 1 - "DetailScreen.svelte"
 Cohesion: 0.07
-Nodes (39): ./AbilitiesPanel.svelte, ./BarRow.svelte, accentColor, adjacent, evolvesAtLevels, malePct, retry(), startLoad() (+31 more)
+Nodes (38): ./AbilitiesPanel.svelte, ./BarRow.svelte, accentColor, adjacent, evolvesAtLevels, malePct, retry(), startLoad() (+30 more)
 
 ### Community 2 - "types.ts"
-Cohesion: 0.07
-Nodes (42): FLAVOR_TEXT_TABS_BY_GEN, FLAVOR_TEXT_VERSION_GROUPS, MOVE_DESCRIPTION_VERSION_GROUPS, MOVE_VERSION_GROUPS, MOVE_VERSION_TABS_BY_GEN, QuirkDef, QUIRKS, RARITIES (+34 more)
+Cohesion: 0.11
+Nodes (32): ADR-0002, MOVE_DESCRIPTION_VERSION_GROUPS, buildEvolutionNode(), deriveMegaForms(), deriveRegionalForms(), describeEvolutionRequirement(), extractFlavorTexts(), extractFormSuffix() (+24 more)
 
 ### Community 3 - "PokedexRepository"
 Cohesion: 0.12
-Nodes (12): collectChainIds(), trimFlavorTextEntries(), trimMovesToVersionGroups(), PokedexRepository, TableLoadResult, EvolutionChainVisual, MegaFormDetail, MoveDetail (+4 more)
+Nodes (10): collectChainIds(), normalizeMoveDetail(), trimMovesToVersionGroups(), PokedexRepository, MoveDetail, PokedexEntry, RawPokemon, mapWithConcurrency() (+2 more)
 
 ### Community 4 - "devDependencies"
 Cohesion: 0.05
 Nodes (38): builtin-modules, esbuild, esbuild-svelte, eslint, eslint-plugin-obsidianmd, description, devDependencies, builtin-modules (+30 more)
 
 ### Community 5 - "DiskCache"
-Cohesion: 0.12
+Cohesion: 0.11
 Nodes (11): arrayBufferToBase64(), DiskCache, extOf(), MIME_BY_EXT, makeCache(), createFakeDataAdapter(), FakePokeApiClient, makeRepository() (+3 more)
 
 ### Community 6 - "main.ts"
@@ -118,36 +125,56 @@ Cohesion: 0.33
 Nodes (5): Domain glossary, Evolution requirement, Generation fallback, Quick jump, View history
 
 ### Community 13 - "viewHistory.ts"
-Cohesion: 0.53
-Nodes (4): pushHistory(), stepBack(), stepForward(), ViewHistoryStep
+Cohesion: 0.26
+Nodes (6): pushHistory(), stepBack(), stepForward(), ViewHistoryStep, DetailNavigationState, ScrollInstruction
+
+### Community 14 - "mirrorState.test.ts"
+Cohesion: 0.14
+Nodes (13): FLAVOR_TEXT_TABS_BY_GEN, FLAVOR_TEXT_VERSION_GROUPS, MOVE_VERSION_GROUPS, MOVE_VERSION_TABS_BY_GEN, QuirkDef, QUIRKS, RARITIES, REGIONAL_FORMS (+5 more)
 
 ### Community 15 - "Pokedex"
 Cohesion: 0.50
 Nodes (3): Disclosures, Pokedex, Usage
 
 ### Community 26 - "generationFallback.test.ts"
-Cohesion: 0.33
-Nodes (5): LATEST_GEN, resolveTabsForGen(), FLAVOR_TABS_BY_GEN, LATEST_GEN, MOVE_TABS_BY_GEN
+Cohesion: 0.32
+Nodes (6): GENERATIONS, LATEST_GEN, resolveTabsForGen(), FLAVOR_TABS_BY_GEN, LATEST_GEN, MOVE_TABS_BY_GEN
+
+### Community 27 - "PokedexTableRow"
+Cohesion: 0.29
+Nodes (4): TableLoadResult, PokedexTableRow, isIdInGenerations(), PokedexLoadState
+
+### Community 28 - "resolveGenerationId"
+Cohesion: 0.24
+Nodes (9): resolveGenerationId(), row(), matchesSearch(), quickJumpMatches(), QuickJumpNavResult, stepQuickJumpNav(), row(), row() (+1 more)
+
+### Community 29 - "generationScope.ts"
+Cohesion: 0.47
+Nodes (3): matchesGenerations(), GenerationScope, resolveGenerationScope()
+
+### Community 30 - "dexNav.test.ts"
+Cohesion: 0.60
+Nodes (3): DexNavEntry, getAdjacentDexEntries(), toNavEntry()
 
 ## Knowledge Gaps
-- **110 isolated node(s):** `id`, `name`, `version`, `minAppVersion`, `description` (+105 more)
+- **115 isolated node(s):** `id`, `name`, `version`, `minAppVersion`, `description` (+110 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **4 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `PokedexRepository` connect `PokedexRepository` to `constants.ts`, `PokeApiClient`, `DiskCache`, `main.ts`?**
-  _High betweenness centrality (0.064) - this node is a cross-community bridge._
-- **Why does `DiskCache` connect `DiskCache` to `PokeApiClient`, `PokedexRepository`, `main.ts`?**
-  _High betweenness centrality (0.043) - this node is a cross-community bridge._
-- **Why does `PokedexTableRow` connect `constants.ts` to `types.ts`, `PokedexRepository`, `DiskCache`, `tableColumns.ts`, `PokeApiClient`?**
-  _High betweenness centrality (0.038) - this node is a cross-community bridge._
+- **Why does `PokedexRepository` connect `PokedexRepository` to `types.ts`, `PokedexTableRow`, `DiskCache`, `main.ts`?**
+  _High betweenness centrality (0.062) - this node is a cross-community bridge._
+- **Why does `DiskCache` connect `DiskCache` to `types.ts`, `PokedexRepository`, `main.ts`?**
+  _High betweenness centrality (0.041) - this node is a cross-community bridge._
+- **Why does `PokedexTableRow` connect `PokedexTableRow` to `constants.ts`, `types.ts`, `PokedexRepository`, `DiskCache`, `tableColumns.ts`, `PokeApiClient`, `resolveGenerationId`, `generationScope.ts`, `dexNav.test.ts`?**
+  _High betweenness centrality (0.037) - this node is a cross-community bridge._
 - **What connects `id`, `name`, `version` to the rest of the system?**
-  _110 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `constants.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.06936026936026936 - nodes in this community are weakly interconnected._
+  _115 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `DetailScreen.svelte` be split into smaller, more focused modules?**
-  _Cohesion score 0.06568832983927324 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06748911465892599 - nodes in this community are weakly interconnected._
 - **Should `types.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.07346938775510205 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.1076923076923077 - nodes in this community are weakly interconnected._
+- **Should `PokedexRepository` be split into smaller, more focused modules?**
+  _Cohesion score 0.1184939091915836 - nodes in this community are weakly interconnected._

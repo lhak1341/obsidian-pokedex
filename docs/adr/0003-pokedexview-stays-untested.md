@@ -1,0 +1,7 @@
+# PokedexView.ts stays untested by convention
+
+An architecture review flagged view-layer orchestration (`PokedexView.ts`'s mount/unmount lifecycle, `PokedexApp.svelte`, `DetailLoadState.ts`) as structurally untested while holding the real risk (mount/unmount races, timing bugs) that pure `utils/` tests don't reach. Candidate 2 of the same review already fixed the one concrete instance of this (view-history navigation orchestration, extracted into the tested `DetailNavigationState`), and `DetailLoadState.ts` turned out to already be a deep, tested module (`DetailLoadState.test.ts`), same shape as `PokedexLoadState`.
+
+What's left — `PokedexView.ts`'s `mountApp`/`onOpen`/`onClose`/`refresh` — is Obsidian `ItemView` lifecycle plus Svelte `mount`/`unmount` calls, and CLAUDE.md already names it explicitly as untested by convention, in the same category as `PokeApiClient.ts`: `vitest.config.ts` has no jsdom environment, so DOM/Obsidian-lifecycle code can't be tested without adding one — a bigger infrastructure decision than this file's own risk profile justifies. Its one real risk (double-mount running two fetch loops if `onOpen` fires twice) is already guarded by a 3-line check with a comment explaining the bug it prevents; there's no meaningful complexity to extract from it.
+
+**Decision:** leave `PokedexView.ts` as-is, untested, per the existing convention. Don't re-flag this in a future architecture review without first proposing adding jsdom to `vitest.config.ts` as its own decision — that's the actual lever, not restructuring this file.

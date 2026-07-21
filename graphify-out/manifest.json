@@ -40,8 +40,8 @@
     "semantic_hash": ""
   },
   "src/data/PokedexRepository.ts": {
-    "mtime": 1784135201.9604506,
-    "ast_hash": "48ad29d32bfac437c6f9a1a44be6e0a1",
+    "mtime": 1784652633.601503,
+    "ast_hash": "403c544db46f6238c54711ac7f0169de",
     "semantic_hash": ""
   },
   "src/data/__fixtures__/bulbasaur-evolution-chain.json": {
@@ -169,16 +169,6 @@
     "ast_hash": "2f1bfd54f1323b315b110735306da212",
     "semantic_hash": ""
   },
-  "src/utils/mirrorState.test.ts": {
-    "mtime": 1783847164.316761,
-    "ast_hash": "8ac3a21628e42bcfac0c6ab6588cbc68",
-    "semantic_hash": ""
-  },
-  "src/utils/mirrorState.ts": {
-    "mtime": 1783847158.0007792,
-    "ast_hash": "b2a6bd75dbfb8426e64f5e8af6cf56ee",
-    "semantic_hash": ""
-  },
   "src/utils/moveRows.test.ts": {
     "mtime": 1784080708.9743612,
     "ast_hash": "d1ab50c6812a74dc79b9c2e82543ff38",
@@ -255,13 +245,13 @@
     "semantic_hash": ""
   },
   "src/view/DetailLoadState.ts": {
-    "mtime": 1783845846.2968585,
-    "ast_hash": "c6e63393b3d6df14d3494f4cb8078474",
+    "mtime": 1784653084.9247506,
+    "ast_hash": "8fb75d398cc8892b0fe6f16949ffced5",
     "semantic_hash": ""
   },
   "src/view/PokedexApp.svelte": {
-    "mtime": 1784138579.0253289,
-    "ast_hash": "9f942b6347387410358bcf9de960da17",
+    "mtime": 1784652114.0066433,
+    "ast_hash": "730de245a2a52af453236ab99ccad6d3",
     "semantic_hash": ""
   },
   "src/view/PokedexLoadState.test.ts": {
@@ -290,8 +280,8 @@
     "semantic_hash": ""
   },
   "src/view/components/DetailScreen.svelte": {
-    "mtime": 1784650527.5389194,
-    "ast_hash": "97ffb2782ac8cadba3d36100b3c3ffdb",
+    "mtime": 1784653173.7082603,
+    "ast_hash": "0c2a190e14033c09bd79320fe221264e",
     "semantic_hash": ""
   },
   "src/view/components/EvolutionChain.svelte": {
@@ -375,13 +365,13 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1784650978.0399215,
-    "ast_hash": "5212bc5ed8246a37d055bfad097504d0",
+    "mtime": 1784653541.0886948,
+    "ast_hash": "8fd2c293b8d115a967df2b77607fec53",
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1784122135.0181553,
-    "ast_hash": "032123bc24ebdf1a6f0cca10c6326a5d",
+    "mtime": 1784652151.7406037,
+    "ast_hash": "673f3bd8d0e585bf1b50aa37b899ebdf",
     "semantic_hash": ""
   },
   "README.md": {
@@ -422,6 +412,31 @@
   "src/utils/dexNav.ts": {
     "mtime": 1784649438.403288,
     "ast_hash": "7a2db2990f0b30ebfbda3745ef91606a",
+    "semantic_hash": ""
+  },
+  "src/view/DetailNavigationState.test.ts": {
+    "mtime": 1784652078.2645867,
+    "ast_hash": "251f49e118528e672208d6bd71a9a029",
+    "semantic_hash": ""
+  },
+  "src/view/DetailNavigationState.ts": {
+    "mtime": 1784652069.5331604,
+    "ast_hash": "97f8e5b1817e8577eb14d53af1274ed8",
+    "semantic_hash": ""
+  },
+  "docs/adr/0001-two-generation-membership-checks.md": {
+    "mtime": 1784652489.1050224,
+    "ast_hash": "b938a21ed1cb642a37b793a2d29c4e0f",
+    "semantic_hash": ""
+  },
+  "docs/adr/0002-mega-form-cache-not-on-getOrFetch.md": {
+    "mtime": 1784652642.516283,
+    "ast_hash": "fe7a4f2838866ca0990ba22c4c28d716",
+    "semantic_hash": ""
+  },
+  "docs/adr/0003-pokedexview-stays-untested.md": {
+    "mtime": 1784653013.7622535,
+    "ast_hash": "b3829925313fb52631198ab9ad506a05",
     "semantic_hash": ""
   }
 }

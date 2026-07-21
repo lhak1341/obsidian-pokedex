@@ -25,5 +25,12 @@
   "23": "obsidian",
   "24": "svelte",
   "25": "vitest.config.ts",
-  "26": "generationFallback.test.ts"
+  "26": "generationFallback.test.ts",
+  "27": "PokedexTableRow",
+  "28": "resolveGenerationId",
+  "29": "generationScope.ts",
+  "30": "dexNav.test.ts",
+  "31": "0001-two-generation-membership-checks.md",
+  "32": "0002-mega-form-cache-not-on-getOrFetch.md",
+  "33": "0003-pokedexview-stays-untested.md"
 }

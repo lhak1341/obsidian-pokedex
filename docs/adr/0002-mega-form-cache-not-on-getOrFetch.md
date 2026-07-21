@@ -1,0 +1,7 @@
+# getMegaForm stays off the shared getOrFetch shell
+
+An architecture review flagged `getMegaForm`/`getOrFetchImage` (`src/data/PokedexRepository.ts`) as not built on `getOrFetch`'s shared mem/disk/network/isStale/migrate contract, risking a future cache-contract fix not propagating to them.
+
+Both exclusions are deliberate, pre-existing, and already commented in place: `getOrFetchImage` caches a binary asset (different shape — null-url short-circuit, read-after-write) and `getMegaForm` combines one JSON fetch with four image fetches (same category as `getEntryCore`/`getEntryExtras`, also not built on `getOrFetch`). Forcing either through the shared shell would cost clarity, not buy it — this part of the review was a misdiagnosis of intentional design.
+
+There is a real, narrower gap: `getMegaForm`'s cache read has no `isStale` mechanism at all, unlike `getOrFetchPokemon`'s `pokemonIsStale`. Nothing in `MegaFormDetail` is missing today, so adding a staleness check now would validate a scenario that doesn't exist yet. **Decision:** leave a comment at the cache-read site (not a code change) pointing forward to the `pokemonIsStale` pattern, so whoever adds the first new `MegaFormDetail` field doesn't repeat the "cache silently stays stale forever" mistake CLAUDE.md already warns about for `getOrFetch`-shaped code — `getMegaForm` isn't wired into that shell, so the reminder doesn't come for free.

@@ -5,7 +5,7 @@
 	import type { PluginSettings, PokedexTableRow } from "../data/types";
 	import { resolveGenerationScope } from "../utils/generationScope";
 	import { describePartialLoadOutcome, describeRetryOutcome } from "../utils/loadNotices";
-	import { pushHistory, stepBack, stepForward } from "../utils/viewHistory";
+	import { DetailNavigationState, type ScrollInstruction } from "./DetailNavigationState";
 	import DetailScreen from "./components/DetailScreen.svelte";
 	import { PokedexLoadState } from "./PokedexLoadState";
 	import TableScreen from "./components/TableScreen.svelte";
@@ -23,9 +23,11 @@
 	// openDetail/goBack/goForward below), bound to plain "[" / "]" — no
 	// modifier is free of conflict with any existing hotkey (unlike Cmd+L
 	// and Cmd+[/Cmd+], which collide with Obsidian's/Electron's own bindings;
-	// see QuickSearch.svelte's comment for that whole saga).
-	let history = $state<number[]>([]);
-	let historyIndex = $state(-1);
+	// see QuickSearch.svelte's comment for that whole saga). DetailNavigationState
+	// is a plain, non-reactive class (same reason as PokedexLoadState below) —
+	// screen/selectedId above are the reactive mirror, re-assigned after every
+	// call instead of read directly off the instance.
+	const navState = new DetailNavigationState();
 
 	// PokedexLoadState is a plain, non-reactive class (tested with plain
 	// vitest, see PokedexLoadState.test.ts) — Svelte 5's $state only
@@ -93,41 +95,36 @@
 	// manage scroll position explicitly rather than letting whatever position
 	// the table was left at carry straight over.
 	let rootEl: HTMLDivElement | undefined;
-	// Saved the moment the user leaves the table (not on every openDetail
-	// call — an evolution-chain click inside the detail view also calls
-	// openDetail, and that must not clobber this with the detail view's own
-	// scroll position).
-	let tableScrollTop = 0;
+
+	// Mirrors screen/selectedId from navState, then executes the returned
+	// ScrollInstruction — the one piece of work navState can't do itself
+	// since it stays DOM-free on purpose (see DetailNavigationState.ts).
+	// TableScreen stays mounted (see template — it's hidden via CSS while
+	// viewing detail, not destroyed, so its filters/sort/column state
+	// survive) but restoring a non-zero scroll position still needs the DOM
+	// to have un-hidden it first, or the browser clamps the scrollTop write
+	// to whatever the still-collapsed height allows.
+	async function applyNavigation(instruction: ScrollInstruction) {
+		screen = navState.screen;
+		selectedId = navState.selectedId;
+		if (instruction.kind === "reset") {
+			rootEl?.scrollTo(0, 0);
+		} else if (instruction.kind === "restore") {
+			await tick();
+			rootEl?.scrollTo(0, instruction.top);
+		}
+	}
 
 	function openDetail(id: number) {
-		const fromScreen = screen;
-		if (fromScreen === "table") tableScrollTop = rootEl?.scrollTop ?? 0;
-		selectedId = id;
-		screen = "detail";
-		rootEl?.scrollTo(0, 0);
-		({ history, historyIndex } = pushHistory(history, historyIndex, id, fromScreen));
+		void applyNavigation(navState.openDetail(id, rootEl?.scrollTop ?? 0));
 	}
 
 	function goBack() {
-		const step = stepBack(history, historyIndex, screen);
-		if (step.action === "exitToTable") {
-			void backToTable();
-		} else if (step.action === "select") {
-			historyIndex = step.historyIndex;
-			selectedId = step.id;
-			screen = "detail";
-			rootEl?.scrollTo(0, 0);
-		}
+		void applyNavigation(navState.goBack());
 	}
 
 	function goForward() {
-		const step = stepForward(history, historyIndex, screen);
-		if (step.action === "select") {
-			historyIndex = step.historyIndex;
-			selectedId = step.id;
-			screen = "detail";
-			rootEl?.scrollTo(0, 0);
-		}
+		void applyNavigation(navState.goForward());
 	}
 
 	function isEditableTarget(target: EventTarget | null): boolean {
@@ -154,15 +151,8 @@
 	onMount(() => window.addEventListener("keydown", onGlobalKeydown));
 	onDestroy(() => window.removeEventListener("keydown", onGlobalKeydown));
 
-	async function backToTable() {
-		screen = "table";
-		// TableScreen stays mounted (see template — it's hidden via CSS while
-		// viewing detail, not destroyed, so its filters/sort/column state
-		// survive) but restoring a non-zero scroll position still needs the
-		// DOM to have un-hidden it first, or the browser clamps the scrollTop
-		// write to whatever the still-collapsed height allows.
-		await tick();
-		rootEl?.scrollTo(0, tableScrollTop);
+	function backToTable() {
+		void applyNavigation(navState.backToTable());
 	}
 </script>
 

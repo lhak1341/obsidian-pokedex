@@ -5,11 +5,10 @@
 	import { getAdjacentDexEntries } from "../../utils/dexNav";
 	import { nextEvolutionLevels } from "../../data/normalize";
 	import type { PokedexRepository } from "../../data/PokedexRepository";
-	import type { MegaFormDetail, MoveDetail, PokedexEntry, PokedexTableRow, PluginSettings } from "../../data/types";
+	import type { MegaFormDetail, MoveDetail, PokedexTableRow, PluginSettings } from "../../data/types";
 	import AbilitiesPanel from "./AbilitiesPanel.svelte";
 	import BarRow from "./BarRow.svelte";
-	import { DetailLoadState } from "../DetailLoadState";
-	import { mirrorInto } from "../../utils/mirrorState";
+	import { DetailLoadState, type DetailEntrySnapshot } from "../DetailLoadState";
 	import EvolutionTree from "./EvolutionTree.svelte";
 	import FlavorTextPanel from "./FlavorTextPanel.svelte";
 	import HeldItemsPanel from "./HeldItemsPanel.svelte";
@@ -48,13 +47,13 @@
 	// vitest, see DetailLoadState.test.ts) — Svelte 5's $state only
 	// deep-proxies plain objects/arrays, not class instances, so mutations
 	// to its fields wouldn't be visible to the template. entryLoad is the
-	// reactive boundary instead, mirrored wholesale from DetailLoadState's
-	// onUpdate callback via mirrorInto. PokedexLoadState (the browse table's
+	// reactive boundary instead, reassigned wholesale from loadState.snapshot()
+	// on every onUpdate callback. PokedexLoadState (the browse table's
 	// equivalent, see PokedexApp.svelte) solves the same "plain class into
-	// $state" problem but doesn't use mirrorInto — its load() callbacks are
+	// $state" problem by hand instead — its load() callbacks are
 	// payload-carrying and row-streaming-shaped (built for incremental
 	// render-as-you-go), not this class's payload-free wholesale-refresh
-	// shape, so PokedexApp mirrors by hand instead.
+	// shape, so a snapshot()-style method doesn't fit there.
 	// $derived (not a plain const) so Svelte doesn't warn about capturing the
 	// `repository` prop outside a reactive scope — it never actually changes
 	// across this component's lifetime (see PokedexApp's template, which
@@ -67,27 +66,15 @@
 	// in a chain was already fetched for the table load that got the user
 	// here, so this resolves from mem cache — not a second round of real
 	// network requests.
-	let entryLoad = $state<{
-		entry: PokedexEntry | null;
-		loading: boolean;
-		error: string | null;
-		evolutionSprites: Record<number, string | null>;
-		evolutionTypes: Record<number, string[]>;
-	}>({
+	let entryLoad = $state<DetailEntrySnapshot>({
 		entry: null,
 		loading: true,
 		error: null,
 		evolutionSprites: {},
 		evolutionTypes: {},
 	});
-	// Re-mirrors every DetailLoadState field wholesale via mirrorInto — cheap
-	// (a handful of small objects), and simpler than a dedicated callback per
-	// field since these fields only ever change at 2-3 discrete points per
-	// load rather than streaming (unlike moveDetails, which gets its own
-	// callback in startLoad below).
-	const entryLoadKeys = ["entry", "loading", "error", "evolutionSprites", "evolutionTypes"] as const;
 	function mirror() {
-		mirrorInto(entryLoad, loadState, entryLoadKeys);
+		entryLoad = loadState.snapshot();
 	}
 
 	// Reset per-entry (see startLoad below) so switching Pokemon never

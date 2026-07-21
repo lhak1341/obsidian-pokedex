@@ -324,6 +324,13 @@ export class PokedexRepository {
 	async getMegaForm(varietyKey: string): Promise<MegaFormDetail> {
 		const mem = this.megaFormMemCache.get(varietyKey);
 		if (mem) return mem;
+		// Unlike getOrFetchPokemon's pokemonIsStale, this cache read has no
+		// staleness escape hatch — if a field is ever added to MegaFormDetail,
+		// an existing user's cached mega-forms/{key}.json will silently stay
+		// undefined for that field forever instead of self-healing. Add an
+		// isStale-style check here when that happens (see getOrFetch's own
+		// isStale comment for the pattern); see ADR-0002 for why this can't
+		// just reuse getOrFetch directly.
 		const cached = await this.cache.readJson<MegaFormDetail>(`mega-forms/${varietyKey}.json`);
 		if (cached) {
 			this.megaFormMemCache.set(varietyKey, cached);
