@@ -152,7 +152,11 @@
 
 {#if popover.hovered && popover.pos}
 	{@const description = moveDetails[popover.hovered]?.description}
-	<div class="move-popover" style="top: {popover.pos.top}px; left: {popover.pos.left}px;">
+	<div
+		class="move-popover"
+		class:popover-above={popover.pos.placement === "above"}
+		style="top: {popover.pos.top}px; left: {popover.pos.left}px;"
+	>
 		{description ?? "No description available."}
 	</div>
 {/if}
@@ -259,6 +263,13 @@
 		font-size: 0.85em;
 		color: var(--text-normal);
 		pointer-events: none;
+	}
+	/* Grows upward from the target's top edge instead of downward from its
+	bottom — see hoverPopover.svelte.ts's "above" placement comment for why
+	this can't just be a recomputed `top` (the popover's own height, needed
+	for that math, isn't known until after it's rendered). */
+	.move-popover.popover-above {
+		transform: translateY(-100%);
 	}
 	.move-table th.col-right, .move-table td.col-right {
 		text-align: right;

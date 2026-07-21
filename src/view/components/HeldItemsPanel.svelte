@@ -38,7 +38,11 @@
 
 {#if popover.hovered && popover.pos}
 	{@const state = itemDescriptions[popover.hovered]}
-	<div class="held-item-popover" style="top: {popover.pos.top}px; left: {popover.pos.left}px;">
+	<div
+		class="held-item-popover"
+		class:popover-above={popover.pos.placement === "above"}
+		style="top: {popover.pos.top}px; left: {popover.pos.left}px;"
+	>
 		{#if !state}
 			Loading…
 		{:else if "error" in state}
@@ -69,5 +73,8 @@
 		font-size: 0.85em;
 		color: var(--text-normal);
 		pointer-events: none;
+	}
+	.held-item-popover.popover-above {
+		transform: translateY(-100%);
 	}
 </style>

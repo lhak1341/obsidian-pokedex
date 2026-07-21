@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { Notice } from "obsidian";
-	import { onDestroy } from "svelte";
-	import { TYPE_COLORS } from "../../data/constants";
+	import { onDestroy, onMount } from "svelte";
+	import { resolveGenerationId, TYPE_COLORS } from "../../data/constants";
+	import { getAdjacentDexEntries } from "../../utils/dexNav";
 	import { nextEvolutionLevels } from "../../data/normalize";
 	import type { PokedexRepository } from "../../data/PokedexRepository";
 	import type { MegaFormDetail, MoveDetail, PokedexEntry, PokedexTableRow, PluginSettings } from "../../data/types";
@@ -29,6 +30,8 @@
 	// rare outliers worth clipping.
 	const MAX_CATCH_RATE = 255;
 	const MAX_HATCH_COUNTER = 120;
+
+	const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII"];
 
 	let { repository, id, rows, spriteStyle, useTypeIcons, activeGen, onBack, onSelect }: {
 		repository: PokedexRepository;
@@ -214,6 +217,38 @@
 	function retry() {
 		startLoad(id);
 	}
+
+	// Prev/next by National Dex number, always landing on a species' default
+	// row (never a regional-form sibling) — see getAdjacentDexEntries. `rows`
+	// only holds whatever generations are currently enabled/loaded, so a
+	// disabled generation's gap is skipped rather than surfaced as a target.
+	const adjacent = $derived(
+		entryLoad.entry ? getAdjacentDexEntries(rows, entryLoad.entry.dexNumber) : { prev: null, next: null },
+	);
+
+	// Same isEditableTarget guard as PokedexApp's "[" / "]" history hotkeys —
+	// plain ArrowLeft/ArrowRight only fires the strip's own nav when nothing
+	// text-editable has focus. Scoped to this component's own lifetime
+	// (mounted only while screen === "detail") rather than PokedexApp's
+	// always-mounted global listener, since this is detail-view-only nav.
+	function isEditableTarget(target: EventTarget | null): boolean {
+		return target instanceof HTMLElement &&
+			(target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+	}
+	function onKeydown(e: KeyboardEvent) {
+		if (isEditableTarget(e.target)) return;
+		if (e.key === "ArrowLeft" && adjacent.prev) {
+			e.preventDefault();
+			onSelect(adjacent.prev.id);
+		} else if (e.key === "ArrowRight" && adjacent.next) {
+			e.preventDefault();
+			onSelect(adjacent.next.id);
+		}
+	}
+	onMount(() => {
+		window.addEventListener("keydown", onKeydown);
+		return () => window.removeEventListener("keydown", onKeydown);
+	});
 </script>
 
 <div class="detail-screen">
@@ -224,6 +259,37 @@
 	<div class="page">
 		<div class="detail-header">
 			<button class="back-button" onclick={onBack}>&larr; Back to list</button>
+			<div class="dex-nav">
+				<div class="dex-nav-side dex-nav-side-prev">
+					{#if adjacent.prev}
+						{@const prev = adjacent.prev}
+						<button type="button" class="dex-nav-button dex-nav-prev" onclick={() => onSelect(prev.id)}>
+							<Icon name="chevron-left" size={14} strokeWidth={2.5} />
+							{#if prev.spriteDataUri}
+								<img src={prev.spriteDataUri} alt="" class="dex-nav-sprite" />
+							{/if}
+							<span class="dex-nav-label">#{String(prev.dexNumber).padStart(3, "0")} {prev.name}</span>
+						</button>
+					{/if}
+				</div>
+				{#if adjacent.prev && adjacent.next}
+					<span class="dex-nav-divider">|</span>
+				{:else}
+					<span></span>
+				{/if}
+				<div class="dex-nav-side dex-nav-side-next">
+					{#if adjacent.next}
+						{@const next = adjacent.next}
+						<button type="button" class="dex-nav-button dex-nav-next" onclick={() => onSelect(next.id)}>
+							<span class="dex-nav-label">#{String(next.dexNumber).padStart(3, "0")} {next.name}</span>
+							{#if next.spriteDataUri}
+								<img src={next.spriteDataUri} alt="" class="dex-nav-sprite" />
+							{/if}
+							<Icon name="chevron-right" size={14} strokeWidth={2.5} />
+						</button>
+					{/if}
+				</div>
+			</div>
 			<QuickSearch {rows} {onSelect} />
 		</div>
 
@@ -263,7 +329,7 @@
 				</div>
 
 				<div class="name-block">
-					<p class="dex-eyebrow">No. {String(entry.dexNumber).padStart(3, "0")}</p>
+					<p class="dex-eyebrow">No. {String(entry.dexNumber).padStart(3, "0")} ({ROMAN_NUMERALS[resolveGenerationId(entry.dexNumber) - 1]})</p>
 					<h2 class="mon-name">{formatPokemonDisplayName(entry)}</h2>
 					<div class="type-row">
 						{#each (activeMegaData ?? entry).types as type (type)}
@@ -387,7 +453,76 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 12px;
-		margin-bottom: var(--size-4-3);
+		margin-bottom: var(--size-4-2);
+	}
+	.dex-nav {
+		/* Grid (not a centered flex row) so the "|" divider sits at a fixed
+		midpoint of this fixed-width flex:1 box, independent of how long
+		either name is — prev/next each get an equal 1fr side instead of the
+		whole group re-centering as its natural content width changes. */
+		display: grid;
+		grid-template-columns: 1fr auto 1fr;
+		align-items: center;
+		column-gap: 10px;
+		flex: 1;
+		min-width: 0;
+	}
+	.dex-nav-side {
+		display: flex;
+		min-width: 0;
+	}
+	.dex-nav-side-prev {
+		justify-content: flex-end;
+	}
+	.dex-nav-side-next {
+		justify-content: flex-start;
+	}
+	.dex-nav-divider {
+		color: var(--background-modifier-border);
+	}
+	.dex-nav-button {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		max-width: 100%;
+		min-width: 0;
+		height: auto;
+		min-height: 28px;
+		line-height: 1;
+		padding: 4px 6px;
+		background: transparent;
+		border: none;
+		box-shadow: none;
+		border-radius: var(--radius-s, 6px);
+		color: var(--text-muted);
+		cursor: pointer;
+	}
+	.dex-nav-button:hover {
+		color: var(--text-normal);
+		background: var(--background-modifier-hover);
+	}
+	.dex-nav-sprite {
+		width: 36px;
+		height: 36px;
+		object-fit: contain;
+		image-rendering: pixelated;
+		flex-shrink: 0;
+		display: block;
+	}
+	.dex-nav-label {
+		/* min-width:0 lets this shrink with an ellipsis as a last resort in a
+		genuinely narrow pane, but otherwise renders the full name — the
+		chevron/sprite's fixed size (not this label) is what keeps them
+		pinned at the button's edge, so there's no need to force truncation
+		just to hold that anchor. */
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		text-transform: capitalize;
+		font-size: 0.95em;
+		font-weight: 700;
+		line-height: 1;
 	}
 
 	.detail-grid {

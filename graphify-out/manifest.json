@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   "src/view/components/AbilitiesPanel.svelte": {
-    "mtime": 1784131805.2108233,
-    "ast_hash": "44afd3dd12ea71e03163e55c23349328",
+    "mtime": 1784650818.4351993,
+    "ast_hash": "0b2096f66ac56567eac2c989e18f0267",
     "semantic_hash": ""
   },
   "src/view/components/BarRow.svelte": {
@@ -290,8 +290,8 @@
     "semantic_hash": ""
   },
   "src/view/components/DetailScreen.svelte": {
-    "mtime": 1784139333.7492852,
-    "ast_hash": "f4159893330f2791a54711f56208f93c",
+    "mtime": 1784650527.5389194,
+    "ast_hash": "97ffb2782ac8cadba3d36100b3c3ffdb",
     "semantic_hash": ""
   },
   "src/view/components/EvolutionChain.svelte": {
@@ -320,8 +320,8 @@
     "semantic_hash": ""
   },
   "src/view/components/MoveBrowser.svelte": {
-    "mtime": 1784081070.8826787,
-    "ast_hash": "18d23f2347af71677127ed4217a93c0c",
+    "mtime": 1784650800.6025171,
+    "ast_hash": "0935a32e4166e55d19d483c61e058de4",
     "semantic_hash": ""
   },
   "src/view/components/QuickSearch.svelte": {
@@ -355,8 +355,8 @@
     "semantic_hash": ""
   },
   "src/view/hoverPopover.svelte.ts": {
-    "mtime": 1784081004.581851,
-    "ast_hash": "411eb8777d285cf22c8872883305a537",
+    "mtime": 1784650787.102322,
+    "ast_hash": "7e57cb3586994ca413e61413955aa13d",
     "semantic_hash": ""
   },
   "tsconfig.json": {
@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1784139599.076299,
-    "ast_hash": "e741d360ab4d3a2e6a6a93439f33a562",
+    "mtime": 1784650978.0399215,
+    "ast_hash": "5212bc5ed8246a37d055bfad097504d0",
     "semantic_hash": ""
   },
   "CONTEXT.md": {
@@ -400,8 +400,8 @@
     "semantic_hash": ""
   },
   "src/view/components/HeldItemsPanel.svelte": {
-    "mtime": 1784129024.0229053,
-    "ast_hash": "d8adf7335b3a4692e0f81c254001e58b",
+    "mtime": 1784650837.9358501,
+    "ast_hash": "35f4e4712cb76d632538fc6e8f3dfee7",
     "semantic_hash": ""
   },
   "src/view/components/MegaFormToggle.svelte": {
@@ -412,6 +412,16 @@
   "src/view/components/RegionalFormNav.svelte": {
     "mtime": 1784139321.5050569,
     "ast_hash": "5d79324d49bd478322988e8522b0e4b8",
+    "semantic_hash": ""
+  },
+  "src/utils/dexNav.test.ts": {
+    "mtime": 1784649467.2474644,
+    "ast_hash": "bc407f58a50863aa835eea15c4c14eee",
+    "semantic_hash": ""
+  },
+  "src/utils/dexNav.ts": {
+    "mtime": 1784649438.403288,
+    "ast_hash": "7a2db2990f0b30ebfbda3745ef91606a",
     "semantic_hash": ""
   }
 }

@@ -714,8 +714,8 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "src_data_cache_diskcache_exists",
-      "community": 3,
-      "community_name": "PokedexRepository",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": ".exists()"
     },
     {
@@ -967,8 +967,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_data_pokedexrepository",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 3,
+      "community_name": "PokedexRepository",
       "norm_label": "pokedexrepository.ts"
     },
     {
@@ -978,8 +978,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "src_data_pokedexrepository_tableloadresult",
-      "community": 0,
-      "community_name": "constants.ts",
+      "community": 3,
+      "community_name": "PokedexRepository",
       "norm_label": "tableloadresult"
     },
     {
@@ -1319,8 +1319,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_data_fixtures_fakes",
-      "community": 5,
-      "community_name": "DiskCache",
+      "community": 10,
+      "community_name": "PokeApiClient",
       "norm_label": "fakes.ts"
     },
     {
@@ -1374,8 +1374,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_data_constants",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "constants.ts"
     },
     {
@@ -1385,8 +1385,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_data_constants_move_version_tabs_by_gen",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "move_version_tabs_by_gen"
     },
     {
@@ -1396,8 +1396,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "src_data_constants_move_version_groups",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "move_version_groups"
     },
     {
@@ -1407,8 +1407,8 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "src_data_constants_flavor_text_tabs_by_gen",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "flavor_text_tabs_by_gen"
     },
     {
@@ -1418,8 +1418,8 @@
       "source_location": "L107",
       "_origin": "ast",
       "id": "src_data_constants_flavor_text_version_groups",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "flavor_text_version_groups"
     },
     {
@@ -1429,8 +1429,8 @@
       "source_location": "L111",
       "_origin": "ast",
       "id": "src_data_constants_type_names",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "type_names"
     },
     {
@@ -1440,8 +1440,8 @@
       "source_location": "L117",
       "_origin": "ast",
       "id": "src_data_constants_rarities",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "rarities"
     },
     {
@@ -1462,8 +1462,8 @@
       "source_location": "L128",
       "_origin": "ast",
       "id": "src_data_constants_quirkdef",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "quirkdef"
     },
     {
@@ -1473,8 +1473,8 @@
       "source_location": "L138",
       "_origin": "ast",
       "id": "src_data_constants_quirks",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "quirks"
     },
     {
@@ -1517,8 +1517,8 @@
       "source_location": "L180",
       "_origin": "ast",
       "id": "src_data_constants_regional_forms",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "regional_forms"
     },
     {
@@ -1528,8 +1528,8 @@
       "source_location": "L184",
       "_origin": "ast",
       "id": "src_data_constants_stat_names",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "stat_names"
     },
     {
@@ -1561,8 +1561,8 @@
       "source_location": "L202",
       "_origin": "ast",
       "id": "src_data_constants_stat_colors",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "stat_colors"
     },
     {
@@ -1583,8 +1583,8 @@
       "source_location": "L260",
       "_origin": "ast",
       "id": "src_data_constants_type_colors",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "type_colors"
     },
     {
@@ -1594,8 +1594,8 @@
       "source_location": "L271",
       "_origin": "ast",
       "id": "src_data_constants_type_icons",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "type_icons"
     },
     {
@@ -1737,8 +1737,8 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "src_data_normalize_trimmovestoversiongroups",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 3,
+      "community_name": "PokedexRepository",
       "norm_label": "trimmovestoversiongroups()"
     },
     {
@@ -1825,8 +1825,8 @@
       "source_location": "L237",
       "_origin": "ast",
       "id": "src_data_normalize_collectchainids",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 3,
+      "community_name": "PokedexRepository",
       "norm_label": "collectchainids()"
     },
     {
@@ -1880,8 +1880,8 @@
       "source_location": "L347",
       "_origin": "ast",
       "id": "src_data_normalize_trimflavortextentries",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 3,
+      "community_name": "PokedexRepository",
       "norm_label": "trimflavortextentries()"
     },
     {
@@ -1979,8 +1979,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_data_types",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 10,
+      "community_name": "PokeApiClient",
       "norm_label": "types.ts"
     },
     {
@@ -1990,8 +1990,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "src_data_types_namedapiresource",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 10,
+      "community_name": "PokeApiClient",
       "norm_label": "namedapiresource"
     },
     {
@@ -2012,8 +2012,8 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "src_data_types_rawspecies",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 10,
+      "community_name": "PokeApiClient",
       "norm_label": "rawspecies"
     },
     {
@@ -2034,8 +2034,8 @@
       "source_location": "L102",
       "_origin": "ast",
       "id": "src_data_types_rawevolutionchain",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 10,
+      "community_name": "PokeApiClient",
       "norm_label": "rawevolutionchain"
     },
     {
@@ -2078,8 +2078,8 @@
       "source_location": "L130",
       "_origin": "ast",
       "id": "src_data_types_statblock",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 0,
+      "community_name": "constants.ts",
       "norm_label": "statblock"
     },
     {
@@ -2100,8 +2100,8 @@
       "source_location": "L181",
       "_origin": "ast",
       "id": "src_data_types_moveentry",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 10,
+      "community_name": "PokeApiClient",
       "norm_label": "moveentry"
     },
     {
@@ -2111,8 +2111,8 @@
       "source_location": "L188",
       "_origin": "ast",
       "id": "src_data_types_rawmove",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 10,
+      "community_name": "PokeApiClient",
       "norm_label": "rawmove"
     },
     {
@@ -2122,8 +2122,8 @@
       "source_location": "L200",
       "_origin": "ast",
       "id": "src_data_types_movedetail",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 3,
+      "community_name": "PokedexRepository",
       "norm_label": "movedetail"
     },
     {
@@ -2133,8 +2133,8 @@
       "source_location": "L215",
       "_origin": "ast",
       "id": "src_data_types_evolutionchainvisual",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 3,
+      "community_name": "PokedexRepository",
       "norm_label": "evolutionchainvisual"
     },
     {
@@ -2155,8 +2155,8 @@
       "source_location": "L230",
       "_origin": "ast",
       "id": "src_data_types_pokemonrarity",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 10,
+      "community_name": "PokeApiClient",
       "norm_label": "pokemonrarity"
     },
     {
@@ -2177,8 +2177,8 @@
       "source_location": "L278",
       "_origin": "ast",
       "id": "src_data_types_pokedexentry",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 3,
+      "community_name": "PokedexRepository",
       "norm_label": "pokedexentry"
     },
     {
@@ -2199,8 +2199,8 @@
       "source_location": "L323",
       "_origin": "ast",
       "id": "src_data_types_megaformdetail",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 3,
+      "community_name": "PokedexRepository",
       "norm_label": "megaformdetail"
     },
     {
@@ -2391,6 +2391,72 @@
       "norm_label": "mapwithconcurrency()"
     },
     {
+      "label": "dexNav.test.ts",
+      "file_type": "code",
+      "source_file": "src/utils/dexNav.test.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_utils_dexnav_test",
+      "community": 0,
+      "community_name": "constants.ts",
+      "norm_label": "dexnav.test.ts"
+    },
+    {
+      "label": "row()",
+      "file_type": "code",
+      "source_file": "src/utils/dexNav.test.ts",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "src_utils_dexnav_test_row",
+      "community": 0,
+      "community_name": "constants.ts",
+      "norm_label": "row()"
+    },
+    {
+      "label": "dexNav.ts",
+      "file_type": "code",
+      "source_file": "src/utils/dexNav.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_utils_dexnav",
+      "community": 0,
+      "community_name": "constants.ts",
+      "norm_label": "dexnav.ts"
+    },
+    {
+      "label": "DexNavEntry",
+      "file_type": "code",
+      "source_file": "src/utils/dexNav.ts",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "src_utils_dexnav_dexnaventry",
+      "community": 0,
+      "community_name": "constants.ts",
+      "norm_label": "dexnaventry"
+    },
+    {
+      "label": "toNavEntry()",
+      "file_type": "code",
+      "source_file": "src/utils/dexNav.ts",
+      "source_location": "L14",
+      "_origin": "ast",
+      "id": "src_utils_dexnav_tonaventry",
+      "community": 0,
+      "community_name": "constants.ts",
+      "norm_label": "tonaventry()"
+    },
+    {
+      "label": "getAdjacentDexEntries()",
+      "file_type": "code",
+      "source_file": "src/utils/dexNav.ts",
+      "source_location": "L22",
+      "_origin": "ast",
+      "id": "src_utils_dexnav_getadjacentdexentries",
+      "community": 0,
+      "community_name": "constants.ts",
+      "norm_label": "getadjacentdexentries()"
+    },
+    {
       "label": "filterPokemon.test.ts",
       "file_type": "code",
       "source_file": "src/utils/filterPokemon.test.ts",
@@ -2452,8 +2518,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_utils_filterpokemon_pokedexfilters",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 0,
+      "community_name": "constants.ts",
       "norm_label": "pokedexfilters"
     },
     {
@@ -2628,8 +2694,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_utils_generationfallback_test",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 26,
+      "community_name": "generationFallback.test.ts",
       "norm_label": "generationfallback.test.ts"
     },
     {
@@ -2639,8 +2705,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "src_utils_generationfallback_test_latest_gen",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 26,
+      "community_name": "generationFallback.test.ts",
       "norm_label": "latest_gen"
     },
     {
@@ -2650,8 +2716,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_utils_generationfallback_test_move_tabs_by_gen",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 26,
+      "community_name": "generationFallback.test.ts",
       "norm_label": "move_tabs_by_gen"
     },
     {
@@ -2661,8 +2727,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_utils_generationfallback_test_flavor_tabs_by_gen",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 26,
+      "community_name": "generationFallback.test.ts",
       "norm_label": "flavor_tabs_by_gen"
     },
     {
@@ -2672,8 +2738,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_utils_generationfallback",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 26,
+      "community_name": "generationFallback.test.ts",
       "norm_label": "generationfallback.ts"
     },
     {
@@ -2683,8 +2749,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "src_utils_generationfallback_latest_gen",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 26,
+      "community_name": "generationFallback.test.ts",
       "norm_label": "latest_gen"
     },
     {
@@ -2694,8 +2760,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_utils_generationfallback_resolvetabsforgen",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 26,
+      "community_name": "generationFallback.test.ts",
       "norm_label": "resolvetabsforgen()"
     },
     {
@@ -2903,8 +2969,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_utils_moverows_test",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 10,
+      "community_name": "PokeApiClient",
       "norm_label": "moverows.test.ts"
     },
     {
@@ -2914,8 +2980,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_utils_moverows_test_move",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 10,
+      "community_name": "PokeApiClient",
       "norm_label": "move()"
     },
     {
@@ -2925,8 +2991,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_utils_moverows",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 10,
+      "community_name": "PokeApiClient",
       "norm_label": "moverows.ts"
     },
     {
@@ -2936,8 +3002,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_utils_moverows_moverow",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 10,
+      "community_name": "PokeApiClient",
       "norm_label": "moverow"
     },
     {
@@ -2947,8 +3013,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "src_utils_moverows_buildmoverows",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 10,
+      "community_name": "PokeApiClient",
       "norm_label": "buildmoverows()"
     },
     {
@@ -3112,8 +3178,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_utils_sortpokemon_test",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 0,
+      "community_name": "constants.ts",
       "norm_label": "sortpokemon.test.ts"
     },
     {
@@ -3134,8 +3200,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "src_utils_sortpokemon_test_rows",
-      "community": 7,
-      "community_name": "tableColumns.ts",
+      "community": 0,
+      "community_name": "constants.ts",
       "norm_label": "rows"
     },
     {
@@ -3431,8 +3497,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_view_detailloadstate",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 3,
+      "community_name": "PokedexRepository",
       "norm_label": "detailloadstate.ts"
     },
     {
@@ -3442,8 +3508,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "src_view_detailloadstate_detailloadstate",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 3,
+      "community_name": "PokedexRepository",
       "norm_label": "detailloadstate"
     },
     {
@@ -3464,8 +3530,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "src_view_detailloadstate_detailloadstate_cancel",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 3,
+      "community_name": "PokedexRepository",
       "norm_label": ".cancel()"
     },
     {
@@ -3631,8 +3697,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_view_pokedexloadstate",
-      "community": 0,
-      "community_name": "constants.ts",
+      "community": 3,
+      "community_name": "PokedexRepository",
       "norm_label": "pokedexloadstate.ts"
     },
     {
@@ -3847,10 +3913,43 @@
       "norm_label": "./barrow.svelte"
     },
     {
+      "label": "malePct",
+      "file_type": "code",
+      "source_file": "src/view/components/DetailScreen.svelte",
+      "source_location": "L170",
+      "_origin": "ast",
+      "id": "src_view_components_detailscreen_malepct",
+      "community": 1,
+      "community_name": "DetailScreen.svelte",
+      "norm_label": "malepct"
+    },
+    {
+      "label": "accentColor",
+      "file_type": "code",
+      "source_file": "src/view/components/DetailScreen.svelte",
+      "source_location": "L178",
+      "_origin": "ast",
+      "id": "src_view_components_detailscreen_accentcolor",
+      "community": 1,
+      "community_name": "DetailScreen.svelte",
+      "norm_label": "accentcolor"
+    },
+    {
+      "label": "evolvesAtLevels",
+      "file_type": "code",
+      "source_file": "src/view/components/DetailScreen.svelte",
+      "source_location": "L186",
+      "_origin": "ast",
+      "id": "src_view_components_detailscreen_evolvesatlevels",
+      "community": 1,
+      "community_name": "DetailScreen.svelte",
+      "norm_label": "evolvesatlevels"
+    },
+    {
       "label": "startLoad()",
       "file_type": "code",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L189",
+      "source_location": "L192",
       "_origin": "ast",
       "id": "src_view_components_detailscreen_startload",
       "community": 1,
@@ -3861,12 +3960,34 @@
       "label": "retry()",
       "file_type": "code",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L214",
+      "source_location": "L217",
       "_origin": "ast",
       "id": "src_view_components_detailscreen_retry",
       "community": 1,
       "community_name": "DetailScreen.svelte",
       "norm_label": "retry()"
+    },
+    {
+      "label": "adjacent",
+      "file_type": "code",
+      "source_file": "src/view/components/DetailScreen.svelte",
+      "source_location": "L225",
+      "_origin": "ast",
+      "id": "src_view_components_detailscreen_adjacent",
+      "community": 1,
+      "community_name": "DetailScreen.svelte",
+      "norm_label": "adjacent"
+    },
+    {
+      "label": "var()",
+      "file_type": "code",
+      "source_file": "src/view/components/DetailScreen.svelte",
+      "source_location": "L607",
+      "_origin": "ast",
+      "id": "src_view_components_detailscreen_var",
+      "community": 1,
+      "community_name": "DetailScreen.svelte",
+      "norm_label": "var()"
     },
     {
       "label": "../../data/constants",
@@ -3878,6 +3999,17 @@
       "community": 1,
       "community_name": "DetailScreen.svelte",
       "norm_label": "../../data/constants"
+    },
+    {
+      "label": "../../utils/dexNav",
+      "file_type": "code",
+      "source_file": "src/utils/dexNav",
+      "confidence": "EXTRACTED",
+      "_origin": "ast",
+      "id": "users_lhak_workspace_github_com_lhak1341_obsidian_pokedex_src_utils_dexnav",
+      "community": 1,
+      "community_name": "DetailScreen.svelte",
+      "norm_label": "../../utils/dexnav"
     },
     {
       "label": "../../data/normalize",
@@ -4313,7 +4445,7 @@
       "label": "createHoverPopover()",
       "file_type": "code",
       "source_file": "src/view/hoverPopover.svelte.ts",
-      "source_location": "L10",
+      "source_location": "L19",
       "_origin": "ast",
       "id": "src_view_hoverpopover_svelte_createhoverpopover",
       "community": 17,
@@ -8836,6 +8968,17 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/utils/dexNav.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "src_utils_dexnav_test",
+      "target": "src_data_constants",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/utils/filterPokemon.ts",
       "source_location": "L1",
       "weight": 1.0,
@@ -9095,6 +9238,28 @@
       "weight": 1.0,
       "source": "src_data_normalize_totablerow",
       "target": "src_data_constants_resolvegenerationid"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/utils/dexNav.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "src_utils_dexnav_test",
+      "target": "src_data_constants_resolvegenerationid",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/utils/dexNav.test.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "src_utils_dexnav_test_row",
+      "target": "src_data_constants_resolvegenerationid",
+      "confidence_score": 1.0
     },
     {
       "relation": "imports",
@@ -10455,6 +10620,28 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/utils/dexNav.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "src_utils_dexnav",
+      "target": "src_data_types",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/utils/dexNav.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_utils_dexnav_test",
+      "target": "src_data_types",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/utils/filterPokemon.ts",
       "source_location": "L2",
       "weight": 1.0,
@@ -10767,6 +10954,28 @@
       "source_location": "L278",
       "weight": 1.0,
       "source": "src_data_types_pokedexentry",
+      "target": "src_data_types_pokedextablerow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/utils/dexNav.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "src_utils_dexnav",
+      "target": "src_data_types_pokedextablerow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/utils/dexNav.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_utils_dexnav_test",
       "target": "src_data_types_pokedextablerow",
       "confidence_score": 1.0
     },
@@ -11372,6 +11581,79 @@
       "weight": 1.0,
       "source": "src_utils_concurrency",
       "target": "src_utils_concurrency_mapwithconcurrency",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/utils/dexNav.test.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "src_utils_dexnav_test",
+      "target": "src_utils_dexnav",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/utils/dexNav.test.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "src_utils_dexnav_test",
+      "target": "src_utils_dexnav_getadjacentdexentries",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/utils/dexNav.test.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "src_utils_dexnav_test",
+      "target": "src_utils_dexnav_test_row",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/utils/dexNav.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "src_utils_dexnav",
+      "target": "src_utils_dexnav_dexnaventry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/utils/dexNav.ts",
+      "source_location": "L22",
+      "weight": 1.0,
+      "source": "src_utils_dexnav",
+      "target": "src_utils_dexnav_getadjacentdexentries",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/utils/dexNav.ts",
+      "source_location": "L14",
+      "weight": 1.0,
+      "source": "src_utils_dexnav",
+      "target": "src_utils_dexnav_tonaventry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/utils/dexNav.ts",
+      "source_location": "L32",
+      "weight": 1.0,
+      "source": "src_utils_dexnav_getadjacentdexentries",
+      "target": "src_utils_dexnav_tonaventry",
       "confidence_score": 1.0
     },
     {
@@ -13007,7 +13289,47 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L214",
+      "source_location": "L178",
+      "weight": 1.0,
+      "source": "src_view_components_detailscreen",
+      "target": "src_view_components_detailscreen_accentcolor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/components/DetailScreen.svelte",
+      "source_location": "L225",
+      "weight": 1.0,
+      "source": "src_view_components_detailscreen",
+      "target": "src_view_components_detailscreen_adjacent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/components/DetailScreen.svelte",
+      "source_location": "L186",
+      "weight": 1.0,
+      "source": "src_view_components_detailscreen",
+      "target": "src_view_components_detailscreen_evolvesatlevels",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/components/DetailScreen.svelte",
+      "source_location": "L170",
+      "weight": 1.0,
+      "source": "src_view_components_detailscreen",
+      "target": "src_view_components_detailscreen_malepct",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/components/DetailScreen.svelte",
+      "source_location": "L217",
       "weight": 1.0,
       "source": "src_view_components_detailscreen",
       "target": "src_view_components_detailscreen_retry",
@@ -13017,10 +13339,20 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L189",
+      "source_location": "L192",
       "weight": 1.0,
       "source": "src_view_components_detailscreen",
       "target": "src_view_components_detailscreen_startload",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/components/DetailScreen.svelte",
+      "source_location": "L607",
+      "weight": 1.0,
+      "source": "src_view_components_detailscreen",
+      "target": "src_view_components_detailscreen_var",
       "confidence_score": 1.0
     },
     {
@@ -13117,6 +13449,14 @@
       "source_file": "src/view/components/DetailScreen.svelte",
       "source": "src_view_components_detailscreen",
       "target": "users_lhak_workspace_github_com_lhak1341_obsidian_pokedex_src_data_normalize",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/components/DetailScreen.svelte",
+      "source": "src_view_components_detailscreen",
+      "target": "users_lhak_workspace_github_com_lhak1341_obsidian_pokedex_src_utils_dexnav",
       "confidence_score": 1.0
     },
     {
@@ -13486,7 +13826,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L215",
+      "source_location": "L218",
       "weight": 1.0,
       "source": "src_view_components_detailscreen_retry",
       "target": "src_view_components_detailscreen_startload",
@@ -13834,7 +14174,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/view/hoverPopover.svelte.ts",
-      "source_location": "L10",
+      "source_location": "L19",
       "weight": 1.0,
       "source": "src_view_hoverpopover_svelte",
       "target": "src_view_hoverpopover_svelte_createhoverpopover",
@@ -14297,5 +14637,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "b4200d94a28940c15285ab8fbfab6c607d3bf286"
+  "built_at_commit": "0ca898c6421ecd01cc20887aee5b80ada6d288be"
 }
