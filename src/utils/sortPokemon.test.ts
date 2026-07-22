@@ -23,6 +23,9 @@ function row(id: number, name: string, speed: number, overrides: Partial<Pokedex
 		catchRate: 0,
 		hatchCounter: 0,
 		rarity: "normal",
+		isBaby: false,
+		canMegaEvolve: false,
+		canGigantamax: false,
 		...overrides,
 	};
 }

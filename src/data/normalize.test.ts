@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	collectChainIds,
+	deriveGigantamaxForms,
 	deriveMegaForms,
 	deriveRegionalForms,
 	describeEvolutionRequirement,
@@ -107,7 +108,7 @@ describe("normalizeMoves", () => {
 	});
 
 	it("returns an empty list when no version group matches", () => {
-		expect(normalizeMoves(pokemon.moves, ["scarlet-violet"])).toEqual([]);
+		expect(normalizeMoves(pokemon.moves, ["the-teal-mask"])).toEqual([]);
 	});
 });
 
@@ -176,7 +177,7 @@ describe("normalizeEvolutionChain", () => {
 			min_level: null, trigger: null, item: null, min_happiness: null, time_of_day: "",
 			held_item: null, min_beauty: null, relative_physical_stats: null, location: null,
 			known_move: null, party_species: null, gender: null, trade_species: null,
-			needs_overworld_rain: false, turn_upside_down: false, base_form: null, evolved_form: null,
+			needs_overworld_rain: false, turn_upside_down: false, base_form: null, evolved_form: null, region: null, min_damage_taken: null,
 			...overrides,
 		};
 	}
@@ -209,11 +210,190 @@ describe("normalizeEvolutionChain", () => {
 	});
 
 	it("picks the form-matching entry and resolves the variety's own id when a context is given", () => {
-		const node = normalizeEvolutionChain(meowthChain, { formSuffix: "alola", rootId: 10107 });
+		const node = normalizeEvolutionChain(meowthChain, {
+			formSuffix: "alola",
+			rootId: 10107,
+			speciesName: "meowth",
+		});
 		expect(node.id).toBe(10107);
 		expect(node.children[0].minLevel).toBeNull();
 		expect(node.children[0].minHappiness).toBe(160);
 		expect(node.children[0].id).toBe(10108);
+	});
+
+	// Muk-shaped: the viewed regional variety is the *evolved* stage, not the
+	// chain's structural root (unlike Meowth/Vulpix/Rattata) — Grimer only
+	// turns out to be "Alolan" by seeing which entry leads to "muk-alola".
+	const grimerChain: RawEvolutionChainLink = {
+		species: { name: "grimer", url: "https://pokeapi.co/api/v2/pokemon-species/88/" },
+		evolution_details: [],
+		evolves_to: [
+			{
+				species: { name: "muk", url: "https://pokeapi.co/api/v2/pokemon-species/89/" },
+				evolution_details: [
+					evolutionDetail({ min_level: 38, trigger: { name: "level-up", url: "" } }),
+					evolutionDetail({
+						min_level: 38,
+						trigger: { name: "level-up", url: "" },
+						base_form: { name: "grimer-alola", url: "https://pokeapi.co/api/v2/pokemon/10123/" },
+						evolved_form: { name: "muk-alola", url: "https://pokeapi.co/api/v2/pokemon/10124/" },
+					}),
+				],
+				evolves_to: [],
+			},
+		],
+	};
+
+	it("resolves the ancestor's own variety when the viewed species is the evolved stage", () => {
+		const node = normalizeEvolutionChain(grimerChain, { formSuffix: "alola", rootId: 10124, speciesName: "muk" });
+		expect(node.name).toBe("grimer");
+		expect(node.id).toBe(10123);
+		expect(node.formLabel).toBe("Alolan");
+		expect(node.children[0].name).toBe("muk");
+		expect(node.children[0].id).toBe(10124);
+		expect(node.children[0].formLabel).toBe("Alolan");
+	});
+
+	// Exeggutor/Marowak-shaped: PokeAPI's evolution_details carry no
+	// base_form/evolved_form distinction at all for these two, so the
+	// ancestor's own variety can't be recovered — but the viewed (evolved)
+	// node itself must still resolve correctly rather than defaulting.
+	const exeggcuteChain: RawEvolutionChainLink = {
+		species: { name: "exeggcute", url: "https://pokeapi.co/api/v2/pokemon-species/102/" },
+		evolution_details: [],
+		evolves_to: [
+			{
+				species: { name: "exeggutor", url: "https://pokeapi.co/api/v2/pokemon-species/103/" },
+				evolution_details: [evolutionDetail({ item: { name: "leaf-stone", url: "" } })],
+				evolves_to: [],
+			},
+		],
+	};
+
+	it("still resolves the viewed evolved node when PokeAPI can't disambiguate the ancestor", () => {
+		const node = normalizeEvolutionChain(exeggcuteChain, {
+			formSuffix: "alola",
+			rootId: 10121,
+			speciesName: "exeggutor",
+		});
+		expect(node.name).toBe("exeggcute");
+		expect(node.id).toBe(102);
+		expect(node.formLabel).toBeNull();
+		expect(node.children[0].name).toBe("exeggutor");
+		expect(node.children[0].id).toBe(10121);
+		expect(node.children[0].formLabel).toBe("Alolan");
+	});
+
+	// Yamask-shaped (Gen 8): TWO sibling children, not one node with two
+	// entries — Cofagrigus (plain, no base_form entry at all) and Runerigus
+	// (base_form "yamask-galar" only, plus min_damage_taken/take-damage) —
+	// verified live against the real Yamask evolution-chain response.
+	// Regular Yamask can only reach Cofagrigus; Galarian Yamask can only
+	// reach Runerigus, never both, and never the wrong one via fallback.
+	const yamaskChain: RawEvolutionChainLink = {
+		species: { name: "yamask", url: "https://pokeapi.co/api/v2/pokemon-species/562/" },
+		evolution_details: [],
+		evolves_to: [
+			{
+				species: { name: "cofagrigus", url: "https://pokeapi.co/api/v2/pokemon-species/563/" },
+				evolution_details: [evolutionDetail({ min_level: 34, trigger: { name: "level-up", url: "" } })],
+				evolves_to: [],
+			},
+			{
+				species: { name: "runerigus", url: "https://pokeapi.co/api/v2/pokemon-species/867/" },
+				evolution_details: [
+					evolutionDetail({
+						min_damage_taken: 49,
+						trigger: { name: "take-damage", url: "" },
+						base_form: { name: "yamask-galar", url: "https://pokeapi.co/api/v2/pokemon/10179/" },
+					}),
+				],
+				evolves_to: [],
+			},
+		],
+	};
+
+	it("drops the sibling branch a dedicated regional entry doesn't own (Yamask viewed as base)", () => {
+		const node = normalizeEvolutionChain(yamaskChain);
+		expect(node.children.map((c) => c.name)).toEqual(["cofagrigus"]);
+	});
+
+	it("drops the sibling branch a dedicated regional entry doesn't own (Yamask viewed as Galarian)", () => {
+		const node = normalizeEvolutionChain(yamaskChain, { formSuffix: "galar", rootId: 10179, speciesName: "yamask" });
+		expect(node.children.map((c) => c.name)).toEqual(["runerigus"]);
+		expect(node.children[0].minDamageTaken).toBe(49);
+		expect(node.children[0].trigger).toBe("take-damage");
+	});
+
+	// Corsola-shaped (Gen 8): a single child whose only entry is form-
+	// exclusive (base_form "corsola-galar", no unconditional fallback entry
+	// at all) — base Corsola never evolves in-game; the old details[0]
+	// last-resort fallback used to incorrectly show Cursola here regardless.
+	const corsolaChain: RawEvolutionChainLink = {
+		species: { name: "corsola", url: "https://pokeapi.co/api/v2/pokemon-species/222/" },
+		evolution_details: [],
+		evolves_to: [
+			{
+				species: { name: "cursola", url: "https://pokeapi.co/api/v2/pokemon-species/864/" },
+				evolution_details: [
+					evolutionDetail({
+						min_level: 38,
+						trigger: { name: "level-up", url: "" },
+						base_form: { name: "corsola-galar", url: "https://pokeapi.co/api/v2/pokemon/10173/" },
+					}),
+				],
+				evolves_to: [],
+			},
+		],
+	};
+
+	it("drops a child whose only entry requires a form we're not viewing, instead of falling back to it", () => {
+		const node = normalizeEvolutionChain(corsolaChain);
+		expect(node.children).toEqual([]);
+	});
+
+	it("keeps the child when viewing the exact form its entry requires", () => {
+		const node = normalizeEvolutionChain(corsolaChain, { formSuffix: "galar", rootId: 10173, speciesName: "corsola" });
+		expect(node.children.map((c) => c.name)).toEqual(["cursola"]);
+	});
+
+	// Mime-Jr-shaped (Gen 8): Mime Jr. itself has no Galarian variety, so
+	// neither entry has a base_form — the two entries are disambiguated only
+	// by `region` (verified live: both require known_move Mimic, only the
+	// Galarian one also carries region: "galar"). The ancestor (Mime Jr.)
+	// can't infer its own regional-ness from this (there isn't one), but the
+	// viewed child must still resolve to the correct variety.
+	const mimeJrChain: RawEvolutionChainLink = {
+		species: { name: "mime-jr", url: "https://pokeapi.co/api/v2/pokemon-species/439/" },
+		evolution_details: [],
+		evolves_to: [
+			{
+				species: { name: "mr-mime", url: "https://pokeapi.co/api/v2/pokemon-species/122/" },
+				evolution_details: [
+					evolutionDetail({ known_move: { name: "mimic", url: "" }, trigger: { name: "level-up", url: "" } }),
+					evolutionDetail({
+						known_move: { name: "mimic", url: "" },
+						trigger: { name: "level-up", url: "" },
+						region: { name: "galar", url: "" },
+						evolved_form: { name: "mr-mime-galar", url: "https://pokeapi.co/api/v2/pokemon/10168/" },
+					}),
+				],
+				evolves_to: [],
+			},
+		],
+	};
+
+	it("disambiguates a region-only (no base_form) entry by its region field", () => {
+		const node = normalizeEvolutionChain(mimeJrChain, {
+			formSuffix: "galar",
+			rootId: 10168,
+			speciesName: "mr-mime",
+		});
+		expect(node.name).toBe("mime-jr");
+		expect(node.formLabel).toBeNull(); // Mime Jr. has no Galarian variety of its own
+		expect(node.children[0].name).toBe("mr-mime");
+		expect(node.children[0].id).toBe(10168);
+		expect(node.children[0].formLabel).toBe("Galarian");
 	});
 });
 
@@ -244,9 +424,11 @@ describe("collectChainIds", () => {
 			tradeSpecies: null,
 			needsOverworldRain: false,
 			turnUpsideDown: false,
+			region: null,
+			minDamageTaken: null,
 			children: [
-				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, children: [] },
-				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, children: [] },
+				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, children: [] },
+				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, children: [] },
 			],
 		};
 		expect(collectChainIds(forked)).toEqual([1, 2, 3]);
@@ -292,7 +474,9 @@ describe("nextEvolutionLevels", () => {
 			tradeSpecies: null,
 			needsOverworldRain: false,
 			turnUpsideDown: false,
-			children: [{ id: 2, dexNumber: 2, formLabel: null, name: "evolved", minLevel: null, trigger: "trade", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, children: [] }],
+			region: null,
+			minDamageTaken: null,
+			children: [{ id: 2, dexNumber: 2, formLabel: null, name: "evolved", minLevel: null, trigger: "trade", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, children: [] }],
 		};
 		expect(nextEvolutionLevels(itemEvolution, 1)).toEqual([]);
 	});
@@ -318,10 +502,12 @@ describe("nextEvolutionLevels", () => {
 			tradeSpecies: null,
 			needsOverworldRain: false,
 			turnUpsideDown: false,
+			region: null,
+			minDamageTaken: null,
 			children: [
-				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, children: [] },
-				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: 10, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, children: [] },
-				{ id: 4, dexNumber: 4, formLabel: null, name: "branch-c", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, children: [] },
+				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, children: [] },
+				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: 10, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, children: [] },
+				{ id: 4, dexNumber: 4, formLabel: null, name: "branch-c", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, children: [] },
 			],
 		};
 		expect(nextEvolutionLevels(forked, 1)).toEqual([10, 20]);
@@ -350,6 +536,8 @@ describe("describeEvolutionRequirement", () => {
 			tradeSpecies: null,
 			needsOverworldRain: false,
 			turnUpsideDown: false,
+			region: null,
+			minDamageTaken: null,
 			children: [],
 			...overrides,
 		};
@@ -454,6 +642,22 @@ describe("describeEvolutionRequirement", () => {
 	it("returns a bare time-of-day label when no base label matched", () => {
 		expect(describeEvolutionRequirement(node({ trigger: "level-up", timeOfDay: "day" }))).toBe("Day");
 	});
+
+	it("labels a take-damage evolution with its threshold (e.g. Runerigus)", () => {
+		expect(
+			describeEvolutionRequirement(node({ minDamageTaken: 49, trigger: "take-damage" })),
+		).toBe("Take 49+ dmg");
+	});
+
+	it("appends a region suffix to a base label (e.g. Mime Jr. -> Galarian Mr. Mime)", () => {
+		expect(
+			describeEvolutionRequirement(node({ knownMove: "mimic", trigger: "level-up", region: "galar" })),
+		).toBe("Knows mimic (in Galar)");
+	});
+
+	it("returns a bare region label when no base label matched", () => {
+		expect(describeEvolutionRequirement(node({ trigger: "level-up", region: "galar" }))).toBe("In Galar");
+	});
 });
 
 describe("normalizeEvYield", () => {
@@ -478,6 +682,34 @@ describe("toTableRow", () => {
 		expect(row.hatchCounter).toBe(20);
 		expect(row.evYield).toEqual([{ stat: "specialAttack", amount: 1 }]);
 		expect(row.heldItemNames).toEqual([]);
+		expect(row.isBaby).toBe(false);
+		expect(row.canMegaEvolve).toBe(false);
+		expect(row.canGigantamax).toBe(false);
+	});
+
+	it("reads isBaby straight off species.is_baby", () => {
+		const babySpecies: RawSpecies = { ...species, is_baby: true };
+		expect(toTableRow(pokemon, babySpecies, null).isBaby).toBe(true);
+	});
+
+	it("derives canMegaEvolve/canGigantamax from species.varieties", () => {
+		// "venusaur", not the bulbasaur fixture's own name — canMegaEvolve is
+		// checked against the curated real-Mega allowlist (see
+		// MEGA_VARIETY_KEYS), and Bulbasaur itself never Mega Evolves in any
+		// game, only its final evolution does.
+		const megaGmaxSpecies: RawSpecies = {
+			...species,
+			name: "venusaur",
+			varieties: [
+				{ is_default: true, pokemon: { name: "venusaur", url: "" } },
+				{ is_default: false, pokemon: { name: "venusaur-mega", url: "" } },
+				{ is_default: false, pokemon: { name: "venusaur-gmax", url: "" } },
+			],
+		};
+		const megaGmaxPokemon: RawPokemon = { ...pokemon, name: "venusaur" };
+		const row = toTableRow(megaGmaxPokemon, megaGmaxSpecies, null);
+		expect(row.canMegaEvolve).toBe(true);
+		expect(row.canGigantamax).toBe(true);
 	});
 
 	it("dedupes level-up move names across version groups", () => {
@@ -600,7 +832,7 @@ describe("normalizeMoveDetail", () => {
 			type: { name: "normal", url: "" },
 			flavor_text_entries: [
 				{ flavor_text: "Attaque physique.", language: { name: "fr", url: "" }, version_group: { name: "firered-leafgreen", url: "" } },
-				{ flavor_text: "A physical attack.", language: { name: "en", url: "" }, version_group: { name: "sword-shield", url: "" } },
+				{ flavor_text: "A physical attack.", language: { name: "en", url: "" }, version_group: { name: "scarlet-violet", url: "" } },
 			],
 		};
 		expect(normalizeMoveDetail(raw).description).toBeNull();
@@ -617,23 +849,88 @@ describe("deriveMegaForms", () => {
 			],
 		} as unknown as RawSpecies;
 	}
+	function pokemonNamed(name: string): RawPokemon {
+		return { name } as unknown as RawPokemon;
+	}
 
 	it("returns empty for a species with no Mega variety", () => {
-		expect(deriveMegaForms(speciesWithVarieties("bulbasaur", []))).toEqual([]);
+		expect(deriveMegaForms(pokemonNamed("bulbasaur"), speciesWithVarieties("bulbasaur", []))).toEqual([]);
 	});
 
 	it("labels a single Mega variety as just 'Mega'", () => {
-		expect(deriveMegaForms(speciesWithVarieties("gengar", ["gengar-mega", "gengar-gmax"]))).toEqual([
-			{ key: "gengar-mega", label: "Mega" },
-		]);
+		const species = speciesWithVarieties("gengar", ["gengar-mega", "gengar-gmax"]);
+		expect(deriveMegaForms(pokemonNamed("gengar"), species)).toEqual([{ key: "gengar-mega", label: "Mega" }]);
 	});
 
 	it("labels an X/Y-split Mega pair and excludes Gigantamax", () => {
-		expect(
-			deriveMegaForms(speciesWithVarieties("charizard", ["charizard-mega-x", "charizard-mega-y", "charizard-gmax"])),
-		).toEqual([
+		const species = speciesWithVarieties("charizard", ["charizard-mega-x", "charizard-mega-y", "charizard-gmax"]);
+		expect(deriveMegaForms(pokemonNamed("charizard"), species)).toEqual([
 			{ key: "charizard-mega-x", label: "Mega X" },
 			{ key: "charizard-mega-y", label: "Mega Y" },
+		]);
+	});
+
+	// PokeAPI hosts non-canon/fan "-mega" varieties alongside the 48 real
+	// Gen 6-7 ones (verified live: "raichu-mega-x" is a real, resolvable
+	// PokeAPI resource, but Raichu never had an official Mega Evolution in
+	// any game) — a naming-pattern-only match would wrongly surface these.
+	it("excludes a naming-pattern match that isn't a real, curated Mega Evolution", () => {
+		const species = speciesWithVarieties("raichu", ["raichu-alola", "raichu-mega-x", "raichu-mega-y"]);
+		expect(deriveMegaForms(pokemonNamed("raichu"), species)).toEqual([]);
+	});
+
+	// Slowbro-shaped (real bug, caught live): Slowbro and Galarian Slowbro
+	// share one `species` record, but only Kantonian Slowbro can actually
+	// Mega Evolve in-game — viewing the regional-form row must not inherit
+	// the base row's Mega Evolution just because they share `species`.
+	it("returns empty when the viewed variety isn't the species' own default/base one", () => {
+		const species = speciesWithVarieties("slowbro", ["slowbro-mega", "slowbro-galar"]);
+		expect(deriveMegaForms(pokemonNamed("slowbro-galar"), species)).toEqual([]);
+	});
+});
+
+describe("deriveGigantamaxForms", () => {
+	function speciesWithVarieties(name: string, varietyNames: string[]): RawSpecies {
+		return {
+			name,
+			varieties: [
+				{ is_default: true, pokemon: { name, url: "" } },
+				...varietyNames.map((n) => ({ is_default: false, pokemon: { name: n, url: "" } })),
+			],
+		} as unknown as RawSpecies;
+	}
+	function pokemonNamed(name: string): RawPokemon {
+		return { name } as unknown as RawPokemon;
+	}
+
+	it("returns empty for a species with no Gigantamax variety", () => {
+		expect(deriveGigantamaxForms(pokemonNamed("bulbasaur"), speciesWithVarieties("bulbasaur", []))).toEqual([]);
+	});
+
+	it("labels a species' own Gigantamax variety and excludes Mega", () => {
+		expect(
+			deriveGigantamaxForms(
+				pokemonNamed("gengar"),
+				speciesWithVarieties("gengar", ["gengar-mega", "gengar-gmax"]),
+			),
+		).toEqual([{ key: "gengar-gmax", label: "Gigantamax" }]);
+	});
+
+	// Toxtricity-shaped: the Gigantamax variety name is prefixed by the
+	// VIEWED variety's own name ("toxtricity-amped-gmax"), not the bare
+	// species name ("toxtricity-gmax", which doesn't exist) — verified live.
+	// Only the variety actually being viewed should ever match.
+	it("matches against the viewed variety's own name, not the bare species name", () => {
+		const species = speciesWithVarieties("toxtricity", [
+			"toxtricity-low-key",
+			"toxtricity-amped-gmax",
+			"toxtricity-low-key-gmax",
+		]);
+		expect(deriveGigantamaxForms(pokemonNamed("toxtricity-amped"), species)).toEqual([
+			{ key: "toxtricity-amped-gmax", label: "Gigantamax" },
+		]);
+		expect(deriveGigantamaxForms(pokemonNamed("toxtricity-low-key"), species)).toEqual([
+			{ key: "toxtricity-low-key-gmax", label: "Gigantamax" },
 		]);
 	});
 });

@@ -5,12 +5,13 @@
 	import { getAdjacentDexEntries } from "../../utils/dexNav";
 	import { nextEvolutionLevels } from "../../data/normalize";
 	import type { PokedexRepository } from "../../data/PokedexRepository";
-	import type { MegaFormDetail, MoveDetail, PokedexTableRow, PluginSettings } from "../../data/types";
+	import type { GigantamaxFormDetail, MegaFormDetail, MoveDetail, PokedexTableRow, PluginSettings } from "../../data/types";
 	import AbilitiesPanel from "./AbilitiesPanel.svelte";
 	import BarRow from "./BarRow.svelte";
 	import { DetailLoadState, type DetailEntrySnapshot } from "../DetailLoadState";
 	import EvolutionTree from "./EvolutionTree.svelte";
 	import FlavorTextPanel from "./FlavorTextPanel.svelte";
+	import GigantamaxFormToggle from "./GigantamaxFormToggle.svelte";
 	import HeldItemsPanel from "./HeldItemsPanel.svelte";
 	import Icon from "./Icon.svelte";
 	import MegaFormToggle from "./MegaFormToggle.svelte";
@@ -103,12 +104,25 @@
 	let megaFormCache = $state<Record<string, MegaFormDetail>>({});
 	const activeMegaData = $derived(activeMegaKey ? megaFormCache[activeMegaKey] ?? null : null);
 
+	// Same shape as activeMegaKey/megaFormCache above, for the separate
+	// Gigantamax toggle. In-game, Mega and Gigantamax/Dynamax are mutually
+	// exclusive states on the same Pokemon — selecting one here deactivates
+	// the other (see selectMegaForm/selectGigantamaxForm below) rather than
+	// letting both apply at once, even though a species like Venusaur has
+	// both forms available to toggle independently.
+	let activeGigantamaxKey = $state<string | null>(null);
+	let gigantamaxFormCache = $state<Record<string, GigantamaxFormDetail>>({});
+	const activeGigantamaxData = $derived(
+		activeGigantamaxKey ? gigantamaxFormCache[activeGigantamaxKey] ?? null : null,
+	);
+
 	// Fetch is fire-and-forget: a dropped connection just means the tab click
 	// silently doesn't change anything (activeMegaData stays null until a
 	// retry click succeeds) — consistent with how a dropped shiny/artwork
 	// fetch elsewhere in this view doesn't take down the rest of the entry.
 	function selectMegaForm(key: string | null) {
 		activeMegaKey = key;
+		if (key) activeGigantamaxKey = null;
 		if (key && !(key in megaFormCache)) {
 			repository.getMegaForm(key).then((detail) => {
 				megaFormCache = { ...megaFormCache, [key]: detail };
@@ -116,10 +130,23 @@
 		}
 	}
 
-	// Shared by the base-species and Mega-form image sets (see
-	// MegaFormDetail's comment on why it mirrors PokedexEntry's four image
-	// fields) so switching the Mega tab and the shiny toggle compose freely.
-	const activePortraitSource = $derived(activeMegaData ?? entryLoad.entry);
+	function selectGigantamaxForm(key: string | null) {
+		activeGigantamaxKey = key;
+		if (key) activeMegaKey = null;
+		if (key && !(key in gigantamaxFormCache)) {
+			repository.getGigantamaxForm(key).then((detail) => {
+				gigantamaxFormCache = { ...gigantamaxFormCache, [key]: detail };
+			});
+		}
+	}
+
+	// Shared by the base-species, Mega-form, and Gigantamax-form image sets
+	// (see MegaFormDetail/GigantamaxFormDetail's comment on why each mirrors
+	// PokedexEntry's four image fields) so switching either toggle and the
+	// shiny toggle compose freely. Mega and Gigantamax are mutually
+	// exclusive (see selectMegaForm/selectGigantamaxForm above), so only one
+	// of activeMegaData/activeGigantamaxData is ever non-null at once.
+	const activePortraitSource = $derived(activeMegaData ?? activeGigantamaxData ?? entryLoad.entry);
 	const portraitUri = $derived(
 		activePortraitSource ? resolvePortrait(activePortraitSource, spriteStyle, showShiny) : null,
 	);
@@ -155,6 +182,7 @@
 	function startLoad(currentId: number) {
 		showShiny = false;
 		activeMegaKey = null;
+		activeGigantamaxKey = null;
 		const result = loadState.load(currentId, mirror, (name, moveDetail) => {
 			moveDetails = { ...moveDetails, [name]: moveDetail };
 		});
@@ -277,7 +305,7 @@
 				<aside class="identity-col">
 				<div class="portrait-panel">
 					<img src={portraitUri ?? ""} alt={formatPokemonDisplayName(entry)} class="portrait-image" />
-					{#if (activeMegaData ?? entry).shinyDataUri || (activeMegaData ?? entry).shinyArtworkDataUri}
+					{#if (activeMegaData ?? activeGigantamaxData ?? entry).shinyDataUri || (activeMegaData ?? activeGigantamaxData ?? entry).shinyArtworkDataUri}
 						<button
 							class="shiny-toggle"
 							class:active={showShiny}
@@ -289,6 +317,11 @@
 						</button>
 					{/if}
 					<MegaFormToggle megaForms={entry.megaForms} activeKey={activeMegaKey} onSelect={selectMegaForm} />
+					<GigantamaxFormToggle
+						gigantamaxForms={entry.gigantamaxForms}
+						activeKey={activeGigantamaxKey}
+						onSelect={selectGigantamaxForm}
+					/>
 				</div>
 
 				<div class="name-block">

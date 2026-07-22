@@ -50,6 +50,7 @@ export interface RawSpecies {
 	capture_rate: number;
 	is_legendary: boolean;
 	is_mythical: boolean;
+	is_baby: boolean;
 	egg_groups: NamedApiResource[];
 	// Alternate forms of this species — most species have only the default
 	// entry (is_default: true, pokemon.name === species.name); a Mega/Gigantamax
@@ -95,6 +96,18 @@ export interface RawEvolutionChainLink {
 		// currentFormSuffix parameter for how these are selected per-row.
 		base_form: NamedApiResource | null;
 		evolved_form: NamedApiResource | null;
+		// Gen 8+: the region an evolution must occur in, when that's the only
+		// thing distinguishing two otherwise-identical entries (e.g. Mime Jr. ->
+		// Mr. Mime vs. -> Galarian Mr. Mime, both requiring the known move
+		// Mimic — neither parent nor child has its own base_form/evolved_form
+		// variety here, since Mime Jr. itself has no Galarian variety; only this
+		// field says which). Distinct from base_form: base_form names a
+		// PokeAPI *variety* the parent must already be, region names a place
+		// the evolution happens regardless of the parent's variety.
+		region: NamedApiResource | null;
+		// Gen 8+: Runerigus's take-damage trigger — must take at least this
+		// much damage in a single hit without fainting (Galarian Yamask #562).
+		min_damage_taken: number | null;
 	}[];
 	evolves_to: RawEvolutionChainLink[];
 }
@@ -175,6 +188,10 @@ export interface EvolutionNode {
 	// gender/timeOfDay below.
 	needsOverworldRain: boolean;
 	turnUpsideDown: boolean;
+	// Gen 8+ independent suffixes, same layering treatment as the two above —
+	// see RawEvolutionChainLink.evolution_details for what each means.
+	region: string | null;
+	minDamageTaken: number | null;
 	children: EvolutionNode[];
 }
 
@@ -238,8 +255,8 @@ export interface PokedexTableRow {
 	id: number;
 	// The National Dex number ("No. 019") — identical across a species'
 	// default row and every regional-form row it has, unlike id above. This
-	// is what search-by-number, dex-range display, and Quirks' FOSSIL_IDS
-	// lookup should compare against.
+	// is what search-by-number, dex-range display, and the Traits filter's
+	// FOSSIL_IDS lookup should compare against.
 	dexNumber: number;
 	name: string;
 	// Human label for a regional/alternate form ("Alolan"), null for a
@@ -272,6 +289,14 @@ export interface PokedexTableRow {
 	catchRate: number;
 	hatchCounter: number;
 	rarity: PokemonRarity;
+	// Traits filter fields — cheap booleans derived from data already fetched
+	// at table-load time (species/pokemon), no extra fetch. Fossil and held-
+	// item aren't duplicated here: fossil checks FOSSIL_IDS.has(dexNumber)
+	// directly (curated list, same as before), held-item checks
+	// heldItemNames.length > 0 directly — see matchesTrait in filterPokemon.ts.
+	isBaby: boolean;
+	canMegaEvolve: boolean;
+	canGigantamax: boolean;
 }
 
 // Full record shown in the detail screen.
@@ -301,6 +326,12 @@ export interface PokedexEntry extends PokedexTableRow {
 	// user actually picks that tab, same lazy-on-interaction shape as
 	// ability/move descriptions.
 	megaForms: MegaFormSummary[];
+	// Gigantamax varieties this species has, if any — same lazy-fetch shape
+	// as megaForms (see PokedexRepository.getGigantamaxForm), but the detail
+	// itself is just PortraitImageSource: Gigantamax changes no stats, types,
+	// or abilities (verified live comparing Gengar vs. gengar-gmax), only
+	// the sprite/artwork, unlike Mega.
+	gigantamaxForms: GigantamaxFormSummary[];
 }
 
 // key is the raw PokeAPI variety name (e.g. "charizard-mega-x") — used both
@@ -308,6 +339,14 @@ export interface PokedexEntry extends PokedexTableRow {
 // fetch target (GET /pokemon/{key}). label is the short human tab text
 // derived from it ("Mega X").
 export interface MegaFormSummary {
+	key: string;
+	label: string;
+}
+
+// Same shape as MegaFormSummary — key is the raw PokeAPI variety name (e.g.
+// "toxtricity-amped-gmax"), label is always "Gigantamax" (no split-form
+// case like Mega X/Y exists for Gigantamax).
+export interface GigantamaxFormSummary {
 	key: string;
 	label: string;
 }
@@ -322,6 +361,12 @@ export interface PortraitImageSource {
 	shinyDataUri: string | null;
 	shinyArtworkDataUri: string | null;
 }
+
+// A Gigantamax form's own images, fetched from its /pokemon/{key} response
+// (see PokedexRepository.getGigantamaxForm) — unlike MegaFormDetail, there's
+// nothing else to carry: no stat/type/ability change, so this is exactly
+// PortraitImageSource with no extra fields.
+export type GigantamaxFormDetail = PortraitImageSource;
 
 // Everything that visibly differs on a Mega form vs its base species —
 // deliberately NOT extending PokedexEntry: a Mega form has no breeding data,

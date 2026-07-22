@@ -1,6 +1,7 @@
 import {
 	FLAVOR_TEXT_TABS_BY_GEN,
 	FLAVOR_TEXT_VERSION_GROUPS,
+	MEGA_VARIETY_KEYS,
 	MOVE_DESCRIPTION_VERSION_GROUPS,
 	MOVE_VERSION_GROUPS,
 	REGIONAL_FORMS,
@@ -9,6 +10,8 @@ import {
 import type {
 	EvolutionNode,
 	EvYieldEntry,
+	GigantamaxFormDetail,
+	GigantamaxFormSummary,
 	MegaFormDetail,
 	MegaFormSummary,
 	MoveDetail,
@@ -140,33 +143,141 @@ export function resolveRegionalFormSuffix(pokemon: RawPokemon, species: RawSpeci
 	return suffix !== undefined && suffix in REGIONAL_FORMS ? suffix : undefined;
 }
 
-// Given the evolution_details this app would consider for reaching a child
-// node, picks whichever entry actually applies to `parentFormName` (e.g.
-// "vulpix-alola") — falling back to the entry with no base_form requirement
-// (the common case: most species' evolution requirement doesn't actually
-// differ by form, it's just re-recorded once per version_group), and finally
-// to the first entry outright if somehow neither exists (mirrors the old,
-// pre-regional-forms `evolution_details[0]` behavior exactly for a species
-// with no divergent entries at all).
-function selectEvolutionDetail(
-	details: RawEvolutionChainLink["evolution_details"],
-	parentFormName: string,
-): RawEvolutionChainLink["evolution_details"][number] | undefined {
-	if (details.length === 0) return undefined;
-	return (
-		details.find((d) => d.base_form?.name === parentFormName) ??
-		details.find((d) => !d.base_form) ??
-		details[0]
-	);
-}
-
 function buildEvolutionNode(
 	link: RawEvolutionChainLink,
 	id: number,
 	detail: RawEvolutionChainLink["evolution_details"][number] | undefined,
 	formSuffix: string | undefined,
+	context?: { formSuffix: string; rootId: number; speciesName: string },
 ): EvolutionNode {
-	const formName = formSuffix ? `${link.species.name}-${formSuffix}` : link.species.name;
+	// The viewed row's own id/formSuffix only ever belongs on the node whose
+	// species actually matches it — the old code stamped it on whichever
+	// link normalizeEvolutionChain was first called with (the chain's
+	// structural root), which is wrong for any species where the Alolan
+	// variety is an evolved stage rather than the base stage (Muk,
+	// Exeggutor, Marowak): the root (Grimer/Exeggcute/Cubone) isn't the
+	// viewed pokemon at all, so forcing the viewed id onto it produced two
+	// chain nodes sharing one id (duplicate sprite, no connector) or a
+	// mislabeled node showing the wrong sprite.
+	const isViewedNode = context !== undefined && link.species.name === context.speciesName;
+	if (isViewedNode) {
+		id = context.rootId;
+		formSuffix = context.formSuffix;
+	}
+
+	// The suffix that decides which BRANCH/entry to walk toward is the
+	// globally viewed one (context.formSuffix), not this node's own possibly
+	// still-unresolved `formSuffix` — for a Muk-shaped chain, Grimer doesn't
+	// know it's Alolan yet at this point, but still has to pick the edge that
+	// leads to Muk-Alola specifically. formSuffix (mutable) stays this node's
+	// own DISPLAY state; targetSuffix (constant) drives edge selection.
+	const targetSuffix = context?.formSuffix;
+
+	// Which suffixes some sibling of this link's children exclusively claims
+	// via an exact base_form-tagged entry — e.g. Yamask's `evolves_to` has
+	// both Cofagrigus (plain, no base_form entry at all) and Runerigus
+	// (base_form "yamask-galar" only): once Runerigus claims "galar", a
+	// Galarian-viewed Yamask must not also fall through to Cofagrigus's
+	// unconditional entry, and a plain-viewed Yamask must not fall through to
+	// Runerigus's (which has no unconditional entry to fall through on
+	// anyway). Empty for the common case (no regional branching at this
+	// node at all, e.g. Eevee's many evolutions) — nothing gets dropped then.
+	const dedicatedSuffixes = new Set<string>();
+	for (const c of link.evolves_to) {
+		for (const d of c.evolution_details) {
+			if (d.base_form) {
+				const s = extractFormSuffix(d.base_form.name, link.species.name);
+				if (s !== undefined) dedicatedSuffixes.add(s);
+			}
+		}
+	}
+
+	const children = link.evolves_to.flatMap((child) => {
+		// A child that IS the viewed species is matched directly by which
+		// entry's own evolved_form or region carries the viewed suffix — not
+		// by this (possibly still-unresolved) node's own form, since for
+		// Muk-shaped chains this node's own Alolan-ness is exactly what we're
+		// trying to learn by looking at this edge. `region` (rather than
+		// evolved_form) is how Mime Jr. -> Mr. Mime/Galarian Mr. Mime is
+		// disambiguated — Mime Jr. itself has no Galarian variety, so neither
+		// entry has a base_form, and only the Galarian entry names a region.
+		const isViewedChild = context !== undefined && child.species.name === context.speciesName;
+		const viewedDetail = isViewedChild
+			? child.evolution_details.find(
+					(d) =>
+						(!!d.evolved_form && extractFormSuffix(d.evolved_form.name, child.species.name) === targetSuffix) ||
+						(!!d.region && d.region.name === targetSuffix),
+				)
+			: undefined;
+
+		const exactDetail = targetSuffix
+			? child.evolution_details.find(
+					(d) => !!d.base_form && extractFormSuffix(d.base_form.name, link.species.name) === targetSuffix,
+				)
+			: undefined;
+		const unconditionalDetail = child.evolution_details.find((d) => !d.base_form);
+
+		let childDetail: RawEvolutionChainLink["evolution_details"][number] | undefined;
+		if (viewedDetail) {
+			childDetail = viewedDetail;
+		} else if (exactDetail) {
+			childDetail = exactDetail;
+		} else if (targetSuffix !== undefined && dedicatedSuffixes.has(targetSuffix)) {
+			// A sibling exactly owns this suffix; this branch doesn't apply to
+			// it even though it has an otherwise-unconditional entry (Yamask
+			// viewed as Galarian: Cofagrigus is dropped here).
+			return [];
+		} else if (unconditionalDetail) {
+			childDetail = unconditionalDetail;
+		} else if (targetSuffix === undefined) {
+			// Base/default view, and every entry on this branch requires some
+			// specific form we're not viewing (Corsola viewed as base: Cursola
+			// is dropped here, fixing a pre-existing bug where this used to
+			// fall through to evolution_details[0] regardless).
+			return [];
+		} else {
+			childDetail = child.evolution_details[0];
+		}
+
+		// This node only finds out it's itself a regional variant by seeing
+		// which entry leads to the viewed child, since PokeAPI never marks a
+		// pre-evolution's own variety on its own link — only the matched
+		// entry's base_form names it. Absent for a Mime-Jr-shaped child
+		// (region-only, no base_form): there's genuinely nothing to infer,
+		// since Mime Jr. itself has no Galarian variety.
+		if (!isViewedNode && isViewedChild && childDetail?.base_form) {
+			const ancestorSuffix = extractFormSuffix(childDetail.base_form.name, link.species.name);
+			if (ancestorSuffix !== undefined) {
+				formSuffix = ancestorSuffix;
+				id = idFromUrl(childDetail.base_form.url);
+			}
+		}
+
+		// The child's own id/form still follows the matched entry's
+		// evolved_form when present — resetting to the *default* variety
+		// when it's absent, unless the child is itself the viewed species,
+		// in which case its id/form are exactly context's regardless: 2 of
+		// the currently-modeled Alolan species (Exeggutor, Marowak) have a
+		// region-gated, not form-gated, evolution that PokeAPI's
+		// evolution_details can't disambiguate at all (both entries are
+		// identical, no base_form/evolved_form difference) — this still
+		// shows the correct viewed variety for that node itself, it just
+		// can't recover the *ancestor's* own variety from that same gap
+		// (see the `!isViewedNode &&` guard above). A known, documented
+		// half-gap, not a silent bug.
+		const childId = isViewedChild
+			? context.rootId
+			: childDetail?.evolved_form
+				? idFromUrl(childDetail.evolved_form.url)
+				: idFromUrl(child.species.url);
+		const childFormSuffix = isViewedChild
+			? context.formSuffix
+			: childDetail?.evolved_form
+				? extractFormSuffix(childDetail.evolved_form.name, child.species.name)
+				: undefined;
+		return [buildEvolutionNode(child, childId, childDetail, childFormSuffix, context)];
+	});
+
 	return {
 		id,
 		dexNumber: idFromUrl(link.species.url),
@@ -187,47 +298,27 @@ function buildEvolutionNode(
 		tradeSpecies: detail?.trade_species?.name ?? null,
 		needsOverworldRain: detail?.needs_overworld_rain ?? false,
 		turnUpsideDown: detail?.turn_upside_down ?? false,
-		// Each child is resolved against THIS node's own form context
-		// (formName) — e.g. from Alolan Vulpix, Ninetales' evolution_details
-		// gets matched against "vulpix-alola" specifically, picking the
-		// Ice-Stone entry instead of the Fire-Stone one. The child's own id/
-		// form then follows the matched entry's evolved_form when present
-		// (e.g. "ninetales-alola", giving an exact variety id with no
-		// guessing) — and resets to the *default* variety when it's absent.
-		// That reset (rather than assuming the same regional suffix carries
-		// forward) is deliberate: 2 of the 18 currently-modeled Alolan
-		// species (Exeggutor, Marowak) have a region-gated, not form-gated,
-		// evolution that PokeAPI's evolution_details can't disambiguate at
-		// all (both entries are identical, no base_form/evolved_form
-		// difference) — rather than fabricate a variety id PokeAPI never
-		// actually confirmed, this shows the base evolution result for
-		// those two specifically. A known, documented gap, not a silent bug.
-		children: link.evolves_to.map((child) => {
-			const childDetail = selectEvolutionDetail(child.evolution_details, formName);
-			const childFormSuffix = childDetail?.evolved_form
-				? extractFormSuffix(childDetail.evolved_form.name, child.species.name)
-				: undefined;
-			const childId = childDetail?.evolved_form
-				? idFromUrl(childDetail.evolved_form.url)
-				: idFromUrl(child.species.url);
-			return buildEvolutionNode(child, childId, childDetail, childFormSuffix);
-		}),
+		region: detail?.region?.name ?? null,
+		minDamageTaken: detail?.min_damage_taken ?? null,
+		children,
 	};
 }
 
 // `context` scopes the whole chain to a specific row's own variety (e.g.
-// { formSuffix: "alola", rootId: 10103 } when viewing Alolan Vulpix's detail
-// page) — omit it for a species' default/base row, which reproduces the
-// original (pre-regional-forms) behavior exactly. `rootId` is passed in
-// rather than derived, since PokedexRepository already knows it precisely
-// (it's the same numeric id used to fetch whichever row is being viewed) —
-// avoids this function ever having to guess a variety's own id.
+// { formSuffix: "alola", rootId: 10103, speciesName: "vulpix" } when viewing
+// Alolan Vulpix's detail page) — omit it for a species' default/base row,
+// which reproduces the original (pre-regional-forms) behavior exactly.
+// `rootId` is passed in rather than derived, since PokedexRepository already
+// knows it precisely (it's the same numeric id used to fetch whichever row
+// is being viewed) — avoids this function ever having to guess a variety's
+// own id. `speciesName` (the row's *base* species name, e.g. "muk") is what
+// locates the viewed node within the chain — it's not always the chain's
+// structural root, e.g. Muk/Exeggutor/Marowak are all evolved stages.
 export function normalizeEvolutionChain(
 	link: RawEvolutionChainLink,
-	context?: { formSuffix: string; rootId: number },
+	context?: { formSuffix: string; rootId: number; speciesName: string },
 ): EvolutionNode {
-	const rootId = context?.rootId ?? idFromUrl(link.species.url);
-	return buildEvolutionNode(link, rootId, undefined, context?.formSuffix);
+	return buildEvolutionNode(link, idFromUrl(link.species.url), undefined, undefined, context);
 }
 
 // Flattens an evolution chain tree down to the ids of every member (the
@@ -289,6 +380,10 @@ export function describeEvolutionRequirement(node: EvolutionNode): string {
 	else if (node.knownMove) base = `Knows ${node.knownMove.replace(/-/g, " ")}`;
 	else if (node.partySpecies) base = `${node.partySpecies.replace(/-/g, " ")} in party`;
 	else if (node.location) base = node.location.replace(/-/g, " ");
+	// Gen 8+: Runerigus's take-damage trigger carries its own threshold
+	// (min_damage_taken), worth showing over the generic trigger-name
+	// fallback below ("Take damage" alone doesn't say how much).
+	else if (node.minDamageTaken) base = `Take ${node.minDamageTaken}+ dmg`;
 	else if (node.trigger && node.trigger !== "level-up") base = node.trigger.replace(/-/g, " ");
 
 	if (node.relativePhysicalStats === 1) base = base ? `${base} (Atk > Def)` : "Atk > Def";
@@ -306,6 +401,15 @@ export function describeEvolutionRequirement(node: EvolutionNode): string {
 
 	if (node.gender === 1) base = base ? `${base} (Female)` : "Female";
 	else if (node.gender === 2) base = base ? `${base} (Male)` : "Male";
+
+	// Gen 8+: an evolution that only happens "in Galar" (e.g. Mime Jr. ->
+	// Galarian Mr. Mime) regardless of the parent's own variety — distinct
+	// from formLabel, which describes THIS node's own variety, not where its
+	// evolution happened.
+	if (node.region) {
+		const regionLabel = node.region.charAt(0).toUpperCase() + node.region.slice(1);
+		base = base ? `${base} (in ${regionLabel})` : `In ${regionLabel}`;
+	}
 
 	if (!node.timeOfDay) return base;
 	const timeLabel = node.timeOfDay === "day" ? "Day" : node.timeOfDay === "night" ? "Night" : node.timeOfDay;
@@ -418,17 +522,62 @@ export function deriveRegionalForms(
 // "{species}-gmax" (verified live against several species' varieties — no
 // PokeAPI field marks "is this a Mega" directly without an extra
 // pokemon-form fetch per candidate, but the naming convention is exact and
-// stable). Filtered to "-mega" only — Gigantamax is a separate, not-yet-
-// modeled forms problem (see docs/multi-gen-expansion-plan.md Phase 5).
-export function deriveMegaForms(species: RawSpecies): MegaFormSummary[] {
+// stable). Filtered to "-mega" only — see deriveGigantamaxForms below for
+// Gigantamax. Gated on `pokemon.name === species.name` (the viewed row being
+// the species' own default/base variety) since Mega Evolution only ever
+// attaches to the base form — caught live as a real bug: Galarian Slowbro
+// was inheriting Slowbro's own Mega Evolution just because both rows share
+// one `species` record, even though only Kantonian Slowbro can actually Mega
+// Evolve in-game. Every curated `MEGA_VARIETY_KEYS` entry is itself always
+// `{base-species-name}-mega...`, never a regional-form-prefixed variant, so
+// this check alone is sufficient — no regional form needs its own entry.
+export function deriveMegaForms(pokemon: RawPokemon, species: RawSpecies): MegaFormSummary[] {
+	if (pokemon.name !== species.name) return [];
 	const prefix = `${species.name}-mega`;
 	return species.varieties
-		.filter((v) => v.pokemon.name.startsWith(prefix))
+		.filter((v) => v.pokemon.name.startsWith(prefix) && MEGA_VARIETY_KEYS.has(v.pokemon.name))
 		.map((v) => {
 			const suffix = v.pokemon.name.slice(prefix.length);
 			const label = suffix === "-x" ? "Mega X" : suffix === "-y" ? "Mega Y" : "Mega";
 			return { key: v.pokemon.name, label };
 		});
+}
+
+// Unlike Mega, matched against the CURRENTLY VIEWED variety's own name
+// (`pokemon.name`), not the bare species name — verified live that a
+// species with multiple non-Gigantamax varieties of its own (Toxtricity:
+// "toxtricity-amped"/"toxtricity-low-key"; Urshifu:
+// "urshifu-single-strike"/"urshifu-rapid-strike") gets a SEPARATE Gigantamax
+// variety per one ("toxtricity-amped-gmax", "toxtricity-low-key-gmax", ...),
+// not one shared "{species}-gmax". Since this app only ever browses a
+// species' `is_default` variety (the other personality/strike variants
+// aren't separately browsable, a pre-existing gap, not a new one), this
+// naturally only ever surfaces the one Gigantamax form relevant to whichever
+// row is actually being viewed.
+export function deriveGigantamaxForms(pokemon: RawPokemon, species: RawSpecies): GigantamaxFormSummary[] {
+	const gmaxName = `${pokemon.name}-gmax`;
+	return species.varieties
+		.filter((v) => v.pokemon.name === gmaxName)
+		.map((v) => ({ key: v.pokemon.name, label: "Gigantamax" }));
+}
+
+// A Gigantamax form's own images, fetched from its /pokemon/{key} response
+// (see PokedexRepository.getGigantamaxForm) — Gigantamax changes no
+// stats/types/abilities (verified live comparing Gengar vs. gengar-gmax),
+// only the sprite/artwork, so there's nothing else to normalize here unlike
+// toMegaFormDetail.
+export function toGigantamaxFormDetail(images: {
+	sprite: string | null;
+	artwork: string | null;
+	shiny: string | null;
+	shinyArtwork: string | null;
+}): GigantamaxFormDetail {
+	return {
+		spriteDataUri: images.sprite,
+		artworkDataUri: images.artwork,
+		shinyDataUri: images.shiny,
+		shinyArtworkDataUri: images.shinyArtwork,
+	};
 }
 
 // Types/abilities/stats for a Mega form, fetched from its own /pokemon/{key}
@@ -486,6 +635,9 @@ export function toTableRow(
 		catchRate: species.capture_rate,
 		hatchCounter: species.hatch_counter,
 		rarity: species.is_mythical ? "mythical" : species.is_legendary ? "legendary" : "normal",
+		isBaby: species.is_baby,
+		canMegaEvolve: deriveMegaForms(pokemon, species).length > 0,
+		canGigantamax: deriveGigantamaxForms(pokemon, species).length > 0,
 	};
 }
 
@@ -509,6 +661,7 @@ export function toEntry(
 		moves: normalizeMoves(pokemon.moves),
 		evolutionChain,
 		heldItems: normalizeHeldItemDetails(pokemon.held_items),
-		megaForms: deriveMegaForms(species),
+		megaForms: deriveMegaForms(pokemon, species),
+		gigantamaxForms: deriveGigantamaxForms(pokemon, species),
 	};
 }

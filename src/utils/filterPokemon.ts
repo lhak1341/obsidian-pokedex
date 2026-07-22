@@ -26,6 +26,11 @@ export interface PokedexFilters {
 	// OR semantics: matches if the Pokemon has ANY of the selected quirks
 	// (see QUIRKS in data/constants.ts and matchesQuirk below).
 	quirks: string[];
+	// AND semantics, same idiom as `types` above: a Pokemon must have ALL
+	// selected traits (see TRAITS in data/constants.ts and matchesTrait
+	// below) — unlike quirks, these are independent yes/no properties with
+	// no meaningful "any of" reading (e.g. Baby + Fossil should mean both).
+	traits: string[];
 }
 
 export const EMPTY_FILTERS: PokedexFilters = {
@@ -37,6 +42,7 @@ export const EMPTY_FILTERS: PokedexFilters = {
 	rarities: [],
 	evStats: [],
 	quirks: [],
+	traits: [],
 };
 
 // Exported for QuickSearch.svelte's quick-check input, which needs the same
@@ -107,14 +113,17 @@ function matchesEvStats(row: PokedexTableRow, evStats: string[]): boolean {
 	return row.evYield.some((y) => evStats.includes(y.stat));
 }
 
-// Each quirk key checks a different underlying field — a curated id list
-// (fossil), an ability name (compound-eyes/pickup), or a level-up move name
-// (thief/trick/covet) — see QUIRKS in data/constants.ts for the definitions
-// this switch's keys must stay in sync with.
+// Each quirk key checks a different underlying field — an array-length check
+// (held-item), an ability name (compound-eyes/pickup), or a level-up move
+// name (thief/trick/covet) — see QUIRKS in data/constants.ts for the
+// definitions this switch's keys must stay in sync with. Fossil moved to
+// matchesTrait below (see TRAITS' own comment for why); held-item stays here
+// rather than moving alongside it, since "pickup OR holds an item" is a
+// meaningful combined search the way "baby AND fossil" isn't.
 function matchesQuirk(row: PokedexTableRow, quirk: string): boolean {
 	switch (quirk) {
-		case "fossil":
-			return FOSSIL_IDS.has(row.dexNumber);
+		case "held-item":
+			return row.heldItemNames.length > 0;
 		case "compound-eyes":
 		case "pickup":
 			return row.abilityNames.includes(quirk);
@@ -132,6 +141,30 @@ function matchesQuirks(row: PokedexTableRow, quirks: string[]): boolean {
 	return quirks.some((q) => matchesQuirk(row, q));
 }
 
+// Each trait key checks a different independent yes/no property — a curated
+// id list (fossil, same FOSSIL_IDS as before) or a derived-at-load-time
+// boolean (baby/mega/gigantamax) — see TRAITS in data/constants.ts for the
+// definitions this switch's keys must stay in sync with.
+function matchesTrait(row: PokedexTableRow, trait: string): boolean {
+	switch (trait) {
+		case "baby":
+			return row.isBaby;
+		case "fossil":
+			return FOSSIL_IDS.has(row.dexNumber);
+		case "mega":
+			return row.canMegaEvolve;
+		case "gigantamax":
+			return row.canGigantamax;
+		default:
+			return false;
+	}
+}
+
+function matchesTraits(row: PokedexTableRow, traits: string[]): boolean {
+	if (traits.length === 0) return true;
+	return traits.every((t) => matchesTrait(row, t));
+}
+
 export function filterPokemon(rows: PokedexTableRow[], filters: PokedexFilters): PokedexTableRow[] {
 	return rows.filter((row) =>
 		matchesSearch(row, filters.search) &&
@@ -141,6 +174,7 @@ export function filterPokemon(rows: PokedexTableRow[], filters: PokedexFilters):
 		matchesAbilities(row, filters.abilities) &&
 		matchesRarities(row, filters.rarities) &&
 		matchesEvStats(row, filters.evStats) &&
-		matchesQuirks(row, filters.quirks)
+		matchesQuirks(row, filters.quirks) &&
+		matchesTraits(row, filters.traits)
 	);
 }

@@ -7,6 +7,7 @@ import {
 	normalizeMoveDetail,
 	resolveRegionalFormSuffix,
 	toEntry,
+	toGigantamaxFormDetail,
 	toMegaFormDetail,
 	toTableRow,
 	trimFlavorTextEntries,
@@ -16,6 +17,7 @@ import { PokeApiClient } from "./PokeApiClient";
 import type {
 	EvolutionChainVisual,
 	EvolutionNode,
+	GigantamaxFormDetail,
 	MegaFormDetail,
 	MoveDetail,
 	PokedexEntry,
@@ -68,6 +70,7 @@ export class PokedexRepository {
 	private itemDescriptionMemCache = new Map<string, { description: string | null }>();
 	private moveDetailMemCache = new Map<string, MoveDetail>();
 	private megaFormMemCache = new Map<string, MegaFormDetail>();
+	private gigantamaxFormMemCache = new Map<string, GigantamaxFormDetail>();
 
 	constructor(
 		private client: PokeApiClient,
@@ -356,6 +359,39 @@ export class PokedexRepository {
 		return detail;
 	}
 
+	// Same lazy fetch-on-click shape as getMegaForm, but simpler: no
+	// types/abilities/stats to normalize (Gigantamax changes none of those,
+	// verified live comparing Gengar vs. gengar-gmax), just the four image
+	// fields. Cached separately from mega-forms/ since a variety name is
+	// never shared between the two (a species' Gigantamax key always ends
+	// "-gmax", Mega always "-mega"/"-mega-x/-y").
+	async getGigantamaxForm(varietyKey: string): Promise<GigantamaxFormDetail> {
+		const mem = this.gigantamaxFormMemCache.get(varietyKey);
+		if (mem) return mem;
+		const cached = await this.cache.readJson<GigantamaxFormDetail>(`gigantamax-forms/${varietyKey}.json`);
+		if (cached) {
+			this.gigantamaxFormMemCache.set(varietyKey, cached);
+			return cached;
+		}
+		const pokemon = await this.client.fetchPokemon(varietyKey);
+		const [sprite, artwork, shiny, shinyArtwork] = await Promise.all([
+			this.getOrFetchImage(pokemon.sprites.front_default, imagePath(varietyKey, "sprite")).catch(() => null),
+			this.getOrFetchImage(
+				pokemon.sprites.other?.["official-artwork"]?.front_default ?? null,
+				imagePath(varietyKey, "artwork"),
+			).catch(() => null),
+			this.getOrFetchImage(pokemon.sprites.front_shiny, imagePath(varietyKey, "shiny")).catch(() => null),
+			this.getOrFetchImage(
+				pokemon.sprites.other?.["official-artwork"]?.front_shiny ?? null,
+				imagePath(varietyKey, "shiny-artwork"),
+			).catch(() => null),
+		]);
+		const detail = toGigantamaxFormDetail({ sprite, artwork, shiny, shinyArtwork });
+		await this.cache.writeJson(`gigantamax-forms/${varietyKey}.json`, detail);
+		this.gigantamaxFormMemCache.set(varietyKey, detail);
+		return detail;
+	}
+
 	// Shared by partitionByCacheHit and getCacheStatus — an id counts as
 	// cached once both its pokemon and species JSON are on disk (or already
 	// in this session's mem cache), the same two files getRowsForIds' fetchRow
@@ -624,7 +660,10 @@ export class PokedexRepository {
 		let evolutionChain: EvolutionNode | null = null;
 		try {
 			const rawChain = await this.getOrFetchEvolutionChain(species.evolution_chain.url);
-			evolutionChain = normalizeEvolutionChain(rawChain.chain, formSuffix ? { formSuffix, rootId: id } : undefined);
+			evolutionChain = normalizeEvolutionChain(
+				rawChain.chain,
+				formSuffix ? { formSuffix, rootId: id, speciesName: species.name } : undefined,
+			);
 		} catch {
 			evolutionChain = null; // non-fatal: detail view still renders without it
 		}

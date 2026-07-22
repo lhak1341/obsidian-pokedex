@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { GENERATIONS, QUIRKS, RARITIES, STAT_COLORS, STAT_COLUMNS, TYPE_NAMES } from "../../data/constants";
+	import { GENERATIONS, QUIRKS, RARITIES, STAT_COLORS, STAT_COLUMNS, TRAITS, TYPE_NAMES } from "../../data/constants";
 	import { EMPTY_FILTERS, type PokedexFilters } from "../../utils/filterPokemon";
 	import type { PokedexTableRow, StatBlock } from "../../data/types";
 	import { createQuickJumpDropdown } from "../quickJumpDropdown.svelte";
@@ -39,6 +39,22 @@
 
 	function reset() {
 		filters = { ...EMPTY_FILTERS, statRanges: {} };
+	}
+
+	// Each filter-group is a native <details>, which don't coordinate with
+	// each other on their own — without this, opening a second/third dropdown
+	// while the first stays open clutters the whole rail. `toggle` is a real
+	// DOM event fired on both open AND close, so this only acts when the just-
+	// interacted-with one is the one now open, closing every sibling
+	// (scoped to filterRailEl, not the whole document, so nothing outside
+	// this bar is affected).
+	let filterRailEl: HTMLDivElement | undefined;
+	function onDetailsToggle(e: Event) {
+		const target = e.currentTarget as HTMLDetailsElement;
+		if (!target.open) return;
+		filterRailEl?.querySelectorAll("details.filter-group").forEach((d) => {
+			if (d !== target) (d as HTMLDetailsElement).open = false;
+		});
 	}
 
 	let abilitySearch = $state("");
@@ -98,8 +114,8 @@
 		{/if}
 	</div>
 
-	<div class="filter-rail">
-		<details class="filter-group">
+	<div class="filter-rail" bind:this={filterRailEl}>
+		<details class="filter-group" ontoggle={onDetailsToggle}>
 			<summary>
 				<Icon name="swatch-book" size={14} strokeWidth={2} />
 				<span>Type</span>
@@ -121,7 +137,7 @@
 			</div>
 		</details>
 
-		<details class="filter-group">
+		<details class="filter-group" ontoggle={onDetailsToggle}>
 			<summary>
 				<Icon name="layers" size={14} strokeWidth={2} />
 				<span>Gen</span>
@@ -140,7 +156,7 @@
 			</div>
 		</details>
 
-		<details class="filter-group">
+		<details class="filter-group" ontoggle={onDetailsToggle}>
 			<summary>
 				<Icon name="sparkles" size={14} strokeWidth={2} />
 				<span>Ability</span>
@@ -170,7 +186,7 @@
 			</div>
 		</details>
 
-		<details class="filter-group">
+		<details class="filter-group" ontoggle={onDetailsToggle}>
 			<summary>
 				<Icon name="bar-chart-3" size={14} strokeWidth={2} />
 				<span>Stats</span>
@@ -199,7 +215,7 @@
 			</div>
 		</details>
 
-		<details class="filter-group">
+		<details class="filter-group" ontoggle={onDetailsToggle}>
 			<summary>
 				<Icon name="crown" size={14} strokeWidth={2} />
 				<span>Rarity</span>
@@ -218,7 +234,7 @@
 			</div>
 		</details>
 
-		<details class="filter-group">
+		<details class="filter-group" ontoggle={onDetailsToggle}>
 			<summary>
 				<Icon name="dumbbell" size={14} strokeWidth={2} />
 				<span>EV</span>
@@ -238,7 +254,7 @@
 			</div>
 		</details>
 
-		<details class="filter-group filter-group-last">
+		<details class="filter-group" ontoggle={onDetailsToggle}>
 			<summary>
 				<Icon name="glasses" size={14} strokeWidth={2} />
 				<span>Quirks</span>
@@ -253,6 +269,26 @@
 					>
 						<Icon name={quirk.icon} size={13} strokeWidth={2} />
 						{quirk.label}
+					</button>
+				{/each}
+			</div>
+		</details>
+
+		<details class="filter-group filter-group-last" ontoggle={onDetailsToggle}>
+			<summary>
+				<Icon name="star" size={14} strokeWidth={2} />
+				<span>Traits</span>
+				{#if filters.traits.length}<span class="filter-count">{filters.traits.length}</span>{/if}
+			</summary>
+			<div class="filter-chips">
+				{#each TRAITS as trait (trait.key)}
+					<button
+						class="chip quirk-chip"
+						class:active={filters.traits.includes(trait.key)}
+						onclick={() => (filters.traits = toggle(filters.traits, trait.key))}
+					>
+						<Icon name={trait.icon} size={13} strokeWidth={2} />
+						{trait.label}
 					</button>
 				{/each}
 			</div>

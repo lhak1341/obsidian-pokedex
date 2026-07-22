@@ -22,6 +22,9 @@ function row(id: number, name: string): PokedexTableRow {
 		catchRate: 0,
 		hatchCounter: 0,
 		rarity: "normal",
+		isBaby: false,
+		canMegaEvolve: false,
+		canGigantamax: false,
 	};
 }
 

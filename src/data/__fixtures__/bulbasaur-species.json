@@ -6,6 +6,7 @@
 	"capture_rate": 45,
 	"is_legendary": false,
 	"is_mythical": false,
+	"is_baby": false,
 	"egg_groups": [
 		{ "name": "monster", "url": "" },
 		{ "name": "plant", "url": "" }

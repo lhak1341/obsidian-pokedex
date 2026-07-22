@@ -38,7 +38,7 @@ describe("PokedexRepository", () => {
 		const { cache, repository } = makeRepository();
 		// Simulate a cache written before trimMovesToVersionGroups existed: the
 		// full fixture still has out-of-scope version groups (e.g. solar-beam,
-		// sword-shield only).
+		// scarlet-violet only).
 		await cache.writeJson("pokemon/1.json", bulbasaur);
 		expect((bulbasaur as unknown as RawPokemon).moves.some((m) => m.move.name === "solar-beam")).toBe(true);
 

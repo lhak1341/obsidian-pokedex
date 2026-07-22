@@ -24,6 +24,9 @@ function row(overrides: Partial<PokedexTableRow>): PokedexTableRow {
 		catchRate: 45,
 		hatchCounter: 20,
 		rarity: "normal",
+		isBaby: false,
+		canMegaEvolve: false,
+		canGigantamax: false,
 		...overrides,
 	};
 }

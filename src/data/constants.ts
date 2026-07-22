@@ -31,6 +31,13 @@ export const MOVE_VERSION_TABS_BY_GEN: Record<number, readonly { key: string; la
 		{ key: "ultra-sun-ultra-moon", label: "USUM" },
 		{ key: "lets-go-pikachu-lets-go-eevee", label: "LGPE" },
 	],
+	// Sword/Shield's DLC (Isle of Armor/Crown Tundra) are their own
+	// version-groups on PokeAPI, but they're the same two games' movepools,
+	// not a third title — scoped to the base "sword-shield" version-group
+	// only, same as how BDSP/Legends Arceus (also generation-viii per
+	// PokeAPI, verified live) are out of scope for this phase entirely,
+	// being Gen 4 remakes / a Hisui spinoff rather than Galar dex data.
+	8: [{ key: "sword-shield", label: "Sw/Sh" }],
 };
 
 // Every version group any tab above reads, across every supported
@@ -99,6 +106,13 @@ export const FLAVOR_TEXT_TABS_BY_GEN: Record<
 			versions: ["lets-go-pikachu", "lets-go-eevee"],
 		},
 	],
+	// Sword and Shield's flavor text genuinely differs per version (verified
+	// live against Grookey #810) — unlike Ruby/Sapphire or Diamond/Pearl,
+	// this isn't a "shared text, merge into one tab" pair.
+	8: [
+		{ key: "sword", label: "Sword", versions: ["sword"] },
+		{ key: "shield", label: "Shield", versions: ["shield"] },
+	],
 };
 
 // Every raw version name any tab above reads, across every supported
@@ -120,10 +134,28 @@ export const RARITIES = [
 	{ key: "mythical", label: "Mythical" },
 ] as const;
 
-// Gen 1-3 fossil Pokemon (revived from a fossil item at a Pokemon Lab, not
+// Fossil Pokemon (revived from a fossil item at a Pokemon Lab/Dig Site, not
 // found or evolved any other way). PokeAPI has no explicit "is_fossil"
-// species flag, so this is a curated list rather than a derived one.
-export const FOSSIL_IDS = new Set([138, 139, 140, 141, 142, 345, 346, 347, 348]);
+// species flag, so this is a curated list rather than a derived one — and
+// since it's curated, it needs a manual re-check every time a new
+// generation is added (see the "curated tables" reminder in
+// docs/multi-gen-expansion-plan.md's Recipe section). Verified live
+// (id -> species name) rather than from memory before adding each gen's
+// entries: Gen 1 omanyte/omastar/kabuto/kabutops/aerodactyl (#138-142);
+// Gen 3 lileep/cradily/anorith/armaldo (#345-348); Gen 4
+// cranidos/rampardos/shieldon/bastiodon (#408-411); Gen 5
+// tirtouga/carracosta/archen/archeops (#564-567); Gen 6
+// tyrunt/tyrantrum/amaura/aurorus (#696-699); Gen 8
+// dracozolt/arctozolt/dracovish/arctovish (#880-883, Sword/Shield's
+// mix-and-match fossils). No Gen 2 or Gen 7 fossils exist.
+export const FOSSIL_IDS = new Set([
+	138, 139, 140, 141, 142,
+	345, 346, 347, 348,
+	408, 409, 410, 411,
+	564, 565, 566, 567,
+	696, 697, 698, 699,
+	880, 881, 882, 883,
+]);
 
 export interface QuirkDef {
 	key: string;
@@ -131,18 +163,61 @@ export interface QuirkDef {
 	icon: string;
 }
 
-// A personal shortlist of specific traits (not a formal in-game category) —
-// mixes an ability check (compoundEyes/pickup), a level-up-learnset check
-// (thief/trick/covet), and the curated FOSSIL_IDS list above. See
-// matchesQuirk in filterPokemon.ts for how each key is actually evaluated.
+// A personal shortlist of specific traits that can genuinely overlap on one
+// Pokemon (not a formal in-game category) — mixes an ability check
+// (compoundEyes/pickup), a level-up-learnset check (thief/trick/covet), and a
+// held-item check, OR'd together in matchesQuirks (e.g. "pickup OR holds an
+// item" is a meaningful combined search, unlike Traits' independent flags
+// below). See matchesQuirk in filterPokemon.ts for how each key is evaluated.
 export const QUIRKS: QuirkDef[] = [
-	{ key: "fossil", label: "Fossil", icon: "bone" },
+	{ key: "held-item", label: "Held Item", icon: "gift" },
 	{ key: "compound-eyes", label: "Compound Eyes", icon: "eye" },
 	{ key: "pickup", label: "Pickup", icon: "boxes" },
 	{ key: "thief", label: "Thief", icon: "package" },
 	{ key: "trick", label: "Trick", icon: "package" },
 	{ key: "covet", label: "Covet", icon: "package" },
 ];
+
+// Independent yes/no properties of a Pokemon itself — unlike QUIRKS' OR
+// semantics (show me any of these), TRAITS uses AND semantics (same idiom as
+// the Type filter): selecting Baby + Fossil finds only a Pokemon that is
+// BOTH, since there's no meaningful "either/or" reading of these flags. See
+// matchesTrait in filterPokemon.ts.
+export const TRAITS: QuirkDef[] = [
+	{ key: "baby", label: "Baby", icon: "baby" },
+	{ key: "fossil", label: "Fossil", icon: "bone" },
+	{ key: "mega", label: "Can Mega Evolve", icon: "wand-2" },
+	{ key: "gigantamax", label: "Can Gigantamax", icon: "expand" },
+];
+
+// PokeAPI's species.varieties naming convention ("{species}-mega"/"-mega-x"/
+// "-mega-y") is NOT a reliable signal for "has an official in-game Mega
+// Evolution" — verified live (full /pokemon?limit=2000 scan) that it hosts
+// 94 "-mega"-suffixed varieties, only 48 of which are real Gen 6-7 Mega
+// Evolutions; the other 46 are non-canon/fan content PokeAPI happens to also
+// host (e.g. "raichu-mega-x", "starmie-mega", "dragonite-mega", even
+// "baxcalibur-mega" for a Gen 9 Pokemon that predates any real Mega
+// mechanic). deriveMegaForms filters candidates against this curated
+// allowlist of the real 48 (by variety key) rather than trusting the naming
+// pattern alone — same FOSSIL_IDS-style curation, needed because PokeAPI has
+// no "is this an official game mechanic" flag either. This exact set is
+// stable (Mega Evolution hasn't gained a new entry since Gen 7 ORAS/USUM,
+// and isn't expected to as of Gen 8/9's Dynamax/Terastallization focus) —
+// re-verify only if a future generation ever reintroduces Mega.
+export const MEGA_VARIETY_KEYS = new Set([
+	"venusaur-mega", "charizard-mega-x", "charizard-mega-y", "blastoise-mega",
+	"alakazam-mega", "gengar-mega", "kangaskhan-mega", "pinsir-mega",
+	"gyarados-mega", "aerodactyl-mega", "mewtwo-mega-x", "mewtwo-mega-y",
+	"ampharos-mega", "scizor-mega", "heracross-mega", "houndoom-mega",
+	"tyranitar-mega", "blaziken-mega", "gardevoir-mega", "mawile-mega",
+	"aggron-mega", "medicham-mega", "manectric-mega", "banette-mega",
+	"absol-mega", "garchomp-mega", "lucario-mega", "abomasnow-mega",
+	"latias-mega", "latios-mega", "swampert-mega", "sceptile-mega",
+	"sableye-mega", "altaria-mega", "gallade-mega", "audino-mega",
+	"sharpedo-mega", "slowbro-mega", "steelix-mega", "pidgeot-mega",
+	"glalie-mega", "diancie-mega", "metagross-mega", "rayquaza-mega",
+	"camerupt-mega", "lopunny-mega", "salamence-mega", "beedrill-mega",
+]);
 
 export const GENERATIONS = [
 	{ id: 1, name: "Gen 1 (Kanto)", start: 1, end: 151 },
@@ -152,9 +227,10 @@ export const GENERATIONS = [
 	{ id: 5, name: "Gen 5 (Unova)", start: 494, end: 649 },
 	{ id: 6, name: "Gen 6 (Kalos)", start: 650, end: 721 },
 	{ id: 7, name: "Gen 7 (Alola)", start: 722, end: 809 },
+	{ id: 8, name: "Gen 8 (Galar)", start: 810, end: 905 },
 ] as const;
 
-// All generations enabled by default (dex #1-809, Gen 1 through Gen 7).
+// All generations enabled by default (dex #1-905, Gen 1 through Gen 8).
 export const DEFAULT_ENABLED_GENERATIONS: number[] = GENERATIONS.map((g) => g.id);
 
 // Which GENERATIONS entry a dex number falls in — shared by toTableRow (to
@@ -179,6 +255,19 @@ export function resolveGenerationId(dexNumber: number): number {
 // "which generation introduced this form" nor a "display label" field.
 export const REGIONAL_FORMS: Record<string, { label: string; generationId: number }> = {
 	alola: { label: "Alolan", generationId: 7 },
+	// Galarian forms span 19 species (verified live via a full /pokemon
+	// name-suffix scan, not assumed from the Alolan count) — retroactively
+	// touching Gen 1 (the legendary birds, Slowpoke line, Meowth, Farfetch'd,
+	// Weezing, Mr. Mime), Gen 2 (Slowking), Gen 3 (Corsola, Zigzagoon/
+	// Linoone), and Gen 5 (Darumaka/Darmanitan, Stunfisk), not just Gen 8
+	// natives — same "scan the whole dex range" gotcha the Alolan phase hit.
+	// Darmanitan's Galarian variety is keyed separately ("galar-standard")
+	// since its variety name is "darmanitan-galar-standard" — its Zen-mode
+	// counterpart ("darmanitan-galar-zen") is left unmodeled, same as the
+	// already-unmodeled base "darmanitan-zen" (a pre-existing, consistent
+	// gap, not a new one introduced here).
+	galar: { label: "Galarian", generationId: 8 },
+	"galar-standard": { label: "Galarian", generationId: 8 },
 };
 
 export const STAT_NAMES = [
@@ -215,10 +304,12 @@ export const STAT_COLORS: Record<string, string> = {
 // (validThroughGen: the last generation that still used the old value).
 // Sourced from https://bulbapedia.bulbagarden.net/wiki/Base_stats
 // ("Between generations" > Generation VI), restricted to dex #1-809 (the
-// generations this plugin currently supports) — re-check that page for any
-// future phase, though nothing beyond #553 is affected: a species can only
-// diverge from its own current stats if it existed *before* the Gen 6 buff
-// wave, so nothing native to Gen 6+ (dex #650 onward) is ever eligible.
+// generations this plugin currently supports at the time of the Gen 6 buff
+// research) — re-check that page for any future phase. A species can only
+// diverge from its Gen 6-onward stats via that buff wave if it existed
+// *before* Gen 6, so nothing native to Gen 6/7 is ever eligible there — but
+// this table isn't Gen-6-buff-only: Gen 8 separately nerfed Aegislash (#681,
+// Gen 6 native) via a patch, verified live against Bulbapedia + PokeAPI.
 // Keyed by PokedexTableRow.id (a specific form's own fetch id), not
 // dexNumber — Alolan Raichu (#26, same dexNumber as regular Raichu, which
 // IS in this table below) never existed pre-Gen 6 in any form, so it must
@@ -255,6 +346,14 @@ export const STAT_OVERRIDES: Record<number, { validThroughGen: number; deltas: P
 	542: { validThroughGen: 5, deltas: { specialDefense: 70 } }, // Leavanny
 	545: { validThroughGen: 5, deltas: { attack: 90 } }, // Scolipede
 	553: { validThroughGen: 5, deltas: { defense: 70 } }, // Krookodile
+	// Gen 8's one base-stat change runs the opposite direction of the Gen 6
+	// buff wave above (a nerf, not a buff) — Aegislash's Shield Forme (its
+	// default variety) had Def/SpDef lowered 150 -> 140 in Sword/Shield
+	// onward, confirmed live against both Bulbapedia's Aegislash page and
+	// PokeAPI's current /pokemon/aegislash-shield stats (140/140). The
+	// lookup mechanism doesn't care about direction, so this reuses the same
+	// table rather than a separate one.
+	681: { validThroughGen: 7, deltas: { defense: 150, specialDefense: 150 } }, // Aegislash
 };
 
 export const TYPE_COLORS: Record<string, string> = {

@@ -27,6 +27,9 @@ function row(overrides: Partial<PokedexTableRow>): PokedexTableRow {
 		catchRate: 45,
 		hatchCounter: 20,
 		rarity: "normal",
+		isBaby: false,
+		canMegaEvolve: false,
+		canGigantamax: false,
 		...overrides,
 	};
 }
@@ -96,18 +99,37 @@ describe("filterPokemon", () => {
 		expect(result.map((r) => r.name)).toEqual(["bulbasaur", "ivysaur"]);
 	});
 
-	it("matches ANY selected quirk, across id/ability/move-based checks alike", () => {
+	it("matches ANY selected quirk, across held-item/ability/move-based checks alike", () => {
 		const quirkRows: PokedexTableRow[] = [
-			row({ id: 138, name: "omanyte" }),
 			row({ id: 1, name: "bulbasaur", abilityNames: ["overgrow"] }),
 			row({ id: 190, name: "aipom", abilityNames: ["pickup"] }),
 			row({ id: 302, name: "sableye", levelUpMoveNames: ["covet"] }),
+			row({ id: 12, name: "butterfree", heldItemNames: ["silver-powder"] }),
 			row({ id: 7, name: "squirtle", abilityNames: ["torrent"], levelUpMoveNames: [] }),
 		];
 
-		const result = filterPokemon(quirkRows, { ...EMPTY_FILTERS, quirks: ["fossil", "pickup", "covet"] });
+		const result = filterPokemon(quirkRows, { ...EMPTY_FILTERS, quirks: ["pickup", "covet", "held-item"] });
 
-		expect(result.map((r) => r.name)).toEqual(["omanyte", "aipom", "sableye"]);
+		expect(result.map((r) => r.name)).toEqual(["aipom", "sableye", "butterfree"]);
+	});
+
+	it("matches ALL selected traits (AND semantics), across id/boolean checks alike", () => {
+		const traitRows: PokedexTableRow[] = [
+			row({ id: 138, name: "omanyte" }), // fossil only
+			row({ id: 1, name: "bulbasaur", isBaby: true, canMegaEvolve: true }), // baby + mega
+			row({ id: 4, name: "charmander", isBaby: true }), // baby only (no mega)
+			row({ id: 6, name: "charizard", canMegaEvolve: true, canGigantamax: true }),
+		];
+
+		expect(
+			filterPokemon(traitRows, { ...EMPTY_FILTERS, traits: ["fossil"] }).map((r) => r.name),
+		).toEqual(["omanyte"]);
+		expect(
+			filterPokemon(traitRows, { ...EMPTY_FILTERS, traits: ["baby", "mega"] }).map((r) => r.name),
+		).toEqual(["bulbasaur"]);
+		expect(
+			filterPokemon(traitRows, { ...EMPTY_FILTERS, traits: ["mega", "gigantamax"] }).map((r) => r.name),
+		).toEqual(["charizard"]);
 	});
 
 	it("combines multiple filter axes with AND", () => {
