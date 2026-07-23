@@ -1,5 +1,6 @@
 .pokedex-view {
 	height: 100%;
 	overflow: auto;
+	scrollbar-gutter: stable;
 	padding: var(--size-4-4);
 }

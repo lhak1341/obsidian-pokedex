@@ -1,7 +1,7 @@
 # Graph Report - obsidian-pokedex  (2026-07-23)
 
 ## Corpus Check
-- 95 files · ~62,477 words
+- 95 files · ~64,090 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `8513b99f`
+- Built from commit: `b5c7b737`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

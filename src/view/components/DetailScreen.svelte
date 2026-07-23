@@ -209,12 +209,16 @@
 		startLoad(id);
 	}
 
-	// Prev/next by National Dex number, always landing on a species' default
-	// row (never a regional-form sibling) — see getAdjacentDexEntries. `rows`
-	// only holds whatever generations are currently enabled/loaded, so a
-	// disabled generation's gap is skipped rather than surfaced as a target.
+	// Prev/next by National Dex number — stays on the same regional-form line
+	// (e.g. Hisuian Growlithe -> Hisuian Arcanine) when the currently viewed
+	// row is itself a variant and the neighboring species has one too, else
+	// falls back to the neighbor's default row. See getAdjacentDexEntries.
+	// `rows` only holds whatever generations are currently enabled/loaded, so
+	// a disabled generation's gap is skipped rather than surfaced as a target.
 	const adjacent = $derived(
-		entryLoad.entry ? getAdjacentDexEntries(rows, entryLoad.entry.dexNumber) : { prev: null, next: null },
+		entryLoad.entry
+			? getAdjacentDexEntries(rows, entryLoad.entry.dexNumber, entryLoad.entry.formLabel)
+			: { prev: null, next: null },
 	);
 
 	// Same isEditableTarget guard as PokedexApp's "[" / "]" history hotkeys —
@@ -259,7 +263,7 @@
 							{#if prev.spriteDataUri}
 								<img src={prev.spriteDataUri} alt="" class="dex-nav-sprite" />
 							{/if}
-							<span class="dex-nav-label">#{String(prev.dexNumber).padStart(3, "0")} {prev.name}</span>
+							<span class="dex-nav-label">#{String(prev.dexNumber).padStart(3, "0")} {formatPokemonDisplayName(prev)}</span>
 						</button>
 					{/if}
 				</div>
@@ -272,7 +276,7 @@
 					{#if adjacent.next}
 						{@const next = adjacent.next}
 						<button type="button" class="dex-nav-button dex-nav-next" onclick={() => onSelect(next.id)}>
-							<span class="dex-nav-label">#{String(next.dexNumber).padStart(3, "0")} {next.name}</span>
+							<span class="dex-nav-label">#{String(next.dexNumber).padStart(3, "0")} {formatPokemonDisplayName(next)}</span>
 							{#if next.spriteDataUri}
 								<img src={next.spriteDataUri} alt="" class="dex-nav-sprite" />
 							{/if}

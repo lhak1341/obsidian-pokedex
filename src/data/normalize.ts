@@ -386,6 +386,8 @@ function buildEvolutionNode(
 		turnUpsideDown: detail?.turn_upside_down ?? false,
 		region: detail?.region?.name ?? null,
 		minDamageTaken: detail?.min_damage_taken ?? null,
+		usedMove: detail?.used_move?.name ?? null,
+		minMoveCount: detail?.min_move_count ?? null,
 		children,
 	};
 }
@@ -475,7 +477,12 @@ export function describeEvolutionRequirement(node: EvolutionNode): string {
 	// (min_damage_taken), worth showing over the generic trigger-name
 	// fallback below ("Take damage" alone doesn't say how much).
 	else if (node.minDamageTaken) base = `Take ${node.minDamageTaken}+ dmg`;
-	else if (node.trigger && node.trigger !== "level-up") base = node.trigger.replace(/-/g, " ");
+	// Hisuian Qwilfish -> Overqwil: use a specific move a set number of times
+	// (Barb Barrage x20), worth showing over the generic trigger-name fallback
+	// below ("strong style move" alone doesn't say which move or how many).
+	else if (node.usedMove && node.minMoveCount) {
+		base = `${node.usedMove.replace(/-/g, " ")} x${node.minMoveCount}`;
+	} else if (node.trigger && node.trigger !== "level-up") base = node.trigger.replace(/-/g, " ");
 
 	if (node.relativePhysicalStats === 1) base = base ? `${base} (Atk > Def)` : "Atk > Def";
 	else if (node.relativePhysicalStats === -1) base = base ? `${base} (Def > Atk)` : "Def > Atk";

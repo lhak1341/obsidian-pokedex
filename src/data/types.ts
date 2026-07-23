@@ -108,6 +108,13 @@ export interface RawEvolutionChainLink {
 		// Gen 8+: Runerigus's take-damage trigger — must take at least this
 		// much damage in a single hit without fainting (Galarian Yamask #562).
 		min_damage_taken: number | null;
+		// Hisuian forms (tagged generation-viii, legends-arceus): Hisuian
+		// Qwilfish -> Overqwil requires using a specific move a number of times
+		// (Barb Barrage x20 as a Strong Style move) rather than any
+		// level/item/happiness condition already modeled — verified live
+		// against /evolution-chain/106.
+		used_move: NamedApiResource | null;
+		min_move_count: number | null;
 	}[];
 	evolves_to: RawEvolutionChainLink[];
 }
@@ -192,6 +199,10 @@ export interface EvolutionNode {
 	// see RawEvolutionChainLink.evolution_details for what each means.
 	region: string | null;
 	minDamageTaken: number | null;
+	// Hisuian Qwilfish -> Overqwil's use-move condition — see
+	// RawEvolutionChainLink.evolution_details.used_move/min_move_count.
+	usedMove: string | null;
+	minMoveCount: number | null;
 	children: EvolutionNode[];
 }
 

@@ -34,10 +34,23 @@ export const MOVE_VERSION_TABS_BY_GEN: Record<number, readonly { key: string; la
 	// Sword/Shield's DLC (Isle of Armor/Crown Tundra) are their own
 	// version-groups on PokeAPI, but they're the same two games' movepools,
 	// not a third title — scoped to the base "sword-shield" version-group
-	// only, same as how BDSP/Legends Arceus (also generation-viii per
-	// PokeAPI, verified live) are out of scope for this phase entirely,
-	// being Gen 4 remakes / a Hisui spinoff rather than Galar dex data.
-	8: [{ key: "sword-shield", label: "Sw/Sh" }],
+	// only, same as how BDSP (also generation-viii per PokeAPI, verified
+	// live) is out of scope entirely, being a Gen 4 remake rather than Galar
+	// dex data. "legends-arceus" IS included, unlike BDSP — Hisuian forms
+	// (see REGIONAL_FORMS) are real browsable rows now, and legends-arceus is
+	// the ONLY version group any Hisuian variety's own moves ever appear
+	// under (verified live against growlithe-hisui: version groups present
+	// are exactly ["scarlet-violet", "legends-arceus"], neither of which was
+	// in this table before — without this entry every Hisuian row shows zero
+	// moves, not just a suboptimal fallback). resolveTabsForGen only ever
+	// surfaces a tab a species actually has moves for, so this stays inert
+	// for the ~80 ordinary Galar natives with no Legends: Arceus appearance
+	// and only lights up for the handful of species (Hisuian or not) that
+	// were actually catchable there.
+	8: [
+		{ key: "sword-shield", label: "Sw/Sh" },
+		{ key: "legends-arceus", label: "Legends: Arceus" },
+	],
 };
 
 // Every version group any tab above reads, across every supported
@@ -268,6 +281,15 @@ export const REGIONAL_FORMS: Record<string, { label: string; generationId: numbe
 	// gap, not a new one introduced here).
 	galar: { label: "Galarian", generationId: 8 },
 	"galar-standard": { label: "Galarian", generationId: 8 },
+	// Hisuian forms span 16 species (verified live via a full /pokemon
+	// name-suffix scan), all already-shipped Gen 1/4/5/7 species (Growlithe/
+	// Arcanine, Voltorb/Electrode, Typhlosion, Qwilfish, Sneasel, Samurott,
+	// Lilligant, Zorua/Zoroark, Braviary, Sliggoo/Goodra, Avalugg, Decidueye).
+	// PokeAPI tags their origin version-group (legends-arceus) as
+	// generation-viii — same bucket as Galarian, no new GENERATIONS entry
+	// needed. See docs/multi-gen-expansion-plan.md's "Explicitly deferred"
+	// section for the go/no-go history.
+	hisui: { label: "Hisuian", generationId: 8 },
 };
 
 export const STAT_NAMES = [

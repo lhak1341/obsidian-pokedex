@@ -179,6 +179,7 @@ describe("normalizeEvolutionChain", () => {
 			held_item: null, min_beauty: null, relative_physical_stats: null, location: null,
 			known_move: null, party_species: null, gender: null, trade_species: null,
 			needs_overworld_rain: false, turn_upside_down: false, base_form: null, evolved_form: null, region: null, min_damage_taken: null,
+			used_move: null, min_move_count: null,
 			...overrides,
 		};
 	}
@@ -320,6 +321,46 @@ describe("normalizeEvolutionChain", () => {
 			},
 		],
 	};
+
+	// Qwilfish-hisui-shaped (Hisuian forms): a single child (Overqwil) whose
+	// entries are ALL base_form "qwilfish-hisui" (no plain Qwilfish evolution
+	// exists at all) with a use-move trigger carrying used_move/min_move_count
+	// instead of any level/item condition — verified live against the real
+	// /evolution-chain/106 response (three entries share the same base_form,
+	// differing only by version_group; .find() picks the first, which happens
+	// to be the legends-arceus/strong-style-move one — exactly the game this
+	// Hisuian row represents).
+	const qwilfishChain: RawEvolutionChainLink = {
+		species: { name: "qwilfish", url: "https://pokeapi.co/api/v2/pokemon-species/211/" },
+		evolution_details: [],
+		evolves_to: [
+			{
+				species: { name: "overqwil", url: "https://pokeapi.co/api/v2/pokemon-species/904/" },
+				evolution_details: [
+					evolutionDetail({
+						trigger: { name: "strong-style-move", url: "" },
+						used_move: { name: "barb-barrage", url: "" },
+						min_move_count: 20,
+						base_form: { name: "qwilfish-hisui", url: "https://pokeapi.co/api/v2/pokemon/10234/" },
+					}),
+				],
+				evolves_to: [],
+			},
+		],
+	};
+
+	it("normalizes a use-move evolution's used_move/min_move_count (Hisuian Qwilfish -> Overqwil)", () => {
+		const node = normalizeEvolutionChain(qwilfishChain, {
+			formSuffix: "hisui",
+			ownFormSuffix: "hisui",
+			rootId: 10234,
+			speciesName: "qwilfish",
+		});
+		expect(node.children.map((c) => c.name)).toEqual(["overqwil"]);
+		expect(node.children[0].usedMove).toBe("barb-barrage");
+		expect(node.children[0].minMoveCount).toBe(20);
+		expect(node.children[0].trigger).toBe("strong-style-move");
+	});
 
 	it("drops the sibling branch a dedicated regional entry doesn't own (Yamask viewed as base)", () => {
 		const node = normalizeEvolutionChain(yamaskChain);
@@ -543,10 +584,10 @@ describe("collectChainIds", () => {
 			needsOverworldRain: false,
 			turnUpsideDown: false,
 			region: null,
-			minDamageTaken: null,
+			minDamageTaken: null, usedMove: null, minMoveCount: null,
 			children: [
-				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, children: [] },
-				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, children: [] },
+				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, children: [] },
+				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, children: [] },
 			],
 		};
 		expect(collectChainIds(forked)).toEqual([1, 2, 3]);
@@ -593,8 +634,8 @@ describe("nextEvolutionLevels", () => {
 			needsOverworldRain: false,
 			turnUpsideDown: false,
 			region: null,
-			minDamageTaken: null,
-			children: [{ id: 2, dexNumber: 2, formLabel: null, name: "evolved", minLevel: null, trigger: "trade", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, children: [] }],
+			minDamageTaken: null, usedMove: null, minMoveCount: null,
+			children: [{ id: 2, dexNumber: 2, formLabel: null, name: "evolved", minLevel: null, trigger: "trade", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, children: [] }],
 		};
 		expect(nextEvolutionLevels(itemEvolution, 1)).toEqual([]);
 	});
@@ -621,11 +662,11 @@ describe("nextEvolutionLevels", () => {
 			needsOverworldRain: false,
 			turnUpsideDown: false,
 			region: null,
-			minDamageTaken: null,
+			minDamageTaken: null, usedMove: null, minMoveCount: null,
 			children: [
-				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, children: [] },
-				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: 10, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, children: [] },
-				{ id: 4, dexNumber: 4, formLabel: null, name: "branch-c", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, children: [] },
+				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, children: [] },
+				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: 10, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, children: [] },
+				{ id: 4, dexNumber: 4, formLabel: null, name: "branch-c", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, children: [] },
 			],
 		};
 		expect(nextEvolutionLevels(forked, 1)).toEqual([10, 20]);
@@ -655,7 +696,7 @@ describe("describeEvolutionRequirement", () => {
 			needsOverworldRain: false,
 			turnUpsideDown: false,
 			region: null,
-			minDamageTaken: null,
+			minDamageTaken: null, usedMove: null, minMoveCount: null,
 			children: [],
 			...overrides,
 		};
@@ -763,8 +804,16 @@ describe("describeEvolutionRequirement", () => {
 
 	it("labels a take-damage evolution with its threshold (e.g. Runerigus)", () => {
 		expect(
-			describeEvolutionRequirement(node({ minDamageTaken: 49, trigger: "take-damage" })),
+			describeEvolutionRequirement(node({ minDamageTaken: 49, usedMove: null, minMoveCount: null, trigger: "take-damage" })),
 		).toBe("Take 49+ dmg");
+	});
+
+	it("labels a use-move evolution with the move and count (e.g. Hisuian Qwilfish -> Overqwil)", () => {
+		expect(
+			describeEvolutionRequirement(
+				node({ usedMove: "barb-barrage", minMoveCount: 20, trigger: "strong-style-move" }),
+			),
+		).toBe("barb barrage x20");
 	});
 
 	it("appends a region suffix to a base label (e.g. Mime Jr. -> Galarian Mr. Mime)", () => {

@@ -70,23 +70,23 @@
     "semantic_hash": ""
   },
   "src/data/constants.ts": {
-    "mtime": 1784735935.8709476,
-    "ast_hash": "a080c29f312f97e0f3683cca22eb487a",
+    "mtime": 1784769656.8696136,
+    "ast_hash": "3d50952eb925f419c434d6a0fb278738",
     "semantic_hash": ""
   },
   "src/data/normalize.test.ts": {
-    "mtime": 1784767845.9406934,
-    "ast_hash": "809b4e7c2c8db97b38c743aa353fbd07",
+    "mtime": 1784769127.6015525,
+    "ast_hash": "e5f40d1e77fd8388564e4e6d676edd52",
     "semantic_hash": ""
   },
   "src/data/normalize.ts": {
-    "mtime": 1784767791.4120638,
-    "ast_hash": "db2d24e433ba8a658104bd2803fa03f0",
+    "mtime": 1784769046.1581604,
+    "ast_hash": "b2b7f38b04e0b8ed8888d11ec6bce36c",
     "semantic_hash": ""
   },
   "src/data/types.ts": {
-    "mtime": 1784735429.1772175,
-    "ast_hash": "83d843bf6b52cc1ca430502f08699350",
+    "mtime": 1784769037.281566,
+    "ast_hash": "0028294d6f6263af8c83e304f8089f98",
     "semantic_hash": ""
   },
   "src/main.ts": {
@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   "src/view/components/DetailScreen.svelte": {
-    "mtime": 1784738009.0482771,
-    "ast_hash": "0599c767e7c06e46637e7faf83b090b4",
+    "mtime": 1784769489.6494627,
+    "ast_hash": "67fa2b6271b2797006391bac6afff421",
     "semantic_hash": ""
   },
   "src/view/components/EvolutionChain.svelte": {
@@ -365,8 +365,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1784768625.9160278,
-    "ast_hash": "4a18efb0cd41393d0eddc80b597043c0",
+    "mtime": 1784770825.798265,
+    "ast_hash": "7fe6df7f513aa1e700db1d80b6be4244",
     "semantic_hash": ""
   },
   "CONTEXT.md": {
@@ -380,8 +380,8 @@
     "semantic_hash": ""
   },
   "docs/multi-gen-expansion-plan.md": {
-    "mtime": 1784736649.0386107,
-    "ast_hash": "738df35babfcc40153077f7089304efa",
+    "mtime": 1784770846.7127323,
+    "ast_hash": "e1e730b5f4bd996c03bffe1276247e6a",
     "semantic_hash": ""
   },
   "src/utils/pokemonDisplay.ts": {
@@ -405,13 +405,13 @@
     "semantic_hash": ""
   },
   "src/utils/dexNav.test.ts": {
-    "mtime": 1784735544.6891375,
-    "ast_hash": "a49a39644eb3c8653ce1f99729fa2841",
+    "mtime": 1784769509.4334404,
+    "ast_hash": "c3398c9e7a215e972c10f1695cd8aa8c",
     "semantic_hash": ""
   },
   "src/utils/dexNav.ts": {
-    "mtime": 1784649438.403288,
-    "ast_hash": "7a2db2990f0b30ebfbda3745ef91606a",
+    "mtime": 1784769475.8831136,
+    "ast_hash": "899b02205ac14b97825cd76530f75e88",
     "semantic_hash": ""
   },
   "src/view/DetailNavigationState.test.ts": {
