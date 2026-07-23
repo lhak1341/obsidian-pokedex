@@ -791,8 +791,8 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "src_data_cache_diskcache_exists",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 3,
+      "community_name": "PokedexRepository",
       "norm_label": ".exists()"
     },
     {
@@ -890,8 +890,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_data_pokeapiclient",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": "pokeapiclient.ts"
     },
     {
@@ -901,8 +901,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_data_pokeapiclient_httperror",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": "httperror"
     },
     {
@@ -912,8 +912,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "src_data_pokeapiclient_httperror_constructor",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": ".constructor()"
     },
     {
@@ -923,8 +923,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "src_data_pokeapiclient_pokeapiclient",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": "pokeapiclient"
     },
     {
@@ -934,8 +934,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "src_data_pokeapiclient_pokeapiclient_getjson",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": ".getjson()"
     },
     {
@@ -956,8 +956,8 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "src_data_pokeapiclient_pokeapiclient_fetchspecies",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": ".fetchspecies()"
     },
     {
@@ -967,8 +967,8 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "src_data_pokeapiclient_pokeapiclient_fetchevolutionchain",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": ".fetchevolutionchain()"
     },
     {
@@ -978,8 +978,8 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "src_data_pokeapiclient_pokeapiclient_fetchability",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": ".fetchability()"
     },
     {
@@ -989,8 +989,8 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "src_data_pokeapiclient_pokeapiclient_fetchitem",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": ".fetchitem()"
     },
     {
@@ -1000,8 +1000,8 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "src_data_pokeapiclient_pokeapiclient_fetchmove",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": ".fetchmove()"
     },
     {
@@ -1011,8 +1011,8 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "src_data_pokeapiclient_pokeapiclient_fetchpokemonlist",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": ".fetchpokemonlist()"
     },
     {
@@ -1022,8 +1022,8 @@
       "source_location": "L80",
       "_origin": "ast",
       "id": "src_data_pokeapiclient_pokeapiclient_fetchimagebinary",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": ".fetchimagebinary()"
     },
     {
@@ -1066,8 +1066,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_data_pokedexrepository",
-      "community": 3,
-      "community_name": "PokedexRepository",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "pokedexrepository.ts"
     },
     {
@@ -1077,8 +1077,8 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "src_data_pokedexrepository_tableloadresult",
-      "community": 3,
-      "community_name": "PokedexRepository",
+      "community": 0,
+      "community_name": "constants.ts",
       "norm_label": "tableloadresult"
     },
     {
@@ -1258,10 +1258,21 @@
       "norm_label": ".getmovedetailsformoves()"
     },
     {
+      "label": ".fetchVarietyForm()",
+      "file_type": "code",
+      "source_file": "src/data/PokedexRepository.ts",
+      "source_location": "L375",
+      "_origin": "ast",
+      "id": "src_data_pokedexrepository_pokedexrepository_fetchvarietyform",
+      "community": 3,
+      "community_name": "PokedexRepository",
+      "norm_label": ".fetchvarietyform()"
+    },
+    {
       "label": ".getMegaForm()",
       "file_type": "code",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L368",
+      "source_location": "L419",
       "_origin": "ast",
       "id": "src_data_pokedexrepository_pokedexrepository_getmegaform",
       "community": 3,
@@ -1272,18 +1283,18 @@
       "label": ".getGigantamaxForm()",
       "file_type": "code",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L408",
+      "source_location": "L427",
       "_origin": "ast",
       "id": "src_data_pokedexrepository_pokedexrepository_getgigantamaxform",
-      "community": 3,
-      "community_name": "PokedexRepository",
+      "community": 14,
+      "community_name": "VarietyToggleState",
       "norm_label": ".getgigantamaxform()"
     },
     {
       "label": ".isIdCached()",
       "file_type": "code",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L439",
+      "source_location": "L437",
       "_origin": "ast",
       "id": "src_data_pokedexrepository_pokedexrepository_isidcached",
       "community": 3,
@@ -1294,7 +1305,7 @@
       "label": ".isExtrasCached()",
       "file_type": "code",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L458",
+      "source_location": "L456",
       "_origin": "ast",
       "id": "src_data_pokedexrepository_pokedexrepository_isextrascached",
       "community": 3,
@@ -1305,7 +1316,7 @@
       "label": ".getCacheStatus()",
       "file_type": "code",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L477",
+      "source_location": "L475",
       "_origin": "ast",
       "id": "src_data_pokedexrepository_pokedexrepository_getcachestatus",
       "community": 3,
@@ -1316,7 +1327,7 @@
       "label": ".clearRange()",
       "file_type": "code",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L506",
+      "source_location": "L504",
       "_origin": "ast",
       "id": "src_data_pokedexrepository_pokedexrepository_clearrange",
       "community": 3,
@@ -1327,7 +1338,7 @@
       "label": ".cacheRange()",
       "file_type": "code",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L564",
+      "source_location": "L562",
       "_origin": "ast",
       "id": "src_data_pokedexrepository_pokedexrepository_cacherange",
       "community": 3,
@@ -1338,7 +1349,7 @@
       "label": ".refreshRange()",
       "file_type": "code",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L593",
+      "source_location": "L591",
       "_origin": "ast",
       "id": "src_data_pokedexrepository_pokedexrepository_refreshrange",
       "community": 3,
@@ -1349,7 +1360,7 @@
       "label": ".getRowsForIds()",
       "file_type": "code",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L618",
+      "source_location": "L616",
       "_origin": "ast",
       "id": "src_data_pokedexrepository_pokedexrepository_getrowsforids",
       "community": 3,
@@ -1360,7 +1371,7 @@
       "label": ".getTableRows()",
       "file_type": "code",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L691",
+      "source_location": "L689",
       "_origin": "ast",
       "id": "src_data_pokedexrepository_pokedexrepository_gettablerows",
       "community": 3,
@@ -1371,7 +1382,7 @@
       "label": ".retryRows()",
       "file_type": "code",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L704",
+      "source_location": "L702",
       "_origin": "ast",
       "id": "src_data_pokedexrepository_pokedexrepository_retryrows",
       "community": 3,
@@ -1382,7 +1393,7 @@
       "label": ".getEntryCore()",
       "file_type": "code",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L719",
+      "source_location": "L717",
       "_origin": "ast",
       "id": "src_data_pokedexrepository_pokedexrepository_getentrycore",
       "community": 3,
@@ -1393,7 +1404,7 @@
       "label": ".getEntryExtras()",
       "file_type": "code",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L726",
+      "source_location": "L724",
       "_origin": "ast",
       "id": "src_data_pokedexrepository_pokedexrepository_getentryextras",
       "community": 3,
@@ -1404,7 +1415,7 @@
       "label": ".getEntryChainVisuals()",
       "file_type": "code",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L790",
+      "source_location": "L788",
       "_origin": "ast",
       "id": "src_data_pokedexrepository_pokedexrepository_getentrychainvisuals",
       "community": 3,
@@ -1415,11 +1426,11 @@
       "label": "ADR-0002",
       "file_type": "concept",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L376",
+      "source_location": "L361",
       "_origin": "ast",
       "id": "docref_adr_0002",
-      "community": 3,
-      "community_name": "PokedexRepository",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "adr-0002"
     },
     {
@@ -1429,8 +1440,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_data_fixtures_fakes",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": "fakes.ts"
     },
     {
@@ -1946,8 +1957,8 @@
       "source_location": "L94",
       "_origin": "ast",
       "id": "src_data_normalize_trimmovestoversiongroups",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 3,
+      "community_name": "PokedexRepository",
       "norm_label": "trimmovestoversiongroups()"
     },
     {
@@ -2034,8 +2045,8 @@
       "source_location": "L424",
       "_origin": "ast",
       "id": "src_data_normalize_collectchainids",
-      "community": 2,
-      "community_name": "types.ts",
+      "community": 3,
+      "community_name": "PokedexRepository",
       "norm_label": "collectchainids()"
     },
     {
@@ -2100,8 +2111,8 @@
       "source_location": "L598",
       "_origin": "ast",
       "id": "src_data_normalize_trimflavortextentries",
-      "community": 3,
-      "community_name": "PokedexRepository",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "trimflavortextentries()"
     },
     {
@@ -2177,8 +2188,8 @@
       "source_location": "L716",
       "_origin": "ast",
       "id": "src_data_normalize_togigantamaxformdetail",
-      "community": 3,
-      "community_name": "PokedexRepository",
+      "community": 14,
+      "community_name": "VarietyToggleState",
       "norm_label": "togigantamaxformdetail()"
     },
     {
@@ -2254,8 +2265,8 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "src_data_types_rawspecies",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": "rawspecies"
     },
     {
@@ -2276,8 +2287,8 @@
       "source_location": "L130",
       "_origin": "ast",
       "id": "src_data_types_rawevolutionchain",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": "rawevolutionchain"
     },
     {
@@ -2287,8 +2298,8 @@
       "source_location": "L135",
       "_origin": "ast",
       "id": "src_data_types_rawability",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": "rawability"
     },
     {
@@ -2298,8 +2309,8 @@
       "source_location": "L144",
       "_origin": "ast",
       "id": "src_data_types_rawitem",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": "rawitem"
     },
     {
@@ -2309,8 +2320,8 @@
       "source_location": "L149",
       "_origin": "ast",
       "id": "src_data_types_rawpokemonlistresponse",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": "rawpokemonlistresponse"
     },
     {
@@ -2353,8 +2364,8 @@
       "source_location": "L228",
       "_origin": "ast",
       "id": "src_data_types_rawmove",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": "rawmove"
     },
     {
@@ -2375,8 +2386,8 @@
       "source_location": "L255",
       "_origin": "ast",
       "id": "src_data_types_evolutionchainvisual",
-      "community": 5,
-      "community_name": "DiskCache",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "evolutionchainvisual"
     },
     {
@@ -2386,8 +2397,8 @@
       "source_location": "L260",
       "_origin": "ast",
       "id": "src_data_types_evyieldentry",
-      "community": 5,
-      "community_name": "DiskCache",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "evyieldentry"
     },
     {
@@ -2408,8 +2419,8 @@
       "source_location": "L272",
       "_origin": "ast",
       "id": "src_data_types_pokedextablerow",
-      "community": 3,
-      "community_name": "PokedexRepository",
+      "community": 0,
+      "community_name": "constants.ts",
       "norm_label": "pokedextablerow"
     },
     {
@@ -2430,8 +2441,8 @@
       "source_location": "L371",
       "_origin": "ast",
       "id": "src_data_types_megaformsummary",
-      "community": 5,
-      "community_name": "DiskCache",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "megaformsummary"
     },
     {
@@ -2441,8 +2452,8 @@
       "source_location": "L379",
       "_origin": "ast",
       "id": "src_data_types_gigantamaxformsummary",
-      "community": 5,
-      "community_name": "DiskCache",
+      "community": 2,
+      "community_name": "types.ts",
       "norm_label": "gigantamaxformsummary"
     },
     {
@@ -2463,8 +2474,8 @@
       "source_location": "L399",
       "_origin": "ast",
       "id": "src_data_types_gigantamaxformdetail",
-      "community": 5,
-      "community_name": "DiskCache",
+      "community": 14,
+      "community_name": "VarietyToggleState",
       "norm_label": "gigantamaxformdetail"
     },
     {
@@ -2474,8 +2485,8 @@
       "source_location": "L409",
       "_origin": "ast",
       "id": "src_data_types_megaformdetail",
-      "community": 5,
-      "community_name": "DiskCache",
+      "community": 14,
+      "community_name": "VarietyToggleState",
       "norm_label": "megaformdetail"
     },
     {
@@ -2870,8 +2881,8 @@
       "source_location": "L72",
       "_origin": "ast",
       "id": "src_utils_filterpokemon_isidingenerations",
-      "community": 3,
-      "community_name": "PokedexRepository",
+      "community": 0,
+      "community_name": "constants.ts",
       "norm_label": "isidingenerations()"
     },
     {
@@ -3442,8 +3453,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_utils_retry_test",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": "retry.test.ts"
     },
     {
@@ -3453,8 +3464,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_utils_retry",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": "retry.ts"
     },
     {
@@ -3464,8 +3475,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_utils_retry_retryoptions",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": "retryoptions"
     },
     {
@@ -3475,8 +3486,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_utils_retry_sleep",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": "sleep()"
     },
     {
@@ -3486,8 +3497,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "src_utils_retry_isretryablehttperror",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": "isretryablehttperror()"
     },
     {
@@ -3497,8 +3508,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "src_utils_retry_withretry",
-      "community": 10,
-      "community_name": "PokeApiClient",
+      "community": 5,
+      "community_name": "DiskCache",
       "norm_label": "withretry()"
     },
     {
@@ -4115,8 +4126,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_view_pokedexloadstate_test",
-      "community": 3,
-      "community_name": "PokedexRepository",
+      "community": 0,
+      "community_name": "constants.ts",
       "norm_label": "pokedexloadstate.test.ts"
     },
     {
@@ -4137,8 +4148,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_view_pokedexloadstate",
-      "community": 3,
-      "community_name": "PokedexRepository",
+      "community": 0,
+      "community_name": "constants.ts",
       "norm_label": "pokedexloadstate.ts"
     },
     {
@@ -4148,8 +4159,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "src_view_pokedexloadstate_pokedexloadstate",
-      "community": 3,
-      "community_name": "PokedexRepository",
+      "community": 0,
+      "community_name": "constants.ts",
       "norm_label": "pokedexloadstate"
     },
     {
@@ -4159,8 +4170,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_view_pokedexloadstate_pokedexloadstate_constructor",
-      "community": 3,
-      "community_name": "PokedexRepository",
+      "community": 0,
+      "community_name": "constants.ts",
       "norm_label": ".constructor()"
     },
     {
@@ -4170,8 +4181,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "src_view_pokedexloadstate_pokedexloadstate_cancel",
-      "community": 3,
-      "community_name": "PokedexRepository",
+      "community": 0,
+      "community_name": "constants.ts",
       "norm_label": ".cancel()"
     },
     {
@@ -4181,8 +4192,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "src_view_pokedexloadstate_pokedexloadstate_mergerows",
-      "community": 3,
-      "community_name": "PokedexRepository",
+      "community": 0,
+      "community_name": "constants.ts",
       "norm_label": ".mergerows()"
     },
     {
@@ -4192,8 +4203,8 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "src_view_pokedexloadstate_pokedexloadstate_load",
-      "community": 3,
-      "community_name": "PokedexRepository",
+      "community": 0,
+      "community_name": "constants.ts",
       "norm_label": ".load()"
     },
     {
@@ -4203,8 +4214,8 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "src_view_pokedexloadstate_pokedexloadstate_retry",
-      "community": 3,
-      "community_name": "PokedexRepository",
+      "community": 0,
+      "community_name": "constants.ts",
       "norm_label": ".retry()"
     },
     {
@@ -4318,6 +4329,127 @@
       "norm_label": ".mountapp()"
     },
     {
+      "label": "VarietyToggleState.test.ts",
+      "file_type": "code",
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_view_varietytogglestate_test",
+      "community": 10,
+      "community_name": "PokeApiClient",
+      "norm_label": "varietytogglestate.test.ts"
+    },
+    {
+      "label": "makeState()",
+      "file_type": "code",
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "src_view_varietytogglestate_test_makestate",
+      "community": 10,
+      "community_name": "PokeApiClient",
+      "norm_label": "makestate()"
+    },
+    {
+      "label": "tick()",
+      "file_type": "code",
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L16",
+      "_origin": "ast",
+      "id": "src_view_varietytogglestate_test_tick",
+      "community": 10,
+      "community_name": "PokeApiClient",
+      "norm_label": "tick()"
+    },
+    {
+      "label": "VarietyToggleState.ts",
+      "file_type": "code",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_view_varietytogglestate",
+      "community": 14,
+      "community_name": "VarietyToggleState",
+      "norm_label": "varietytogglestate.ts"
+    },
+    {
+      "label": "VarietyToggleSnapshot",
+      "file_type": "code",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L13",
+      "_origin": "ast",
+      "id": "src_view_varietytogglestate_varietytogglesnapshot",
+      "community": 14,
+      "community_name": "VarietyToggleState",
+      "norm_label": "varietytogglesnapshot"
+    },
+    {
+      "label": "VarietyToggleState",
+      "file_type": "code",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L20",
+      "_origin": "ast",
+      "id": "src_view_varietytogglestate_varietytogglestate",
+      "community": 14,
+      "community_name": "VarietyToggleState",
+      "norm_label": "varietytogglestate"
+    },
+    {
+      "label": ".constructor()",
+      "file_type": "code",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L26",
+      "_origin": "ast",
+      "id": "src_view_varietytogglestate_varietytogglestate_constructor",
+      "community": 14,
+      "community_name": "VarietyToggleState",
+      "norm_label": ".constructor()"
+    },
+    {
+      "label": ".snapshot()",
+      "file_type": "code",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L28",
+      "_origin": "ast",
+      "id": "src_view_varietytogglestate_varietytogglestate_snapshot",
+      "community": 14,
+      "community_name": "VarietyToggleState",
+      "norm_label": ".snapshot()"
+    },
+    {
+      "label": ".resetSelection()",
+      "file_type": "code",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L41",
+      "_origin": "ast",
+      "id": "src_view_varietytogglestate_varietytogglestate_resetselection",
+      "community": 14,
+      "community_name": "VarietyToggleState",
+      "norm_label": ".resetselection()"
+    },
+    {
+      "label": ".selectMega()",
+      "file_type": "code",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L53",
+      "_origin": "ast",
+      "id": "src_view_varietytogglestate_varietytogglestate_selectmega",
+      "community": 14,
+      "community_name": "VarietyToggleState",
+      "norm_label": ".selectmega()"
+    },
+    {
+      "label": ".selectGigantamax()",
+      "file_type": "code",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L68",
+      "_origin": "ast",
+      "id": "src_view_varietytogglestate_varietytogglestate_selectgigantamax",
+      "community": 14,
+      "community_name": "VarietyToggleState",
+      "norm_label": ".selectgigantamax()"
+    },
+    {
       "label": "./AbilitiesPanel.svelte",
       "file_type": "code",
       "source_file": "src/view/components/AbilitiesPanel.svelte",
@@ -4353,43 +4485,10 @@
       "norm_label": "./barrow.svelte"
     },
     {
-      "label": "activePortraitSource",
-      "file_type": "code",
-      "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L149",
-      "_origin": "ast",
-      "id": "src_view_components_detailscreen_activeportraitsource",
-      "community": 1,
-      "community_name": "DetailScreen.svelte",
-      "norm_label": "activeportraitsource"
-    },
-    {
-      "label": "portraitUri",
-      "file_type": "code",
-      "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L150",
-      "_origin": "ast",
-      "id": "src_view_components_detailscreen_portraituri",
-      "community": 1,
-      "community_name": "DetailScreen.svelte",
-      "norm_label": "portraituri"
-    },
-    {
-      "label": "femalePct",
-      "file_type": "code",
-      "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L157",
-      "_origin": "ast",
-      "id": "src_view_components_detailscreen_femalepct",
-      "community": 1,
-      "community_name": "DetailScreen.svelte",
-      "norm_label": "femalepct"
-    },
-    {
       "label": "malePct",
       "file_type": "code",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L160",
+      "source_location": "L146",
       "_origin": "ast",
       "id": "src_view_components_detailscreen_malepct",
       "community": 1,
@@ -4400,7 +4499,7 @@
       "label": "accentColor",
       "file_type": "code",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L168",
+      "source_location": "L154",
       "_origin": "ast",
       "id": "src_view_components_detailscreen_accentcolor",
       "community": 1,
@@ -4411,7 +4510,7 @@
       "label": "evolvesAtLevels",
       "file_type": "code",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L176",
+      "source_location": "L162",
       "_origin": "ast",
       "id": "src_view_components_detailscreen_evolvesatlevels",
       "community": 1,
@@ -4422,7 +4521,7 @@
       "label": "startLoad()",
       "file_type": "code",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L182",
+      "source_location": "L168",
       "_origin": "ast",
       "id": "src_view_components_detailscreen_startload",
       "community": 1,
@@ -4433,7 +4532,7 @@
       "label": "retry()",
       "file_type": "code",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L208",
+      "source_location": "L194",
       "_origin": "ast",
       "id": "src_view_components_detailscreen_retry",
       "community": 1,
@@ -4444,7 +4543,7 @@
       "label": "adjacent",
       "file_type": "code",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L218",
+      "source_location": "L204",
       "_origin": "ast",
       "id": "src_view_components_detailscreen_adjacent",
       "community": 1,
@@ -4455,7 +4554,7 @@
       "label": "var()",
       "file_type": "code",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L607",
+      "source_location": "L597",
       "_origin": "ast",
       "id": "src_view_components_detailscreen_var",
       "community": 1,
@@ -4670,6 +4769,17 @@
       "community": 1,
       "community_name": "DetailScreen.svelte",
       "norm_label": "../../utils/stats"
+    },
+    {
+      "label": "../VarietyToggleState",
+      "file_type": "code",
+      "source_file": "src/view/VarietyToggleState",
+      "confidence": "EXTRACTED",
+      "_origin": "ast",
+      "id": "users_lhak_workspace_github_com_lhak1341_obsidian_pokedex_src_view_varietytogglestate",
+      "community": 1,
+      "community_name": "DetailScreen.svelte",
+      "norm_label": "../varietytogglestate"
     },
     {
       "label": "./EvolutionChain.svelte",
@@ -5302,6 +5412,17 @@
       "norm_label": "view history"
     },
     {
+      "label": "Variety toggle",
+      "file_type": "document",
+      "source_file": "CONTEXT.md",
+      "source_location": "L39",
+      "_origin": "ast",
+      "id": "context_variety_toggle",
+      "community": 12,
+      "community_name": "Domain glossary",
+      "norm_label": "variety toggle"
+    },
+    {
       "label": "README.md",
       "file_type": "document",
       "source_file": "README.md",
@@ -5410,6 +5531,50 @@
       "community": 33,
       "community_name": "0003-pokedexview-stays-untested.md",
       "norm_label": "pokedexview.ts stays untested by convention"
+    },
+    {
+      "label": "0004-repository-cache-fields-not-a-slot-registry.md",
+      "file_type": "document",
+      "source_file": "docs/adr/0004-repository-cache-fields-not-a-slot-registry.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_adr_0004_repository_cache_fields_not_a_slot_registry",
+      "community": 20,
+      "community_name": "0004-repository-cache-fields-not-a-slot-registry.md",
+      "norm_label": "0004-repository-cache-fields-not-a-slot-registry.md"
+    },
+    {
+      "label": "PokedexRepository's per-entity mem-cache fields stay separate declarations",
+      "file_type": "document",
+      "source_file": "docs/adr/0004-repository-cache-fields-not-a-slot-registry.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_adr_0004_repository_cache_fields_not_a_slot_registry_pokedexrepository_s_per_entity_mem_cache_fields_stay_separate_declarations",
+      "community": 20,
+      "community_name": "0004-repository-cache-fields-not-a-slot-registry.md",
+      "norm_label": "pokedexrepository's per-entity mem-cache fields stay separate declarations"
+    },
+    {
+      "label": "0005-evolution-node-branch-selection-not-extracted.md",
+      "file_type": "document",
+      "source_file": "docs/adr/0005-evolution-node-branch-selection-not-extracted.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_adr_0005_evolution_node_branch_selection_not_extracted",
+      "community": 26,
+      "community_name": "0005-evolution-node-branch-selection-not-extracted.md",
+      "norm_label": "0005-evolution-node-branch-selection-not-extracted.md"
+    },
+    {
+      "label": "buildEvolutionNode's priority-chain decision stays inline",
+      "file_type": "document",
+      "source_file": "docs/adr/0005-evolution-node-branch-selection-not-extracted.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_adr_0005_evolution_node_branch_selection_not_extracted_buildevolutionnode_s_priority_chain_decision_stays_inline",
+      "community": 26,
+      "community_name": "0005-evolution-node-branch-selection-not-extracted.md",
+      "norm_label": "buildevolutionnode's priority-chain decision stays inline"
     },
     {
       "label": "multi-gen-expansion-plan.md",
@@ -6435,6 +6600,17 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_test",
+      "target": "src_data_cache",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -6684,6 +6860,17 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_test",
+      "target": "src_data_cache_diskcache",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -6736,6 +6923,17 @@
       "source_location": "L16",
       "weight": 1.0,
       "source": "src_view_pokedexloadstate_test_makeloadstate",
+      "target": "src_data_cache_diskcache_fortest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_test_makestate",
       "target": "src_data_cache_diskcache_fortest"
     },
     {
@@ -6838,6 +7036,17 @@
       "target": "src_data_cache_diskcache_resolve"
     },
     {
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L17",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_test_tick",
+      "target": "src_data_cache_diskcache_resolve"
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -6865,7 +7074,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L460",
+      "source_location": "L458",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_isextrascached",
       "target": "src_data_cache_diskcache_exists"
@@ -6876,7 +7085,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L441",
+      "source_location": "L439",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_isidcached",
       "target": "src_data_cache_diskcache_exists"
@@ -6887,20 +7096,9 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L430",
+      "source_location": "L408",
       "weight": 1.0,
-      "source": "src_data_pokedexrepository_pokedexrepository_getgigantamaxform",
-      "target": "src_data_cache_diskcache_writejson"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L397",
-      "weight": 1.0,
-      "source": "src_data_pokedexrepository_pokedexrepository_getmegaform",
+      "source": "src_data_pokedexrepository_pokedexrepository_fetchvarietyform",
       "target": "src_data_cache_diskcache_writejson"
     },
     {
@@ -6975,7 +7173,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L520",
+      "source_location": "L518",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_clearrange",
       "target": "src_data_cache_diskcache_remove"
@@ -7447,20 +7645,9 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L416",
+      "source_location": "L394",
       "weight": 1.0,
-      "source": "src_data_pokedexrepository_pokedexrepository_getgigantamaxform",
-      "target": "src_data_pokeapiclient_pokeapiclient_fetchpokemon"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L383",
-      "weight": 1.0,
-      "source": "src_data_pokedexrepository_pokedexrepository_getmegaform",
+      "source": "src_data_pokedexrepository_pokedexrepository_fetchvarietyform",
       "target": "src_data_pokeapiclient_pokeapiclient_fetchpokemon"
     },
     {
@@ -7729,7 +7916,7 @@
       "relation": "cites",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L376",
+      "source_location": "L361",
       "weight": 1.0,
       "source": "src_data_pokedexrepository",
       "target": "docref_adr_0002",
@@ -8152,6 +8339,28 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate",
+      "target": "src_data_pokedexrepository",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_test",
+      "target": "src_data_pokedexrepository",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "references",
       "context": "field",
       "confidence": "EXTRACTED",
@@ -8188,7 +8397,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L564",
+      "source_location": "L562",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository",
       "target": "src_data_pokedexrepository_pokedexrepository_cacherange",
@@ -8198,7 +8407,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L506",
+      "source_location": "L504",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository",
       "target": "src_data_pokedexrepository_pokedexrepository_clearrange",
@@ -8228,6 +8437,16 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
+      "source_location": "L375",
+      "weight": 1.0,
+      "source": "src_data_pokedexrepository_pokedexrepository",
+      "target": "src_data_pokedexrepository_pokedexrepository_fetchvarietyform",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/data/PokedexRepository.ts",
       "source_location": "L284",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository",
@@ -8238,7 +8457,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L477",
+      "source_location": "L475",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository",
       "target": "src_data_pokedexrepository_pokedexrepository_getcachestatus",
@@ -8248,7 +8467,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L790",
+      "source_location": "L788",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository",
       "target": "src_data_pokedexrepository_pokedexrepository_getentrychainvisuals",
@@ -8258,7 +8477,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L719",
+      "source_location": "L717",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository",
       "target": "src_data_pokedexrepository_pokedexrepository_getentrycore",
@@ -8268,7 +8487,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L726",
+      "source_location": "L724",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository",
       "target": "src_data_pokedexrepository_pokedexrepository_getentryextras",
@@ -8278,7 +8497,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L408",
+      "source_location": "L427",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository",
       "target": "src_data_pokedexrepository_pokedexrepository_getgigantamaxform",
@@ -8298,7 +8517,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L368",
+      "source_location": "L419",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository",
       "target": "src_data_pokedexrepository_pokedexrepository_getmegaform",
@@ -8388,7 +8607,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L618",
+      "source_location": "L616",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository",
       "target": "src_data_pokedexrepository_pokedexrepository_getrowsforids",
@@ -8398,7 +8617,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L691",
+      "source_location": "L689",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository",
       "target": "src_data_pokedexrepository_pokedexrepository_gettablerows",
@@ -8408,7 +8627,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L458",
+      "source_location": "L456",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository",
       "target": "src_data_pokedexrepository_pokedexrepository_isextrascached",
@@ -8418,7 +8637,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L439",
+      "source_location": "L437",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository",
       "target": "src_data_pokedexrepository_pokedexrepository_isidcached",
@@ -8438,7 +8657,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L593",
+      "source_location": "L591",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository",
       "target": "src_data_pokedexrepository_pokedexrepository_refreshrange",
@@ -8448,7 +8667,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L704",
+      "source_location": "L702",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository",
       "target": "src_data_pokedexrepository_pokedexrepository_retryrows",
@@ -8581,6 +8800,39 @@
       "source_location": "L12",
       "weight": 1.0,
       "source": "src_view_pokedexview_pokedexview_constructor",
+      "target": "src_data_pokedexrepository_pokedexrepository",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate",
+      "target": "src_data_pokedexrepository_pokedexrepository",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_test",
+      "target": "src_data_pokedexrepository_pokedexrepository",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L26",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_varietytogglestate_constructor",
       "target": "src_data_pokedexrepository_pokedexrepository",
       "confidence_score": 1.0
     },
@@ -8787,7 +9039,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L794",
+      "source_location": "L792",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentrychainvisuals",
       "target": "src_data_pokedexrepository_pokedexrepository_getorfetchpokemon",
@@ -8798,7 +9050,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L720",
+      "source_location": "L718",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentrycore",
       "target": "src_data_pokedexrepository_pokedexrepository_getorfetchpokemon",
@@ -8809,7 +9061,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L729",
+      "source_location": "L727",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentryextras",
       "target": "src_data_pokedexrepository_pokedexrepository_getorfetchpokemon",
@@ -8842,7 +9094,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L638",
+      "source_location": "L636",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getrowsforids",
       "target": "src_data_pokedexrepository_pokedexrepository_getorfetchpokemon",
@@ -8853,7 +9105,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L461",
+      "source_location": "L459",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_isextrascached",
       "target": "src_data_pokedexrepository_pokedexrepository_getorfetchpokemon",
@@ -8886,7 +9138,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L645",
+      "source_location": "L643",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getrowsforids",
       "target": "src_data_pokedexrepository_pokedexrepository_getorfetchpokemonvariant",
@@ -8897,7 +9149,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L721",
+      "source_location": "L719",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentrycore",
       "target": "src_data_pokedexrepository_pokedexrepository_speciesidfrompokemon",
@@ -8908,7 +9160,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L730",
+      "source_location": "L728",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentryextras",
       "target": "src_data_pokedexrepository_pokedexrepository_speciesidfrompokemon",
@@ -8919,7 +9171,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L639",
+      "source_location": "L637",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getrowsforids",
       "target": "src_data_pokedexrepository_pokedexrepository_speciesidfrompokemon",
@@ -8941,7 +9193,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L721",
+      "source_location": "L719",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentrycore",
       "target": "src_data_pokedexrepository_pokedexrepository_getorfetchspecies",
@@ -8952,7 +9204,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L730",
+      "source_location": "L728",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentryextras",
       "target": "src_data_pokedexrepository_pokedexrepository_getorfetchspecies",
@@ -8996,7 +9248,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L639",
+      "source_location": "L637",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getrowsforids",
       "target": "src_data_pokedexrepository_pokedexrepository_getorfetchspecies",
@@ -9007,7 +9259,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L741",
+      "source_location": "L739",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentryextras",
       "target": "src_data_pokedexrepository_pokedexrepository_getorfetchevolutionchain",
@@ -9029,7 +9281,18 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L795",
+      "source_location": "L396",
+      "weight": 1.0,
+      "source": "src_data_pokedexrepository_pokedexrepository_fetchvarietyform",
+      "target": "src_data_pokedexrepository_pokedexrepository_getorfetchimage",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/data/PokedexRepository.ts",
+      "source_location": "L793",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentrychainvisuals",
       "target": "src_data_pokedexrepository_pokedexrepository_getorfetchimage",
@@ -9040,7 +9303,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L722",
+      "source_location": "L720",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentrycore",
       "target": "src_data_pokedexrepository_pokedexrepository_getorfetchimage",
@@ -9051,7 +9314,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L761",
+      "source_location": "L759",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentryextras",
       "target": "src_data_pokedexrepository_pokedexrepository_getorfetchimage",
@@ -9062,29 +9325,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L418",
-      "weight": 1.0,
-      "source": "src_data_pokedexrepository_pokedexrepository_getgigantamaxform",
-      "target": "src_data_pokedexrepository_pokedexrepository_getorfetchimage",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L385",
-      "weight": 1.0,
-      "source": "src_data_pokedexrepository_pokedexrepository_getmegaform",
-      "target": "src_data_pokedexrepository_pokedexrepository_getorfetchimage",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L640",
+      "source_location": "L638",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getrowsforids",
       "target": "src_data_pokedexrepository_pokedexrepository_getorfetchimage",
@@ -9162,18 +9403,51 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L385",
+      "source_location": "L396",
       "weight": 1.0,
-      "source": "src_data_pokedexrepository_pokedexrepository_getmegaform",
+      "source": "src_data_pokedexrepository_pokedexrepository_fetchvarietyform",
       "target": "src_data_cachepaths_imagepath"
+    },
+    {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/data/PokedexRepository.ts",
+      "source_location": "L375",
+      "weight": 1.0,
+      "source": "src_data_pokedexrepository_pokedexrepository_fetchvarietyform",
+      "target": "src_data_types_rawpokemon",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L396",
+      "source_location": "L428",
+      "weight": 1.0,
+      "source": "src_data_pokedexrepository_pokedexrepository_getgigantamaxform",
+      "target": "src_data_pokedexrepository_pokedexrepository_fetchvarietyform",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/data/PokedexRepository.ts",
+      "source_location": "L420",
+      "weight": 1.0,
+      "source": "src_data_pokedexrepository_pokedexrepository_getmegaform",
+      "target": "src_data_pokedexrepository_pokedexrepository_fetchvarietyform",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "src/data/PokedexRepository.ts",
+      "source_location": "L420",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getmegaform",
       "target": "src_data_normalize_tomegaformdetail"
@@ -9183,7 +9457,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L368",
+      "source_location": "L419",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getmegaform",
       "target": "src_data_types_megaformdetail",
@@ -9194,11 +9468,11 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L418",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L58",
       "weight": 1.0,
-      "source": "src_data_pokedexrepository_pokedexrepository_getgigantamaxform",
-      "target": "src_data_cachepaths_imagepath"
+      "source": "src_view_varietytogglestate_varietytogglestate_selectmega",
+      "target": "src_data_pokedexrepository_pokedexrepository_getmegaform"
     },
     {
       "relation": "calls",
@@ -9216,7 +9490,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L408",
+      "source_location": "L427",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getgigantamaxform",
       "target": "src_data_types_gigantamaxformdetail",
@@ -9226,8 +9500,19 @@
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L73",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_varietytogglestate_selectgigantamax",
+      "target": "src_data_pokedexrepository_pokedexrepository_getgigantamaxform"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L481",
+      "source_location": "L479",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getcachestatus",
       "target": "src_data_pokedexrepository_pokedexrepository_isidcached",
@@ -9239,7 +9524,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L441",
+      "source_location": "L439",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_isidcached",
       "target": "src_data_cachepaths_pokemonpath"
@@ -9250,7 +9535,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L443",
+      "source_location": "L441",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_isidcached",
       "target": "src_data_cachepaths_speciespath"
@@ -9260,7 +9545,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L481",
+      "source_location": "L479",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getcachestatus",
       "target": "src_data_pokedexrepository_pokedexrepository_isextrascached",
@@ -9272,7 +9557,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L459",
+      "source_location": "L457",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_isextrascached",
       "target": "src_data_cachepaths_imagepath"
@@ -9283,7 +9568,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L480",
+      "source_location": "L478",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getcachestatus",
       "target": "src_utils_concurrency_mapwithconcurrency"
@@ -9294,7 +9579,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L522",
+      "source_location": "L520",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_clearrange",
       "target": "src_data_cachepaths_imagepath"
@@ -9305,7 +9590,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L518",
+      "source_location": "L516",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_clearrange",
       "target": "src_data_cachepaths_pokemonpath"
@@ -9316,7 +9601,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L509",
+      "source_location": "L507",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_clearrange",
       "target": "src_data_cachepaths_speciespath"
@@ -9327,7 +9612,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L511",
+      "source_location": "L509",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_clearrange",
       "target": "src_data_normalize_deriveregionalforms"
@@ -9337,7 +9622,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L599",
+      "source_location": "L597",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_refreshrange",
       "target": "src_data_pokedexrepository_pokedexrepository_clearrange",
@@ -9348,7 +9633,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L579",
+      "source_location": "L577",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_cacherange",
       "target": "src_data_pokedexrepository_pokedexrepository_getentryextras",
@@ -9359,7 +9644,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L572",
+      "source_location": "L570",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_cacherange",
       "target": "src_data_pokedexrepository_pokedexrepository_gettablerows",
@@ -9370,7 +9655,7 @@
       "context": "parameter_type",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L564",
+      "source_location": "L562",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_cacherange",
       "target": "src_data_types_pokedextablerow",
@@ -9382,7 +9667,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L576",
+      "source_location": "L574",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_cacherange",
       "target": "src_utils_concurrency_mapwithconcurrency"
@@ -9392,7 +9677,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L600",
+      "source_location": "L598",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_refreshrange",
       "target": "src_data_pokedexrepository_pokedexrepository_cacherange",
@@ -9403,7 +9688,7 @@
       "context": "parameter_type",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L593",
+      "source_location": "L591",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_refreshrange",
       "target": "src_data_types_pokedextablerow",
@@ -9415,7 +9700,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L640",
+      "source_location": "L638",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getrowsforids",
       "target": "src_data_cachepaths_imagepath"
@@ -9426,7 +9711,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L643",
+      "source_location": "L641",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getrowsforids",
       "target": "src_data_normalize_deriveregionalforms"
@@ -9437,7 +9722,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L641",
+      "source_location": "L639",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getrowsforids",
       "target": "src_data_normalize_totablerow"
@@ -9447,7 +9732,7 @@
       "context": "parameter_type",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L618",
+      "source_location": "L616",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getrowsforids",
       "target": "src_data_types_pokedextablerow",
@@ -9459,7 +9744,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L681",
+      "source_location": "L679",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getrowsforids",
       "target": "src_utils_concurrency_mapwithconcurrency"
@@ -9469,7 +9754,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L701",
+      "source_location": "L699",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_gettablerows",
       "target": "src_data_pokedexrepository_pokedexrepository_getrowsforids",
@@ -9480,7 +9765,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L709",
+      "source_location": "L707",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_retryrows",
       "target": "src_data_pokedexrepository_pokedexrepository_getrowsforids",
@@ -9491,7 +9776,7 @@
       "context": "parameter_type",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L691",
+      "source_location": "L689",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_gettablerows",
       "target": "src_data_types_pokedextablerow",
@@ -9525,7 +9810,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L722",
+      "source_location": "L720",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentrycore",
       "target": "src_data_cachepaths_imagepath"
@@ -9536,7 +9821,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L723",
+      "source_location": "L721",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentrycore",
       "target": "src_data_normalize_toentry"
@@ -9546,7 +9831,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L719",
+      "source_location": "L717",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentrycore",
       "target": "src_data_types_pokedexentry",
@@ -9569,7 +9854,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L763",
+      "source_location": "L761",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentryextras",
       "target": "src_data_cachepaths_imagepath"
@@ -9580,7 +9865,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L748",
+      "source_location": "L746",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentryextras",
       "target": "src_data_normalize_inferancestorformsuffix"
@@ -9591,7 +9876,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L749",
+      "source_location": "L747",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentryextras",
       "target": "src_data_normalize_normalizeevolutionchain"
@@ -9602,7 +9887,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L737",
+      "source_location": "L735",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentryextras",
       "target": "src_data_normalize_resolveregionalformsuffix"
@@ -9612,7 +9897,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L726",
+      "source_location": "L724",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentryextras",
       "target": "src_data_types_pokedexentry",
@@ -9635,7 +9920,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L797",
+      "source_location": "L795",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentrychainvisuals",
       "target": "src_data_cachepaths_imagepath"
@@ -9645,7 +9930,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "src/data/PokedexRepository.ts",
-      "source_location": "L790",
+      "source_location": "L788",
       "weight": 1.0,
       "source": "src_data_pokedexrepository_pokedexrepository_getentrychainvisuals",
       "target": "src_data_types_evolutionchainvisual",
@@ -9782,6 +10067,17 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_test",
+      "target": "src_data_fixtures_fakes",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -9829,6 +10125,28 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_test",
+      "target": "src_data_fixtures_fakes_createfakedataadapter",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_test_makestate",
+      "target": "src_data_fixtures_fakes_createfakedataadapter",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/view/DetailLoadState.test.ts",
       "source_location": "L2",
       "weight": 1.0,
@@ -9844,6 +10162,17 @@
       "source_location": "L2",
       "weight": 1.0,
       "source": "src_view_pokedexloadstate_test",
+      "target": "src_data_fixtures_fakes_fakepokeapiclient",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_test",
       "target": "src_data_fixtures_fakes_fakepokeapiclient",
       "confidence_score": 1.0
     },
@@ -12291,6 +12620,28 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate",
+      "target": "src_data_types",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_test",
+      "target": "src_data_types",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -12298,6 +12649,17 @@
       "source_location": "L5",
       "weight": 1.0,
       "source": "src_view_detailloadstate_test",
+      "target": "src_data_types_rawpokemon",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_test",
       "target": "src_data_types_rawpokemon",
       "confidence_score": 1.0
     },
@@ -12706,6 +13068,72 @@
       "weight": 1.0,
       "source": "src_utils_portrait_test",
       "target": "src_data_types_portraitimagesource",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate",
+      "target": "src_data_types_gigantamaxformdetail",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "generic_arg",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L17",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_varietytogglesnapshot",
+      "target": "src_data_types_gigantamaxformdetail",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "generic_arg",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_varietytogglestate",
+      "target": "src_data_types_gigantamaxformdetail",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate",
+      "target": "src_data_types_megaformdetail",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "generic_arg",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_varietytogglesnapshot",
+      "target": "src_data_types_megaformdetail",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "generic_arg",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L23",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_varietytogglestate",
+      "target": "src_data_types_megaformdetail",
       "confidence_score": 1.0
     },
     {
@@ -15153,7 +15581,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L168",
+      "source_location": "L154",
       "weight": 1.0,
       "source": "src_view_components_detailscreen",
       "target": "src_view_components_detailscreen_accentcolor",
@@ -15163,17 +15591,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L149",
-      "weight": 1.0,
-      "source": "src_view_components_detailscreen",
-      "target": "src_view_components_detailscreen_activeportraitsource",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L218",
+      "source_location": "L204",
       "weight": 1.0,
       "source": "src_view_components_detailscreen",
       "target": "src_view_components_detailscreen_adjacent",
@@ -15183,7 +15601,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L176",
+      "source_location": "L162",
       "weight": 1.0,
       "source": "src_view_components_detailscreen",
       "target": "src_view_components_detailscreen_evolvesatlevels",
@@ -15193,17 +15611,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L157",
-      "weight": 1.0,
-      "source": "src_view_components_detailscreen",
-      "target": "src_view_components_detailscreen_femalepct",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L160",
+      "source_location": "L146",
       "weight": 1.0,
       "source": "src_view_components_detailscreen",
       "target": "src_view_components_detailscreen_malepct",
@@ -15213,17 +15621,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L150",
-      "weight": 1.0,
-      "source": "src_view_components_detailscreen",
-      "target": "src_view_components_detailscreen_portraituri",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L208",
+      "source_location": "L194",
       "weight": 1.0,
       "source": "src_view_components_detailscreen",
       "target": "src_view_components_detailscreen_retry",
@@ -15233,7 +15631,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L182",
+      "source_location": "L168",
       "weight": 1.0,
       "source": "src_view_components_detailscreen",
       "target": "src_view_components_detailscreen_startload",
@@ -15243,7 +15641,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L607",
+      "source_location": "L597",
       "weight": 1.0,
       "source": "src_view_components_detailscreen",
       "target": "src_view_components_detailscreen_var",
@@ -15391,6 +15789,14 @@
       "source_file": "src/view/components/DetailScreen.svelte",
       "source": "src_view_components_detailscreen",
       "target": "users_lhak_workspace_github_com_lhak1341_obsidian_pokedex_src_view_detailloadstate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/components/DetailScreen.svelte",
+      "source": "src_view_components_detailscreen",
+      "target": "users_lhak_workspace_github_com_lhak1341_obsidian_pokedex_src_view_varietytogglestate",
       "confidence_score": 1.0
     },
     {
@@ -15693,6 +16099,118 @@
     },
     {
       "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_test",
+      "target": "src_view_varietytogglestate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_test",
+      "target": "src_view_varietytogglestate_test_makestate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_test",
+      "target": "src_view_varietytogglestate_test_tick",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.test.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_test",
+      "target": "src_view_varietytogglestate_varietytogglestate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate",
+      "target": "src_view_varietytogglestate_varietytogglesnapshot",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate",
+      "target": "src_view_varietytogglestate_varietytogglestate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L26",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_varietytogglestate",
+      "target": "src_view_varietytogglestate_varietytogglestate_constructor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L41",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_varietytogglestate",
+      "target": "src_view_varietytogglestate_varietytogglestate_resetselection",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L68",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_varietytogglestate",
+      "target": "src_view_varietytogglestate_varietytogglestate_selectgigantamax",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L53",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_varietytogglestate",
+      "target": "src_view_varietytogglestate_varietytogglestate_selectmega",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/view/VarietyToggleState.ts",
+      "source_location": "L28",
+      "weight": 1.0,
+      "source": "src_view_varietytogglestate_varietytogglestate",
+      "target": "src_view_varietytogglestate_varietytogglestate_snapshot",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
       "confidence": "EXTRACTED",
       "source_file": "src/view/components/AbilitiesPanel.svelte",
       "source": "src_view_components_abilitiespanel",
@@ -15728,7 +16246,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/view/components/DetailScreen.svelte",
-      "source_location": "L209",
+      "source_location": "L195",
       "weight": 1.0,
       "source": "src_view_components_detailscreen_retry",
       "target": "src_view_components_detailscreen_startload",
@@ -16386,6 +16904,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CONTEXT.md",
+      "source_location": "L39",
+      "weight": 1.0,
+      "source": "context_domain_glossary",
+      "target": "context_variety_toggle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CONTEXT.md",
       "source_location": "L31",
       "weight": 1.0,
       "source": "context_domain_glossary",
@@ -16450,6 +16978,26 @@
       "weight": 1.0,
       "source": "docs_adr_0003_pokedexview_stays_untested",
       "target": "docs_adr_0003_pokedexview_stays_untested_pokedexview_ts_stays_untested_by_convention",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/adr/0004-repository-cache-fields-not-a-slot-registry.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "docs_adr_0004_repository_cache_fields_not_a_slot_registry",
+      "target": "docs_adr_0004_repository_cache_fields_not_a_slot_registry_pokedexrepository_s_per_entity_mem_cache_fields_stay_separate_declarations",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/adr/0005-evolution-node-branch-selection-not-extracted.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "docs_adr_0005_evolution_node_branch_selection_not_extracted",
+      "target": "docs_adr_0005_evolution_node_branch_selection_not_extracted_buildevolutionnode_s_priority_chain_decision_stays_inline",
       "confidence_score": 1.0
     },
     {
@@ -16614,5 +17162,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "025a71f89e6abeb040a9b26984d34ea4472bc69e"
+  "built_at_commit": "a5d51c28ecbca780708e429111268d72c857e714"
 }

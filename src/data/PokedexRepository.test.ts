@@ -423,4 +423,73 @@ describe("PokedexRepository", () => {
 		expect(Object.keys(results).sort()).toEqual(["growl", "tackle"]);
 		expect(client.fetchMove).toHaveBeenCalledTimes(3);
 	});
+
+	it("getMegaForm/getGigantamaxForm serve a repeat call from the in-memory layer without touching the client", async () => {
+		const { client, repository } = makeRepository();
+		client.variantPokemon.set("charizard-mega-x", { ...(bulbasaur as unknown as RawPokemon) });
+		client.variantPokemon.set("charizard-gmax", { ...(bulbasaur as unknown as RawPokemon) });
+		await repository.getMegaForm("charizard-mega-x");
+		await repository.getGigantamaxForm("charizard-gmax");
+
+		await repository.getMegaForm("charizard-mega-x");
+		await repository.getGigantamaxForm("charizard-gmax");
+
+		expect(client.fetchPokemon).toHaveBeenCalledTimes(2);
+	});
+
+	it("getMegaForm reads a disk-cached form without touching the client, and mem-caches it", async () => {
+		const { cache, client, repository } = makeRepository();
+		await cache.writeJson("mega-forms/charizard-mega-x.json", {
+			types: ["fire", "flying"],
+			abilities: [{ name: "blaze", isHidden: false }],
+			stats: { hp: 78, atk: 84, def: 78, spa: 109, spd: 85, spe: 100 },
+			spriteDataUri: null,
+			artworkDataUri: null,
+			shinyDataUri: null,
+			shinyArtworkDataUri: null,
+		});
+
+		const first = await repository.getMegaForm("charizard-mega-x");
+		expect(client.fetchPokemon).not.toHaveBeenCalled();
+		expect(first.types).toEqual(["fire", "flying"]);
+
+		const readJsonSpy = vi.spyOn(cache, "readJson");
+		await repository.getMegaForm("charizard-mega-x");
+		expect(readJsonSpy).not.toHaveBeenCalled();
+	});
+
+	it("getGigantamaxForm fetches on a cache miss, normalizes, and writes through to disk", async () => {
+		const { cache, client, repository } = makeRepository();
+		client.variantPokemon.set("charizard-gmax", { ...(bulbasaur as unknown as RawPokemon) });
+
+		const detail = await repository.getGigantamaxForm("charizard-gmax");
+
+		expect(client.fetchPokemon).toHaveBeenCalledTimes(1);
+		expect(await cache.readJson("gigantamax-forms/charizard-gmax.json")).toEqual(detail);
+	});
+
+	it("Mega and Gigantamax caches never collide, even fetched for the same species", async () => {
+		const { cache, client, repository } = makeRepository();
+		client.variantPokemon.set("charizard-mega-x", { ...(bulbasaur as unknown as RawPokemon) });
+		client.variantPokemon.set("charizard-gmax", { ...(bulbasaur as unknown as RawPokemon) });
+
+		await repository.getMegaForm("charizard-mega-x");
+		await repository.getGigantamaxForm("charizard-gmax");
+
+		expect(await cache.readJson("gigantamax-forms/charizard-mega-x.json")).toBeNull();
+		expect(await cache.readJson("mega-forms/charizard-gmax.json")).toBeNull();
+	});
+
+	it("getMegaForm/getGigantamaxForm swallow a failed image fetch, returning null per field", async () => {
+		const { client, repository } = makeRepository();
+		client.variantPokemon.set("charizard-mega-x", { ...(bulbasaur as unknown as RawPokemon) });
+		client.failImage = true;
+
+		const detail = await repository.getMegaForm("charizard-mega-x");
+
+		expect(detail.spriteDataUri).toBeNull();
+		expect(detail.artworkDataUri).toBeNull();
+		expect(detail.shinyDataUri).toBeNull();
+		expect(detail.shinyArtworkDataUri).toBeNull();
+	});
 });

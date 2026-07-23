@@ -1,0 +1,9 @@
+# PokedexRepository's per-entity mem-cache fields stay separate declarations
+
+An architecture review flagged `PokedexRepository`'s 9 private mem-cache `Map`s (`pokemonMemCache`, `pokemonVariantMemCache`, `speciesMemCache`, `evolutionChainMemCache`, `abilityDescriptionMemCache`, `itemDescriptionMemCache`, `moveDetailMemCache`, `megaFormMemCache`, `gigantamaxFormMemCache`) as shallow — each justified by its own standalone comment rather than one uniform shape, risking a 10th cacheable entity requiring the pattern to be re-derived from prose instead of filled into a contract.
+
+On inspection, 7 of the 9 already share one mechanical shape: the private `getOrFetch<K, T>(memCache, key, cachePath, fetch, migrate?, isStale?)` shell (`PokedexRepository.ts:121`). Each of those 7's own comment explains a *business* reason for that entity's cache (e.g. a variant name can't collide with a numeric id, `held_items` needs a real refetch not a local migrate) — not a *mechanical* divergence from the others. Adding an 8th getOrFetch-shaped entity is already just "declare a `Map` field, write a one-line private method calling `getOrFetch`."
+
+The remaining 2 groups — `imageMemCache` (binary asset, different shape) and `megaFormMemCache`/`gigantamaxFormMemCache` (combined JSON+4-image fetch) — are not shallow duplication either; both are already covered by ADR-0002 as deliberately off the `getOrFetch` shell.
+
+**Decision:** leave the 9 field declarations as-is. Wrapping the 7 getOrFetch-shaped ones into a declarative "slot registry" would be boilerplate-only — no locality or leverage gained, since the uniform contract they'd be registered against already exists and is already followed. Don't re-flag the field-declaration count itself as shallow in a future review without first checking whether the flagged fields already route through `getOrFetch` — that's the actual test, not how many `Map` fields the class declares.

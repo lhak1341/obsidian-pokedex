@@ -5,7 +5,7 @@
 	import { getAdjacentDexEntries } from "../../utils/dexNav";
 	import { nextEvolutionLevels } from "../../data/normalize";
 	import type { PokedexRepository } from "../../data/PokedexRepository";
-	import type { GigantamaxFormDetail, MegaFormDetail, MoveDetail, PokedexTableRow, PluginSettings } from "../../data/types";
+	import type { MoveDetail, PokedexTableRow, PluginSettings } from "../../data/types";
 	import AbilitiesPanel from "./AbilitiesPanel.svelte";
 	import BarRow from "./BarRow.svelte";
 	import { DetailLoadState, type DetailEntrySnapshot } from "../DetailLoadState";
@@ -23,6 +23,7 @@
 	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { resolvePortrait } from "../../utils/portrait";
 	import { resolveStatsForGen } from "../../utils/stats";
+	import { VarietyToggleState, type VarietyToggleSnapshot } from "../VarietyToggleState";
 
 	// True game ceilings (unlike StatBars' MAX_STAT, not compressed) —
 	// catch rate hits 255 for plenty of common early-route Pokemon (Caterpie,
@@ -94,58 +95,43 @@
 	// DetailLoadState.load() already fetches the whole movepool up front.
 	let moveDetails = $state<Record<string, MoveDetail>>({});
 
-	// Which Mega variety (if any) is currently displayed — null means the
-	// base species. Reset per-entry in startLoad below, same as showShiny.
-	// megaFormCache is NOT reset per entry: each key is a globally unique
-	// PokeAPI variety name (e.g. "charizard-mega-x"), so nothing to discard
-	// or collide across species — same "accumulate for the session" shape as
-	// moveDetails above.
-	let activeMegaKey = $state<string | null>(null);
-	let megaFormCache = $state<Record<string, MegaFormDetail>>({});
-	const activeMegaData = $derived(activeMegaKey ? megaFormCache[activeMegaKey] ?? null : null);
-
-	// Same shape as activeMegaKey/megaFormCache above, for the separate
-	// Gigantamax toggle. In-game, Mega and Gigantamax/Dynamax are mutually
-	// exclusive states on the same Pokemon — selecting one here deactivates
-	// the other (see selectMegaForm/selectGigantamaxForm below) rather than
-	// letting both apply at once, even though a species like Venusaur has
-	// both forms available to toggle independently.
-	let activeGigantamaxKey = $state<string | null>(null);
-	let gigantamaxFormCache = $state<Record<string, GigantamaxFormDetail>>({});
-	const activeGigantamaxData = $derived(
-		activeGigantamaxKey ? gigantamaxFormCache[activeGigantamaxKey] ?? null : null,
-	);
-
-	// Fetch is fire-and-forget: a dropped connection just means the tab click
-	// silently doesn't change anything (activeMegaData stays null until a
-	// retry click succeeds) — consistent with how a dropped shiny/artwork
-	// fetch elsewhere in this view doesn't take down the rest of the entry.
-	function selectMegaForm(key: string | null) {
-		activeMegaKey = key;
-		if (key) activeGigantamaxKey = null;
-		if (key && !(key in megaFormCache)) {
-			repository.getMegaForm(key).then((detail) => {
-				megaFormCache = { ...megaFormCache, [key]: detail };
-			});
-		}
+	// Owns which Mega/Gigantamax variety (if any) is currently displayed and
+	// the session-lifetime cache of forms already fetched — see
+	// VarietyToggleState's own comment for why it stays a plain class
+	// (same "mirror into $state" reasoning as loadState/entryLoad above).
+	// $derived for the same never-changes-across-lifetime reason as
+	// loadState above.
+	const varietyToggle = $derived(new VarietyToggleState(repository));
+	let varietySnapshot = $state<VarietyToggleSnapshot>({
+		activeMegaKey: null,
+		activeGigantamaxKey: null,
+		megaFormCache: {},
+		gigantamaxFormCache: {},
+	});
+	function mirrorVariety() {
+		varietySnapshot = varietyToggle.snapshot();
 	}
-
+	const activeMegaData = $derived(
+		varietySnapshot.activeMegaKey ? varietySnapshot.megaFormCache[varietySnapshot.activeMegaKey] ?? null : null,
+	);
+	const activeGigantamaxData = $derived(
+		varietySnapshot.activeGigantamaxKey
+			? varietySnapshot.gigantamaxFormCache[varietySnapshot.activeGigantamaxKey] ?? null
+			: null,
+	);
+	function selectMegaForm(key: string | null) {
+		varietyToggle.selectMega(key, mirrorVariety);
+	}
 	function selectGigantamaxForm(key: string | null) {
-		activeGigantamaxKey = key;
-		if (key) activeMegaKey = null;
-		if (key && !(key in gigantamaxFormCache)) {
-			repository.getGigantamaxForm(key).then((detail) => {
-				gigantamaxFormCache = { ...gigantamaxFormCache, [key]: detail };
-			});
-		}
+		varietyToggle.selectGigantamax(key, mirrorVariety);
 	}
 
 	// Shared by the base-species, Mega-form, and Gigantamax-form image sets
 	// (see MegaFormDetail/GigantamaxFormDetail's comment on why each mirrors
 	// PokedexEntry's four image fields) so switching either toggle and the
 	// shiny toggle compose freely. Mega and Gigantamax are mutually
-	// exclusive (see selectMegaForm/selectGigantamaxForm above), so only one
-	// of activeMegaData/activeGigantamaxData is ever non-null at once.
+	// exclusive (enforced by VarietyToggleState), so only one of
+	// activeMegaData/activeGigantamaxData is ever non-null at once.
 	const activePortraitSource = $derived(activeMegaData ?? activeGigantamaxData ?? entryLoad.entry);
 	const portraitUri = $derived(
 		activePortraitSource ? resolvePortrait(activePortraitSource, spriteStyle, showShiny) : null,
@@ -181,8 +167,8 @@
 
 	function startLoad(currentId: number) {
 		showShiny = false;
-		activeMegaKey = null;
-		activeGigantamaxKey = null;
+		varietyToggle.resetSelection();
+		mirrorVariety();
 		const result = loadState.load(currentId, mirror, (name, moveDetail) => {
 			moveDetails = { ...moveDetails, [name]: moveDetail };
 		});
@@ -320,10 +306,14 @@
 							<Icon name="sparkles" size={15} strokeWidth={2.25} />
 						</button>
 					{/if}
-					<MegaFormToggle megaForms={entry.megaForms} activeKey={activeMegaKey} onSelect={selectMegaForm} />
+					<MegaFormToggle
+						megaForms={entry.megaForms}
+						activeKey={varietySnapshot.activeMegaKey}
+						onSelect={selectMegaForm}
+					/>
 					<GigantamaxFormToggle
 						gigantamaxForms={entry.gigantamaxForms}
-						activeKey={activeGigantamaxKey}
+						activeKey={varietySnapshot.activeGigantamaxKey}
 						onSelect={selectGigantamaxForm}
 					/>
 				</div>

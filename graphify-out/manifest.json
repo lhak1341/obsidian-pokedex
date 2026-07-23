@@ -35,13 +35,13 @@
     "semantic_hash": ""
   },
   "src/data/PokedexRepository.test.ts": {
-    "mtime": 1784819681.300596,
-    "ast_hash": "441de5e11f1e6694abe0f5a52f8d19a1",
+    "mtime": 1784823662.4818618,
+    "ast_hash": "a2e4905cb22ef31938ee4f1869644aea",
     "semantic_hash": ""
   },
   "src/data/PokedexRepository.ts": {
-    "mtime": 1784819663.7011235,
-    "ast_hash": "de55c561280a4df50a9e1c2ac10ca35c",
+    "mtime": 1784823624.5828583,
+    "ast_hash": "86ea9b697588b3a102ce64b449d60eff",
     "semantic_hash": ""
   },
   "src/data/__fixtures__/bulbasaur-evolution-chain.json": {
@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   "src/view/components/DetailScreen.svelte": {
-    "mtime": 1784817195.6389582,
-    "ast_hash": "c80971933ba2b3bdf62ec7fbf70cc11a",
+    "mtime": 1784822998.0439737,
+    "ast_hash": "c65c63e5953e7b6d565e968bc3680f0f",
     "semantic_hash": ""
   },
   "src/view/components/EvolutionChain.svelte": {
@@ -365,13 +365,13 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1784821073.650377,
-    "ast_hash": "b5562d85abd8c53fd91a44bfbaecf2e6",
+    "mtime": 1784825732.9954777,
+    "ast_hash": "ad790023887f6b11933eec0d33c8e83b",
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1784654381.3713715,
-    "ast_hash": "e0cf2b0de46c3753749078872bfffb98",
+    "mtime": 1784823036.3432388,
+    "ast_hash": "101bf47685b530719f0b82757e650f6b",
     "semantic_hash": ""
   },
   "README.md": {
@@ -482,6 +482,26 @@
   "src/data/evolutionStages.json": {
     "mtime": 1784819469.6842868,
     "ast_hash": "aeefd0f917c257f919c496e62e4da328",
+    "semantic_hash": ""
+  },
+  "src/view/VarietyToggleState.test.ts": {
+    "mtime": 1784822935.9512515,
+    "ast_hash": "dcfbb64709ce5286cf36716eaeee8df0",
+    "semantic_hash": ""
+  },
+  "src/view/VarietyToggleState.ts": {
+    "mtime": 1784822918.3739033,
+    "ast_hash": "38d3408a6ae8fce9f01f9e242b9d8782",
+    "semantic_hash": ""
+  },
+  "docs/adr/0004-repository-cache-fields-not-a-slot-registry.md": {
+    "mtime": 1784823337.2499635,
+    "ast_hash": "8c180633325c23fa9944d8e608e78465",
+    "semantic_hash": ""
+  },
+  "docs/adr/0005-evolution-node-branch-selection-not-extracted.md": {
+    "mtime": 1784824565.033409,
+    "ast_hash": "6f04d449903456d6c44a0fce862e9cb1",
     "semantic_hash": ""
   }
 }

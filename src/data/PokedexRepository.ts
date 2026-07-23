@@ -356,28 +356,39 @@ export class PokedexRepository {
 		});
 	}
 
-	// Mega forms are rare (<40 species out of 900+) and only ever needed when
-	// a user actually clicks that species' Mega tab — fetched lazily here
-	// rather than eagerly during getEntryCore/getEntryExtras, same reasoning
-	// as ability/item descriptions above. Not built on the generic getOrFetch
-	// shell: like getEntryCore/getEntryExtras, this combines one JSON fetch
-	// with several image fetches, a different shape than getOrFetch's
-	// single-value cache. `varietyKey` (e.g. "charizard-mega-x") is a PokeAPI
-	// pokemon name, never a numeric id, so it can't collide with the
-	// `pokemon/{id}.json` cache getOrFetchPokemon uses.
-	async getMegaForm(varietyKey: string): Promise<MegaFormDetail> {
-		const mem = this.megaFormMemCache.get(varietyKey);
+	// Shared by getMegaForm/getGigantamaxForm below: both combine one JSON
+	// fetch with four image fetches, a different shape than getOrFetch's
+	// single-value cache (see ADR-0002 for why this doesn't reuse getOrFetch
+	// itself) — but that combined shape IS identical between the two of them,
+	// differing only in which mem cache/disk-path prefix/normalize function
+	// each uses. `normalize` takes the raw pokemon even though
+	// toGigantamaxFormDetail ignores it (Gigantamax changes no
+	// types/abilities/stats, verified live comparing Gengar vs. gengar-gmax)
+	// — one shared signature, not two.
+	//
+	// No isStale escape hatch, unlike getOrFetchPokemon's pokemonIsStale — if
+	// a field is ever added to MegaFormDetail/GigantamaxFormDetail, an
+	// existing user's cached json will silently stay undefined for that field
+	// forever instead of self-healing. Add one here when that happens (see
+	// getOrFetch's own isStale comment for the pattern); nothing today needs
+	// it, so it isn't speculatively built in.
+	private async fetchVarietyForm<T>(
+		varietyKey: string,
+		memCache: Map<string, T>,
+		cachePathPrefix: string,
+		normalize: (pokemon: RawPokemon, images: {
+			sprite: string | null;
+			artwork: string | null;
+			shiny: string | null;
+			shinyArtwork: string | null;
+		}) => T,
+	): Promise<T> {
+		const mem = memCache.get(varietyKey);
 		if (mem) return mem;
-		// Unlike getOrFetchPokemon's pokemonIsStale, this cache read has no
-		// staleness escape hatch — if a field is ever added to MegaFormDetail,
-		// an existing user's cached mega-forms/{key}.json will silently stay
-		// undefined for that field forever instead of self-healing. Add an
-		// isStale-style check here when that happens (see getOrFetch's own
-		// isStale comment for the pattern); see ADR-0002 for why this can't
-		// just reuse getOrFetch directly.
-		const cached = await this.cache.readJson<MegaFormDetail>(`mega-forms/${varietyKey}.json`);
+		const cachePath = `${cachePathPrefix}/${varietyKey}.json`;
+		const cached = await this.cache.readJson<T>(cachePath);
 		if (cached) {
-			this.megaFormMemCache.set(varietyKey, cached);
+			memCache.set(varietyKey, cached);
 			return cached;
 		}
 		const pokemon = await this.client.fetchPokemon(varietyKey);
@@ -393,43 +404,30 @@ export class PokedexRepository {
 				imagePath(varietyKey, "shiny-artwork"),
 			).catch(() => null),
 		]);
-		const detail = toMegaFormDetail(pokemon, { sprite, artwork, shiny, shinyArtwork });
-		await this.cache.writeJson(`mega-forms/${varietyKey}.json`, detail);
-		this.megaFormMemCache.set(varietyKey, detail);
+		const detail = normalize(pokemon, { sprite, artwork, shiny, shinyArtwork });
+		await this.cache.writeJson(cachePath, detail);
+		memCache.set(varietyKey, detail);
 		return detail;
 	}
 
-	// Same lazy fetch-on-click shape as getMegaForm, but simpler: no
-	// types/abilities/stats to normalize (Gigantamax changes none of those,
-	// verified live comparing Gengar vs. gengar-gmax), just the four image
-	// fields. Cached separately from mega-forms/ since a variety name is
-	// never shared between the two (a species' Gigantamax key always ends
-	// "-gmax", Mega always "-mega"/"-mega-x/-y").
+	// Mega forms are rare (<40 species out of 900+) and only ever needed when
+	// a user actually clicks that species' Mega tab — fetched lazily here
+	// rather than eagerly during getEntryCore/getEntryExtras, same reasoning
+	// as ability/item descriptions above. `varietyKey` (e.g.
+	// "charizard-mega-x") is a PokeAPI pokemon name, never a numeric id, so it
+	// can't collide with the `pokemon/{id}.json` cache getOrFetchPokemon uses.
+	async getMegaForm(varietyKey: string): Promise<MegaFormDetail> {
+		return this.fetchVarietyForm(varietyKey, this.megaFormMemCache, "mega-forms", toMegaFormDetail);
+	}
+
+	// Same lazy fetch-on-click shape as getMegaForm. Cached separately from
+	// mega-forms/ since a variety name is never shared between the two (a
+	// species' Gigantamax key always ends "-gmax", Mega always
+	// "-mega"/"-mega-x/-y").
 	async getGigantamaxForm(varietyKey: string): Promise<GigantamaxFormDetail> {
-		const mem = this.gigantamaxFormMemCache.get(varietyKey);
-		if (mem) return mem;
-		const cached = await this.cache.readJson<GigantamaxFormDetail>(`gigantamax-forms/${varietyKey}.json`);
-		if (cached) {
-			this.gigantamaxFormMemCache.set(varietyKey, cached);
-			return cached;
-		}
-		const pokemon = await this.client.fetchPokemon(varietyKey);
-		const [sprite, artwork, shiny, shinyArtwork] = await Promise.all([
-			this.getOrFetchImage(pokemon.sprites.front_default, imagePath(varietyKey, "sprite")).catch(() => null),
-			this.getOrFetchImage(
-				pokemon.sprites.other?.["official-artwork"]?.front_default ?? null,
-				imagePath(varietyKey, "artwork"),
-			).catch(() => null),
-			this.getOrFetchImage(pokemon.sprites.front_shiny, imagePath(varietyKey, "shiny")).catch(() => null),
-			this.getOrFetchImage(
-				pokemon.sprites.other?.["official-artwork"]?.front_shiny ?? null,
-				imagePath(varietyKey, "shiny-artwork"),
-			).catch(() => null),
-		]);
-		const detail = toGigantamaxFormDetail({ sprite, artwork, shiny, shinyArtwork });
-		await this.cache.writeJson(`gigantamax-forms/${varietyKey}.json`, detail);
-		this.gigantamaxFormMemCache.set(varietyKey, detail);
-		return detail;
+		return this.fetchVarietyForm(varietyKey, this.gigantamaxFormMemCache, "gigantamax-forms", (_pokemon, images) =>
+			toGigantamaxFormDetail(images),
+		);
 	}
 
 	// Shared by partitionByCacheHit and getCacheStatus — an id counts as
