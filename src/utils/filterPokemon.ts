@@ -116,10 +116,11 @@ function matchesEvStats(row: PokedexTableRow, evStats: string[]): boolean {
 // Each quirk key checks a different underlying field — an array-length check
 // (held-item), an ability name (compound-eyes/pickup), or a level-up move
 // name (thief/trick/covet) — see QUIRKS in data/constants.ts for the
-// definitions this switch's keys must stay in sync with. Fossil moved to
-// matchesTrait below (see TRAITS' own comment for why); held-item stays here
-// rather than moving alongside it, since "pickup OR holds an item" is a
-// meaningful combined search the way "baby AND fossil" isn't.
+// definitions this switch's keys must stay in sync with. Fossil and the
+// evolution-stage buckets live in matchesTrait below instead (see TRAITS'
+// own comment for why); held-item stays here rather than moving alongside
+// fossil, since "pickup OR holds an item" is a meaningful combined search
+// the way "baby AND fossil" isn't.
 function matchesQuirk(row: PokedexTableRow, quirk: string): boolean {
 	switch (quirk) {
 		case "held-item":
@@ -153,6 +154,14 @@ function matchesTrait(row: PokedexTableRow, trait: string): boolean {
 			return FOSSIL_IDS.has(row.dexNumber);
 		case "mega":
 			return row.canMegaEvolve;
+		// Bucketed off the whole-family evolutionStages value — see TRAITS in
+		// data/constants.ts for the AND-semantics note.
+		case "no-evolution":
+			return row.evolutionStages === 0;
+		case "one-evolution":
+			return row.evolutionStages === 1;
+		case "two-plus-evolutions":
+			return row.evolutionStages >= 2;
 		case "gigantamax":
 			return row.canGigantamax;
 		default:

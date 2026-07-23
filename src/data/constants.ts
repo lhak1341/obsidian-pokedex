@@ -1,3 +1,4 @@
+import evolutionStagesData from "./evolutionStages.json";
 import type { StatBlock } from "./types";
 
 export const POKEAPI_BASE = "https://pokeapi.co/api/v2";
@@ -51,6 +52,22 @@ export const MOVE_VERSION_TABS_BY_GEN: Record<number, readonly { key: string; la
 		{ key: "sword-shield", label: "Sw/Sh" },
 		{ key: "legends-arceus", label: "Legends: Arceus" },
 	],
+	// Scarlet/Violet's DLC (The Teal Mask/The Indigo Disk) are their own
+	// version-groups on PokeAPI ("the-teal-mask"/"the-indigo-disk", both
+	// generation-ix) and even their own flavor-text *versions*
+	// ("the-teal-mask-scarlet" etc.) — but verified live (Dipplin,
+	// Archaludon, Okidogi, Ogerpon) that every DLC species' own *moves* and
+	// *flavor text* are recorded under plain "scarlet-violet"/"scarlet"/
+	// "violet" regardless, same as any base-game species. Unlike Hisuian
+	// forms (whose moves only ever appear under "legends-arceus"), no DLC
+	// version group needs adding here — the DLC evolution-chain entries that
+	// do cite "the-teal-mask"/"the-indigo-disk" (see RawEvolutionChainLink)
+	// only date which game update introduced that evolution method, an
+	// unrelated concern. Also verified live that PokeAPI hosts a "champions"
+	// version-group tagged generation-ix with empty move_learn_methods/
+	// regions — non-canon/test data, same "don't trust a plausible-looking
+	// PokeAPI entry" lesson as MEGA_VARIETY_KEYS — deliberately excluded.
+	9: [{ key: "scarlet-violet", label: "S/V" }],
 };
 
 // Every version group any tab above reads, across every supported
@@ -125,6 +142,16 @@ export const FLAVOR_TEXT_TABS_BY_GEN: Record<
 	8: [
 		{ key: "sword", label: "Sword", versions: ["sword"] },
 		{ key: "shield", label: "Shield", versions: ["shield"] },
+	],
+	// Scarlet and Violet's flavor text genuinely differs per version (verified
+	// live against Sprigatito #906), same pairing pattern as Sword/Shield —
+	// two tabs, not one merged. DLC species (Dipplin, Archaludon, Ogerpon,
+	// ...) still only ever carry "scarlet"/"violet" flavor-text entries, never
+	// "the-teal-mask-scarlet" etc. (verified live) — see the matching note on
+	// MOVE_VERSION_TABS_BY_GEN[9].
+	9: [
+		{ key: "scarlet", label: "Scarlet", versions: ["scarlet"] },
+		{ key: "violet", label: "Violet", versions: ["violet"] },
 	],
 };
 
@@ -201,6 +228,16 @@ export const TRAITS: QuirkDef[] = [
 	{ key: "fossil", label: "Fossil", icon: "bone" },
 	{ key: "mega", label: "Can Mega Evolve", icon: "wand-2" },
 	{ key: "gigantamax", label: "Can Gigantamax", icon: "expand" },
+	// Bucketed off PokedexTableRow.evolutionStages (a whole-family value, see
+	// its own comment). AND semantics still composes meaningfully with the
+	// OTHER traits here (e.g. Baby + No Evolution), but selecting two of
+	// these three buckets together always yields zero rows since they're
+	// mutually exclusive per row — same as any other Traits combo that
+	// happens not to overlap, not a special case. See matchesTrait in
+	// filterPokemon.ts for the bucket boundaries.
+	{ key: "no-evolution", label: "No Evolution", icon: "minus" },
+	{ key: "one-evolution", label: "1 Evolution", icon: "arrow-up" },
+	{ key: "two-plus-evolutions", label: "2+ Evolutions", icon: "chevrons-up" },
 ];
 
 // PokeAPI's species.varieties naming convention ("{species}-mega"/"-mega-x"/
@@ -241,9 +278,15 @@ export const GENERATIONS = [
 	{ id: 6, name: "Gen 6 (Kalos)", start: 650, end: 721 },
 	{ id: 7, name: "Gen 7 (Alola)", start: 722, end: 809 },
 	{ id: 8, name: "Gen 8 (Galar)", start: 810, end: 905 },
+	// Verified live via /generation/9 — 120 species, contiguous #906-1025, no
+	// gaps. This already includes every Teal Mask/Indigo Disk DLC addition
+	// (Ogerpon, Dipplin, Archaludon, the Loyal Three, the Paradox Pokemon,
+	// Terapagos, Pecharunt, ...) — DLC content patches into the same National
+	// Dex range rather than adding its own, unlike a spinoff.
+	{ id: 9, name: "Gen 9 (Paldea)", start: 906, end: 1025 },
 ] as const;
 
-// All generations enabled by default (dex #1-905, Gen 1 through Gen 8).
+// All generations enabled by default (dex #1-1025, Gen 1 through Gen 9).
 export const DEFAULT_ENABLED_GENERATIONS: number[] = GENERATIONS.map((g) => g.id);
 
 // Which GENERATIONS entry a dex number falls in — shared by toTableRow (to
@@ -290,7 +333,43 @@ export const REGIONAL_FORMS: Record<string, { label: string; generationId: numbe
 	// needed. See docs/multi-gen-expansion-plan.md's "Explicitly deferred"
 	// section for the go/no-go history.
 	hisui: { label: "Hisuian", generationId: 8 },
+	// Paldean forms span 2 species, 4 varieties total (verified live via a
+	// full /pokemon name-suffix scan for "-paldea") — Tauros (#128, Gen 1)
+	// gained three "breed" varieties with no single unsuffixed "-paldea" form
+	// at all, so each breed needs its own key; Wooper (#194, Gen 2) gained one
+	// plain "-paldea" variety, itself the only route to Clodsire (#980) via
+	// the same base_form-gated branch mechanism Yamask/Zigzagoon already use.
+	// No Paldean form evolves *from* a non-Paldean ancestor the way Meowth/
+	// Vulpix's Alolan lines do, and Tauros doesn't evolve at all — no new
+	// evolution-chain gap here.
+	"paldea-combat-breed": { label: "Paldean (Combat Breed)", generationId: 9 },
+	"paldea-blaze-breed": { label: "Paldean (Blaze Breed)", generationId: 9 },
+	"paldea-aqua-breed": { label: "Paldean (Aqua Breed)", generationId: 9 },
+	paldea: { label: "Paldean", generationId: 9 },
 };
+
+// How many evolution stages the WHOLE family a given dex number belongs to
+// has (0/1/2+, same value for every member of a family — see QUIRKS' no-
+// evolution/one-evolution/two-plus-evolutions options and
+// PokedexTableRow.evolutionStages). Unlike FOSSIL_IDS/REGIONAL_FORMS/
+// STAT_OVERRIDES this isn't hand-curated — it's a generated array (index =
+// dex number, 1-1025; index 0 unused) computed once against every one of
+// PokeAPI's 541 evolution-chain resources, since the dex is fixed until Gen
+// 10 and this doesn't change without a new generation shipping. Deliberately
+// counts every `evolves_to` child unconditionally (ignoring
+// evolution_details' base_form/region branch-selection entirely) rather than
+// reusing normalizeEvolutionChain's default (no-context) view — that view
+// has to pick exactly ONE coherent path for a specific viewed form, which
+// silently drops a species whose ONLY evolution route is entirely
+// form-gated (e.g. plain Farfetch'd has no evolution of its own; only
+// Galarian Farfetch'd evolves into Sirfetch'd, with no unconditional sibling
+// entry — verified live against /evolution-chain for Farfetch'd) — see
+// evolutionFamilyDepth's own comment in normalize.ts for the full
+// reasoning, and the generation script that produced this array (fetch
+// every evolution-chain resource, walk `evolves_to` counting max depth,
+// assign that depth to every member species id) for how to regenerate this
+// after a future generation adds new evolution chains.
+export const EVOLUTION_STAGES: readonly number[] = evolutionStagesData;
 
 export const STAT_NAMES = [
 	"hp", "attack", "defense", "special-attack", "special-defense", "speed",
@@ -376,6 +455,15 @@ export const STAT_OVERRIDES: Record<number, { validThroughGen: number; deltas: P
 	// lookup mechanism doesn't care about direction, so this reuses the same
 	// table rather than a separate one.
 	681: { validThroughGen: 7, deltas: { defense: 150, specialDefense: 150 } }, // Aegislash
+	// Gen 9 introduced no broad buff/nerf wave (checked live against
+	// Bulbapedia's Base_stats "Between generations" section) — the two
+	// Gen9-era stat changes that DO exist don't qualify for this table: the
+	// Treasures of Ruin's mid-cycle 1.0.1 patch adjustment is Gen-9-native (no
+	// earlier generation's stats to diverge from), and Hisuian Zorua/Zoroark/
+	// Kleavor's pre-1.2.0 stat mismatch was corrected back to their original
+	// Legends: Arceus values by the time this app's Active Gen 8 lookup would
+	// ever read them, i.e. current data already matches — nothing to override
+	// either way.
 };
 
 export const TYPE_COLORS: Record<string, string> = {

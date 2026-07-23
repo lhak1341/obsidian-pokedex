@@ -5,6 +5,7 @@ import {
 	deriveMegaForms,
 	deriveRegionalForms,
 	describeEvolutionRequirement,
+	evolutionFamilyDepth,
 	extractFlavorTexts,
 	inferAncestorFormSuffix,
 	nextEvolutionLevels,
@@ -179,7 +180,7 @@ describe("normalizeEvolutionChain", () => {
 			held_item: null, min_beauty: null, relative_physical_stats: null, location: null,
 			known_move: null, party_species: null, gender: null, trade_species: null,
 			needs_overworld_rain: false, turn_upside_down: false, base_form: null, evolved_form: null, region: null, min_damage_taken: null,
-			used_move: null, min_move_count: null,
+			used_move: null, min_move_count: null, min_steps: null, needs_multiplayer: false,
 			...overrides,
 		};
 	}
@@ -584,10 +585,10 @@ describe("collectChainIds", () => {
 			needsOverworldRain: false,
 			turnUpsideDown: false,
 			region: null,
-			minDamageTaken: null, usedMove: null, minMoveCount: null,
+			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false,
 			children: [
-				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, children: [] },
-				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, children: [] },
+				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false, children: [] },
+				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false, children: [] },
 			],
 		};
 		expect(collectChainIds(forked)).toEqual([1, 2, 3]);
@@ -634,8 +635,8 @@ describe("nextEvolutionLevels", () => {
 			needsOverworldRain: false,
 			turnUpsideDown: false,
 			region: null,
-			minDamageTaken: null, usedMove: null, minMoveCount: null,
-			children: [{ id: 2, dexNumber: 2, formLabel: null, name: "evolved", minLevel: null, trigger: "trade", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, children: [] }],
+			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false,
+			children: [{ id: 2, dexNumber: 2, formLabel: null, name: "evolved", minLevel: null, trigger: "trade", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false, children: [] }],
 		};
 		expect(nextEvolutionLevels(itemEvolution, 1)).toEqual([]);
 	});
@@ -662,11 +663,11 @@ describe("nextEvolutionLevels", () => {
 			needsOverworldRain: false,
 			turnUpsideDown: false,
 			region: null,
-			minDamageTaken: null, usedMove: null, minMoveCount: null,
+			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false,
 			children: [
-				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, children: [] },
-				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: 10, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, children: [] },
-				{ id: 4, dexNumber: 4, formLabel: null, name: "branch-c", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, children: [] },
+				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false, children: [] },
+				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: 10, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false, children: [] },
+				{ id: 4, dexNumber: 4, formLabel: null, name: "branch-c", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false, children: [] },
 			],
 		};
 		expect(nextEvolutionLevels(forked, 1)).toEqual([10, 20]);
@@ -696,7 +697,7 @@ describe("describeEvolutionRequirement", () => {
 			needsOverworldRain: false,
 			turnUpsideDown: false,
 			region: null,
-			minDamageTaken: null, usedMove: null, minMoveCount: null,
+			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false,
 			children: [],
 			...overrides,
 		};
@@ -920,6 +921,66 @@ describe("toEntry", () => {
 		expect(entry.catchRate).toBe(45);
 		expect(entry.evolutionChain?.children[0].name).toBe("ivysaur");
 		expect(entry.moves.some((m) => m.name === "vine-whip")).toBe(true);
+		// From the static EVOLUTION_STAGES lookup (species.id 1 = bulbasaur),
+		// not derived from the `node` passed in above.
+		expect(entry.evolutionStages).toBe(2);
+	});
+});
+
+describe("evolutionFamilyDepth", () => {
+	// Operates on the RAW chain link (RawEvolutionChainLink), not a
+	// normalized EvolutionNode — see the function's own comment for why.
+	it("returns 0 for a species that never evolves", () => {
+		const solo = chain.chain.evolves_to[0].evolves_to[0]; // venusaur, final stage
+		expect(evolutionFamilyDepth(solo)).toBe(0);
+	});
+
+	it("returns the longest path in edges, not the species count", () => {
+		// bulbasaur -> ivysaur -> venusaur: 2 evolution events.
+		expect(evolutionFamilyDepth(chain.chain)).toBe(2);
+	});
+
+	it("ignores branching width — depth comes from the deepest branch, not the branch count", () => {
+		const forked: RawEvolutionChainLink = {
+			...chain.chain,
+			// Give bulbasaur (the root) 3 same-depth children instead of 1 —
+			// depth should still read 2 (bulbasaur -> child -> venusaur's own
+			// child), not 4 just because there are more branches at the same
+			// level.
+			evolves_to: [chain.chain.evolves_to[0], chain.chain.evolves_to[0], chain.chain.evolves_to[0]],
+		};
+		expect(evolutionFamilyDepth(forked)).toBe(2);
+	});
+
+	it("counts a branch gated entirely on a specific regional form, unlike buildEvolutionNode's default view", () => {
+		// Farfetch'd-shaped: the only evolves_to child requires a base_form the
+		// default (no-context) EvolutionNode view would drop entirely (see
+		// buildEvolutionNode's own comment on dropping form-exclusive
+		// branches) — evolutionFamilyDepth must still count it, since it reads
+		// evolves_to directly rather than going through that view-selection
+		// logic at all.
+		const gatedOnly: RawEvolutionChainLink = {
+			species: { name: "farfetchd", url: "" },
+			evolution_details: [],
+			evolves_to: [
+				{
+					species: { name: "sirfetchd", url: "" },
+					evolution_details: [
+						{
+							min_level: null, trigger: { name: "three-critical-hits", url: "" }, item: null,
+							min_happiness: null, time_of_day: "", held_item: null, min_beauty: null,
+							relative_physical_stats: null, location: null, known_move: null, party_species: null,
+							gender: null, trade_species: null, needs_overworld_rain: false, turn_upside_down: false,
+							base_form: { name: "farfetchd-galar", url: "" }, evolved_form: null, region: null,
+							min_damage_taken: null, used_move: null, min_move_count: null, min_steps: null,
+							needs_multiplayer: false,
+						},
+					],
+					evolves_to: [],
+				},
+			],
+		};
+		expect(evolutionFamilyDepth(gatedOnly)).toBe(1);
 	});
 });
 
@@ -999,7 +1060,7 @@ describe("normalizeMoveDetail", () => {
 			type: { name: "normal", url: "" },
 			flavor_text_entries: [
 				{ flavor_text: "Attaque physique.", language: { name: "fr", url: "" }, version_group: { name: "firered-leafgreen", url: "" } },
-				{ flavor_text: "A physical attack.", language: { name: "en", url: "" }, version_group: { name: "scarlet-violet", url: "" } },
+				{ flavor_text: "A physical attack.", language: { name: "en", url: "" }, version_group: { name: "legends-za", url: "" } },
 			],
 		};
 		expect(normalizeMoveDetail(raw).description).toBeNull();

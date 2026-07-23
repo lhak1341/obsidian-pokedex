@@ -38,7 +38,7 @@ describe("PokedexRepository", () => {
 		const { cache, repository } = makeRepository();
 		// Simulate a cache written before trimMovesToVersionGroups existed: the
 		// full fixture still has out-of-scope version groups (e.g. solar-beam,
-		// scarlet-violet only).
+		// legends-za only).
 		await cache.writeJson("pokemon/1.json", bulbasaur);
 		expect((bulbasaur as unknown as RawPokemon).moves.some((m) => m.move.name === "solar-beam")).toBe(true);
 
@@ -305,6 +305,9 @@ describe("PokedexRepository", () => {
 		expect(core.name).toBe("bulbasaur");
 		expect(core.spriteDataUri).not.toBeNull();
 		expect(core.evolutionChain).toBeNull();
+		// evolutionStages is a static lookup (EVOLUTION_STAGES), not a fetch —
+		// see data/evolutionStages.json.
+		expect(core.evolutionStages).toBe(2); // bulbasaur -> ivysaur -> venusaur
 		expect(core.artworkDataUri).toBeNull();
 		expect(core.shinyDataUri).toBeNull();
 		expect(core.shinyArtworkDataUri).toBeNull();

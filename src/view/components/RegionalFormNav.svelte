@@ -42,7 +42,19 @@
 	since extracting shared CSS across Svelte components loses scoping (see
 	this repo's CLAUDE.md gotcha on that). */
 	.regional-form-nav {
+		/* Gained flex-wrap — fine as a single non-wrapping row for 2 short
+		siblings (Alolan/Galarian/Hisuian, one word each), but Tauros' 4
+		Paldean-breed siblings have long labels ("Paldean (Combat Breed)")
+		that don't fit the identity column's fixed 240px width; without wrap
+		the whole box grew wider than its column and visibly overflowed into
+		core-col next to it. max-width keeps it from doing that even before
+		wrapping kicks in (identity-col itself has no overflow clipping).
+		Stays inline-flex (not flex) so the 2-sibling case keeps shrink-
+		wrapping to its own content instead of stretching to the column's
+		full width. */
 		display: inline-flex;
+		flex-wrap: wrap;
+		max-width: 100%;
 		gap: 4px;
 		padding: 4px;
 		margin-top: 8px;

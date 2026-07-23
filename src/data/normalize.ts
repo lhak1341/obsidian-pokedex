@@ -1,4 +1,5 @@
 import {
+	EVOLUTION_STAGES,
 	FLAVOR_TEXT_TABS_BY_GEN,
 	FLAVOR_TEXT_VERSION_GROUPS,
 	MEGA_VARIETY_KEYS,
@@ -388,6 +389,8 @@ function buildEvolutionNode(
 		minDamageTaken: detail?.min_damage_taken ?? null,
 		usedMove: detail?.used_move?.name ?? null,
 		minMoveCount: detail?.min_move_count ?? null,
+		minSteps: detail?.min_steps ?? null,
+		needsMultiplayer: detail?.needs_multiplayer ?? false,
 		children,
 	};
 }
@@ -449,6 +452,39 @@ export function nextEvolutionLevels(root: EvolutionNode, id: number): number[] {
 	return [...new Set(levels)].sort((a, b) => a - b);
 }
 
+// Max depth (number of evolution "levels" from the family's root to its
+// deepest branch, NOT the count of species in it) of the WHOLE family
+// tree — every member of a family reports the same value regardless of
+// which stage it itself is (see QUIRKS' no-evolution/one-evolution/
+// two-plus-evolutions options and PokedexTableRow.evolutionStages).
+// Branching width (e.g. Eevee's 8 evolutions) doesn't add depth, only extra
+// branches at the same level — Eevee and every Eeveelution alike report
+// depth 1.
+//
+// Deliberately operates on the RAW chain (RawEvolutionChainLink), not a
+// normalized EvolutionNode from buildEvolutionNode — that function has to
+// pick exactly ONE coherent path to label a specific viewed form (dropping
+// every branch that requires a different, unviewed base_form/region), which
+// is right for rendering one Pokemon's own evolution card but wrong here:
+// walking `evolves_to` directly and counting every distinct child species,
+// with no base_form/region branch-selection at all, avoids a real
+// undercount buildEvolutionNode's default (no-context) view has for a
+// species whose ONLY evolution route is entirely form-gated with no
+// unconditional sibling entry to fall back to — e.g. plain Farfetch'd has no
+// evolution of its own; only Galarian Farfetch'd evolves into Sirfetch'd,
+// gated on a single base_form-only entry (verified live against
+// /evolution-chain for Farfetch'd) — buildEvolutionNode's default view
+// drops that branch entirely (same "base/default view drops a
+// form-exclusive branch" rule Corsola/Cursola relies on), which would
+// wrongly report depth 0 for the whole family. Recursing over `evolves_to`
+// (distinct child species) rather than `evolution_details` (alternate
+// requirement entries for reaching the SAME child, e.g. Meowth-shaped
+// dual-entry branches) still counts each real evolution event exactly once.
+export function evolutionFamilyDepth(link: RawEvolutionChainLink): number {
+	if (link.evolves_to.length === 0) return 0;
+	return 1 + Math.max(...link.evolves_to.map(evolutionFamilyDepth));
+}
+
 // Human-readable label for what triggers `node`'s own evolution (e.g. "Lv.
 // 16", "Thunder Stone", "Trade (metal-coat)") — used as the method line on
 // EvolutionChain's card for this node. Priority-ordered: the base label
@@ -482,7 +518,19 @@ export function describeEvolutionRequirement(node: EvolutionNode): string {
 	// below ("strong style move" alone doesn't say which move or how many).
 	else if (node.usedMove && node.minMoveCount) {
 		base = `${node.usedMove.replace(/-/g, " ")} x${node.minMoveCount}`;
-	} else if (node.trigger && node.trigger !== "level-up") base = node.trigger.replace(/-/g, " ");
+	}
+	// Gen 9: Pawmot/Rabsca/Brambleghast's only condition (level-up trigger, no
+	// level/item/happiness of its own) — worth showing over the generic
+	// trigger-name fallback below, same reasoning as minDamageTaken/usedMove.
+	else if (node.minSteps) base = `Walk ${node.minSteps} steps`;
+	// Gen 9: two new named triggers with no other condition attached (neither
+	// carries a level/item), so the generic trigger.replace(/-/g, " ") fallback
+	// below would otherwise show an awkward literal ("three defeated bisharp",
+	// "gimmighoul coins") — same "worth a real label" treatment as every other
+	// hard-to-read trigger name already gets above.
+	else if (node.trigger === "three-defeated-bisharp") base = "Defeat 3 Bisharp";
+	else if (node.trigger === "gimmighoul-coins") base = "Full Coin Hoard";
+	else if (node.trigger && node.trigger !== "level-up") base = node.trigger.replace(/-/g, " ");
 
 	if (node.relativePhysicalStats === 1) base = base ? `${base} (Atk > Def)` : "Atk > Def";
 	else if (node.relativePhysicalStats === -1) base = base ? `${base} (Def > Atk)` : "Def > Atk";
@@ -490,6 +538,7 @@ export function describeEvolutionRequirement(node: EvolutionNode): string {
 
 	if (node.needsOverworldRain) base = base ? `${base} (Rain)` : "Rain";
 	if (node.turnUpsideDown) base = base ? `${base} (Upside-down)` : "Upside-down";
+	if (node.needsMultiplayer) base = base ? `${base} (Multiplayer)` : "Multiplayer";
 
 	if (node.trigger === "trade" && node.heldItem) {
 		base = `Trade (${node.heldItem.replace(/-/g, " ")})`;
@@ -736,6 +785,8 @@ export function toTableRow(
 		isBaby: species.is_baby,
 		canMegaEvolve: deriveMegaForms(pokemon, species).length > 0,
 		canGigantamax: deriveGigantamaxForms(pokemon, species).length > 0,
+		// Static lookup, not a fetch — see EVOLUTION_STAGES in constants.ts.
+		evolutionStages: EVOLUTION_STAGES[species.id] ?? 0,
 	};
 }
 

@@ -256,26 +256,6 @@
 
 		<details class="filter-group" ontoggle={onDetailsToggle}>
 			<summary>
-				<Icon name="glasses" size={14} strokeWidth={2} />
-				<span>Quirks</span>
-				{#if filters.quirks.length}<span class="filter-count">{filters.quirks.length}</span>{/if}
-			</summary>
-			<div class="filter-chips">
-				{#each QUIRKS as quirk (quirk.key)}
-					<button
-						class="chip quirk-chip"
-						class:active={filters.quirks.includes(quirk.key)}
-						onclick={() => (filters.quirks = toggle(filters.quirks, quirk.key))}
-					>
-						<Icon name={quirk.icon} size={13} strokeWidth={2} />
-						{quirk.label}
-					</button>
-				{/each}
-			</div>
-		</details>
-
-		<details class="filter-group filter-group-last" ontoggle={onDetailsToggle}>
-			<summary>
 				<Icon name="star" size={14} strokeWidth={2} />
 				<span>Traits</span>
 				{#if filters.traits.length}<span class="filter-count">{filters.traits.length}</span>{/if}
@@ -289,6 +269,26 @@
 					>
 						<Icon name={trait.icon} size={13} strokeWidth={2} />
 						{trait.label}
+					</button>
+				{/each}
+			</div>
+		</details>
+
+		<details class="filter-group filter-group-last" ontoggle={onDetailsToggle}>
+			<summary>
+				<Icon name="glasses" size={14} strokeWidth={2} />
+				<span>Quirks</span>
+				{#if filters.quirks.length}<span class="filter-count">{filters.quirks.length}</span>{/if}
+			</summary>
+			<div class="filter-chips">
+				{#each QUIRKS as quirk (quirk.key)}
+					<button
+						class="chip quirk-chip"
+						class:active={filters.quirks.includes(quirk.key)}
+						onclick={() => (filters.quirks = toggle(filters.quirks, quirk.key))}
+					>
+						<Icon name={quirk.icon} size={13} strokeWidth={2} />
+						{quirk.label}
 					</button>
 				{/each}
 			</div>

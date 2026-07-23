@@ -30,6 +30,7 @@ function row(overrides: Partial<PokedexTableRow>): PokedexTableRow {
 		isBaby: false,
 		canMegaEvolve: false,
 		canGigantamax: false,
+		evolutionStages: 0,
 		...overrides,
 	};
 }
@@ -130,6 +131,32 @@ describe("filterPokemon", () => {
 		expect(
 			filterPokemon(traitRows, { ...EMPTY_FILTERS, traits: ["mega", "gigantamax"] }).map((r) => r.name),
 		).toEqual(["charizard"]);
+	});
+
+	it("buckets the no-evolution/one-evolution/two-plus-evolutions traits off evolutionStages, ANDed like any other trait", () => {
+		const stageRows: PokedexTableRow[] = [
+			row({ id: 128, name: "tauros", evolutionStages: 0 }),
+			row({ id: 172, name: "pichu", evolutionStages: 1, isBaby: true }),
+			row({ id: 25, name: "pikachu", evolutionStages: 1 }),
+			row({ id: 1, name: "bulbasaur", evolutionStages: 2 }),
+		];
+
+		expect(
+			filterPokemon(stageRows, { ...EMPTY_FILTERS, traits: ["no-evolution"] }).map((r) => r.name),
+		).toEqual(["tauros"]);
+		expect(
+			filterPokemon(stageRows, { ...EMPTY_FILTERS, traits: ["two-plus-evolutions"] }).map((r) => r.name),
+		).toEqual(["bulbasaur"]);
+		// AND semantics composes meaningfully with an unrelated trait...
+		expect(
+			filterPokemon(stageRows, { ...EMPTY_FILTERS, traits: ["one-evolution", "baby"] }).map((r) => r.name),
+		).toEqual(["pichu"]);
+		// ...but two evolution-stage buckets together are mutually exclusive per
+		// row, same as any other non-overlapping Traits combo — not a bug, just
+		// an always-empty query.
+		expect(
+			filterPokemon(stageRows, { ...EMPTY_FILTERS, traits: ["no-evolution", "one-evolution"] }).map((r) => r.name),
+		).toEqual([]);
 	});
 
 	it("combines multiple filter axes with AND", () => {

@@ -32,7 +32,7 @@
 	const MAX_CATCH_RATE = 255;
 	const MAX_HATCH_COUNTER = 120;
 
-	const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
+	const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"];
 
 	let { repository, id, rows, spriteStyle, useTypeIcons, activeGen, onBack, onSelect }: {
 		repository: PokedexRepository;

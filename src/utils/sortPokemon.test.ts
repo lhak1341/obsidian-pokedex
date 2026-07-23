@@ -26,6 +26,7 @@ function row(id: number, name: string, speed: number, overrides: Partial<Pokedex
 		isBaby: false,
 		canMegaEvolve: false,
 		canGigantamax: false,
+		evolutionStages: 0,
 		...overrides,
 	};
 }

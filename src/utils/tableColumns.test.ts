@@ -24,6 +24,7 @@ function makeRow(overrides: Partial<PokedexTableRow> = {}): PokedexTableRow {
 		isBaby: false,
 		canMegaEvolve: false,
 		canGigantamax: false,
+		evolutionStages: 0,
 		...overrides,
 	};
 }

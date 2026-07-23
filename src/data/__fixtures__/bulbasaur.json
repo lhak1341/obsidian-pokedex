@@ -56,7 +56,7 @@
 		{
 			"move": { "name": "solar-beam", "url": "" },
 			"version_group_details": [
-				{ "level_learned_at": 0, "move_learn_method": { "name": "tutor", "url": "" }, "version_group": { "name": "scarlet-violet", "url": "" } }
+				{ "level_learned_at": 0, "move_learn_method": { "name": "tutor", "url": "" }, "version_group": { "name": "legends-za", "url": "" } }
 			]
 		}
 	],

@@ -25,6 +25,7 @@ function row(id: number, name: string): PokedexTableRow {
 		isBaby: false,
 		canMegaEvolve: false,
 		canGigantamax: false,
+	evolutionStages: 0,
 	};
 }
 

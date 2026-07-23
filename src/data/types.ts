@@ -115,6 +115,14 @@ export interface RawEvolutionChainLink {
 		// against /evolution-chain/106.
 		used_move: NamedApiResource | null;
 		min_move_count: number | null;
+		// Gen 9: Pawmot/Rabsca/Brambleghast all require walking 1000 steps
+		// (level-up trigger, no other condition) — verified live against
+		// /evolution-chain responses for each.
+		min_steps: number | null;
+		// Gen 9: Palafin (Finizen -> Palafin) requires being in a multiplayer
+		// battle, layered alongside its own min_level 38 the same way
+		// needs_overworld_rain layers onto Sliggoo's min_level.
+		needs_multiplayer: boolean;
 	}[];
 	evolves_to: RawEvolutionChainLink[];
 }
@@ -203,6 +211,10 @@ export interface EvolutionNode {
 	// RawEvolutionChainLink.evolution_details.used_move/min_move_count.
 	usedMove: string | null;
 	minMoveCount: number | null;
+	// Gen 9+ independent conditions — see
+	// RawEvolutionChainLink.evolution_details.min_steps/needs_multiplayer.
+	minSteps: number | null;
+	needsMultiplayer: boolean;
 	children: EvolutionNode[];
 }
 
@@ -308,6 +320,13 @@ export interface PokedexTableRow {
 	isBaby: boolean;
 	canMegaEvolve: boolean;
 	canGigantamax: boolean;
+	// Total evolution stages in this species' WHOLE family (same value for
+	// every member, including every regional-form sibling) — see QUIRKS'
+	// no-evolution/one-evolution/two-plus-evolutions options,
+	// normalize.ts's evolutionFamilyDepth. 0 for a species with no evolution
+	// at all (Tauros) or when the family's evolution-chain fetch failed
+	// (non-fatal fallback, same as elsewhere in this repo).
+	evolutionStages: number;
 }
 
 // Full record shown in the detail screen.
