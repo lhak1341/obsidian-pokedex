@@ -26,6 +26,7 @@
   "24": "svelte",
   "25": "vitest.config.ts",
   "26": "0005-evolution-node-branch-selection-not-extracted.md",
+  "27": "domTarget.ts",
   "31": "0001-two-generation-membership-checks.md",
   "32": "0002-mega-form-cache-not-on-getOrFetch.md",
   "33": "0003-pokedexview-stays-untested.md"

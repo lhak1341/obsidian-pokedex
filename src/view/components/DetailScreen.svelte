@@ -9,6 +9,7 @@
 	import AbilitiesPanel from "./AbilitiesPanel.svelte";
 	import BarRow from "./BarRow.svelte";
 	import { DetailLoadState, type DetailEntrySnapshot } from "../DetailLoadState";
+	import { isEditableTarget } from "../domTarget";
 	import EvolutionTree from "./EvolutionTree.svelte";
 	import FlavorTextPanel from "./FlavorTextPanel.svelte";
 	import GigantamaxFormToggle from "./GigantamaxFormToggle.svelte";
@@ -207,15 +208,6 @@
 			: { prev: null, next: null },
 	);
 
-	// Same isEditableTarget guard as PokedexApp's "[" / "]" history hotkeys —
-	// plain ArrowLeft/ArrowRight only fires the strip's own nav when nothing
-	// text-editable has focus. Scoped to this component's own lifetime
-	// (mounted only while screen === "detail") rather than PokedexApp's
-	// always-mounted global listener, since this is detail-view-only nav.
-	function isEditableTarget(target: EventTarget | null): boolean {
-		return target instanceof HTMLElement &&
-			(target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
-	}
 	function onKeydown(e: KeyboardEvent) {
 		if (isEditableTarget(e.target)) return;
 		if (e.key === "ArrowLeft" && adjacent.prev) {
@@ -295,7 +287,7 @@
 				<aside class="identity-col">
 				<div class="portrait-panel">
 					<img src={portraitUri ?? ""} alt={formatPokemonDisplayName(entry)} class="portrait-image" />
-					{#if (activeMegaData ?? activeGigantamaxData ?? entry).shinyDataUri || (activeMegaData ?? activeGigantamaxData ?? entry).shinyArtworkDataUri}
+					{#if activePortraitSource?.shinyDataUri || activePortraitSource?.shinyArtworkDataUri}
 						<button
 							class="shiny-toggle"
 							class:active={showShiny}

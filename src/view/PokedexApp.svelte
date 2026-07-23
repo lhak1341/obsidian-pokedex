@@ -6,6 +6,7 @@
 	import { resolveGenerationScope } from "../utils/generationScope";
 	import { describePartialLoadOutcome, describeRetryOutcome } from "../utils/loadNotices";
 	import { DetailNavigationState, type ScrollInstruction } from "./DetailNavigationState";
+	import { isEditableTarget } from "./domTarget";
 	import DetailScreen from "./components/DetailScreen.svelte";
 	import { PokedexLoadState } from "./PokedexLoadState";
 	import TableScreen from "./components/TableScreen.svelte";
@@ -125,11 +126,6 @@
 
 	function goForward() {
 		void applyNavigation(navState.goForward());
-	}
-
-	function isEditableTarget(target: EventTarget | null): boolean {
-		if (!(target instanceof HTMLElement)) return false;
-		return target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
 	}
 
 	// Verified against both Obsidian's HotkeyManager and Electron's native

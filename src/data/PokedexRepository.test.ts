@@ -437,6 +437,19 @@ describe("PokedexRepository", () => {
 		expect(client.fetchPokemon).toHaveBeenCalledTimes(2);
 	});
 
+	it("getMegaForm dedups two concurrent calls for the same key into one client fetch", async () => {
+		const { client, repository } = makeRepository();
+		client.variantPokemon.set("charizard-mega-x", { ...(bulbasaur as unknown as RawPokemon) });
+
+		const [first, second] = await Promise.all([
+			repository.getMegaForm("charizard-mega-x"),
+			repository.getMegaForm("charizard-mega-x"),
+		]);
+
+		expect(client.fetchPokemon).toHaveBeenCalledTimes(1);
+		expect(first).toEqual(second);
+	});
+
 	it("getMegaForm reads a disk-cached form without touching the client, and mem-caches it", async () => {
 		const { cache, client, repository } = makeRepository();
 		await cache.writeJson("mega-forms/charizard-mega-x.json", {

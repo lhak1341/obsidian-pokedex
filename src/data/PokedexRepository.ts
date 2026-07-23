@@ -86,6 +86,15 @@ export class PokedexRepository {
 	// its own comment), so it needs its own in-flight tracking keyed by
 	// relPath instead of cachePath.
 	private imageInFlight = new Map<string, Promise<string | null>>();
+	// Same dedup again for fetchVarietyForm below (also not built on
+	// getOrFetch — see its own comment), keyed by varietyKey. One shared map
+	// for both getMegaForm and getGigantamaxForm, not split per entity type
+	// like the mem caches are: the mem-cache split exists only because Mega
+	// and Gigantamax need two different result types, not because a
+	// varietyKey could collide between them (mega keys end in
+	// -mega/-mega-x/-mega-y, gigantamax keys end in -gmax — see
+	// getMegaForm's own comment on varietyKey uniqueness).
+	private varietyFormInFlight = new Map<string, Promise<unknown>>();
 
 	constructor(
 		private client: PokeApiClient,
@@ -385,29 +394,41 @@ export class PokedexRepository {
 	): Promise<T> {
 		const mem = memCache.get(varietyKey);
 		if (mem) return mem;
+		const pending = this.varietyFormInFlight.get(varietyKey) as Promise<T> | undefined;
+		if (pending) return pending;
+
 		const cachePath = `${cachePathPrefix}/${varietyKey}.json`;
-		const cached = await this.cache.readJson<T>(cachePath);
-		if (cached) {
-			memCache.set(varietyKey, cached);
-			return cached;
+		const load = (async (): Promise<T> => {
+			const cached = await this.cache.readJson<T>(cachePath);
+			if (cached) {
+				memCache.set(varietyKey, cached);
+				return cached;
+			}
+			const pokemon = await this.client.fetchPokemon(varietyKey);
+			const [sprite, artwork, shiny, shinyArtwork] = await Promise.all([
+				this.getOrFetchImage(pokemon.sprites.front_default, imagePath(varietyKey, "sprite")).catch(() => null),
+				this.getOrFetchImage(
+					pokemon.sprites.other?.["official-artwork"]?.front_default ?? null,
+					imagePath(varietyKey, "artwork"),
+				).catch(() => null),
+				this.getOrFetchImage(pokemon.sprites.front_shiny, imagePath(varietyKey, "shiny")).catch(() => null),
+				this.getOrFetchImage(
+					pokemon.sprites.other?.["official-artwork"]?.front_shiny ?? null,
+					imagePath(varietyKey, "shiny-artwork"),
+				).catch(() => null),
+			]);
+			const detail = normalize(pokemon, { sprite, artwork, shiny, shinyArtwork });
+			await this.cache.writeJson(cachePath, detail);
+			memCache.set(varietyKey, detail);
+			return detail;
+		})();
+
+		this.varietyFormInFlight.set(varietyKey, load);
+		try {
+			return await load;
+		} finally {
+			this.varietyFormInFlight.delete(varietyKey);
 		}
-		const pokemon = await this.client.fetchPokemon(varietyKey);
-		const [sprite, artwork, shiny, shinyArtwork] = await Promise.all([
-			this.getOrFetchImage(pokemon.sprites.front_default, imagePath(varietyKey, "sprite")).catch(() => null),
-			this.getOrFetchImage(
-				pokemon.sprites.other?.["official-artwork"]?.front_default ?? null,
-				imagePath(varietyKey, "artwork"),
-			).catch(() => null),
-			this.getOrFetchImage(pokemon.sprites.front_shiny, imagePath(varietyKey, "shiny")).catch(() => null),
-			this.getOrFetchImage(
-				pokemon.sprites.other?.["official-artwork"]?.front_shiny ?? null,
-				imagePath(varietyKey, "shiny-artwork"),
-			).catch(() => null),
-		]);
-		const detail = normalize(pokemon, { sprite, artwork, shiny, shinyArtwork });
-		await this.cache.writeJson(cachePath, detail);
-		memCache.set(varietyKey, detail);
-		return detail;
 	}
 
 	// Mega forms are rare (<40 species out of 900+) and only ever needed when
