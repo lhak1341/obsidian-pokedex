@@ -182,6 +182,71 @@ describe("PokedexRepository", () => {
 		expect(result.failedIds).toEqual([]);
 	});
 
+	// Shared by the cacheRange/clearRange regional-form tests below — same
+	// dex #19 rattata/rattata-alola setup as the two tests above.
+	function setUpRattataWithAlolanForm(
+		client: FakePokeApiClient,
+		cache: DiskCache,
+	): Promise<void> {
+		const rattataSpecies: RawSpecies = {
+			...bulbasaurSpecies,
+			id: 19,
+			name: "rattata",
+			varieties: [
+				{ is_default: true, pokemon: { name: "rattata", url: "" } },
+				{ is_default: false, pokemon: { name: "rattata-alola", url: "" } },
+			],
+		};
+		client.variantPokemon.set("rattata-alola", {
+			...(bulbasaur as unknown as RawPokemon),
+			id: 10091,
+			name: "rattata-alola",
+			species: { name: "rattata", url: "" },
+		});
+		return Promise.all([
+			cache.writeJson("species/19.json", rattataSpecies),
+			cache.writeJson("pokemon/19.json", {
+				...(bulbasaur as unknown as RawPokemon),
+				id: 19,
+				name: "rattata",
+				species: { name: "rattata", url: "" },
+			}),
+		]).then(() => undefined);
+	}
+
+	it("cacheRange also prefetches extras for a discovered regional-form row, not just the range's own ids", async () => {
+		const { client, cache, repository } = makeRepository();
+		await setUpRattataWithAlolanForm(client, cache);
+
+		await repository.cacheRange({ start: 19, end: 19 });
+
+		// getEntryExtras(10091) fetches by the variant's own NUMERIC id (a
+		// separate call from the name-keyed "rattata-alola" fetch the core
+		// phase already made) — confirms the extras phase reached beyond the
+		// static range ids to the row getTableRows actually discovered.
+		expect(client.fetchPokemon).toHaveBeenCalledWith(10091);
+		expect(await cache.readJson("pokemon/10091.json")).not.toBeNull();
+	});
+
+	it("clearRange also evicts a discovered regional-form row's cache entries (name-keyed and numeric-id-keyed)", async () => {
+		const { client, cache, repository } = makeRepository();
+		await setUpRattataWithAlolanForm(client, cache);
+		// Populate both cache entities the way real usage would: the
+		// name-keyed file (table load) and the numeric-id-keyed one (a detail-
+		// view visit) — see this repo's CLAUDE.md cache-duplication gotcha.
+		await repository.getTableRows({ start: 19, end: 19 });
+		await repository.getEntryExtras(10091);
+		expect(await cache.readJson("pokemon/rattata-alola.json")).not.toBeNull();
+		expect(await cache.readJson("pokemon/10091.json")).not.toBeNull();
+
+		await repository.clearRange({ start: 19, end: 19 });
+
+		expect(await cache.readJson("pokemon/rattata-alola.json")).toBeNull();
+		expect(await cache.readJson("pokemon/10091.json")).toBeNull();
+		expect(await cache.readJson("pokemon/19.json")).toBeNull();
+		expect(await cache.readJson("species/19.json")).toBeNull();
+	});
+
 	it("getTableRows' onRow callback fires once per successful row as it settles", async () => {
 		const { repository } = makeRepository();
 		const seen: number[] = [];

@@ -493,9 +493,45 @@ export class PokedexRepository {
 	// id, not Pokemon id, and shared across every member of a family, so
 	// deleting it here could evict data a sibling species outside this range
 	// still depends on.
+	//
+	// Also sweeps any regional-form row this range's species produce (see
+	// deriveRegionalForms) — a variant's own numeric id (e.g. 10229 for
+	// Hisuian Growlithe) has nothing to do with this range even though its
+	// BASE species' id does, so it needs its own explicit removal rather
+	// than falling out of the `ids` loop below. Read from whatever species
+	// JSON is STILL on disk (before this id's own files get removed further
+	// down) rather than an extra network fetch — if the species was never
+	// cached, there's nothing to derive a variant from anyway, consistent
+	// with that variant equally never having been cached.
 	async clearRange(range: { start: number; end: number }): Promise<void> {
 		const ids = Array.from({ length: range.end - range.start + 1 }, (_, i) => range.start + i);
 		for (const id of ids) {
+			const cachedSpecies = await this.cache.readJson<RawSpecies>(speciesPath(id));
+			if (cachedSpecies) {
+				for (const form of deriveRegionalForms(cachedSpecies)) {
+					// Two independent cache entries per variant — the name-keyed
+					// one table-load writes (getOrFetchPokemonVariant) and the
+					// numeric-id-keyed one the detail view writes (getOrFetchPokemon)
+					// — see this repo's CLAUDE.md cache-duplication gotcha. Read
+					// the name-keyed file first to learn the variant's own numeric
+					// id before removing it out from under itself.
+					const cachedVariant = await this.cache.readJson<RawPokemon>(pokemonPath(form.key));
+					this.pokemonVariantMemCache.delete(form.key);
+					await this.cache.remove(pokemonPath(form.key));
+					for (const suffix of ALL_IMAGE_SUFFIXES) {
+						this.imageMemCache.delete(imagePath(form.key, suffix));
+						await this.cache.remove(imagePath(form.key, suffix));
+					}
+					if (cachedVariant) {
+						this.pokemonMemCache.delete(cachedVariant.id);
+						await this.cache.remove(pokemonPath(cachedVariant.id));
+						for (const suffix of ALL_IMAGE_SUFFIXES) {
+							this.imageMemCache.delete(imagePath(cachedVariant.id, suffix));
+							await this.cache.remove(imagePath(cachedVariant.id, suffix));
+						}
+					}
+				}
+			}
 			this.pokemonMemCache.delete(id);
 			this.speciesMemCache.delete(id);
 			for (const suffix of ALL_IMAGE_SUFFIXES) {
@@ -511,13 +547,20 @@ export class PokedexRepository {
 	// path (table-row core) followed by getEntryExtras for every id (official
 	// artwork, shiny, shiny artwork, evolution chain) — the same data
 	// DetailLoadState.load() would otherwise fetch on first click into that
-	// Pokemon, done ahead of time instead. Caching a single id is really two
-	// internal steps (row core, then extras), but `onProgress` reports in
-	// entry units (0..ids.length) — a caller-facing progress readout like
-	// "151/151" would otherwise show "302/302" for a 151-entry generation,
-	// looking like double the actual dex size. rawStep tracks the true
-	// 0..ids.length*2 step count internally; only the halved, rounded value
-	// crosses the onProgress boundary.
+	// Pokemon, done ahead of time instead.
+	//
+	// The extras phase runs over EVERY row getTableRows actually produced
+	// (result.rows), not just the static numeric ids — a regional-form row
+	// discovered here (e.g. Hisuian Growlithe while caching Gen 1, since its
+	// base species' dex number lives there even though its own generationId
+	// is 8) would otherwise never get its evolution chain/artwork/shiny
+	// prefetched at all, only lazily loaded on first detail-view visit.
+	// `onProgress` reports each phase against its own honest total (0..
+	// ids.length for the core phase, 0..result.rows.length for the extras
+	// phase) rather than one combined/halved counter — simpler, and the
+	// extras phase's total can legitimately be larger than the core phase's
+	// once regional forms are involved, which a single shared total can't
+	// represent without lying about one phase or the other.
 	async cacheRange(
 		range: { start: number; end: number },
 		onProgress?: (loaded: number, total: number) => void,
@@ -525,16 +568,21 @@ export class PokedexRepository {
 		onRow?: (row: PokedexTableRow) => void,
 	): Promise<TableLoadResult> {
 		const ids = Array.from({ length: range.end - range.start + 1 }, (_, i) => range.start + i);
-		const total = ids.length;
-		const reportStep = (rawStep: number) => onProgress?.(Math.ceil(rawStep / 2), total);
 
-		const result = await this.getTableRows(range, reportStep, isCancelled, onRow);
+		const result = await this.getTableRows(range, (loaded) => onProgress?.(loaded, ids.length), isCancelled, onRow);
 
-		let rawStep = total;
-		await mapWithConcurrency(ids, FETCH_CONCURRENCY, (id) => this.getEntryExtras(id), () => {
-			rawStep++;
-			reportStep(rawStep);
-		}, isCancelled);
+		let extrasLoaded = 0;
+		const extrasTotal = result.rows.length;
+		await mapWithConcurrency(
+			result.rows.map((r) => r.id),
+			FETCH_CONCURRENCY,
+			(id) => this.getEntryExtras(id),
+			() => {
+				extrasLoaded++;
+				onProgress?.(extrasLoaded, extrasTotal);
+			},
+			isCancelled,
+		);
 
 		return result;
 	}
