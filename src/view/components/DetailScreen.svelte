@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Notice } from "obsidian";
 	import { onDestroy, onMount } from "svelte";
-	import { resolveGenerationId, TYPE_COLORS } from "../../data/constants";
+	import { TYPE_COLORS } from "../../data/constants";
 	import { getAdjacentDexEntries } from "../../utils/dexNav";
 	import { nextEvolutionLevels } from "../../data/normalize";
 	import type { PokedexRepository } from "../../data/PokedexRepository";
@@ -32,7 +32,7 @@
 	const MAX_CATCH_RATE = 255;
 	const MAX_HATCH_COUNTER = 120;
 
-	const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII"];
+	const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
 
 	let { repository, id, rows, spriteStyle, useTypeIcons, activeGen, onBack, onSelect }: {
 		repository: PokedexRepository;
@@ -325,7 +325,7 @@
 				</div>
 
 				<div class="name-block">
-					<p class="dex-eyebrow">No. {String(entry.dexNumber).padStart(3, "0")} ({ROMAN_NUMERALS[resolveGenerationId(entry.dexNumber) - 1]})</p>
+					<p class="dex-eyebrow">No. {String(entry.dexNumber).padStart(3, "0")} ({ROMAN_NUMERALS[entry.generationId - 1]})</p>
 					<h2 class="mon-name">{formatPokemonDisplayName(entry)}</h2>
 					<div class="type-row">
 						{#each (activeMegaData ?? entry).types as type (type)}

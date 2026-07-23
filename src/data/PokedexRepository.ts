@@ -3,6 +3,7 @@ import { DiskCache } from "./Cache";
 import { ALL_IMAGE_SUFFIXES, imagePath, pokemonPath, speciesPath } from "./cachePaths";
 import {
 	deriveRegionalForms,
+	inferAncestorFormSuffix,
 	normalizeEvolutionChain,
 	normalizeMoveDetail,
 	resolveRegionalFormSuffix,
@@ -27,15 +28,19 @@ import type {
 	RawSpecies,
 } from "./types";
 
-// Network path (real PokeAPI requests) — kept low and PokeAPI-friendly.
-// withRetry's exponential backoff (see retry.ts) already absorbs an
-// occasional 429 at this concurrency.
+// Outer dispatch concurrency for loops that are all network-bound work (e.g.
+// cacheRange's extras phase, getMoveDetailsForMoves) — the real PokeAPI-
+// friendly cap is enforced at the HTTP call site itself (see PokeApiClient's
+// NETWORK_CONCURRENCY), this just bounds how many callers pile up waiting on
+// that semaphore at once.
 const FETCH_CONCURRENCY = 10;
 
-// Disk-only path (every id already on disk from a previous session, just not
-// yet in this session's mem cache — e.g. every fresh Obsidian restart) has no
-// external rate limit to respect, only local file I/O, so it can run far more
-// in flight than the network path.
+// Outer dispatch concurrency for getRowsForIds, run over every id regardless
+// of cache hit or miss — safe to fan out this wide even though some of those
+// ids will turn out to be cache misses, since a miss blocks on
+// PokeApiClient's own network semaphore rather than consuming this loop's
+// concurrency, and a hit resolves near-instantly (pure local file I/O) and
+// frees its slot immediately.
 const DISK_READ_CONCURRENCY = 50;
 
 export interface TableLoadResult {
@@ -71,6 +76,16 @@ export class PokedexRepository {
 	private moveDetailMemCache = new Map<string, MoveDetail>();
 	private megaFormMemCache = new Map<string, MegaFormDetail>();
 	private gigantamaxFormMemCache = new Map<string, GigantamaxFormDetail>();
+	// In-flight dedup for getOrFetch, keyed by disk cache path (globally
+	// unique across every entity type). Without this, two concurrent callers
+	// for the same not-yet-mem-cached key (e.g. two detail-screen loads in
+	// quick succession from prev/next nav, both wanting move "tackle") each
+	// pay their own disk read or network fetch instead of sharing one.
+	private inFlight = new Map<string, Promise<unknown>>();
+	// Same dedup, separate map: getOrFetchImage isn't built on getOrFetch (see
+	// its own comment), so it needs its own in-flight tracking keyed by
+	// relPath instead of cachePath.
+	private imageInFlight = new Map<string, Promise<string | null>>();
 
 	constructor(
 		private client: PokeApiClient,
@@ -112,17 +127,29 @@ export class PokedexRepository {
 		isStale?: (cached: T) => boolean,
 	): Promise<T> {
 		if (memCache.has(key)) return memCache.get(key)!;
-		const cached = await this.cache.readJson<T>(cachePath);
-		if (cached && !isStale?.(cached)) {
-			const value = migrate ? migrate(cached) : cached;
-			if (value !== cached) await this.cache.writeJson(cachePath, value);
-			memCache.set(key, value);
-			return value;
+		const pending = this.inFlight.get(cachePath) as Promise<T> | undefined;
+		if (pending) return pending;
+
+		const load = (async (): Promise<T> => {
+			const cached = await this.cache.readJson<T>(cachePath);
+			if (cached && !isStale?.(cached)) {
+				const value = migrate ? migrate(cached) : cached;
+				if (value !== cached) await this.cache.writeJson(cachePath, value);
+				memCache.set(key, value);
+				return value;
+			}
+			const fresh = await fetch();
+			await this.cache.writeJson(cachePath, fresh);
+			memCache.set(key, fresh);
+			return fresh;
+		})();
+
+		this.inFlight.set(cachePath, load);
+		try {
+			return await load;
+		} finally {
+			this.inFlight.delete(cachePath);
 		}
-		const fresh = await fetch();
-		await this.cache.writeJson(cachePath, fresh);
-		memCache.set(key, fresh);
-		return fresh;
 	}
 
 	// Shared fetch/migrate/isStale logic behind getOrFetchPokemon (numeric id)
@@ -224,16 +251,29 @@ export class PokedexRepository {
 		if (!url) return null;
 		const mem = this.imageMemCache.get(relPath);
 		if (mem) return mem;
-		const cached = await this.cache.readImageDataUri(relPath);
-		if (cached) {
-			this.imageMemCache.set(relPath, cached);
-			return cached;
+		const pending = this.imageInFlight.get(relPath);
+		if (pending) return pending;
+
+		const load = (async (): Promise<string | null> => {
+			const cached = await this.cache.readImageDataUri(relPath);
+			if (cached) {
+				this.imageMemCache.set(relPath, cached);
+				return cached;
+			}
+			const buffer = await this.client.fetchImageBinary(url);
+			// writeImageBinary hands back the data URI for the buffer it just
+			// wrote — no separate readImageDataUri re-read needed.
+			const dataUri = await this.cache.writeImageBinary(relPath, buffer);
+			this.imageMemCache.set(relPath, dataUri);
+			return dataUri;
+		})();
+
+		this.imageInFlight.set(relPath, load);
+		try {
+			return await load;
+		} finally {
+			this.imageInFlight.delete(relPath);
 		}
-		const buffer = await this.client.fetchImageBinary(url);
-		await this.cache.writeImageBinary(relPath, buffer);
-		const dataUri = await this.cache.readImageDataUri(relPath);
-		if (dataUri) this.imageMemCache.set(relPath, dataUri);
-		return dataUri;
 	}
 
 	// Abilities repeat heavily across species (e.g. "levitate", "intimidate"),
@@ -404,27 +444,6 @@ export class PokedexRepository {
 		return hasPokemon && hasSpecies;
 	}
 
-	// Splits `ids` into ones already sitting in mem/disk cache vs ones that
-	// still need a network round-trip, using a cheap existence check (no JSON
-	// parse) rather than actually reading either file. Lets the caller run the
-	// cache-hit half at DISK_READ_CONCURRENCY and the miss half at the slower,
-	// PokeAPI-friendly FETCH_CONCURRENCY instead of gating every id — cache hit
-	// or not — behind the same throttle.
-	private async partitionByCacheHit(
-		ids: number[],
-	): Promise<{ cached: number[]; uncached: number[] }> {
-		const cached: number[] = [];
-		const uncached: number[] = [];
-
-		await mapWithConcurrency(ids, DISK_READ_CONCURRENCY, (id) => this.isIdCached(id), (result) => {
-			const id = ids[result.index];
-			if ("value" in result && result.value) cached.push(id);
-			else uncached.push(id);
-		});
-
-		return { cached, uncached };
-	}
-
 	// Whether opening this id's detail screen would still hit the network —
 	// i.e. whether getEntryExtras(id) (official artwork, shiny, shiny artwork,
 	// evolution chain) has already landed on disk, not just the table-row
@@ -492,9 +511,13 @@ export class PokedexRepository {
 	// path (table-row core) followed by getEntryExtras for every id (official
 	// artwork, shiny, shiny artwork, evolution chain) — the same data
 	// DetailLoadState.load() would otherwise fetch on first click into that
-	// Pokemon, done ahead of time instead. Reports one combined progress
-	// count across both phases (ids.length each) rather than restarting the
-	// counter at the halfway point.
+	// Pokemon, done ahead of time instead. Caching a single id is really two
+	// internal steps (row core, then extras), but `onProgress` reports in
+	// entry units (0..ids.length) — a caller-facing progress readout like
+	// "151/151" would otherwise show "302/302" for a 151-entry generation,
+	// looking like double the actual dex size. rawStep tracks the true
+	// 0..ids.length*2 step count internally; only the halved, rounded value
+	// crosses the onProgress boundary.
 	async cacheRange(
 		range: { start: number; end: number },
 		onProgress?: (loaded: number, total: number) => void,
@@ -502,14 +525,15 @@ export class PokedexRepository {
 		onRow?: (row: PokedexTableRow) => void,
 	): Promise<TableLoadResult> {
 		const ids = Array.from({ length: range.end - range.start + 1 }, (_, i) => range.start + i);
-		const totalSteps = ids.length * 2;
+		const total = ids.length;
+		const reportStep = (rawStep: number) => onProgress?.(Math.ceil(rawStep / 2), total);
 
-		const result = await this.getTableRows(range, (loaded) => onProgress?.(loaded, totalSteps), isCancelled, onRow);
+		const result = await this.getTableRows(range, reportStep, isCancelled, onRow);
 
-		let extrasLoaded = ids.length;
+		let rawStep = total;
 		await mapWithConcurrency(ids, FETCH_CONCURRENCY, (id) => this.getEntryExtras(id), () => {
-			extrasLoaded++;
-			onProgress?.(extrasLoaded, totalSteps);
+			rawStep++;
+			reportStep(rawStep);
 		}, isCancelled);
 
 		return result;
@@ -583,23 +607,30 @@ export class PokedexRepository {
 			return builtRows;
 		};
 
-		const handleResult = (source: number[]) =>
-			(result: { index: number; value: PokedexTableRow[] } | { index: number; error: unknown }) => {
-				loaded++;
-				onProgress?.(loaded, total);
-				if ("value" in result) {
-					for (const row of result.value) {
-						rows.push(row);
-						onRow?.(row);
-					}
-				} else {
-					failedIds.push(source[result.index]);
+		const handleResult = (result: { index: number; value: PokedexTableRow[] } | { index: number; error: unknown }) => {
+			loaded++;
+			onProgress?.(loaded, total);
+			if ("value" in result) {
+				for (const row of result.value) {
+					rows.push(row);
+					onRow?.(row);
 				}
-			};
+			} else {
+				failedIds.push(ids[result.index]);
+			}
+		};
 
-		const { cached, uncached } = await this.partitionByCacheHit(ids);
-		await mapWithConcurrency(cached, DISK_READ_CONCURRENCY, fetchRow, handleResult(cached), isCancelled);
-		await mapWithConcurrency(uncached, FETCH_CONCURRENCY, fetchRow, handleResult(uncached), isCancelled);
+		// A single pass at DISK_READ_CONCURRENCY over every id, cache hit or
+		// miss — no upfront partitioning scan first. That used to mean checking
+		// every single id's on-disk existence (two adapter.exists() calls each)
+		// before a single row could render, which on the default all-generations
+		// scope (~1010 ids) blocked the very first row behind ~2000 filesystem
+		// checks. Safe to fan out this wide even for cache-miss ids now that
+		// PokeApiClient enforces the real PokeAPI-friendly concurrency cap at
+		// the actual HTTP call site (see NETWORK_CONCURRENCY) — a cache hit
+		// resolves near-instantly and frees its slot, a cache miss blocks on
+		// the client's own semaphore rather than this loop's concurrency.
+		await mapWithConcurrency(ids, DISK_READ_CONCURRENCY, fetchRow, handleResult, isCancelled);
 
 		// dexNumber first (so a regional-form row sits next to its base
 		// species), id as the tiebreaker within a shared dexNumber — a
@@ -655,14 +686,21 @@ export class PokedexRepository {
 		// evolution card shows the Ice Stone requirement and links onward to
 		// Alolan Ninetales rather than the base Fire-Stone line. See
 		// normalizeEvolutionChain's own comment for the selection rules.
-		const formSuffix = resolveRegionalFormSuffix(pokemon, species);
+		const ownFormSuffix = resolveRegionalFormSuffix(pokemon, species);
 
 		let evolutionChain: EvolutionNode | null = null;
 		try {
 			const rawChain = await this.getOrFetchEvolutionChain(species.evolution_chain.url);
+			// Obstagoon/Cursola/Perrserker/Runerigus/Sirfetch'd/Mr. Rime shape:
+			// `ownFormSuffix` is undefined (the viewed species has no suffix of
+			// its own) but it may still only be reachable via a regional-variant
+			// ancestor — inferAncestorFormSuffix walks the raw chain to find
+			// that suffix so the branch leading to it isn't dropped as an
+			// unrelated regional edge. See inferAncestorFormSuffix's own comment.
+			const pathSuffix = ownFormSuffix ?? inferAncestorFormSuffix(rawChain.chain, species.name);
 			evolutionChain = normalizeEvolutionChain(
 				rawChain.chain,
-				formSuffix ? { formSuffix, rootId: id, speciesName: species.name } : undefined,
+				pathSuffix ? { formSuffix: pathSuffix, ownFormSuffix, rootId: id, speciesName: species.name } : undefined,
 			);
 		} catch {
 			evolutionChain = null; // non-fatal: detail view still renders without it

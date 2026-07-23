@@ -107,21 +107,30 @@ export class DiskCache {
 		await this.adapter.write(path, JSON.stringify(data));
 	}
 
+	private dataUriFromBuffer(relPath: string, buffer: ArrayBuffer): string {
+		const mime = MIME_BY_EXT[extOf(relPath)] ?? "image/png";
+		return `data:${mime};base64,${arrayBufferToBase64(buffer)}`;
+	}
+
 	async readImageDataUri(relPath: string): Promise<string | null> {
 		const path = this.resolve(relPath);
 		try {
 			const buffer = await this.adapter.readBinary(path);
-			const mime = MIME_BY_EXT[extOf(relPath)] ?? "image/png";
-			return `data:${mime};base64,${arrayBufferToBase64(buffer)}`;
+			return this.dataUriFromBuffer(relPath, buffer);
 		} catch {
 			return null;
 		}
 	}
 
-	async writeImageBinary(relPath: string, buffer: ArrayBuffer): Promise<void> {
+	// Returns the data URI for the buffer just written, encoded directly from
+	// the in-memory buffer — avoids a redundant readBinary+base64 round-trip
+	// against the file it just wrote (every caller needs the data URI right
+	// after writing).
+	async writeImageBinary(relPath: string, buffer: ArrayBuffer): Promise<string> {
 		const path = this.resolve(relPath);
 		await this.ensureParentDir(path);
 		await this.adapter.writeBinary(path, buffer);
+		return this.dataUriFromBuffer(relPath, buffer);
 	}
 
 	async clear(): Promise<void> {

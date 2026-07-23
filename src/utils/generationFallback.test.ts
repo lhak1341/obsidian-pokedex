@@ -46,10 +46,23 @@ describe("resolveTabsForGen", () => {
 		expect(tabs.map((t) => t.key)).toEqual(["platinum"]);
 	});
 
-	it("returns an empty array when even the latest gen's tabs have no data", () => {
+	it("returns an empty array when no generation's tabs have data", () => {
 		const flavorTexts: Record<string, string> = {};
 		const tabs = resolveTabsForGen(FLAVOR_TABS_BY_GEN, 3, (t) => !!flavorTexts[t.key]);
 		expect(tabs).toEqual([]);
+	});
+
+	// The actual bug this covers: Active Gen defaults to LATEST_GEN for every
+	// fresh install, so falling back to "LATEST_GEN's tabs" specifically used
+	// to be a no-op whenever activeGen was already LATEST_GEN — a moves/
+	// flavor-text cache trimmed before that generation's support existed (see
+	// PokedexRepository's isStale comments) would show zero tabs/rows forever,
+	// with no fallback actually firing. Falling back to the nearest *other*
+	// generation instead fixes this.
+	it("falls back to an older generation when the active gen is already the latest and has no data", () => {
+		const versionsWithMoves = new Set(["firered-leafgreen"]);
+		const tabs = resolveTabsForGen(MOVE_TABS_BY_GEN, LATEST_GEN, (t) => versionsWithMoves.has(t.key));
+		expect(tabs.map((t) => t.key)).toEqual(["firered-leafgreen"]);
 	});
 
 	it("works generically across differently-shaped tab types", () => {

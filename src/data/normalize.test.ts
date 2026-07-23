@@ -6,6 +6,7 @@ import {
 	deriveRegionalForms,
 	describeEvolutionRequirement,
 	extractFlavorTexts,
+	inferAncestorFormSuffix,
 	nextEvolutionLevels,
 	normalizeEvolutionChain,
 	normalizeEvYield,
@@ -212,6 +213,7 @@ describe("normalizeEvolutionChain", () => {
 	it("picks the form-matching entry and resolves the variety's own id when a context is given", () => {
 		const node = normalizeEvolutionChain(meowthChain, {
 			formSuffix: "alola",
+			ownFormSuffix: "alola",
 			rootId: 10107,
 			speciesName: "meowth",
 		});
@@ -245,7 +247,12 @@ describe("normalizeEvolutionChain", () => {
 	};
 
 	it("resolves the ancestor's own variety when the viewed species is the evolved stage", () => {
-		const node = normalizeEvolutionChain(grimerChain, { formSuffix: "alola", rootId: 10124, speciesName: "muk" });
+		const node = normalizeEvolutionChain(grimerChain, {
+			formSuffix: "alola",
+			ownFormSuffix: "alola",
+			rootId: 10124,
+			speciesName: "muk",
+		});
 		expect(node.name).toBe("grimer");
 		expect(node.id).toBe(10123);
 		expect(node.formLabel).toBe("Alolan");
@@ -273,6 +280,7 @@ describe("normalizeEvolutionChain", () => {
 	it("still resolves the viewed evolved node when PokeAPI can't disambiguate the ancestor", () => {
 		const node = normalizeEvolutionChain(exeggcuteChain, {
 			formSuffix: "alola",
+			ownFormSuffix: "alola",
 			rootId: 10121,
 			speciesName: "exeggutor",
 		});
@@ -319,7 +327,12 @@ describe("normalizeEvolutionChain", () => {
 	});
 
 	it("drops the sibling branch a dedicated regional entry doesn't own (Yamask viewed as Galarian)", () => {
-		const node = normalizeEvolutionChain(yamaskChain, { formSuffix: "galar", rootId: 10179, speciesName: "yamask" });
+		const node = normalizeEvolutionChain(yamaskChain, {
+			formSuffix: "galar",
+			ownFormSuffix: "galar",
+			rootId: 10179,
+			speciesName: "yamask",
+		});
 		expect(node.children.map((c) => c.name)).toEqual(["runerigus"]);
 		expect(node.children[0].minDamageTaken).toBe(49);
 		expect(node.children[0].trigger).toBe("take-damage");
@@ -353,7 +366,12 @@ describe("normalizeEvolutionChain", () => {
 	});
 
 	it("keeps the child when viewing the exact form its entry requires", () => {
-		const node = normalizeEvolutionChain(corsolaChain, { formSuffix: "galar", rootId: 10173, speciesName: "corsola" });
+		const node = normalizeEvolutionChain(corsolaChain, {
+			formSuffix: "galar",
+			ownFormSuffix: "galar",
+			rootId: 10173,
+			speciesName: "corsola",
+		});
 		expect(node.children.map((c) => c.name)).toEqual(["cursola"]);
 	});
 
@@ -378,7 +396,21 @@ describe("normalizeEvolutionChain", () => {
 						evolved_form: { name: "mr-mime-galar", url: "https://pokeapi.co/api/v2/pokemon/10168/" },
 					}),
 				],
-				evolves_to: [],
+				// Only reachable from Galarian Mr. Mime (base_form-gated) —
+				// verified live: Kanto Mr. Mime never evolves further.
+				evolves_to: [
+					{
+						species: { name: "mr-rime", url: "https://pokeapi.co/api/v2/pokemon-species/866/" },
+						evolution_details: [
+							evolutionDetail({
+								min_level: 42,
+								trigger: { name: "level-up", url: "" },
+								base_form: { name: "mr-mime-galar", url: "https://pokeapi.co/api/v2/pokemon/10168/" },
+							}),
+						],
+						evolves_to: [],
+					},
+				],
 			},
 		],
 	};
@@ -386,6 +418,7 @@ describe("normalizeEvolutionChain", () => {
 	it("disambiguates a region-only (no base_form) entry by its region field", () => {
 		const node = normalizeEvolutionChain(mimeJrChain, {
 			formSuffix: "galar",
+			ownFormSuffix: "galar",
 			rootId: 10168,
 			speciesName: "mr-mime",
 		});
@@ -394,6 +427,91 @@ describe("normalizeEvolutionChain", () => {
 		expect(node.children[0].name).toBe("mr-mime");
 		expect(node.children[0].id).toBe(10168);
 		expect(node.children[0].formLabel).toBe("Galarian");
+		expect(node.children[0].children[0].name).toBe("mr-rime");
+		expect(node.children[0].children[0].id).toBe(866);
+	});
+
+	// A true default view (no context at all) of a Mime-Jr-shaped bucket used
+	// to pick only the unconditional (Kanto) entry and silently drop the
+	// region-gated one — hiding that Mime Jr. can ever reach Mr. Rime at all,
+	// since the Kanto path is a dead end. Unlike Zigzagoon/Corsola/Yamask
+	// (where the PARENT itself has a variety to scope the default view by),
+	// Mime Jr. has no variety of its own on either entry, so there's nothing
+	// to scope by — both outcomes are shown as sibling branches instead.
+	it("shows every region-gated outcome as a sibling when the parent itself has no variety to scope by", () => {
+		const node = normalizeEvolutionChain(mimeJrChain);
+		expect(node.name).toBe("mime-jr");
+		expect(node.children.map((c) => c.name)).toEqual(["mr-mime", "mr-mime"]);
+		expect(node.children.map((c) => c.id)).toEqual([122, 10168]);
+		expect(node.children[0].formLabel).toBeNull(); // Kanto: dead end, no further children
+		expect(node.children[0].children).toEqual([]);
+		expect(node.children[1].formLabel).toBe("Galarian");
+		expect(node.children[1].children[0].name).toBe("mr-rime"); // reachable via Galar branch
+		expect(node.children[1].children[0].id).toBe(866);
+	});
+
+	// Obstagoon-shaped (Gen 8, verified live): Obstagoon (#862) has no
+	// suffixed name of its own (pokemon.name === species.name, so
+	// resolveRegionalFormSuffix returns undefined for it) but is only
+	// reachable via Linoone-Galar, never plain Linoone — two evolution steps
+	// deep, both requiring the same "galar" base_form. Viewing Obstagoon's
+	// own page passes no ownFormSuffix (it isn't a variety), only a
+	// formSuffix inferred by inferAncestorFormSuffix from the raw chain.
+	const zigzagoonChain: RawEvolutionChainLink = {
+		species: { name: "zigzagoon", url: "https://pokeapi.co/api/v2/pokemon-species/263/" },
+		evolution_details: [],
+		evolves_to: [
+			{
+				species: { name: "linoone", url: "https://pokeapi.co/api/v2/pokemon-species/264/" },
+				evolution_details: [
+					evolutionDetail({ min_level: 20, trigger: { name: "level-up", url: "" } }),
+					evolutionDetail({
+						min_level: 20,
+						trigger: { name: "level-up", url: "" },
+						base_form: { name: "zigzagoon-galar", url: "https://pokeapi.co/api/v2/pokemon/10174/" },
+						evolved_form: { name: "linoone-galar", url: "https://pokeapi.co/api/v2/pokemon/10175/" },
+					}),
+				],
+				evolves_to: [
+					{
+						species: { name: "obstagoon", url: "https://pokeapi.co/api/v2/pokemon-species/862/" },
+						evolution_details: [
+							evolutionDetail({
+								min_level: 35,
+								time_of_day: "night",
+								trigger: { name: "level-up", url: "" },
+								base_form: { name: "linoone-galar", url: "https://pokeapi.co/api/v2/pokemon/10175/" },
+							}),
+						],
+						evolves_to: [],
+					},
+				],
+			},
+		],
+	};
+
+	it("infers the ancestor suffix required to reach a non-suffixed, variant-exclusive species", () => {
+		expect(inferAncestorFormSuffix(zigzagoonChain, "obstagoon")).toBe("galar");
+		expect(inferAncestorFormSuffix(zigzagoonChain, "linoone")).toBeUndefined(); // reachable unconditionally
+		expect(inferAncestorFormSuffix(zigzagoonChain, "nonexistent")).toBeUndefined();
+	});
+
+	it("walks the Galar branch to reach Obstagoon even though Obstagoon itself carries no suffix", () => {
+		const pathSuffix = inferAncestorFormSuffix(zigzagoonChain, "obstagoon");
+		const node = normalizeEvolutionChain(zigzagoonChain, {
+			formSuffix: pathSuffix!,
+			rootId: 862,
+			speciesName: "obstagoon",
+		});
+		expect(node.name).toBe("zigzagoon");
+		expect(node.id).toBe(10174); // Zigzagoon-Galar, not plain Zigzagoon (263)
+		expect(node.formLabel).toBe("Galarian");
+		expect(node.children[0].name).toBe("linoone");
+		expect(node.children[0].id).toBe(10175); // Linoone-Galar, not plain Linoone (264)
+		expect(node.children[0].formLabel).toBe("Galarian");
+		expect(node.children[0].children[0].name).toBe("obstagoon");
+		expect(node.children[0].children[0].id).toBe(862);
+		expect(node.children[0].children[0].formLabel).toBeNull(); // Obstagoon isn't itself a variety
 	});
 });
 

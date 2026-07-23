@@ -143,12 +143,52 @@ export function resolveRegionalFormSuffix(pokemon: RawPokemon, species: RawSpeci
 	return suffix !== undefined && suffix in REGIONAL_FORMS ? suffix : undefined;
 }
 
+// Obstagoon/Cursola/Perrserker/Runerigus/Sirfetch'd/Mr. Rime shape: a species
+// with no suffixed name of its own (pokemon.name === species.name, so
+// resolveRegionalFormSuffix returns undefined for it) that's nonetheless only
+// reachable through a specific regional-variant ancestor — Obstagoon only
+// evolves from Linoone-Galar, never plain Linoone. Without this, viewing one
+// of these species passes no context into normalizeEvolutionChain at all,
+// which falls into buildEvolutionNode's contextless "default view" branch —
+// exactly the branch built to drop a variant-gated edge as unrelated (see the
+// Corsola/Cursola comment below) — so the viewed species' own only edge gets
+// dropped from its own detail page. Walks the raw chain for the edge leading
+// to `speciesName`: if it's reachable unconditionally (the common case) or
+// isn't found at all, returns undefined (no special handling needed); if
+// every entry on that edge requires a specific base_form, returns that
+// variety's suffix, filtered through REGIONAL_FORMS the same way
+// resolveRegionalFormSuffix is, so an unrelated base_form-tagged edge (were
+// one to exist) can't be mistaken for a modeled regional variant.
+export function inferAncestorFormSuffix(link: RawEvolutionChainLink, speciesName: string): string | undefined {
+	for (const child of link.evolves_to) {
+		if (child.species.name === speciesName) {
+			if (child.evolution_details.some((d) => !d.base_form)) return undefined;
+			for (const d of child.evolution_details) {
+				if (!d.base_form) continue;
+				const suffix = extractFormSuffix(d.base_form.name, link.species.name);
+				if (suffix !== undefined && suffix in REGIONAL_FORMS) return suffix;
+			}
+			return undefined;
+		}
+		const found = inferAncestorFormSuffix(child, speciesName);
+		if (found !== undefined) return found;
+	}
+	return undefined;
+}
+
 function buildEvolutionNode(
 	link: RawEvolutionChainLink,
 	id: number,
 	detail: RawEvolutionChainLink["evolution_details"][number] | undefined,
 	formSuffix: string | undefined,
-	context?: { formSuffix: string; rootId: number; speciesName: string },
+	// `formSuffix` on context drives which BRANCH this function walks toward
+	// the viewed species (see targetSuffix below) — `ownFormSuffix` is what
+	// the viewed node itself displays as its own variety label. These differ
+	// exactly in the inferAncestorFormSuffix case above: Obstagoon's context
+	// carries formSuffix "galar" (so the Zigzagoon/Linoone ancestors resolve
+	// down the Galar branch) but ownFormSuffix undefined (Obstagoon itself
+	// isn't a variety — there's no "Galarian Obstagoon" to label it as).
+	context?: { formSuffix: string; ownFormSuffix?: string; rootId: number; speciesName: string },
 ): EvolutionNode {
 	// The viewed row's own id/formSuffix only ever belongs on the node whose
 	// species actually matches it — the old code stamped it on whichever
@@ -162,16 +202,23 @@ function buildEvolutionNode(
 	const isViewedNode = context !== undefined && link.species.name === context.speciesName;
 	if (isViewedNode) {
 		id = context.rootId;
-		formSuffix = context.formSuffix;
+		formSuffix = context.ownFormSuffix;
 	}
 
-	// The suffix that decides which BRANCH/entry to walk toward is the
-	// globally viewed one (context.formSuffix), not this node's own possibly
-	// still-unresolved `formSuffix` — for a Muk-shaped chain, Grimer doesn't
-	// know it's Alolan yet at this point, but still has to pick the edge that
-	// leads to Muk-Alola specifically. formSuffix (mutable) stays this node's
-	// own DISPLAY state; targetSuffix (constant) drives edge selection.
-	const targetSuffix = context?.formSuffix;
+	// The suffix that decides which BRANCH/entry to walk toward is normally
+	// the globally viewed one (context.formSuffix), not this node's own
+	// possibly still-unresolved `formSuffix` — for a Muk-shaped chain, Grimer
+	// doesn't know it's Alolan yet at this point, but still has to pick the
+	// edge that leads to Muk-Alola specifically. Falls back to this node's own
+	// `formSuffix` when there's no outer context at all: a Mime-Jr-shaped
+	// child, having just been placed on its region branch by the pluralization
+	// below (see `regionOnlyBranches`), needs to keep walking that SAME region
+	// for its own children (Mr. Rime) even though no context object exists for
+	// a true default-view walk — `formSuffix` is how that region survives one
+	// level of recursion without a context to carry it. formSuffix (mutable)
+	// stays this node's own DISPLAY state; targetSuffix (constant) drives edge
+	// selection.
+	const targetSuffix = context?.formSuffix ?? formSuffix;
 
 	// Which suffixes some sibling of this link's children exclusively claims
 	// via an exact base_form-tagged entry — e.g. Yamask's `evolves_to` has
@@ -217,18 +264,40 @@ function buildEvolutionNode(
 			: undefined;
 		const unconditionalDetail = child.evolution_details.find((d) => !d.base_form);
 
-		let childDetail: RawEvolutionChainLink["evolution_details"][number] | undefined;
+		// Usually exactly one entry describes how to reach this child — the
+		// one exception is a true default view (no targetSuffix at all) of a
+		// Mime-Jr-shaped bucket: every entry agrees the PARENT carries no
+		// variety of its own (no base_form anywhere), so there's nothing to
+		// scope by, unlike Zigzagoon/Corsola/Yamask (where the parent itself
+		// has a variety, and default view correctly shows only that variety's
+		// own evolution). Picking just one there hid a real branch of the
+		// family — viewing Mime Jr.'s own page showed no hint it can ever
+		// reach Mr. Rime, since the Kanto path is a dead end and the only
+		// route to Mr. Rime is through the region-gated Galar entry. Show
+		// every distinct outcome (deduped by evolved_form, since redundant
+		// entries across old/new version groups for the identical evolution
+		// are common) as a sibling branch instead of arbitrarily dropping the
+		// others.
+		let selectedDetails: RawEvolutionChainLink["evolution_details"];
 		if (viewedDetail) {
-			childDetail = viewedDetail;
+			selectedDetails = [viewedDetail];
 		} else if (exactDetail) {
-			childDetail = exactDetail;
+			selectedDetails = [exactDetail];
 		} else if (targetSuffix !== undefined && dedicatedSuffixes.has(targetSuffix)) {
 			// A sibling exactly owns this suffix; this branch doesn't apply to
 			// it even though it has an otherwise-unconditional entry (Yamask
 			// viewed as Galarian: Cofagrigus is dropped here).
 			return [];
+		} else if (targetSuffix === undefined && !child.evolution_details.some((d) => !!d.base_form)) {
+			const seen = new Set<string>();
+			selectedDetails = child.evolution_details.filter((d) => {
+				const key = d.evolved_form?.name ?? "default";
+				if (seen.has(key)) return false;
+				seen.add(key);
+				return true;
+			});
 		} else if (unconditionalDetail) {
-			childDetail = unconditionalDetail;
+			selectedDetails = [unconditionalDetail];
 		} else if (targetSuffix === undefined) {
 			// Base/default view, and every entry on this branch requires some
 			// specific form we're not viewing (Corsola viewed as base: Cursola
@@ -236,46 +305,63 @@ function buildEvolutionNode(
 			// fall through to evolution_details[0] regardless).
 			return [];
 		} else {
-			childDetail = child.evolution_details[0];
+			selectedDetails = [child.evolution_details[0]];
 		}
 
-		// This node only finds out it's itself a regional variant by seeing
-		// which entry leads to the viewed child, since PokeAPI never marks a
-		// pre-evolution's own variety on its own link — only the matched
-		// entry's base_form names it. Absent for a Mime-Jr-shaped child
-		// (region-only, no base_form): there's genuinely nothing to infer,
-		// since Mime Jr. itself has no Galarian variety.
-		if (!isViewedNode && isViewedChild && childDetail?.base_form) {
-			const ancestorSuffix = extractFormSuffix(childDetail.base_form.name, link.species.name);
-			if (ancestorSuffix !== undefined) {
-				formSuffix = ancestorSuffix;
-				id = idFromUrl(childDetail.base_form.url);
+		return selectedDetails.map((childDetail) => {
+			// This node only finds out it's itself a regional variant by seeing
+			// which entry leads to the retained child, since PokeAPI never marks
+			// a pre-evolution's own variety on its own link — only the matched
+			// entry's base_form names it. Not gated on isViewedChild: a
+			// grandparent two-plus hops from the viewed species (Zigzagoon,
+			// viewing Obstagoon: Zigzagoon -> Linoone -> Obstagoon) needs this
+			// exactly as much as a direct parent (Grimer, viewing Muk) —
+			// childDetail only ever reaches here already resolved via
+			// viewedDetail/exactDetail/unconditionalDetail, so a base_form on it
+			// always describes *this* node's own required variety regardless of
+			// how far down the chain the ultimately-viewed species sits. Absent
+			// for a Mime-Jr-shaped child (region-only, no base_form): there's
+			// genuinely nothing to infer, since Mime Jr. itself has no Galarian
+			// variety. Mutates the enclosing `id`/`formSuffix` directly (not a
+			// per-iteration copy) — safe even though this runs inside a `.map`
+			// over possibly-multiple selectedDetails, since the pluralized-
+			// branches case (multiple selectedDetails) only ever occurs when
+			// NONE of them carry a base_form (that's the precondition for
+			// pluralizing at all — see selectedDetails above), so this block
+			// never fires more than once per node regardless of how many
+			// children the bucket produces.
+			if (!isViewedNode && childDetail?.base_form) {
+				const ancestorSuffix = extractFormSuffix(childDetail.base_form.name, link.species.name);
+				if (ancestorSuffix !== undefined) {
+					formSuffix = ancestorSuffix;
+					id = idFromUrl(childDetail.base_form.url);
+				}
 			}
-		}
 
-		// The child's own id/form still follows the matched entry's
-		// evolved_form when present — resetting to the *default* variety
-		// when it's absent, unless the child is itself the viewed species,
-		// in which case its id/form are exactly context's regardless: 2 of
-		// the currently-modeled Alolan species (Exeggutor, Marowak) have a
-		// region-gated, not form-gated, evolution that PokeAPI's
-		// evolution_details can't disambiguate at all (both entries are
-		// identical, no base_form/evolved_form difference) — this still
-		// shows the correct viewed variety for that node itself, it just
-		// can't recover the *ancestor's* own variety from that same gap
-		// (see the `!isViewedNode &&` guard above). A known, documented
-		// half-gap, not a silent bug.
-		const childId = isViewedChild
-			? context.rootId
-			: childDetail?.evolved_form
-				? idFromUrl(childDetail.evolved_form.url)
-				: idFromUrl(child.species.url);
-		const childFormSuffix = isViewedChild
-			? context.formSuffix
-			: childDetail?.evolved_form
-				? extractFormSuffix(childDetail.evolved_form.name, child.species.name)
-				: undefined;
-		return [buildEvolutionNode(child, childId, childDetail, childFormSuffix, context)];
+			// The child's own id/form still follows the matched entry's
+			// evolved_form when present — resetting to the *default* variety
+			// when it's absent, unless the child is itself the viewed species,
+			// in which case its id/form are exactly context's regardless: 2 of
+			// the currently-modeled Alolan species (Exeggutor, Marowak) have a
+			// region-gated, not form-gated, evolution that PokeAPI's
+			// evolution_details can't disambiguate at all (both entries are
+			// identical, no base_form/evolved_form difference) — this still
+			// shows the correct viewed variety for that node itself, it just
+			// can't recover the *ancestor's* own variety from that same gap
+			// (see the `!isViewedNode &&` guard above). A known, documented
+			// half-gap, not a silent bug.
+			const childId = isViewedChild
+				? context.rootId
+				: childDetail?.evolved_form
+					? idFromUrl(childDetail.evolved_form.url)
+					: idFromUrl(child.species.url);
+			const childFormSuffix = isViewedChild
+				? context.ownFormSuffix
+				: childDetail?.evolved_form
+					? extractFormSuffix(childDetail.evolved_form.name, child.species.name)
+					: undefined;
+			return buildEvolutionNode(child, childId, childDetail, childFormSuffix, context);
+		});
 	});
 
 	return {
@@ -305,18 +391,23 @@ function buildEvolutionNode(
 }
 
 // `context` scopes the whole chain to a specific row's own variety (e.g.
-// { formSuffix: "alola", rootId: 10103, speciesName: "vulpix" } when viewing
-// Alolan Vulpix's detail page) — omit it for a species' default/base row,
-// which reproduces the original (pre-regional-forms) behavior exactly.
-// `rootId` is passed in rather than derived, since PokedexRepository already
-// knows it precisely (it's the same numeric id used to fetch whichever row
-// is being viewed) — avoids this function ever having to guess a variety's
-// own id. `speciesName` (the row's *base* species name, e.g. "muk") is what
-// locates the viewed node within the chain — it's not always the chain's
-// structural root, e.g. Muk/Exeggutor/Marowak are all evolved stages.
+// { formSuffix: "alola", ownFormSuffix: "alola", rootId: 10103, speciesName:
+// "vulpix" } when viewing Alolan Vulpix's detail page) — omit it for a
+// species' default/base row, which reproduces the original
+// (pre-regional-forms) behavior exactly. `formSuffix` and `ownFormSuffix` are
+// usually the same value; they diverge for a species like Obstagoon that's
+// only reachable via a regional-variant ancestor but isn't itself a named
+// variety — see inferAncestorFormSuffix and buildEvolutionNode's own comment
+// on the split. `rootId` is passed in rather than derived, since
+// PokedexRepository already knows it precisely (it's the same numeric id
+// used to fetch whichever row is being viewed) — avoids this function ever
+// having to guess a variety's own id. `speciesName` (the row's *base* species
+// name, e.g. "muk") is what locates the viewed node within the chain — it's
+// not always the chain's structural root, e.g. Muk/Exeggutor/Marowak are all
+// evolved stages.
 export function normalizeEvolutionChain(
 	link: RawEvolutionChainLink,
-	context?: { formSuffix: string; rootId: number; speciesName: string },
+	context?: { formSuffix: string; ownFormSuffix?: string; rootId: number; speciesName: string },
 ): EvolutionNode {
 	return buildEvolutionNode(link, idFromUrl(link.species.url), undefined, undefined, context);
 }
