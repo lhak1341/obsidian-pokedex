@@ -4,6 +4,7 @@ import type { PluginSettings } from "./data/types";
 import type PokedexPlugin from "./main";
 import { formatBytes } from "./utils/formatBytes";
 import { resolveGenerationToggle } from "./utils/generationToggle";
+import { GenerationCacheController } from "./view/GenerationCacheController";
 
 export const DEFAULT_SETTINGS: PluginSettings = {
 	enabledGenerations: DEFAULT_ENABLED_GENERATIONS,
@@ -41,15 +42,10 @@ export class PokedexSettingTab extends PluginSettingTab {
 
 			let actionButton: ButtonComponent | undefined;
 			let deleteButton: ButtonComponent | undefined;
-			// Drives which action the single action button performs — not
-			// fully cached means there's something worth prefetching (download),
-			// fully cached means the only useful action left is a forced
-			// re-fetch (refresh). Recomputed by refreshCacheDesc, never toggled
-			// directly by the click handler, so it can't drift from the actual
-			// on-disk state.
-			let isFullyCached = false;
+			const controller = new GenerationCacheController(this.plugin.repository, range);
 
 			const applyActionButtonIcon = () => {
+				const isFullyCached = controller.actionKind === "refresh";
 				actionButton
 					?.setIcon(isFullyCached ? "refresh-cw" : "download")
 					.setTooltip(
@@ -59,37 +55,40 @@ export class PokedexSettingTab extends PluginSettingTab {
 					);
 			};
 
+			const applyDesc = () => {
+				const status = controller.status;
+				setting.setDesc(status ? `${baseDesc} ${status.cached}/${status.total} cached.` : baseDesc);
+				applyActionButtonIcon();
+			};
+
 			// Cache status is a disk-existence check per id (see
 			// getCacheStatus), not free — fetched once on open and again after
 			// this generation's own action/delete button finishes, not on every
 			// re-render of the tab.
 			const refreshCacheDesc = async () => {
-				const status = await this.plugin.repository.getCacheStatus(range);
-				isFullyCached = status.total > 0 && status.cached === status.total;
-				setting.setDesc(`${baseDesc} ${status.cached}/${status.total} cached.`);
-				applyActionButtonIcon();
+				await controller.refreshStatus();
+				applyDesc();
 			};
 			void refreshCacheDesc();
 
 			setting.addButton((button) => {
 				actionButton = button;
 				button.setCta().onClick(async () => {
+					const kind = controller.actionKind;
 					actionButton?.setDisabled(true);
 					deleteButton?.setDisabled(true);
-					if (isFullyCached) {
-						await this.plugin.repository.refreshRange(range, (loaded, total) => {
-							setting.setDesc(`${baseDesc} Refreshing... ${loaded}/${total}.`);
+					try {
+						await controller.run((loaded, total) => {
+							setting.setDesc(
+								`${baseDesc} ${kind === "refresh" ? "Refreshing" : "Caching"}... ${loaded}/${total}.`,
+							);
 						});
-						new Notice(`Pokedex: ${gen.name} refreshed.`);
-					} else {
-						await this.plugin.repository.cacheRange(range, (loaded, total) => {
-							setting.setDesc(`${baseDesc} Caching... ${loaded}/${total}.`);
-						});
-						new Notice(`Pokedex: ${gen.name} cached.`);
+						new Notice(`Pokedex: ${gen.name} ${kind === "refresh" ? "refreshed" : "cached"}.`);
+					} finally {
+						actionButton?.setDisabled(false);
+						deleteButton?.setDisabled(false);
 					}
-					actionButton?.setDisabled(false);
-					deleteButton?.setDisabled(false);
-					await refreshCacheDesc();
+					applyDesc();
 				});
 				applyActionButtonIcon();
 			});
@@ -103,11 +102,14 @@ export class PokedexSettingTab extends PluginSettingTab {
 					.onClick(async () => {
 						actionButton?.setDisabled(true);
 						deleteButton?.setDisabled(true);
-						await this.plugin.repository.clearRange(range);
-						new Notice(`Pokedex: ${gen.name} cache cleared.`);
-						actionButton?.setDisabled(false);
-						deleteButton?.setDisabled(false);
-						await refreshCacheDesc();
+						try {
+							await controller.clear();
+							new Notice(`Pokedex: ${gen.name} cache cleared.`);
+						} finally {
+							actionButton?.setDisabled(false);
+							deleteButton?.setDisabled(false);
+						}
+						applyDesc();
 					});
 			});
 

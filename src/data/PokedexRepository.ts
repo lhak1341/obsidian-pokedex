@@ -535,30 +535,29 @@ export class PokedexRepository {
 					// the name-keyed file first to learn the variant's own numeric
 					// id before removing it out from under itself.
 					const cachedVariant = await this.cache.readJson<RawPokemon>(pokemonPath(form.key));
-					this.pokemonVariantMemCache.delete(form.key);
-					await this.cache.remove(pokemonPath(form.key));
-					for (const suffix of ALL_IMAGE_SUFFIXES) {
-						this.imageMemCache.delete(imagePath(form.key, suffix));
-						await this.cache.remove(imagePath(form.key, suffix));
-					}
+					await this.evictPokemonAssets(this.pokemonVariantMemCache, form.key);
 					if (cachedVariant) {
-						this.pokemonMemCache.delete(cachedVariant.id);
-						await this.cache.remove(pokemonPath(cachedVariant.id));
-						for (const suffix of ALL_IMAGE_SUFFIXES) {
-							this.imageMemCache.delete(imagePath(cachedVariant.id, suffix));
-							await this.cache.remove(imagePath(cachedVariant.id, suffix));
-						}
+						await this.evictPokemonAssets(this.pokemonMemCache, cachedVariant.id);
 					}
 				}
 			}
-			this.pokemonMemCache.delete(id);
+			await this.evictPokemonAssets(this.pokemonMemCache, id);
 			this.speciesMemCache.delete(id);
-			for (const suffix of ALL_IMAGE_SUFFIXES) {
-				this.imageMemCache.delete(imagePath(id, suffix));
-				await this.cache.remove(imagePath(id, suffix));
-			}
-			await this.cache.remove(pokemonPath(id));
 			await this.cache.remove(speciesPath(id));
+		}
+	}
+
+	// Shared by clearRange's 3 eviction cases (variant key, a variant's
+	// resolved numeric id, and a range's own base id): delete the mem-cache
+	// entry, the pokemon JSON, and every ALL_IMAGE_SUFFIXES image (mem +
+	// disk). Species eviction is deliberately not folded in here — it only
+	// applies to the base-id case, not the shape this helper covers.
+	private async evictPokemonAssets<K extends number | string>(memCache: Map<K, RawPokemon>, key: K): Promise<void> {
+		memCache.delete(key);
+		await this.cache.remove(pokemonPath(key));
+		for (const suffix of ALL_IMAGE_SUFFIXES) {
+			this.imageMemCache.delete(imagePath(key, suffix));
+			await this.cache.remove(imagePath(key, suffix));
 		}
 	}
 

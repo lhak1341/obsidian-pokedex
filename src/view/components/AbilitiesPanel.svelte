@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createHoverPopover } from "../hoverPopover.svelte";
+	import { createHoverDescription } from "../hoverDescription.svelte";
 
 	let { abilities, getDescription }: {
 		abilities: { name: string; isHidden: boolean }[];
@@ -13,31 +13,16 @@
 	// hovering one already seen on a previous Pokemon this session reuses
 	// the cached description instead of refetching (getDescription also
 	// caches on the repository side, but this avoids even the async
-	// round-trip).
-	let abilityDescriptions = $state<Record<string, { text: string | null } | { error: true }>>({});
-	// Positioned relative to .detail-screen (position: absolute, not fixed —
-	// see DetailScreen's .detail-screen CSS comment for why), not the raw
-	// viewport rect.
-	const popover = createHoverPopover(".detail-screen");
-
-	function showAbilityPopover(name: string, target: EventTarget | null) {
-		popover.show(name, target);
-		if (!(name in abilityDescriptions)) {
-			getDescription(name)
-				.then((text) => {
-					abilityDescriptions = { ...abilityDescriptions, [name]: { text } };
-				})
-				.catch(() => {
-					abilityDescriptions = { ...abilityDescriptions, [name]: { error: true } };
-				});
-		}
-	}
+	// round-trip). Positioned relative to .detail-screen (position: absolute,
+	// not fixed — see DetailScreen's .detail-screen CSS comment for why), not
+	// the raw viewport rect.
+	const popover = createHoverDescription(".detail-screen", (name) => getDescription(name));
 </script>
 
 <ul class="ability-list">
 	{#each abilities.filter((a) => !a.isHidden) as ability (ability.name)}
 		<li
-			onmouseenter={(e) => showAbilityPopover(ability.name, e.currentTarget)}
+			onmouseenter={(e) => popover.show(ability.name, e.currentTarget)}
 			onmouseleave={popover.hide}
 		>
 			{ability.name}
@@ -49,7 +34,7 @@
 		<p class="hidden-ability-label">Hidden Ability (G5+)</p>
 		<p
 			class="hidden-ability-name"
-			onmouseenter={(e) => showAbilityPopover(ability.name, e.currentTarget)}
+			onmouseenter={(e) => popover.show(ability.name, e.currentTarget)}
 			onmouseleave={popover.hide}
 		>
 			{ability.name}
@@ -58,18 +43,17 @@
 {/each}
 
 {#if popover.hovered && popover.pos}
-	{@const state = abilityDescriptions[popover.hovered]}
 	<div
 		class="ability-popover"
 		class:popover-above={popover.pos.placement === "above"}
 		style="top: {popover.pos.top}px; left: {popover.pos.left}px;"
 	>
-		{#if !state}
+		{#if !popover.status}
 			Loading…
-		{:else if "error" in state}
+		{:else if popover.status === "error"}
 			Couldn't load description.
 		{:else}
-			{state.text ?? "No description available."}
+			{popover.status.text ?? "No description available."}
 		{/if}
 	</div>
 {/if}

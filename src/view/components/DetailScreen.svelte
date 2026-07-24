@@ -12,14 +12,13 @@
 	import { isEditableTarget } from "../domTarget";
 	import EvolutionTree from "./EvolutionTree.svelte";
 	import FlavorTextPanel from "./FlavorTextPanel.svelte";
-	import GigantamaxFormToggle from "./GigantamaxFormToggle.svelte";
 	import HeldItemsPanel from "./HeldItemsPanel.svelte";
 	import Icon from "./Icon.svelte";
-	import MegaFormToggle from "./MegaFormToggle.svelte";
 	import MoveBrowser from "./MoveBrowser.svelte";
 	import QuickSearch from "./QuickSearch.svelte";
 	import RegionalFormNav from "./RegionalFormNav.svelte";
 	import StatBars from "./StatBars.svelte";
+	import VarietyFormToggle from "./VarietyFormToggle.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { resolvePortrait } from "../../utils/portrait";
@@ -298,15 +297,19 @@
 							<Icon name="sparkles" size={15} strokeWidth={2.25} />
 						</button>
 					{/if}
-					<MegaFormToggle
-						megaForms={entry.megaForms}
+					<VarietyFormToggle
+						forms={entry.megaForms}
 						activeKey={varietySnapshot.activeMegaKey}
 						onSelect={selectMegaForm}
+						badgeText={(label) => (label === "Mega" ? "M" : label.slice(-1))}
+						corner="left"
 					/>
-					<GigantamaxFormToggle
-						gigantamaxForms={entry.gigantamaxForms}
+					<VarietyFormToggle
+						forms={entry.gigantamaxForms}
 						activeKey={varietySnapshot.activeGigantamaxKey}
 						onSelect={selectGigantamaxForm}
+						badgeText={() => "G"}
+						corner="right"
 					/>
 				</div>
 

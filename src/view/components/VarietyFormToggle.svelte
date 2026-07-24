@@ -1,23 +1,21 @@
 <script lang="ts">
-	import type { MegaFormSummary } from "../../data/types";
-
 	// Purely presentational — fetch/cache state for the selected form lives
 	// in DetailScreen (unlike AbilitiesPanel/HeldItemsPanel's self-contained
-	// hover popovers), since a Mega selection needs to drive sibling panels
-	// (StatBars, AbilitiesPanel, the portrait itself) outside this
-	// component's own tree, not just itself.
-	let { megaForms, activeKey, onSelect }: {
-		megaForms: MegaFormSummary[];
+	// hover popovers), since a Mega/Gigantamax selection needs to drive
+	// sibling panels (StatBars, AbilitiesPanel, the portrait itself) outside
+	// this component's own tree, not just itself.
+	//
+	// Shared by DetailScreen's Mega toggle (bottom-left) and Gigantamax
+	// toggle (bottom-right) — same badge/toggle shape, differing only in
+	// badgeText's rule (Mega: "M", or last letter for the X/Y split; always
+	// "G" for Gigantamax) and which corner they occupy.
+	let { forms, activeKey, onSelect, badgeText, corner }: {
+		forms: { key: string; label: string }[];
 		activeKey: string | null;
 		onSelect: (key: string | null) => void;
+		badgeText: (label: string) => string;
+		corner: "left" | "right";
 	} = $props();
-
-	// "M" for a single-mega species, "X"/"Y" for the two species with a
-	// split pair (Charizard, Mewtwo) — short enough to fit the same
-	// icon-button footprint as the shiny-toggle badge this mirrors.
-	function badgeText(label: string): string {
-		return label === "Mega" ? "M" : label.slice(-1);
-	}
 
 	// No separate "Base" button — clicking the already-active one toggles
 	// back to base, clicking a different one switches to it directly
@@ -28,12 +26,12 @@
 	}
 </script>
 
-{#if megaForms.length > 0}
-	<div class="mega-form-toggle">
-		{#each megaForms as form (form.key)}
+{#if forms.length > 0}
+	<div class="variety-form-toggle" class:corner-left={corner === "left"} class:corner-right={corner === "right"}>
+		{#each forms as form (form.key)}
 			<button
 				type="button"
-				class="mega-badge"
+				class="variety-badge"
 				class:active={activeKey === form.key}
 				onclick={() => toggle(form.key)}
 				aria-label={activeKey === form.key ? `Show base ${form.label} form` : `Show ${form.label} form`}
@@ -47,17 +45,23 @@
 
 <style>
 	/* Same footprint/position family as DetailScreen's .shiny-toggle (top-
-	right on the portrait), anchored bottom-left instead — see that class for
-	the shared sizing rationale. Multiple forms (Charizard/Mewtwo's X/Y pair)
-	lay out left-to-right from the corner. */
-	.mega-form-toggle {
+	right on the portrait) — Mega takes bottom-left, Gigantamax bottom-right,
+	so a species with both (e.g. Venusaur/Charizard/Blastoise) can show both
+	toggles without overlap. Multiple forms (Charizard/Mewtwo's Mega X/Y
+	pair) lay out left-to-right from the corner. */
+	.variety-form-toggle {
 		position: absolute;
 		bottom: 8px;
-		left: 8px;
 		display: flex;
 		gap: 4px;
 	}
-	.mega-badge {
+	.variety-form-toggle.corner-left {
+		left: 8px;
+	}
+	.variety-form-toggle.corner-right {
+		right: 8px;
+	}
+	.variety-badge {
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -73,11 +77,11 @@
 		font-size: 0.8em;
 		font-weight: 700;
 	}
-	.mega-badge:hover {
+	.variety-badge:hover {
 		color: var(--text-normal);
 		background: var(--background-modifier-hover);
 	}
-	.mega-badge.active {
+	.variety-badge.active {
 		color: var(--interactive-accent);
 		border-color: var(--interactive-accent);
 	}

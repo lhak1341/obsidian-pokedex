@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createHoverPopover } from "../hoverPopover.svelte";
+	import { createHoverDescription } from "../hoverDescription.svelte";
 	import { formatItemName } from "../../utils/tableColumns";
 
 	let { heldItems, getDescription }: {
@@ -8,47 +8,32 @@
 	} = $props();
 
 	// Keyed by item name, same not-reset-on-id-change reasoning as
-	// AbilitiesPanel's abilityDescriptions — common held items (e.g.
-	// "oran-berry") repeat across species within a session.
-	let itemDescriptions = $state<Record<string, { text: string | null } | { error: true }>>({});
-	const popover = createHoverPopover(".detail-screen");
-
-	function showItemPopover(name: string, target: EventTarget | null) {
-		popover.show(name, target);
-		if (!(name in itemDescriptions)) {
-			getDescription(name)
-				.then((text) => {
-					itemDescriptions = { ...itemDescriptions, [name]: { text } };
-				})
-				.catch(() => {
-					itemDescriptions = { ...itemDescriptions, [name]: { error: true } };
-				});
-		}
-	}
+	// AbilitiesPanel's cache — common held items (e.g. "oran-berry") repeat
+	// across species within a session.
+	const popover = createHoverDescription(".detail-screen", (name) => getDescription(name));
 </script>
 
 {#each heldItems as item (item.name)}
 	<span
 		class="held-item-name"
 		role="note"
-		onmouseenter={(e) => showItemPopover(item.name, e.currentTarget)}
+		onmouseenter={(e) => popover.show(item.name, e.currentTarget)}
 		onmouseleave={popover.hide}
 	>{formatItemName(item.name)} ({item.rarities.join("/")}%)</span>
 {/each}
 
 {#if popover.hovered && popover.pos}
-	{@const state = itemDescriptions[popover.hovered]}
 	<div
 		class="held-item-popover"
 		class:popover-above={popover.pos.placement === "above"}
 		style="top: {popover.pos.top}px; left: {popover.pos.left}px;"
 	>
-		{#if !state}
+		{#if !popover.status}
 			Loading…
-		{:else if "error" in state}
+		{:else if popover.status === "error"}
 			Couldn't load description.
 		{:else}
-			{state.text ?? "No description available."}
+			{popover.status.text ?? "No description available."}
 		{/if}
 	</div>
 {/if}

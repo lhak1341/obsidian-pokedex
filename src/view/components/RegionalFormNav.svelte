@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { PokedexTableRow } from "../../data/types";
 
-	// Unlike Mega (a same-row data overlay, see MegaFormToggle), a regional
+	// Unlike Mega (a same-row data overlay, see VarietyFormToggle), a regional
 	// form is a genuinely separate row with its own id — "switching" here
 	// means navigating to that sibling row's own detail page via onSelect,
 	// the same callback the evolution cards already use, not swapping data

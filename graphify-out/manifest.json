@@ -40,8 +40,8 @@
     "semantic_hash": ""
   },
   "src/data/PokedexRepository.ts": {
-    "mtime": 1784850449.618725,
-    "ast_hash": "7b63fa25d515fff675f0f0ca6b20e7e9",
+    "mtime": 1784857279.9522717,
+    "ast_hash": "4499953d05c44ad6c323dcd351656299",
     "semantic_hash": ""
   },
   "src/data/__fixtures__/bulbasaur-evolution-chain.json": {
@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "src/settings.ts": {
-    "mtime": 1784081746.9999094,
-    "ast_hash": "26eaa07b59a885cb34574d28a0286c5f",
+    "mtime": 1784856921.2862456,
+    "ast_hash": "6c26e124595f43e580f3bb180ab84f1b",
     "semantic_hash": ""
   },
   "src/utils/concurrency.test.ts": {
@@ -270,8 +270,8 @@
     "semantic_hash": ""
   },
   "src/view/components/AbilitiesPanel.svelte": {
-    "mtime": 1784650818.4351993,
-    "ast_hash": "0b2096f66ac56567eac2c989e18f0267",
+    "mtime": 1784851910.207262,
+    "ast_hash": "9257254e6298e18a1abdff4f6dfb368e",
     "semantic_hash": ""
   },
   "src/view/components/BarRow.svelte": {
@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   "src/view/components/DetailScreen.svelte": {
-    "mtime": 1784850819.8876073,
-    "ast_hash": "c43a9a9fbe37c89efe0db67e0301e662",
+    "mtime": 1784856516.8285158,
+    "ast_hash": "7d4202b2a7e133661c7034f1598a8a11",
     "semantic_hash": ""
   },
   "src/view/components/EvolutionChain.svelte": {
@@ -365,8 +365,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1784825732.9954777,
-    "ast_hash": "ad790023887f6b11933eec0d33c8e83b",
+    "mtime": 1784857618.5246654,
+    "ast_hash": "8dc92779e9968c7a586189250dacbce0",
     "semantic_hash": ""
   },
   "CONTEXT.md": {
@@ -390,18 +390,13 @@
     "semantic_hash": ""
   },
   "src/view/components/HeldItemsPanel.svelte": {
-    "mtime": 1784650837.9358501,
-    "ast_hash": "35f4e4712cb76d632538fc6e8f3dfee7",
-    "semantic_hash": ""
-  },
-  "src/view/components/MegaFormToggle.svelte": {
-    "mtime": 1784132606.3203108,
-    "ast_hash": "7d44a5100677317af1412cccd87132af",
+    "mtime": 1784851913.4573617,
+    "ast_hash": "36b45dc4c1c13dddb5c167a73bb29145",
     "semantic_hash": ""
   },
   "src/view/components/RegionalFormNav.svelte": {
-    "mtime": 1784818213.4104788,
-    "ast_hash": "88b1a4cb21e5a2e9abf161737f7eeb9b",
+    "mtime": 1784856523.976569,
+    "ast_hash": "a1d40cbf69d0078ee2a6214eb6a2c1c2",
     "semantic_hash": ""
   },
   "src/utils/dexNav.test.ts": {
@@ -469,11 +464,6 @@
     "ast_hash": "8bba03f7dc66425cef09f98de1808d2f",
     "semantic_hash": ""
   },
-  "src/view/components/GigantamaxFormToggle.svelte": {
-    "mtime": 1784733742.1982923,
-    "ast_hash": "c9600134f78d87fd01f2705467eb42d0",
-    "semantic_hash": ""
-  },
   "scripts/generate-evolution-stages.ts": {
     "mtime": 1784819583.0796313,
     "ast_hash": "10ff76a49920bd3e7f9aee02e262d7f0",
@@ -507,6 +497,26 @@
   "src/view/domTarget.ts": {
     "mtime": 1784850285.7540205,
     "ast_hash": "30acec26030c56da9fc19eea8105d154",
+    "semantic_hash": ""
+  },
+  "src/view/GenerationCacheController.test.ts": {
+    "mtime": 1784856897.237739,
+    "ast_hash": "ca3819a6f82996cf2480b6c83be36531",
+    "semantic_hash": ""
+  },
+  "src/view/GenerationCacheController.ts": {
+    "mtime": 1784856884.7855961,
+    "ast_hash": "75963747c3fa0c97c8db74490ded3df0",
+    "semantic_hash": ""
+  },
+  "src/view/components/VarietyFormToggle.svelte": {
+    "mtime": 1784856499.2761443,
+    "ast_hash": "c2138565098c367dce87866ba6176b97",
+    "semantic_hash": ""
+  },
+  "src/view/hoverDescription.svelte.ts": {
+    "mtime": 1784851828.1452687,
+    "ast_hash": "078b5f8e6bdb23bf6f6431f0aceaa326",
     "semantic_hash": ""
   }
 }
