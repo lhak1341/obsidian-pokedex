@@ -1,8 +1,9 @@
 {
 	"name": "obsidian-pokedex",
 	"version": "0.1.0",
-	"description": "Browse and search Pokemon (Gen 1-3) via PokeAPI, right inside Obsidian.",
+	"description": "Browse and search Pokemon (Gen 1-9) via PokeAPI, right inside Obsidian.",
 	"main": "main.js",
+	"license": "MIT",
 	"scripts": {
 		"dev": "bun esbuild.config.mjs",
 		"build": "bun esbuild.config.mjs production",
