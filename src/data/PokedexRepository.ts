@@ -15,6 +15,7 @@ import {
 	trimMovesToVersionGroups,
 } from "./normalize";
 import { PokeApiClient } from "./PokeApiClient";
+import { REGIONAL_FORMS, type Generation } from "./constants";
 import type {
 	EvolutionChainVisual,
 	EvolutionNode,
@@ -486,15 +487,16 @@ export class PokedexRepository {
 	// refresh — an id only counts as cached once both the table-row core
 	// (isIdCached) and the detail-screen extras (isExtrasCached) are on disk,
 	// since "cached" here means "opening this Pokemon is instant," not just
-	// "the browse table has a row for it." Known, intentionally-scoped gap:
-	// this counts base dex ids only, not the regional-form rows they may
-	// also produce (see getRowsForIds) — the Cache/Refresh/Delete actions
-	// below don't reach into pokemonVariantMemCache or a variety's own
-	// pokemon/{name}.json either. A regional variant still gets cached
-	// normally the first time its table row loads; it just isn't reflected
-	// in this counter or swept by these bulk actions yet.
-	async getCacheStatus(range: { start: number; end: number }): Promise<{ cached: number; total: number }> {
-		const ids = Array.from({ length: range.end - range.start + 1 }, (_, i) => range.start + i);
+	// "the browse table has a row for it." Deliberately scoped to base dex
+	// ids only, not the regional-form rows they may also produce (see
+	// getRowsForIds) — unlike this counter, clearRange/cacheRange below DO
+	// reach a discovered regional variant's own cache entries (see their own
+	// comments), so a generation's variant can be evicted/prefetched without
+	// this counter ever reflecting it. Counting variants here would need a
+	// second, honest total the same way cacheRange's extras phase reports
+	// one (see its own comment) — not done since nothing currently reads it.
+	async getCacheStatus(generation: Generation): Promise<{ cached: number; total: number }> {
+		const ids = Array.from({ length: generation.end - generation.start + 1 }, (_, i) => generation.start + i);
 		let cached = 0;
 		await mapWithConcurrency(ids, DISK_READ_CONCURRENCY, async (id) => {
 			return (await this.isIdCached(id)) && (await this.isExtrasCached(id));
@@ -522,12 +524,35 @@ export class PokedexRepository {
 	// down) rather than an extra network fetch — if the species was never
 	// cached, there's nothing to derive a variant from anyway, consistent
 	// with that variant equally never having been cached.
-	async clearRange(range: { start: number; end: number }): Promise<void> {
-		const ids = Array.from({ length: range.end - range.start + 1 }, (_, i) => range.start + i);
+	//
+	// Gated on the variant's OWN generationId matching the generation being
+	// cleared (REGIONAL_FORMS[suffix].generationId), not the base species'
+	// dex range — a regional variant's real generation can diverge from its
+	// base dex number's range (Alolan Rattata is dex #19/Gen 1's range, but
+	// generationId 7), so clearing Gen 1 must not also evict Gen 7's data.
+	//
+	// Known, deliberate gap this gate introduces (see ADR-0006): this loop
+	// only ever visits base ids inside THIS generation's own numeric range,
+	// so a variant whose own generationId differs from its base species'
+	// range (e.g. Alolan Rattata) is never even discovered when clearing the
+	// generation it actually belongs to (Gen 7's range never reaches id 19).
+	// Such a variant can't be evicted by any per-generation Delete button —
+	// only the global "Clear cache" removes it. Deliberately not fixed here:
+	// doing so needs a cache-directory-listing capability DiskCache doesn't
+	// have (it's read/write/exists/remove by exact path only), a real scope
+	// expansion for what's a cosmetic gap, not a correctness bug — the
+	// correctness bug (silently evicting the WRONG generation's data) is
+	// what this gate exists to close.
+	async clearRange(generation: Generation): Promise<void> {
+		const ids = Array.from(
+			{ length: generation.end - generation.start + 1 },
+			(_, i) => generation.start + i,
+		);
 		for (const id of ids) {
 			const cachedSpecies = await this.cache.readJson<RawSpecies>(speciesPath(id));
 			if (cachedSpecies) {
 				for (const form of deriveRegionalForms(cachedSpecies)) {
+					if (REGIONAL_FORMS[form.suffix].generationId !== generation.id) continue;
 					// Two independent cache entries per variant — the name-keyed
 					// one table-load writes (getOrFetchPokemonVariant) and the
 					// numeric-id-keyed one the detail view writes (getOrFetchPokemon)
@@ -580,11 +605,12 @@ export class PokedexRepository {
 	// once regional forms are involved, which a single shared total can't
 	// represent without lying about one phase or the other.
 	async cacheRange(
-		range: { start: number; end: number },
+		generation: Generation,
 		onProgress?: (loaded: number, total: number) => void,
 		isCancelled?: () => boolean,
 		onRow?: (row: PokedexTableRow) => void,
 	): Promise<TableLoadResult> {
+		const range = { start: generation.start, end: generation.end };
 		const ids = Array.from({ length: range.end - range.start + 1 }, (_, i) => range.start + i);
 
 		const result = await this.getTableRows(range, (loaded) => onProgress?.(loaded, ids.length), isCancelled, onRow);
@@ -609,13 +635,13 @@ export class PokedexRepository {
 	// by cacheRange — same network/disk-concurrency split, just forced past
 	// the cache instead of short-circuited by it, and covering extras too.
 	async refreshRange(
-		range: { start: number; end: number },
+		generation: Generation,
 		onProgress?: (loaded: number, total: number) => void,
 		isCancelled?: () => boolean,
 		onRow?: (row: PokedexTableRow) => void,
 	): Promise<TableLoadResult> {
-		await this.clearRange(range);
-		return this.cacheRange(range, onProgress, isCancelled, onRow);
+		await this.clearRange(generation);
+		return this.cacheRange(generation, onProgress, isCancelled, onRow);
 	}
 
 	// Fetches/caches table rows (pokemon + species, for catch rate/hatch

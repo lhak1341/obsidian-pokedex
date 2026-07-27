@@ -1,3 +1,4 @@
+import type { Generation } from "../data/constants";
 import type { PokedexRepository } from "../data/PokedexRepository";
 
 // The 4 repository methods the Settings tab's per-generation cache/refresh/
@@ -25,7 +26,7 @@ export class GenerationCacheController {
 
 	constructor(
 		private repository: GenerationCacheRepository,
-		private range: { start: number; end: number },
+		private generation: Generation,
 	) {}
 
 	// No status yet fetched defaults to "cache" (download icon), same as the
@@ -37,16 +38,16 @@ export class GenerationCacheController {
 	}
 
 	async refreshStatus(): Promise<void> {
-		this.status = await this.repository.getCacheStatus(this.range);
+		this.status = await this.repository.getCacheStatus(this.generation);
 	}
 
 	async run(onProgress?: (loaded: number, total: number) => void): Promise<void> {
 		this.running = true;
 		try {
 			if (this.actionKind === "refresh") {
-				await this.repository.refreshRange(this.range, onProgress);
+				await this.repository.refreshRange(this.generation, onProgress);
 			} else {
-				await this.repository.cacheRange(this.range, onProgress);
+				await this.repository.cacheRange(this.generation, onProgress);
 			}
 			await this.refreshStatus();
 		} finally {
@@ -57,7 +58,7 @@ export class GenerationCacheController {
 	async clear(): Promise<void> {
 		this.running = true;
 		try {
-			await this.repository.clearRange(this.range);
+			await this.repository.clearRange(this.generation);
 			await this.refreshStatus();
 		} finally {
 			this.running = false;

@@ -286,6 +286,15 @@ export const GENERATIONS = [
 	{ id: 9, name: "Gen 9 (Paldea)", start: 906, end: 1025 },
 ] as const;
 
+// Shape of one GENERATIONS entry — id included, not just the dex span, since
+// some consumers (e.g. PokedexRepository's cache actions) need to know which
+// generation a range actually IS, not just what it spans. A structural type
+// (not `(typeof GENERATIONS)[number]`) so tests can build a synthetic
+// generation with an arbitrary narrow start/end, same as they already do
+// with bare `{start,end}` ranges, without needing to match a real entry's
+// exact literal name/dex-span.
+export type Generation = { id: number; name: string; start: number; end: number };
+
 // All generations enabled by default (dex #1-1025, Gen 1 through Gen 9).
 export const DEFAULT_ENABLED_GENERATIONS: number[] = GENERATIONS.map((g) => g.id);
 

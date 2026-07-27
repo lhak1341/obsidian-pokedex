@@ -36,13 +36,12 @@ export class PokedexSettingTab extends PluginSettingTab {
 		const generationItems = containerEl.createDiv("setting-group").createDiv("setting-items");
 
 		for (const gen of GENERATIONS) {
-			const range = { start: gen.start, end: gen.end };
 			const baseDesc = `National dex #${gen.start}-${gen.end}.`;
 			const setting = new Setting(generationItems).setName(gen.name).setDesc(baseDesc);
 
 			let actionButton: ButtonComponent | undefined;
 			let deleteButton: ButtonComponent | undefined;
-			const controller = new GenerationCacheController(this.plugin.repository, range);
+			const controller = new GenerationCacheController(this.plugin.repository, gen);
 
 			const applyActionButtonIcon = () => {
 				const isFullyCached = controller.actionKind === "refresh";

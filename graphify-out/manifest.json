@@ -10,13 +10,13 @@
     "semantic_hash": ""
   },
   "manifest.json": {
-    "mtime": 1783735724.0985038,
-    "ast_hash": "741b349ba31dffe0a85c9ab8dc749f35",
+    "mtime": 1785165432.9519866,
+    "ast_hash": "1dc28746b6ce4f1b20d3fb8a571dc346",
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1784819596.4235137,
-    "ast_hash": "7b0dc28769d50795a2731818d9578f07",
+    "mtime": 1785165472.8882413,
+    "ast_hash": "9429ee2c31529c5abeb50ac437d7a6d9",
     "semantic_hash": ""
   },
   "src/data/Cache.test.ts": {
@@ -35,13 +35,13 @@
     "semantic_hash": ""
   },
   "src/data/PokedexRepository.test.ts": {
-    "mtime": 1784850455.9331567,
-    "ast_hash": "1d9575095228e046391e43c31717ed47",
+    "mtime": 1785168049.1713605,
+    "ast_hash": "28c368fa708bb8a8f8491b8b9ec546e0",
     "semantic_hash": ""
   },
   "src/data/PokedexRepository.ts": {
-    "mtime": 1784857279.9522717,
-    "ast_hash": "4499953d05c44ad6c323dcd351656299",
+    "mtime": 1785168397.8895636,
+    "ast_hash": "3417c66f33637d00c46f96be670db322",
     "semantic_hash": ""
   },
   "src/data/__fixtures__/bulbasaur-evolution-chain.json": {
@@ -70,8 +70,8 @@
     "semantic_hash": ""
   },
   "src/data/constants.ts": {
-    "mtime": 1784820515.0582268,
-    "ast_hash": "c03bde7c5310b68d46e80a5c73b89d64",
+    "mtime": 1785168032.0220068,
+    "ast_hash": "9b837b0b7c57facbb403ab38c078e4c2",
     "semantic_hash": ""
   },
   "src/data/normalize.test.ts": {
@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "src/settings.ts": {
-    "mtime": 1784856921.2862456,
-    "ast_hash": "6c26e124595f43e580f3bb180ab84f1b",
+    "mtime": 1785168002.1825616,
+    "ast_hash": "d5a9be80446a8e941aaac50a4a8720c9",
     "semantic_hash": ""
   },
   "src/utils/concurrency.test.ts": {
@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   "src/view/components/DetailScreen.svelte": {
-    "mtime": 1784856516.8285158,
-    "ast_hash": "7d4202b2a7e133661c7034f1598a8a11",
+    "mtime": 1785168616.4680762,
+    "ast_hash": "39ccb69f04a65299f259937fd6746b51",
     "semantic_hash": ""
   },
   "src/view/components/EvolutionChain.svelte": {
@@ -365,8 +365,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1784857618.5246654,
-    "ast_hash": "8dc92779e9968c7a586189250dacbce0",
+    "mtime": 1785169035.019783,
+    "ast_hash": "d6526f9ad789664752068a25eb21ece0",
     "semantic_hash": ""
   },
   "CONTEXT.md": {
@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1783735494.2557948,
-    "ast_hash": "ce8a653bb09e54560b229178bc3a55bb",
+    "mtime": 1785165466.306958,
+    "ast_hash": "b6c5d8ec51ee08cf8ea106fba5897b73",
     "semantic_hash": ""
   },
   "docs/multi-gen-expansion-plan.md": {
@@ -500,13 +500,13 @@
     "semantic_hash": ""
   },
   "src/view/GenerationCacheController.test.ts": {
-    "mtime": 1784856897.237739,
-    "ast_hash": "ca3819a6f82996cf2480b6c83be36531",
+    "mtime": 1785168086.794841,
+    "ast_hash": "72c6ffcc88ccb32ee48d4c9946439c6f",
     "semantic_hash": ""
   },
   "src/view/GenerationCacheController.ts": {
-    "mtime": 1784856884.7855961,
-    "ast_hash": "75963747c3fa0c97c8db74490ded3df0",
+    "mtime": 1785167985.6516352,
+    "ast_hash": "0d1f19eaa11796cc14b19d3413db54c1",
     "semantic_hash": ""
   },
   "src/view/components/VarietyFormToggle.svelte": {
@@ -517,6 +517,21 @@
   "src/view/hoverDescription.svelte.ts": {
     "mtime": 1784851828.1452687,
     "ast_hash": "078b5f8e6bdb23bf6f6431f0aceaa326",
+    "semantic_hash": ""
+  },
+  "src/utils/romanNumeral.test.ts": {
+    "mtime": 1785168601.401788,
+    "ast_hash": "5c1b6d9f72a8c092b3720c49a4c3d311",
+    "semantic_hash": ""
+  },
+  "src/utils/romanNumeral.ts": {
+    "mtime": 1785168596.2784784,
+    "ast_hash": "0e5f173e524706df80cf451325533d0a",
+    "semantic_hash": ""
+  },
+  "docs/adr/0006-clearRange-cant-reach-cross-generation-variants.md": {
+    "mtime": 1785168429.5157735,
+    "ast_hash": "5c0b05ebcb6949b386608a87c3c3bd85",
     "semantic_hash": ""
   }
 }
