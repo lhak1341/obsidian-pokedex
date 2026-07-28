@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   "src/view/components/DetailScreen.svelte": {
-    "mtime": 1785168616.4680762,
-    "ast_hash": "39ccb69f04a65299f259937fd6746b51",
+    "mtime": 1785257832.6417575,
+    "ast_hash": "a0c304302447987b908ba53355379f5a",
     "semantic_hash": ""
   },
   "src/view/components/EvolutionChain.svelte": {
@@ -365,8 +365,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1785169035.019783,
-    "ast_hash": "d6526f9ad789664752068a25eb21ece0",
+    "mtime": 1785258848.8847017,
+    "ast_hash": "2acf1325dbf8471d6aebf93e7c4fed4e",
     "semantic_hash": ""
   },
   "CONTEXT.md": {
@@ -532,6 +532,11 @@
   "docs/adr/0006-clearRange-cant-reach-cross-generation-variants.md": {
     "mtime": 1785168429.5157735,
     "ast_hash": "5c0b05ebcb6949b386608a87c3c3bd85",
+    "semantic_hash": ""
+  },
+  "src/view/imageBounds.ts": {
+    "mtime": 1785257743.5204756,
+    "ast_hash": "a3607c30d37c55087895218a7b3ce5d4",
     "semantic_hash": ""
   }
 }

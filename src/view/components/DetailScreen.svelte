@@ -10,6 +10,8 @@
 	import BarRow from "./BarRow.svelte";
 	import { DetailLoadState, type DetailEntrySnapshot } from "../DetailLoadState";
 	import { isEditableTarget } from "../domTarget";
+	import { relativeRect } from "../domPosition";
+	import { contentScale } from "../imageBounds";
 	import EvolutionTree from "./EvolutionTree.svelte";
 	import FlavorTextPanel from "./FlavorTextPanel.svelte";
 	import HeldItemsPanel from "./HeldItemsPanel.svelte";
@@ -135,6 +137,60 @@
 	const portraitUri = $derived(
 		activePortraitSource ? resolvePortrait(activePortraitSource, spriteStyle, showShiny) : null,
 	);
+	// Always the non-shiny render — resolvePortrait(..., false) is the same
+	// "official-artwork falls back to spriteDataUri" logic portraitUri itself
+	// uses, just pinned to showShiny=false so it stays a stable reference
+	// point regardless of the toggle. See imageBounds.ts's comment: some
+	// official-artwork shiny PNGs crop tighter than their non-shiny
+	// counterpart, so this is what portraitScale below normalizes against.
+	const basePortraitUri = $derived(
+		activePortraitSource ? resolvePortrait(activePortraitSource, spriteStyle, false) : null,
+	);
+
+	// 1 unless the currently-shown render's own artwork crops noticeably
+	// tighter than basePortraitUri's (official-artwork style only — the
+	// small game sprites don't exhibit this crop drift). Capped at 1 (never
+	// enlarges) so the non-shiny baseline's own on-screen size never changes.
+	let portraitScale = $state(1);
+	$effect(() => {
+		const base = basePortraitUri;
+		const current = portraitUri;
+		const style = spriteStyle;
+		if (style !== "official-artwork" || !base || !current || base === current) {
+			portraitScale = 1;
+			return;
+		}
+		let cancelled = false;
+		Promise.all([contentScale(base), contentScale(current)]).then(([baseFill, currentFill]) => {
+			if (cancelled || currentFill <= 0) return;
+			portraitScale = Math.min(baseFill / currentFill, 1);
+		});
+		return () => {
+			cancelled = true;
+		};
+	});
+
+	// Hover-to-enlarge for the portrait, mirroring TableScreen's
+	// sprite-preview (same relativeRect + side-anchored-with-vertical-clamp
+	// shape) rather than the ability/move popovers' above/below flip — this
+	// is a magnified copy of the same image, not a text panel.
+	let portraitPreviewPos = $state<{ top: number; left: number } | null>(null);
+	const PORTRAIT_PREVIEW_HALF_HEIGHT = 160;
+	function showPortraitPreview(target: EventTarget | null) {
+		const targetEl = target as HTMLElement;
+		const r = relativeRect(targetEl, ".detail-screen");
+		const viewportRect = targetEl.getBoundingClientRect();
+		const desiredCenter = viewportRect.top + viewportRect.height / 2;
+		const clampedCenter = Math.min(
+			Math.max(desiredCenter, PORTRAIT_PREVIEW_HALF_HEIGHT),
+			window.innerHeight - PORTRAIT_PREVIEW_HALF_HEIGHT,
+		);
+		const shift = clampedCenter - desiredCenter;
+		portraitPreviewPos = { top: r.top + r.height / 2 + shift, left: r.right + 6 };
+	}
+	function hidePortraitPreview() {
+		portraitPreviewPos = null;
+	}
 
 	// genderRate is eighths-female (0 = always male, 8 = always female);
 	// -1 means genderless. Eighths of 100 (12.5, 37.5, ...) are exact in
@@ -283,8 +339,18 @@
 			narrow one. -->
 			<div class="detail-grid" style:--accent={accentColor}>
 				<aside class="identity-col">
-				<div class="portrait-panel">
-					<img src={portraitUri ?? ""} alt={formatPokemonDisplayName(entry)} class="portrait-image" />
+				<div
+					class="portrait-panel"
+					role="note"
+					onmouseenter={(e) => showPortraitPreview(e.currentTarget)}
+					onmouseleave={hidePortraitPreview}
+				>
+					<img
+						src={portraitUri ?? ""}
+						alt={formatPokemonDisplayName(entry)}
+						class="portrait-image"
+						style:transform="scale({portraitScale})"
+					/>
 					{#if activePortraitSource?.shinyDataUri || activePortraitSource?.shinyArtworkDataUri}
 						<button
 							class="shiny-toggle"
@@ -314,7 +380,7 @@
 
 				<div class="name-block">
 					<p class="dex-eyebrow">No. {String(entry.dexNumber).padStart(3, "0")} ({romanNumeral(entry.generationId)})</p>
-					<h2 class="mon-name">{formatPokemonDisplayName(entry)}</h2>
+					<p class="mon-name" role="heading" aria-level="2">{formatPokemonDisplayName(entry)}</p>
 					<div class="type-row">
 						{#each (activeMegaData ?? entry).types as type (type)}
 							<TypeBadge {type} useIcon={useTypeIcons} />
@@ -412,6 +478,15 @@
 				</section>
 			</div>
 		</div>
+
+		{#if portraitPreviewPos && portraitUri}
+			<img
+				src={portraitUri}
+				alt=""
+				class="portrait-preview"
+				style="top: {portraitPreviewPos.top}px; left: {portraitPreviewPos.left}px; transform: translateY(-50%) scale({portraitScale});"
+			/>
+		{/if}
 		{/if}
 	</div>
 </div>
@@ -598,6 +673,30 @@
 		object-fit: contain;
 		image-rendering: pixelated;
 		filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.25));
+	}
+	/* Hover-to-enlarge, same shape as TableScreen's .sprite-preview: fixed
+	size, side-anchored with vertical clamp via relativeRect(".detail-screen"),
+	position: absolute (not fixed — .workspace-leaf's `contain: strict` would
+	otherwise make it the fixed-positioning containing block instead of the
+	viewport, landing the popover off by the tab-bar's height). !important
+	needed for the same reason as .sprite-preview: Obsidian's own
+	`body:not(.zoom-off) .view-content img { max-width: 100% }` outranks a
+	plain single-class selector on specificity. */
+	.portrait-preview {
+		width: 320px;
+		height: 320px;
+		max-width: none !important;
+		max-height: none !important;
+		position: absolute;
+		z-index: 50;
+		object-fit: contain;
+		image-rendering: pixelated;
+		background: var(--background-secondary);
+		border: 1px solid var(--background-modifier-border);
+		border-radius: var(--radius-l, 12px);
+		box-shadow: var(--shadow-s);
+		padding: 12px;
+		pointer-events: none;
 	}
 	.shiny-toggle {
 		position: absolute;
