@@ -12,17 +12,13 @@ export type GenerationCacheRepository = Pick<
 >;
 
 // Owns the Settings tab's per-generation cache-status/action-button state:
-// which action (cache vs. refresh) the single action button should perform,
-// and the disable-during-run bookkeeping for both it and the delete button.
+// which action (cache vs. refresh) the single action button should perform.
 // Plain, non-reactive (same shape as PokedexLoadState) — presentation
-// (ButtonComponent.setDisabled, Notice, icon/desc text) stays the caller's
-// job, this class only tracks state and talks to the repository. display()
-// wraps its own try/finally around the button disable/enable pairing; run()/
-// clear() separately wrap `running` in their own try/finally so a thrown
-// repository call never leaves this class's own state stuck mid-operation.
+// (ButtonComponent.setDisabled, Notice, icon/desc text, and the
+// disable-during-run bookkeeping for both buttons) stays the caller's job,
+// this class only tracks state and talks to the repository.
 export class GenerationCacheController {
 	status: { cached: number; total: number } | null = null;
-	running = false;
 
 	constructor(
 		private repository: GenerationCacheRepository,
@@ -42,26 +38,16 @@ export class GenerationCacheController {
 	}
 
 	async run(onProgress?: (loaded: number, total: number) => void): Promise<void> {
-		this.running = true;
-		try {
-			if (this.actionKind === "refresh") {
-				await this.repository.refreshRange(this.generation, onProgress);
-			} else {
-				await this.repository.cacheRange(this.generation, onProgress);
-			}
-			await this.refreshStatus();
-		} finally {
-			this.running = false;
+		if (this.actionKind === "refresh") {
+			await this.repository.refreshRange(this.generation, onProgress);
+		} else {
+			await this.repository.cacheRange(this.generation, onProgress);
 		}
+		await this.refreshStatus();
 	}
 
 	async clear(): Promise<void> {
-		this.running = true;
-		try {
-			await this.repository.clearRange(this.generation);
-			await this.refreshStatus();
-		} finally {
-			this.running = false;
-		}
+		await this.repository.clearRange(this.generation);
+		await this.refreshStatus();
 	}
 }

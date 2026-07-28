@@ -70,24 +70,33 @@ export class PokedexSettingTab extends PluginSettingTab {
 			};
 			void refreshCacheDesc();
 
+			// Shared disable-during-run bookkeeping for both buttons below —
+			// this is presentation state (ButtonComponent.setDisabled), which is
+			// this caller's job, not the controller's (see its own header comment).
+			const withButtonsDisabled = async (fn: () => Promise<void>) => {
+				actionButton?.setDisabled(true);
+				deleteButton?.setDisabled(true);
+				try {
+					await fn();
+				} finally {
+					actionButton?.setDisabled(false);
+					deleteButton?.setDisabled(false);
+				}
+				applyDesc();
+			};
+
 			setting.addButton((button) => {
 				actionButton = button;
 				button.setCta().onClick(async () => {
 					const kind = controller.actionKind;
-					actionButton?.setDisabled(true);
-					deleteButton?.setDisabled(true);
-					try {
+					await withButtonsDisabled(async () => {
 						await controller.run((loaded, total) => {
 							setting.setDesc(
 								`${baseDesc} ${kind === "refresh" ? "Refreshing" : "Caching"}... ${loaded}/${total}.`,
 							);
 						});
 						new Notice(`Pokedex: ${gen.name} ${kind === "refresh" ? "refreshed" : "cached"}.`);
-					} finally {
-						actionButton?.setDisabled(false);
-						deleteButton?.setDisabled(false);
-					}
-					applyDesc();
+					});
 				});
 				applyActionButtonIcon();
 			});
@@ -99,16 +108,10 @@ export class PokedexSettingTab extends PluginSettingTab {
 					.setTooltip("Delete this generation's cached data")
 					.setDestructive()
 					.onClick(async () => {
-						actionButton?.setDisabled(true);
-						deleteButton?.setDisabled(true);
-						try {
+						await withButtonsDisabled(async () => {
 							await controller.clear();
 							new Notice(`Pokedex: ${gen.name} cache cleared.`);
-						} finally {
-							actionButton?.setDisabled(false);
-							deleteButton?.setDisabled(false);
-						}
-						applyDesc();
+						});
 					});
 			});
 

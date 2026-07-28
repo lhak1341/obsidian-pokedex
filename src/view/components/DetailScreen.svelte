@@ -499,7 +499,7 @@
 		how big the window itself is. */
 		container-name: detail;
 		container-type: inline-size;
-		/* Also the ability-popover's positioning root (see .ability-popover):
+		/* Also the hover-popover's positioning root (see HoverPopoverBox.svelte):
 		Obsidian's .workspace-leaf has `contain: strict`, which (like a
 		transform) makes it the containing block for any `position: fixed`
 		descendant — so a fixed popover positioned from a viewport-relative

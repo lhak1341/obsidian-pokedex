@@ -64,7 +64,7 @@ describe("GenerationCacheController", () => {
 		expect(repository.cacheRange).not.toHaveBeenCalled();
 	});
 
-	it("run() resets running to false even when the repository call rejects", async () => {
+	it("run() propagates a rejected repository call without refreshing status", async () => {
 		const repository = makeRepository({
 			cacheRange: vi.fn().mockRejectedValue(new Error("network down")),
 		});
@@ -72,10 +72,10 @@ describe("GenerationCacheController", () => {
 
 		await expect(controller.run()).rejects.toThrow("network down");
 
-		expect(controller.running).toBe(false);
+		expect(repository.getCacheStatus).not.toHaveBeenCalled();
 	});
 
-	it("clear() calls clearRange, refreshes status, and resets running on throw", async () => {
+	it("clear() propagates a rejected clearRange without refreshing status", async () => {
 		const repository = makeRepository({
 			clearRange: vi.fn().mockRejectedValue(new Error("disk error")),
 		});
@@ -83,7 +83,6 @@ describe("GenerationCacheController", () => {
 
 		await expect(controller.clear()).rejects.toThrow("disk error");
 
-		expect(controller.running).toBe(false);
 		expect(repository.getCacheStatus).not.toHaveBeenCalled();
 	});
 

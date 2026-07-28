@@ -150,18 +150,30 @@ export class DiskCache {
 		}
 	}
 
-	async getSizeBytes(): Promise<number> {
-		if (!(await this.adapter.exists(this.cacheDir))) return 0;
-		let total = 0;
+	// Every cached file's path, recursively. See ADR-0006 for why this exists
+	// as its own method rather than staying trapped inside getSizeBytes: a
+	// future fix for clearRange's cross-generation eviction gap needs exactly
+	// this primitive (discover a generation's regional variants independent
+	// of where their base species' dex range sits) — this doesn't do that
+	// fix itself, only makes the capability available.
+	async listFiles(): Promise<string[]> {
+		if (!(await this.adapter.exists(this.cacheDir))) return [];
+		const paths: string[] = [];
 		const walk = async (dir: string): Promise<void> => {
 			const { files, folders } = await this.adapter.list(dir);
-			for (const file of files) {
-				const stat = await this.adapter.stat(file);
-				total += stat?.size ?? 0;
-			}
+			paths.push(...files);
 			for (const folder of folders) await walk(folder);
 		};
 		await walk(this.cacheDir);
+		return paths;
+	}
+
+	async getSizeBytes(): Promise<number> {
+		let total = 0;
+		for (const file of await this.listFiles()) {
+			const stat = await this.adapter.stat(file);
+			total += stat?.size ?? 0;
+		}
 		return total;
 	}
 }

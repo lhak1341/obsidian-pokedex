@@ -4,6 +4,7 @@
 	import { createHoverPopover } from "../hoverPopover.svelte";
 	import { resolveTabsForGen } from "../../utils/generationFallback";
 	import { buildMoveRows, type MoveRow } from "../../utils/moveRows";
+	import HoverPopoverBox from "./HoverPopoverBox.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 
 	let { moves, moveDetails, useTypeIcons, evolvesAtLevels, activeGen }: {
@@ -150,16 +151,11 @@
 	{/if}
 {/if}
 
-{#if popover.hovered && popover.pos}
-	{@const description = moveDetails[popover.hovered]?.description}
-	<div
-		class="move-popover"
-		class:popover-above={popover.pos.placement === "above"}
-		style="top: {popover.pos.top}px; left: {popover.pos.left}px;"
-	>
-		{description ?? "No description available."}
-	</div>
-{/if}
+<HoverPopoverBox hoverState={popover}>
+	{#if popover.hovered}
+		{moveDetails[popover.hovered]?.description ?? "No description available."}
+	{/if}
+</HoverPopoverBox>
 
 <style>
 	/* Duplicated from DetailScreen's own .section-heading rule — Svelte
@@ -248,28 +244,6 @@
 	}
 	.move-name-cell {
 		cursor: help;
-	}
-	/* Same popover look as AbilitiesPanel's — positioned relative to
-	.detail-screen for the same reason (see hoverPopover.svelte.ts). */
-	.move-popover {
-		position: absolute;
-		z-index: 50;
-		max-width: 260px;
-		background: var(--background-primary);
-		border: 1px solid var(--background-modifier-border);
-		border-radius: var(--radius-m, 8px);
-		box-shadow: var(--shadow-s);
-		padding: 8px 10px;
-		font-size: 0.85em;
-		color: var(--text-normal);
-		pointer-events: none;
-	}
-	/* Grows upward from the target's top edge instead of downward from its
-	bottom — see hoverPopover.svelte.ts's "above" placement comment for why
-	this can't just be a recomputed `top` (the popover's own height, needed
-	for that math, isn't known until after it's rendered). */
-	.move-popover.popover-above {
-		transform: translateY(-100%);
 	}
 	.move-table th.col-right, .move-table td.col-right {
 		text-align: right;

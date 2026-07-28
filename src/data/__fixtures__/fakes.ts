@@ -1,14 +1,7 @@
 import type { DataAdapter } from "obsidian";
 import { vi } from "vitest";
 import { PokeApiClient } from "../PokeApiClient";
-import type {
-	RawAbility,
-	RawEvolutionChain,
-	RawMove,
-	RawPokemon,
-	RawPokemonListResponse,
-	RawSpecies,
-} from "../types";
+import type { RawAbility, RawEvolutionChain, RawMove, RawPokemon, RawSpecies } from "../types";
 import bulbasaurChain from "./bulbasaur-evolution-chain.json";
 import bulbasaurSpecies from "./bulbasaur-species.json";
 import bulbasaur from "./bulbasaur.json";
@@ -175,9 +168,5 @@ export class FakePokeApiClient extends PokeApiClient {
 				},
 			],
 		};
-	});
-
-	fetchPokemonList = vi.fn(async (): Promise<RawPokemonListResponse> => {
-		throw new Error("FakePokeApiClient.fetchPokemonList not implemented — unused by PokedexRepository");
 	});
 }

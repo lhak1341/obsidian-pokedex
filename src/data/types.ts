@@ -146,13 +146,6 @@ export interface RawItem {
 	effect_entries: { effect: string; short_effect: string; language: NamedApiResource }[];
 }
 
-export interface RawPokemonListResponse {
-	count: number;
-	next: string | null;
-	previous: string | null;
-	results: NamedApiResource[];
-}
-
 // --- Normalized shapes used by the UI layer ---
 
 export interface StatBlock {

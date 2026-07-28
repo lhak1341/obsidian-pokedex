@@ -20,18 +20,18 @@
     "semantic_hash": ""
   },
   "src/data/Cache.test.ts": {
-    "mtime": 1783955038.1982327,
-    "ast_hash": "fa22c5591debd97e6674224df178956b",
+    "mtime": 1785261398.9075751,
+    "ast_hash": "7c2a2ec19a0363c785c8dbdafc7f3749",
     "semantic_hash": ""
   },
   "src/data/Cache.ts": {
-    "mtime": 1784736894.0552702,
-    "ast_hash": "bf5cf67b0fa868f82dc2a211ee20dfba",
+    "mtime": 1785261388.6951303,
+    "ast_hash": "cf3b93de4fbf70fdf425cbdc55b9752f",
     "semantic_hash": ""
   },
   "src/data/PokeApiClient.ts": {
-    "mtime": 1784737361.9228218,
-    "ast_hash": "7d7b1243b1dc496ae7ccd0ed74b6b987",
+    "mtime": 1785259829.3333502,
+    "ast_hash": "d3f91df30be2580f7d9259a79381f115",
     "semantic_hash": ""
   },
   "src/data/PokedexRepository.test.ts": {
@@ -60,8 +60,8 @@
     "semantic_hash": ""
   },
   "src/data/__fixtures__/fakes.ts": {
-    "mtime": 1784135722.6724665,
-    "ast_hash": "66323a2cd2f8609d48178a643c6b06d2",
+    "mtime": 1785259832.8040488,
+    "ast_hash": "b5bb06e823be332d58fc104313e60f61",
     "semantic_hash": ""
   },
   "src/data/__fixtures__/obsidian-stub.ts": {
@@ -85,8 +85,8 @@
     "semantic_hash": ""
   },
   "src/data/types.ts": {
-    "mtime": 1784818818.619846,
-    "ast_hash": "f24ddcd80bdf5f9d5822058fe2fd7b8c",
+    "mtime": 1785259830.170463,
+    "ast_hash": "1fb4f49a9a487142c41222051dccc7cb",
     "semantic_hash": ""
   },
   "src/main.ts": {
@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "src/settings.ts": {
-    "mtime": 1785168002.1825616,
-    "ast_hash": "d5a9be80446a8e941aaac50a4a8720c9",
+    "mtime": 1785260339.97263,
+    "ast_hash": "6dd3fd5b4d821b4cf9e9b211cfd6d7ad",
     "semantic_hash": ""
   },
   "src/utils/concurrency.test.ts": {
@@ -270,8 +270,8 @@
     "semantic_hash": ""
   },
   "src/view/components/AbilitiesPanel.svelte": {
-    "mtime": 1784851910.207262,
-    "ast_hash": "9257254e6298e18a1abdff4f6dfb368e",
+    "mtime": 1785260822.961957,
+    "ast_hash": "2430c45f33142f7702420ac7efee0353",
     "semantic_hash": ""
   },
   "src/view/components/BarRow.svelte": {
@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   "src/view/components/DetailScreen.svelte": {
-    "mtime": 1785257832.6417575,
-    "ast_hash": "a0c304302447987b908ba53355379f5a",
+    "mtime": 1785260756.669706,
+    "ast_hash": "1f3c49202e0d1077e2e5ed866b6b26f5",
     "semantic_hash": ""
   },
   "src/view/components/EvolutionChain.svelte": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "src/view/components/MoveBrowser.svelte": {
-    "mtime": 1784650800.6025171,
-    "ast_hash": "0935a32e4166e55d19d483c61e058de4",
+    "mtime": 1785260822.963457,
+    "ast_hash": "77d5c25c7c111f386d698de043dc2c5e",
     "semantic_hash": ""
   },
   "src/view/components/QuickSearch.svelte": {
@@ -365,8 +365,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1785258848.8847017,
-    "ast_hash": "2acf1325dbf8471d6aebf93e7c4fed4e",
+    "mtime": 1785261587.9833055,
+    "ast_hash": "5e5266842851e3a56af709fbf51d9bb0",
     "semantic_hash": ""
   },
   "CONTEXT.md": {
@@ -390,8 +390,8 @@
     "semantic_hash": ""
   },
   "src/view/components/HeldItemsPanel.svelte": {
-    "mtime": 1784851913.4573617,
-    "ast_hash": "36b45dc4c1c13dddb5c167a73bb29145",
+    "mtime": 1785260822.9626925,
+    "ast_hash": "95edd5d2b7d0b84768b4d97b6a4b2b1f",
     "semantic_hash": ""
   },
   "src/view/components/RegionalFormNav.svelte": {
@@ -465,12 +465,12 @@
     "semantic_hash": ""
   },
   "scripts/generate-evolution-stages.ts": {
-    "mtime": 1784819583.0796313,
-    "ast_hash": "10ff76a49920bd3e7f9aee02e262d7f0",
+    "mtime": 1785259850.6914356,
+    "ast_hash": "54fef63ad2c2115a24543ad07309c08b",
     "semantic_hash": ""
   },
   "src/data/evolutionStages.json": {
-    "mtime": 1784819469.6842868,
+    "mtime": 1785259943.3757367,
     "ast_hash": "aeefd0f917c257f919c496e62e4da328",
     "semantic_hash": ""
   },
@@ -500,13 +500,13 @@
     "semantic_hash": ""
   },
   "src/view/GenerationCacheController.test.ts": {
-    "mtime": 1785168086.794841,
-    "ast_hash": "72c6ffcc88ccb32ee48d4c9946439c6f",
+    "mtime": 1785260309.7803712,
+    "ast_hash": "1b99054648e81b888487f3bdd0424f98",
     "semantic_hash": ""
   },
   "src/view/GenerationCacheController.ts": {
-    "mtime": 1785167985.6516352,
-    "ast_hash": "0d1f19eaa11796cc14b19d3413db54c1",
+    "mtime": 1785260302.8686645,
+    "ast_hash": "986ff30d25bc7e7f480dc61750c660d1",
     "semantic_hash": ""
   },
   "src/view/components/VarietyFormToggle.svelte": {
@@ -530,13 +530,18 @@
     "semantic_hash": ""
   },
   "docs/adr/0006-clearRange-cant-reach-cross-generation-variants.md": {
-    "mtime": 1785168429.5157735,
-    "ast_hash": "5c0b05ebcb6949b386608a87c3c3bd85",
+    "mtime": 1785261408.908335,
+    "ast_hash": "b9d3eb6698b4bfb9b078266eefc1bd82",
     "semantic_hash": ""
   },
   "src/view/imageBounds.ts": {
     "mtime": 1785257743.5204756,
     "ast_hash": "a3607c30d37c55087895218a7b3ce5d4",
+    "semantic_hash": ""
+  },
+  "src/view/components/HoverPopoverBox.svelte": {
+    "mtime": 1785260999.725311,
+    "ast_hash": "6185cc95eccaa432b6e07e43a605ea95",
     "semantic_hash": ""
   }
 }
