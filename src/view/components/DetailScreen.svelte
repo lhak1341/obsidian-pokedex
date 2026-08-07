@@ -10,20 +10,18 @@
 	import BarRow from "./BarRow.svelte";
 	import { DetailLoadState, type DetailEntrySnapshot } from "../DetailLoadState";
 	import { isEditableTarget } from "../domTarget";
-	import { relativeRect } from "../domPosition";
-	import { contentScale } from "../imageBounds";
+	import { computeSideAnchoredPreviewPosition } from "../domPosition";
 	import EvolutionTree from "./EvolutionTree.svelte";
 	import FlavorTextPanel from "./FlavorTextPanel.svelte";
 	import HeldItemsPanel from "./HeldItemsPanel.svelte";
 	import Icon from "./Icon.svelte";
 	import MoveBrowser from "./MoveBrowser.svelte";
+	import PortraitPanel from "./PortraitPanel.svelte";
 	import QuickSearch from "./QuickSearch.svelte";
 	import RegionalFormNav from "./RegionalFormNav.svelte";
 	import StatBars from "./StatBars.svelte";
-	import VarietyFormToggle from "./VarietyFormToggle.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
-	import { resolvePortrait } from "../../utils/portrait";
 	import { romanNumeral } from "../../utils/romanNumeral";
 	import { resolveStatsForGen } from "../../utils/stats";
 	import { VarietyToggleState, type VarietyToggleSnapshot } from "../VarietyToggleState";
@@ -127,66 +125,25 @@
 		varietyToggle.selectGigantamax(key, mirrorVariety);
 	}
 
-	// Shared by the base-species, Mega-form, and Gigantamax-form image sets
-	// (see MegaFormDetail/GigantamaxFormDetail's comment on why each mirrors
-	// PokedexEntry's four image fields) so switching either toggle and the
-	// shiny toggle compose freely. Mega and Gigantamax are mutually
-	// exclusive (enforced by VarietyToggleState), so only one of
-	// activeMegaData/activeGigantamaxData is ever non-null at once.
-	const activePortraitSource = $derived(activeMegaData ?? activeGigantamaxData ?? entryLoad.entry);
-	const portraitUri = $derived(
-		activePortraitSource ? resolvePortrait(activePortraitSource, spriteStyle, showShiny) : null,
-	);
-	// Always the non-shiny render — resolvePortrait(..., false) is the same
-	// "official-artwork falls back to spriteDataUri" logic portraitUri itself
-	// uses, just pinned to showShiny=false so it stays a stable reference
-	// point regardless of the toggle. See imageBounds.ts's comment: some
-	// official-artwork shiny PNGs crop tighter than their non-shiny
-	// counterpart, so this is what portraitScale below normalizes against.
-	const basePortraitUri = $derived(
-		activePortraitSource ? resolvePortrait(activePortraitSource, spriteStyle, false) : null,
-	);
-
-	// 1 unless the currently-shown render's own artwork crops noticeably
-	// tighter than basePortraitUri's (official-artwork style only — the
-	// small game sprites don't exhibit this crop drift). Capped at 1 (never
-	// enlarges) so the non-shiny baseline's own on-screen size never changes.
+	// Image resolution (base/Mega/Gigantamax, shiny toggle) and the
+	// shiny-crop scale correction (see imageBounds.ts) live in PortraitPanel
+	// now (architecture review candidate 1) — these two mirror its bindable
+	// outputs, needed here only because the hover-preview overlay below must
+	// render at this component's own root (see its comment), not nested
+	// inside PortraitPanel.
+	let portraitUri = $state<string | null>(null);
 	let portraitScale = $state(1);
-	$effect(() => {
-		const base = basePortraitUri;
-		const current = portraitUri;
-		const style = spriteStyle;
-		if (style !== "official-artwork" || !base || !current || base === current) {
-			portraitScale = 1;
-			return;
-		}
-		let cancelled = false;
-		Promise.all([contentScale(base), contentScale(current)]).then(([baseFill, currentFill]) => {
-			if (cancelled || currentFill <= 0) return;
-			portraitScale = Math.min(baseFill / currentFill, 1);
-		});
-		return () => {
-			cancelled = true;
-		};
-	});
 
 	// Hover-to-enlarge for the portrait, mirroring TableScreen's
-	// sprite-preview (same relativeRect + side-anchored-with-vertical-clamp
-	// shape) rather than the ability/move popovers' above/below flip — this
-	// is a magnified copy of the same image, not a text panel.
+	// sprite-preview (same side-anchored-with-vertical-clamp shape, shared
+	// via domPosition.ts's computeSideAnchoredPreviewPosition) rather than
+	// the ability/move popovers' above/below flip — this is a magnified copy
+	// of the same image, not a text panel.
 	let portraitPreviewPos = $state<{ top: number; left: number } | null>(null);
 	const PORTRAIT_PREVIEW_HALF_HEIGHT = 160;
 	function showPortraitPreview(target: EventTarget | null) {
 		const targetEl = target as HTMLElement;
-		const r = relativeRect(targetEl, ".detail-screen");
-		const viewportRect = targetEl.getBoundingClientRect();
-		const desiredCenter = viewportRect.top + viewportRect.height / 2;
-		const clampedCenter = Math.min(
-			Math.max(desiredCenter, PORTRAIT_PREVIEW_HALF_HEIGHT),
-			window.innerHeight - PORTRAIT_PREVIEW_HALF_HEIGHT,
-		);
-		const shift = clampedCenter - desiredCenter;
-		portraitPreviewPos = { top: r.top + r.height / 2 + shift, left: r.right + 6 };
+		portraitPreviewPos = computeSideAnchoredPreviewPosition(targetEl, ".detail-screen", PORTRAIT_PREVIEW_HALF_HEIGHT);
 	}
 	function hidePortraitPreview() {
 		portraitPreviewPos = null;
@@ -339,44 +296,22 @@
 			narrow one. -->
 			<div class="detail-grid" style:--accent={accentColor}>
 				<aside class="identity-col">
-				<div
-					class="portrait-panel"
-					role="note"
-					onmouseenter={(e) => showPortraitPreview(e.currentTarget)}
-					onmouseleave={hidePortraitPreview}
-				>
-					<img
-						src={portraitUri ?? ""}
-						alt={formatPokemonDisplayName(entry)}
-						class="portrait-image"
-						style:transform="scale({portraitScale})"
-					/>
-					{#if activePortraitSource?.shinyDataUri || activePortraitSource?.shinyArtworkDataUri}
-						<button
-							class="shiny-toggle"
-							class:active={showShiny}
-							onclick={() => (showShiny = !showShiny)}
-							aria-label={showShiny ? "Show normal sprite" : "Show shiny sprite"}
-							title={showShiny ? "Show normal sprite" : "Show shiny sprite"}
-						>
-							<Icon name="sparkles" size={15} strokeWidth={2.25} />
-						</button>
-					{/if}
-					<VarietyFormToggle
-						forms={entry.megaForms}
-						activeKey={varietySnapshot.activeMegaKey}
-						onSelect={selectMegaForm}
-						badgeText={(label) => (label === "Mega" ? "M" : label.slice(-1))}
-						corner="left"
-					/>
-					<VarietyFormToggle
-						forms={entry.gigantamaxForms}
-						activeKey={varietySnapshot.activeGigantamaxKey}
-						onSelect={selectGigantamaxForm}
-						badgeText={() => "G"}
-						corner="right"
-					/>
-				</div>
+				<PortraitPanel
+					{entry}
+					{activeMegaData}
+					{activeGigantamaxData}
+					{spriteStyle}
+					{showShiny}
+					onToggleShiny={() => (showShiny = !showShiny)}
+					activeMegaKey={varietySnapshot.activeMegaKey}
+					onSelectMega={selectMegaForm}
+					activeGigantamaxKey={varietySnapshot.activeGigantamaxKey}
+					onSelectGigantamax={selectGigantamaxForm}
+					onHoverPortrait={showPortraitPreview}
+					onLeavePortrait={hidePortraitPreview}
+					bind:portraitUri
+					bind:portraitScale
+				/>
 
 				<div class="name-block">
 					<p class="dex-eyebrow">No. {String(entry.dexNumber).padStart(3, "0")} ({romanNumeral(entry.generationId)})</p>
@@ -646,34 +581,6 @@
 		}
 	}
 
-	.portrait-panel {
-		position: relative;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		aspect-ratio: 1;
-		width: 100%;
-		/* Capped (both axes, so it stays square) so a moderately-narrow-but-
-		not-yet-3-column pane (identity column at full container width, still
-		under the 920px breakpoint) doesn't turn this into a huge square that
-		pushes the name/stats far down. The 3-column layout's identity column
-		is a fixed 240px anyway, well under this cap. */
-		max-width: 260px;
-		max-height: 260px;
-		align-self: center;
-		background:
-			radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 70%),
-			var(--background-secondary);
-		border: 1px solid var(--background-modifier-border);
-		border-radius: var(--radius-l, 12px);
-	}
-	.portrait-image {
-		width: 76%;
-		height: 76%;
-		object-fit: contain;
-		image-rendering: pixelated;
-		filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.25));
-	}
 	/* Hover-to-enlarge, same shape as TableScreen's .sprite-preview: fixed
 	size, side-anchored with vertical clamp via relativeRect(".detail-screen"),
 	position: absolute (not fixed — .workspace-leaf's `contain: strict` would
@@ -681,7 +588,13 @@
 	viewport, landing the popover off by the tab-bar's height). !important
 	needed for the same reason as .sprite-preview: Obsidian's own
 	`body:not(.zoom-off) .view-content img { max-width: 100% }` outranks a
-	plain single-class selector on specificity. */
+	plain single-class selector on specificity. Deliberately rendered here
+	(root-level sibling of .detail-grid), not inside PortraitPanel, even
+	though the hover trigger lives on PortraitPanel's own box: .identity-col
+	becomes position: sticky at the ≥920px container-query breakpoint below,
+	which would make IT the containing block for a position: absolute
+	descendant nested inside it instead of .detail-screen — silently
+	mispositioning this overlay on every normal desktop-width pane. */
 	.portrait-preview {
 		width: 320px;
 		height: 320px;
@@ -697,31 +610,6 @@
 		box-shadow: var(--shadow-s);
 		padding: 12px;
 		pointer-events: none;
-	}
-	.shiny-toggle {
-		position: absolute;
-		top: 8px;
-		right: 8px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 26px;
-		height: auto;
-		padding: 5px;
-		background: var(--background-primary);
-		border: 1px solid var(--background-modifier-border);
-		border-radius: var(--radius-s, 6px);
-		color: var(--text-muted);
-		cursor: pointer;
-		box-shadow: var(--shadow-s);
-	}
-	.shiny-toggle:hover {
-		color: var(--text-normal);
-		background: var(--background-modifier-hover);
-	}
-	.shiny-toggle.active {
-		color: var(--color-yellow, gold);
-		border-color: var(--color-yellow, gold);
 	}
 
 	.name-block {

@@ -2,6 +2,7 @@ import { Notice, PluginSettingTab, Setting, type ButtonComponent, type SettingDe
 import { DEFAULT_ENABLED_GENERATIONS, DEFAULT_VISIBLE_COLUMNS, GENERATIONS } from "./data/constants";
 import type { PluginSettings } from "./data/types";
 import type PokedexPlugin from "./main";
+import { describeGenerationAction, describeGenerationStatus } from "./utils/generationCacheDescription";
 import { formatBytes } from "./utils/formatBytes";
 import { resolveGenerationToggle } from "./utils/generationToggle";
 import { GenerationCacheController } from "./view/GenerationCacheController";
@@ -44,19 +45,12 @@ export class PokedexSettingTab extends PluginSettingTab {
 			const controller = new GenerationCacheController(this.plugin.repository, gen);
 
 			const applyActionButtonIcon = () => {
-				const isFullyCached = controller.actionKind === "refresh";
-				actionButton
-					?.setIcon(isFullyCached ? "refresh-cw" : "download")
-					.setTooltip(
-						isFullyCached
-							? "Re-fetch this generation from PokeAPI, bypassing the cache"
-							: "Prefetch this generation so browsing it is instant",
-					);
+				const { icon, tooltip } = describeGenerationAction(controller.actionKind);
+				actionButton?.setIcon(icon).setTooltip(tooltip);
 			};
 
 			const applyDesc = () => {
-				const status = controller.status;
-				setting.setDesc(status ? `${baseDesc} ${status.cached}/${status.total} cached.` : baseDesc);
+				setting.setDesc(describeGenerationStatus(baseDesc, controller.status, null));
 				applyActionButtonIcon();
 			};
 
@@ -91,9 +85,7 @@ export class PokedexSettingTab extends PluginSettingTab {
 					const kind = controller.actionKind;
 					await withButtonsDisabled(async () => {
 						await controller.run((loaded, total) => {
-							setting.setDesc(
-								`${baseDesc} ${kind === "refresh" ? "Refreshing" : "Caching"}... ${loaded}/${total}.`,
-							);
+							setting.setDesc(describeGenerationStatus(baseDesc, controller.status, { kind, loaded, total }));
 						});
 						new Notice(`Pokedex: ${gen.name} ${kind === "refresh" ? "refreshed" : "cached"}.`);
 					});

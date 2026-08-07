@@ -267,6 +267,90 @@ describe("PokedexRepository", () => {
 		expect(await cache.readJson("species/19.json")).toBeNull();
 	});
 
+	it("getCacheStatus reports 0/N when nothing has been fetched", async () => {
+		const { repository } = makeRepository();
+
+		const status = await repository.getCacheStatus({ id: 1, name: "Test Gen", start: 1, end: 1 });
+
+		expect(status).toEqual({ cached: 0, total: 1 });
+	});
+
+	it("getCacheStatus serves a mem-cache hit without touching disk", async () => {
+		const { cache, repository } = makeRepository();
+		await repository.getTableRows({ start: 1, end: 1 });
+		await repository.getEntryExtras(1);
+
+		// isIdCached/isExtrasCached both check cache.exists(...) before falling
+		// back to disk — a mem hit on the same instance should never reach it.
+		const existsSpy = vi.spyOn(cache, "exists");
+		const status = await repository.getCacheStatus({ id: 1, name: "Test Gen", start: 1, end: 1 });
+
+		expect(status).toEqual({ cached: 1, total: 1 });
+		expect(existsSpy).not.toHaveBeenCalled();
+	});
+
+	it("getCacheStatus serves a fresh instance's disk-cache hit without touching the network", async () => {
+		const { client, cache } = makeRepository();
+		const repoA = new PokedexRepository(client, cache);
+		await repoA.getTableRows({ start: 1, end: 1 });
+		await repoA.getEntryExtras(1);
+		client.fetchPokemon.mockClear();
+		client.fetchSpecies.mockClear();
+		client.fetchImageBinary.mockClear();
+
+		// New instance = empty mem cache, same disk — exercises the disk-hit
+		// path rather than the mem-cache short-circuit above. This is the
+		// invariant isExtrasCached's own comment only asserts in prose ("core
+		// confirmed cached by the caller first, never a network call at this
+		// point") — a future reordering of the isIdCached && isExtrasCached
+		// check would show up here as a real fetch, not just a stale comment.
+		const repoB = new PokedexRepository(client, cache);
+		const status = await repoB.getCacheStatus({ id: 1, name: "Test Gen", start: 1, end: 1 });
+
+		expect(status).toEqual({ cached: 1, total: 1 });
+		expect(client.fetchPokemon).not.toHaveBeenCalled();
+		expect(client.fetchSpecies).not.toHaveBeenCalled();
+		expect(client.fetchImageBinary).not.toHaveBeenCalled();
+	});
+
+	it("getCacheStatus doesn't award credit for core cached without extras", async () => {
+		const { repository } = makeRepository();
+		// getTableRows populates pokemon.json/species.json (isIdCached's
+		// concern) but never touches the artwork/shiny/evolution-chain fetch
+		// getEntryExtras makes — a real, naturally-reachable partial state
+		// (browsing the table caches core; opening the detail screen is what
+		// caches extras), not a contrived one.
+		await repository.getTableRows({ start: 1, end: 1 });
+
+		const status = await repository.getCacheStatus({ id: 1, name: "Test Gen", start: 1, end: 1 });
+
+		expect(status).toEqual({ cached: 0, total: 1 });
+	});
+
+	it("getCacheStatus counts a species with no official-artwork as extras-satisfied without ever fetching extras", async () => {
+		const { cache, repository } = makeRepository();
+		const withoutArtwork = structuredClone(bulbasaur) as unknown as RawPokemon;
+		if (withoutArtwork.sprites.other) delete withoutArtwork.sprites.other["official-artwork"];
+		await cache.writeJson("pokemon/1.json", withoutArtwork);
+		await cache.writeJson("species/1.json", bulbasaurSpecies);
+
+		const status = await repository.getCacheStatus({ id: 1, name: "Test Gen", start: 1, end: 1 });
+
+		expect(status).toEqual({ cached: 1, total: 1 });
+	});
+
+	it("getCacheStatus counts only the fully-cached id in a multi-id range", async () => {
+		const { repository } = makeRepository();
+		await repository.getTableRows({ start: 1, end: 2 });
+		await repository.getEntryExtras(1);
+		// id 2's core is cached but its extras never were (same shape as the
+		// partial-miss test above) — only id 1 should count.
+
+		const status = await repository.getCacheStatus({ id: 1, name: "Test Gen", start: 1, end: 2 });
+
+		expect(status).toEqual({ cached: 1, total: 2 });
+	});
+
 	it("getTableRows' onRow callback fires once per successful row as it settles", async () => {
 		const { repository } = makeRepository();
 		const seen: number[] = [];

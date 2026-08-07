@@ -1,3 +1,5 @@
+import { sideAnchoredPreviewPosition } from "../utils/previewPosition";
+
 export interface RelativeRect {
 	top: number;
 	left: number;
@@ -31,4 +33,30 @@ export function relativeRect(target: HTMLElement, containerSelector: string): Re
 		width: rect.width,
 		height: rect.height,
 	};
+}
+
+// Side-anchored hover-preview positioning shared by TableScreen's sprite
+// preview and DetailScreen's portrait preview — used to be duplicated
+// verbatim between the two (same relativeRect + vertical-clamp shape, only
+// the container selector and halfHeight differed). The clamp/shift math
+// itself is DOM-free and lives in utils/previewPosition.ts (tested there);
+// this wrapper is only the DOM-reading part (relativeRect,
+// getBoundingClientRect), left untested per this project's view/ convention
+// (no jsdom in vitest.config.ts).
+export function computeSideAnchoredPreviewPosition(
+	target: HTMLElement,
+	containerSelector: string,
+	halfHeight: number,
+): { top: number; left: number } {
+	const r = relativeRect(target, containerSelector);
+	const viewportRect = target.getBoundingClientRect();
+	return sideAnchoredPreviewPosition(
+		r.top,
+		r.right,
+		r.height,
+		viewportRect.top,
+		viewportRect.height,
+		halfHeight,
+		window.innerHeight,
+	);
 }

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { GENERATIONS, QUIRKS, RARITIES, STAT_COLORS, STAT_COLUMNS, TRAITS, TYPE_NAMES } from "../../data/constants";
+	import { filterAndOrderAbilityOptions } from "../../utils/abilityOptions";
 	import { EMPTY_FILTERS, type PokedexFilters } from "../../utils/filterPokemon";
 	import type { PokedexTableRow, StatBlock } from "../../data/types";
 	import { createQuickJumpDropdown } from "../quickJumpDropdown.svelte";
@@ -58,14 +59,7 @@
 	}
 
 	let abilitySearch = $state("");
-	const filteredAbilityOptions = $derived.by(() => {
-		const matches = abilityOptions.filter((a) =>
-			a.toLowerCase().includes(abilitySearch.toLowerCase()),
-		);
-		const selected = matches.filter((a) => filters.abilities.includes(a));
-		const rest = matches.filter((a) => !filters.abilities.includes(a));
-		return [...selected, ...rest];
-	});
+	const filteredAbilityOptions = $derived(filterAndOrderAbilityOptions(abilityOptions, abilitySearch, filters.abilities));
 
 	// Quick-jump dropdown on the main search box, sharing createQuickJumpDropdown
 	// with QuickSearch.svelte on the detail screen (same matchesSearch

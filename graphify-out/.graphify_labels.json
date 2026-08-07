@@ -28,9 +28,16 @@
   "26": "0005-evolution-node-branch-selection-not-extracted.md",
   "27": "domTarget.ts",
   "28": "PokeApiClient.ts",
+  "29": "sortPokemon.ts",
+  "30": "resolveGenerationId",
   "31": "0001-two-generation-membership-checks.md",
   "32": "0002-mega-form-cache-not-on-getOrFetch.md",
   "33": "0003-pokedexview-stays-untested.md",
+  "34": "tableColumns.ts",
+  "35": "PokedexTableRow",
+  "36": "quickJump.ts",
+  "37": "GENERATIONS",
   "38": "moveRows.ts",
-  "39": "imageBounds.ts"
+  "39": "imageBounds.ts",
+  "40": "abilityOptions.ts"
 }

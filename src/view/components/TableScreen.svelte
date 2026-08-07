@@ -6,7 +6,7 @@
 	import { sortPokemon, type SortColumn, type SortDirection } from "../../utils/sortPokemon";
 	import { STAT_LABEL_BY_KEY, TOGGLEABLE_COLUMNS } from "../../utils/tableColumns";
 	import { untrack } from "svelte";
-	import { relativeRect } from "../domPosition";
+	import { computeSideAnchoredPreviewPosition } from "../domPosition";
 	import FilterBar from "./FilterBar.svelte";
 	import Icon from "./Icon.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
@@ -34,25 +34,16 @@
 		const targetEl = target as HTMLElement;
 		// Positioned relative to .table-screen (position: absolute, not
 		// fixed — see its CSS comment for why), not the raw viewport rect.
-		const r = relativeRect(targetEl, ".table-screen");
 		// A row near the top or bottom edge of the visible viewport would
 		// otherwise center the preview off-screen (same class of bug
 		// hoverPopover.svelte.ts's MIN_SPACE_BELOW flip already prevents for
 		// AbilitiesPanel/MoveBrowser/HeldItemsPanel — this is a different
 		// placement shape though, a side-anchored vertical center rather
 		// than a below/above corner flip, so it gets its own clamp instead
-		// of reusing that hook). Clamped in viewport-relative terms (matching
-		// hoverPopover.svelte.ts's own window.innerHeight convention), then
-		// the resulting shift is applied to the container-relative position
-		// actually used for rendering.
-		const viewportRect = targetEl.getBoundingClientRect();
-		const desiredCenter = viewportRect.top + viewportRect.height / 2;
-		const clampedCenter = Math.min(
-			Math.max(desiredCenter, PREVIEW_HALF_HEIGHT),
-			window.innerHeight - PREVIEW_HALF_HEIGHT,
-		);
-		const shift = clampedCenter - desiredCenter;
-		previewPos = { top: r.top + r.height / 2 + shift, left: r.right + 6 };
+		// of reusing that hook). See domPosition.ts's
+		// computeSideAnchoredPreviewPosition/utils/previewPosition.ts for the
+		// shared clamp math (also used by DetailScreen's portrait preview).
+		previewPos = computeSideAnchoredPreviewPosition(targetEl, ".table-screen", PREVIEW_HALF_HEIGHT);
 	}
 
 	function hidePreview() {
