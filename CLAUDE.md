@@ -1,71 +1,180 @@
-# Gotchas
+# obsidian-pokedex
 
-- Live-verify via obsidian-cli against vault "lhakZettel" (`~/Library/Mobile Documents/iCloud~md~obsidian/Documents/lhakZettel`); deployed plugin folder there is named `pokedex` (intentionally ≠ manifest id `obsidian-pokedex`). `dev:screenshot` captures whichever leaf is currently focused, not "the plugin" — focus it first via `getLeavesOfType('pokedex-view')` + `setActiveLeaf(leaf, {focus:true})`. For a genuinely fresh Svelte mount (not a reused leaf), detach it and reopen via `executeCommandById('obsidian-pokedex:open-pokedex')` rather than relying on `plugin:reload` alone. Mandatory after any `.svelte` change, not optional — tests/typecheck/build don't catch reactivity/rendering bugs.
-- Svelte5 `css:"injected"` leaves stale `<style id="svelte-HASH">` tags in `document.head` across plugin disable/enable *and* across `plugin:reload` within one Obsidian session — CSS edits won't show until removed manually or you fully restart Obsidian. **Disable/enable does NOT clear this** (that only fixes stale `.ts` logic, a different gotcha) — always remove tags explicitly before your *first* live-verify after any `.svelte` `<style>` edit, or you'll screenshot/measure against stale rules and chase a phantom layout bug (happened live: a hover-enlarge preview rendered unstyled/mispositioned until tags were cleared, not because the CSS was wrong). Clear before reloading: `obsidian eval code="[...document.head.querySelectorAll('style[id^=\"svelte-\"]')].forEach(s=>s.remove())"`.
-- `obsidian plugin:reload id=obsidian-pokedex` can silently keep running a stale module after a `.ts` (non-Svelte) logic change — observed with a `data/normalize.ts`/`data/constants.ts` edit where the bundled `main.js` on disk was confirmed correct (`grep` the deployed file to check) but a live call into `plugin.repository` still executed the old logic for several `eval` round-trips after `plugin:reload` reported success. Fix: `app.plugins.disablePlugin('obsidian-pokedex')` then `app.plugins.enablePlugin('obsidian-pokedex')` (full unload/reload of the module), not `plugin:reload`, whenever verifying a data-layer change. Cheap to just always use disable/enable instead of `plugin:reload` — no known downside, and it avoids re-diagnosing this from scratch.
-- Svelte5 scopes descendant/element selectors (e.g. `section h3`) via zero-specificity `:where()`, which can lose to Obsidian's theme CSS — target elements with a direct class instead.
-- Svelte5 `$state()` deep-proxies plain objects/arrays only, not class instances — mutating a class instance's fields (e.g. `this.rows = x`) held in `$state()` won't trigger re-render, only reassigning the `$state` variable itself does. Keep stateful orchestration classes (e.g. `PokedexLoadState`) plain/non-reactive/testable; have the Svelte component hold its own `$state` primitives explicitly mirrored from the class's results (see `PokedexApp.svelte`).
-- Code shared between Obsidian runtime and vitest can't use `window.setTimeout` (no `window` in vitest) — use `typeof window !== "undefined" ? window : globalThis` instead. This repo's eslint config (`eslint-comments/no-restricted-disable`) blocks disabling *any* rule via inline comment (confirmed for both `obsidianmd/prefer-window-timers` and `@typescript-eslint/no-deprecated`) — there's no comment-based escape hatch; fix the underlying issue or leave the warning.
-- `obsidian eval code="..."` throws "Converting circular structure to JSON" if the snippet's implicit return value is circular (e.g. calling `app.setting.open()` directly) — end the snippet with a trailing simple expression (`; 'ok'`) to avoid it.
-- `require('obsidian')` throws "Cannot find module" from a raw `obsidian eval` / devtools console — only resolvable inside the actual plugin bundle's module scope. To verify an unfamiliar Lucide icon name exists, temporarily render candidates via `<Icon name=... />` in a live component and check `el.querySelector('svg')?.innerHTML` via `obsidian eval` (non-empty = valid icon, cheaper than a screenshot), or screenshot if you also need to judge how it looks — then remove; don't try to probe the icon registry from eval directly.
-- Reading DOM state immediately after a synchronous `.click()` inside the *same* `obsidian eval` call can race Svelte 5's microtask-batched reactivity — split the click and the read into separate `eval` invocations (a real task boundary) if the result looks stale.
-- To toggle a plugin setting from eval: `app.setting.open(); app.setting.openTabById('obsidian-pokedex')`, find the row via `[...document.querySelectorAll('.setting-item')].find(el => el.querySelector('.setting-item-name')?.textContent.trim() === 'Setting Name')`, click `.checkbox-container`, then `app.setting.close()`.
-- Don't measure timing by polling `obsidian-cli eval` in a loop — each invocation's subprocess-spawn overhead (hundreds of ms+) swamps the real signal. Set `performance.now()` markers on `window` from inside the app and read them once instead.
-- Obsidian's base theme styles plain `button`/`img` elements directly (e.g. `button { height: var(--input-height); justify-content: center }`, `body:not(.zoom-off) .view-content img { max-width: 100% }`) — these can silently win even against a higher-specificity custom class, either because your rule never declared that property at all, or because Obsidian's own selector is *more* specific than a plain two-class one. When giving a custom `<button>`/`<img>` non-default sizing or flex alignment, explicitly declare the specific property yourself (`height: auto`, `justify-content: flex-start`, `max-width: none`), adding `!important` if it's still losing on specificity.
-- `position: fixed` popovers land silently off-position inside this plugin: Obsidian's `.workspace-leaf` has `contain: strict`, which (like a `transform`) makes *it* — not the viewport — the containing block for `position: fixed` descendants. A popover positioned from a viewport-relative `getBoundingClientRect()` ends up offset by however tall the tab bar is (~40-56px observed, varies). Fix: use `position: absolute` against a `position: relative` ancestor you control, computing coordinates relative to *that* ancestor's own rect, not the viewport — `relativeRect()` in `src/view/domPosition.ts` already implements this, reuse it rather than re-deriving the offset math. Don't trust a screenshot alone to verify a positioned popover — compare `getBoundingClientRect()` of the target element vs the popover element (separate `eval` calls); the coordinates should match exactly.
-- To type into a Svelte-bound `<input>` from `obsidian eval` (filter search, quick search, etc.), setting `.value` directly doesn't trigger Svelte's reactivity — use the native setter and dispatch a real event: `Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(input, 'text'); input.dispatchEvent(new Event('input',{bubbles:true}))`.
-- Svelte5 warns `state_referenced_locally` when a `$props()` value is captured into a top-level `const` outside a reactive scope, even if that prop never actually changes for the component's lifetime (e.g. `const x = new Foo(someProp)`) — wrap it in `$derived(() => new Foo(someProp))` instead (lighter than moving construction into `onMount`, which is the other valid fix — see `PokedexApp.svelte`). Same warning also fires when a `$state()` initializer calls into a sibling `$derived` value (e.g. `$state(loadState.snapshot())` where `loadState` is itself `$derived(...)`) — only the initial value gets captured; use a plain literal for the initial `$state` instead (see `DetailScreen.svelte`'s `entryLoad`).
-- `state_referenced_locally`'s `$derived(() => new Foo(someProp))` fix is wrong when `Foo` holds its own long-lived `$state` (e.g. a cache) that must survive re-renders — an inline-function prop (e.g. `getDescription={(name) => repo.get(name)}`) gets a fresh identity every parent render, so `$derived` would recreate `Foo` and drop its cache each time. Fix instead: keep the top-level `const` construction, wrap only the prop *read* in a closure at the call site (`(name) => getDescription(name)`) — see `AbilitiesPanel.svelte`/`HeldItemsPanel.svelte`'s `createHoverDescription` call.
-- `mapWithConcurrency` (`src/utils/concurrency.ts`) swallows per-item errors — `cacheRange`/`refreshRange`/`getTableRows` never reject just because one id's fetch failed, so `FakePokeApiClient.failIds` can't produce a genuine thrown rejection through those paths. For a class that only orchestrates repository calls without exercising real caching/fetch logic (e.g. `GenerationCacheController`), test it against a narrow `Pick<PokedexRepository, ...>` + hand-rolled `vi.fn()` stub instead of the real-repository+`FakePokeApiClient` stack `PokedexLoadState.test.ts`/`DetailLoadState.test.ts` use — that heavier stack is for classes that actually need real fetch/cache behavior.
-- Live-verify fixtures: Venusaur has both Mega (single "M" badge) and Gigantamax ("G" badge); Charizard's Mega splits into X/Y badges; Farfetch'd always holds an item (Stick, 5%) — reach for these directly instead of guessing which species has a given feature. Charizard Mega X/Y is also the fixture for portrait-size normalization: its official-artwork shiny render crops ~9% tighter than non-shiny (bbox-confirmed), giving `portraitScale` a nonzero case to check.
-- A "this sprite/artwork looks bigger/smaller" complaint about one Pokemon is worth a live bbox scan across its whole variety group before assuming a plugin bug — confirmed real for Mega forms: PokeAPI's own official-artwork shiny PNGs crop up to 31% tighter than non-shiny for ~46 of 97 Mega species (classic Gen 6 megas, 475x475 canvas); newer fan-added megas (534x534 canvas) don't have the issue at all. `DetailScreen.svelte`'s `portraitScale` (via `imageBounds.ts`'s `contentScale`) compensates by decoding each render's alpha-channel bbox and scaling the outlier down to match its non-shiny reference, capped shrink-only.
-- This codebase's inline comments are unusually thorough and load-bearing — most "shallow module"/"duplicate logic" findings from an automated architecture review turn out to be deliberate, already-documented separations of concern once you read the comments (6 of 8 candidates misdiagnosed in one round, 3 of 5 in another — including cases that survived into the written report, not just past a pre-implementation check). Reread the full file and check for an existing ADR before writing a candidate into a report, not only before implementing one.
-- This plugin capitalizes Pokemon names purely via CSS (`text-transform: capitalize`) — `.textContent` on any name cell/label returns the raw lowercase value (e.g. `"ivysaur"`, not `"Ivysaur"`). Match lowercase when locating elements via `obsidian eval`.
-- Before clicking a UI element via `obsidian eval`, check the `.svelte` source for the actual `onclick` owner — it's often a nested `<button>` (e.g. EvolutionChain's `.evo-card`), not the outer wrapper `<div>` (e.g. `.evo-node`); clicking the wrapper silently no-ops with no error. Not universal, though — TableScreen's own `<tr onclick=...>` carries the handler directly, so a table row itself is the right click target there.
-- Gating a cache-eviction sweep on a matching condition (e.g. `clearRange`'s generationId check, ADR-0006) can silently make the CORRECTLY-scoped case unreachable too if discovery is still keyed by the old range — live-verify both directions (wrong case now preserved, right case still evictable) before calling a scoping fix done, not just the direction the bug report described.
-- `vitest.config.ts` has no jsdom environment — `document`/`HTMLElement`/`getBoundingClientRect` aren't available in tests. Every file in `utils/` is DOM-free and has a matching test by convention; new DOM-touching helpers (e.g. popover positioning) belong in `view/` instead and stay untested, same category as `PokeApiClient.ts`/`PokedexView.ts`.
-- `temp/` is gitignored and already used for scratch output (reports, notes) — prefer it over the OS tmp dir for any generated artifact meant to stick around locally.
-- A lone plain space (`" "`, U+0020) used as a "reserve height even when empty" placeholder collapses to 0 height in Svelte/flex layouts here — it gets trimmed as insignificant whitespace. Real text or a non-breaking space (U+00A0) doesn't collapse. Symptom: a sibling with real text renders taller, and if a parent flex row centers items, the placeholder's shorter box gets vertically offset — e.g. this caused a visibly crooked dashed connector line in EvolutionChain until diagnosed by comparing `getBoundingClientRect()` heights across sibling cards.
-- The plugin's disk cache lives at `{manifest.dir}/cache` (i.e. `.obsidian/plugins/pokedex/cache` — the vault's actual deployed folder, not the manifest id) — `DiskCache.forPlugin` derives it from `manifest.dir` specifically because keying it off `manifest.id` used to leave the cache in an orphaned sibling folder nobody would find (see `Cache.ts`'s migration logic, which one-time-moves any cache still sitting under the old id-based path). To inspect/clear it directly from eval: `` app.plugins.plugins['obsidian-pokedex'].manifest.dir + '/cache' ``, then `app.vault.adapter.exists/read/rmdir`.
-- A regional-form row's detail view fetches by its own numeric PokeAPI id (`pokemon/{id}.json` — e.g. `pokemon/10229.json` for Hisuian Growlithe), a DIFFERENT disk-cache file from the name-keyed one (`pokemon/growlithe-hisui.json`) that table-load's `deriveRegionalForms`/`getOrFetchPokemonVariant` path writes. `cacheRange` (`PokedexRepository.ts`) prefetches both keys for any discovered regional-form row unconditionally; `clearRange` sweeps both keys too, but ONLY when the variant's own `generationId` (`REGIONAL_FORMS[suffix].generationId`) matches the generation being cleared — not its base dex number's range, since those can diverge (Alolan Rattata is dex #19/Gen 1's range, but `generationId: 7`). `getCacheStatus`'s own cache-status counter still doesn't count variants at all, so its "X/Y cached" figure undercounts once a generation has regional forms. Deliberate residual gap (see ADR-0006): `clearRange` only ever visits base ids inside its OWN range, so a variant whose own generation differs from its base species' range (e.g. Alolan Rattata) is never discovered by clearing the generation it actually belongs to either — it survives every per-generation Delete button and only the global "Clear cache" removes it.
-- `bun run dev`/`npm run build` only write `main.js` to the repo root — never to the vault. Only `bun run deploy` copies `main.js`/`manifest.json`/`styles.css` into both `test-vault/` and the real vault's deployed `pokedex/` folder. Always `deploy` (not just `build`) before any disable/enable live-verify step, or you're silently re-testing stale code.
-- Svelte scoping doesn't protect against name collisions with Obsidian's own *unscoped* global CSS (e.g. `.search-wrapper` — Obsidian's built-in search UI already owns that literal class name and was leaking `padding`/`display` into an unrelated div). If a component's layout looks subtly wrong (extra padding/height, misaligned flex) despite correct-looking scoped CSS, `getComputedStyle` the element first — a property you never declared, present anyway, is the fingerprint. Fix: pick a more specific class name (e.g. prefix with the component/feature).
-- Before adding a new global hotkey, check both: `app.hotkeyManager.bakedHotkeys`/`bakedIds` (Obsidian's own bindings — JS-level, fixable via capture-phase + stopPropagation) and Electron's native menu accelerators via `window.require('electron').remote.Menu.getApplicationMenu()` (OS/main-process level — cannot be intercepted from renderer JS at all, pick a different chord instead). `Mod+L` is double-booked both ways; verify before assuming a capture-phase fix will work.
-- Some buttons bind `onmousedown` instead of `onclick` on purpose (e.g. QuickSearch's result list — `mousedown` fires before the input's `blur` closes the dropdown, `click` would fire after). A `.click()` or dispatched `click` event silently no-ops on these; dispatch `new MouseEvent('mousedown', {bubbles:true, cancelable:true})` instead. Check the `.svelte` source for which event a button actually binds, not just which element.
-- To trigger hover-based UI (`onmouseenter`/`onmouseleave`, e.g. `AbilitiesPanel`'s ability popover) from `obsidian eval`, dispatch a real event — `el.dispatchEvent(new MouseEvent('mouseenter', {bubbles:true}))` — a plain `.click()` or bare `Event` won't fire it. Same category as the mousedown/typing-input gotchas above: check which DOM event the component actually binds before dispatching.
-- Extracting a `.svelte` component moves its markup's Svelte-scope-attribute with it — a shared class (`.panel`, `.section-heading`) still declared in the parent's `<style>` block silently stops matching once that markup renders from the child instead, since Svelte scopes selectors per component, not by class name. Symptom: lost box chrome, or a container-query flex rule reverting silently. Fix: either keep the wrapping/heading element in the parent (extract only the child's own content, not its chrome — see `AbilitiesPanel.svelte`), or duplicate the specific shared rule into the child's own `<style>` (see `MoveBrowser.svelte`'s `.section-heading`) — check every class the extracted markup uses against both files' stylesheets before calling an extraction done.
-- `hoverPopover.svelte.ts`'s hover popovers flip to `placement: "above"` near the pane's bottom (computed via viewport-relative `getBoundingClientRect()`, not `.detail-screen`'s own box). The box CSS, wrapper markup, and `.popover-above { transform: translateY(-100%) }` rule live in one place, `HoverPopoverBox.svelte` (used by AbilitiesPanel/HeldItemsPanel/MoveBrowser) — a bare `.ts` runes module (like `hoverPopover.svelte.ts` itself) can't own a `<style>` block, but a self-contained `.svelte` component that owns both its own markup and style scopes normally regardless of caller, so this isn't split per-consumer the way gotcha #36's extraction warning might suggest.
-- `esbuild-svelte` + `svelte-preprocess`: a `//` comment inside `<script lang="ts">` containing the literal text `<style>`/`<script>` breaks style-block extraction — throws a misleading `Unknown word X,` error (X = whatever the first `$props()` destructure key happens to be) at a location that doesn't track the real file. If `npm run build` throws a location that doesn't match file content, bisect by calling `svelte/compiler`'s `preprocess()`/`compile()` directly via `node -e` (bypassing the esbuild plugin) — progressively remove lines until the error disappears. Fix: reword the comment to avoid the literal tag text.
-- `obsidian-cli dev:screenshot`'s printed output path can render with non-breaking-space-like separators inside the filename's numeric timestamp, which breaks `ls -t`/naive globbing AND an exact `-name` match on the literal printed path (confirmed: exit 2, no match). Locate it with `/usr/bin/find <tmpdir> -maxdepth 1 -iname "*screenshot*<distinctive-number-fragment>*"` (loose fragment match, not the exact literal name) `-exec cp {} <dest> \;` — call the real binary path directly, not `find`/`ls` from `$PATH`, since a shell-level wrapper may reject `-exec` or mis-glob the spaced name.
-- `DetailScreen.svelte`'s `.identity-col` becomes `position: sticky` at the `@container detail (min-width: 920px)` breakpoint — a `position: absolute` descendant rendered inside it (e.g. a hover-preview overlay) gets IT as the containing block instead of `.detail-screen`, silently mispositioned only above 920px pane width. When extracting a Svelte component whose markup sits inside `.identity-col`, keep any such overlay a root-level sibling of `.detail-grid` instead of nesting it in the extracted component (see `PortraitPanel.svelte`'s own comment on `.portrait-preview`). Test both sides of a container-query breakpoint live via `window.require('electron').remote.getCurrentWindow().setSize(w, h)` — a screenshot at only one pane width can miss a breakpoint-conditional bug entirely.
-- An `obsidian eval` call can exceed Bash's 120s default timeout and get backgrounded while the vault is mid-indexing (an "Indexing vault..." toast is visible) even though the command itself already succeeded — check the backgrounded task's output (it'll show the real `=> result`) rather than assuming failure or retrying.
-- `stroke-dasharray` with a dash length shorter than `stroke-width` plus `stroke-linecap: round` (e.g. `EvolutionTree`'s connector line: width 3, dasharray "2 6") renders as small rounded-rect/pill dots, not circles — the two round caps on each short dash overlap into a blob shape. A CSS `radial-gradient`/dashed-border can't reproduce this (no rounded dash caps in CSS backgrounds/borders) — reuse an actual inline `<svg><line>` with the same stroke properties instead of approximating.
-- A `<tr>`/`<td>` can be given `height: 0` (with `position: relative; overflow: visible` on the `td`) and still visually show content, as long as that content is `position: absolute` — absolutely positioned children don't contribute to their container's auto-height. Use this for an overlay that must sit on top of a table's row boundary (e.g. `MoveBrowser`'s evolution-level divider) without adding any spacing to the row flow.
-- `tr:nth-child(odd)` striping breaks the moment a row can be conditionally inserted (e.g. a divider) — every row after the insertion point shifts parity and the stripe pattern visibly jumps. Track the alternation via an explicit index computed only over the real data rows (skip the inserted ones when counting), applied as a class, rather than relying on structural CSS position.
-- `table-layout: fixed` breaks "percentage width with a minimum floor" column sizing two ways at once, silently (no error, just wrong layout): its column-sizing pass ignores `min-width`/`max-width` set on `<col>`/`th`/`td` entirely (that's the point of "fixed" — pin exact widths, skip content measurement), *and* separately ignores CSS `max()`/`calc()` values on `<col>` width (falls back to splitting every column equally). For "percentage that never shrinks below X", use `table-layout: auto` instead: give `<col>` a plain `width: N%` for the extra-space share, and put a real `min-width` on the `<th>` as a deliberate floor — auto layout's own guarantee (never shrink a column below its actual rendered content) does the rest. Critically, don't add `overflow:hidden; text-overflow:ellipsis` to those cells as a "safety net" — ellipsis collapses a cell's intrinsic min-content width down to ~1 character, which defeats that exact guarantee (see `TableScreen.svelte`'s column widths for the working pattern).
-- To verify no cell is truncating/wrapping across an entire table (not just the visible screenshot rows), check via `obsidian eval` rather than eyeballing: `[...document.querySelectorAll('.name-cell')].filter(c => c.scrollWidth > c.clientWidth)` catches truncation, and comparing `getBoundingClientRect().top` across a flex-wrap container's children (e.g. EV chips) catches wrapping — both across every loaded row at once, which a screenshot can't.
-- `leaf.updateHeader()` only refreshes the tab-strip chip, not the larger `.view-header-title` element shown when a pane is focused (that one lives in `view.containerEl`, not `contentEl`, so remounting Svelte content never touches it) — after changing what `getDisplayText()` returns, also do `containerEl.querySelector(".view-header-title").textContent = getDisplayText()` or the pane title stays stale until the tab is closed/reopened.
-- FilterBar's Type/Gen/Ability/Stats/Rarity/EV/Quirks dropdowns are native `<details>/<summary>` (not a JS popover) — via `obsidian eval`, click the `<summary>` element (match by trimmed text; some render a live count/value badge, e.g. "Gen 1", so use `startsWith`), not a `<button>`.
-- Adding a new field to a raw PokeAPI response this app reads (e.g. `held_items`): if it's genuinely new data, not a trim-down of something already cached (unlike `moves`/`flavor_text_entries`), add a matching `isStale` check to its `getOrFetch` call in `PokedexRepository.ts` (see `getMoveDetails`'/`getOrFetchPokemon`'s pattern) — otherwise an existing user's disk cache has the field `undefined` and crashes instead of self-healing.
-- `expect.any(...)` in vitest is typed as returning `any` here, which trips `@typescript-eslint/no-unsafe-assignment` — combined with inline eslint-disable being blocked (see above), avoid it: assert `Object.keys(...)` + `typeof x` separately instead of `toEqual({ key: expect.any(String) })`.
-- `tsconfig.json`'s target is ES2020 — `Array.prototype.at()` (ES2022) fails typecheck with a misleading "change your target library?" error. Use `arr[arr.length - 1]` instead; don't bump the target (risks Obsidian runtime compat).
-- Shared *stateful* Svelte 5 logic (runes) across components lives in a `.svelte.ts` module (e.g. `view/hoverPopover.svelte.ts`), not a plain `.ts` file — runes only compile correctly there. esbuild-svelte handles it natively; eslint needs the `*.svelte.ts` globals block already in `eslint.config.mjs` (copy that pattern for a new one).
-- `bun test` (bun's own runner, not this project's `bun run test`/vitest) fails obsidian-stub-dependent files with `Cannot find package 'obsidian'` — consistently 4 fail/4 error across this suite, which looks exactly like legitimate pre-existing failures rather than a wrong-runner error. Always use `bun run test` (vitest, per package.json) to get real signal; don't trust a bare `bun test` result as a baseline.
-- To verify `PokedexApp`'s current screen via `obsidian eval` without reading Svelte internals: check `.pokedex-view > div`'s `className` for `hidden-screen` (present = table is hidden, i.e. viewing detail; absent = viewing table) and `.dex-eyebrow`'s `textContent` (`"No. 004"`) for which Pokemon's detail is currently shown.
-- `document.querySelectorAll`/`document.querySelector` inside `obsidian eval` search the *entire* Obsidian workspace DOM, not just this plugin's leaf — a table/list in some other open tab can silently pollute a count or match (caused a real false "827 vs 830 rows" bug chase, traced to 3 unrelated rows from an unrelated open note). Always scope queries to `app.workspace.getLeavesOfType('pokedex-view')[0].view.containerEl`, never bare `document`, when counting/asserting elements.
-- `.pokedex-view` (not `.workspace-leaf-content`/`.table-wrap`, both of which merely wrap it) is the actual `overflow-y: auto` scroll container for the table screen — when reproducing a scroll-position-dependent bug, scroll *that* element (`el.scrollTop = el.scrollHeight`), not its ancestors.
-- `obsidian dev:console` throws "Debugger not attached" unless `dev:debug on` ran first this session — `obsidian dev:errors` needs no such setup and is the cheaper default check after a live-verify.
-- Icon-only Settings-tab action buttons (e.g. per-generation Cache/Refresh/Delete) have empty `.textContent` — match by `aria-label` instead (e.g. `[...gen1.querySelectorAll('button')].find(b => b.getAttribute('aria-label')?.includes('Delete'))`).
-- Live-verifying against PokeAPI: `GET /pokemon?limit=N` silently truncates if `N` < the true count (1351 as of Gen 8) — always pass `limit=2000` (or read the response's own `count` field) rather than guessing a round number; a `limit=1300` scan once hid 46 non-canon fan "-mega" varieties from a correctness check, shipping a real bug.
-- PokeAPI's numbered list resources (e.g. `/evolution-chain/{id}`) aren't contiguous — guessing sequential ids `1..count` 404s on some (8 of 541 for evolution chains, confirmed live). Always paginate the real list endpoint (e.g. `/evolution-chain?limit=600`) and use its `results[].url`, never assume every id in range exists.
-- `curl`/raw network fetches are blocked by this session's Bash sandbox policy — for live PokeAPI (or any external) verification, use the `context-mode` MCP's `ctx_execute` tool (`language: "javascript"`, plain `fetch(...)`) instead; it has full network access and keeps large JSON responses out of the conversation. Its Node runtime also has `sharp`/`pngjs` available — useful for pixel-level image analysis (e.g. decoding a PNG's alpha channel to compare bounding boxes across PokeAPI sprite variants), not just JSON.
-- `npm run lint` currently fails repo-wide on a pre-existing, unrelated ESLint config error (type-info parsing on `vitest.config.ts`) — confirmed via `git stash` that this predates any session's changes; don't spend time re-diagnosing it as your own regression.
-- `npx svelte-check` crashes with a TypeScript internal error (`Cannot read properties of undefined (reading 'useCaseSensitiveFileNames')`) in this repo — don't use it for Svelte compile-error checking; `npm run build`'s esbuild-svelte step is the real Svelte-compile-error catcher here.
-- `DetailScreen.svelte` used to keep its own hand-authored `ROMAN_NUMERALS` display array in sync with `GENERATIONS` (`data/constants.ts`) — it drifted for Gen 8 (array stopped at "VII"), silently rendering a blank `()` on every Gen 8 detail page. Replaced with `romanNumeral()` (`utils/romanNumeral.ts`), a generic integer-to-Roman-numeral algorithm called on `entry.generationId` directly — nothing to curate per generation anymore, so this can't drift again. Adding a generation still means updating `GENERATIONS` itself plus the other curated tables on `docs/multi-gen-expansion-plan.md`'s Recipe checklist (`FOSSIL_IDS`, `REGIONAL_FORMS`, `MEGA_VARIETY_KEYS`, `STAT_OVERRIDES`, `QUIRKS`/`TRAITS`).
-- Never recompute "which generation" from `dexNumber` via `resolveGenerationId()` in UI code — use the row/entry's precomputed `generationId` field instead. `resolveGenerationId(dexNumber)` is wrong for any regional-form row (e.g. Alolan Rattata's dexNumber is 19/Gen1, but its real generationId is 7) — DetailScreen.svelte did this and showed the wrong Roman numeral until fixed.
-- PokeAPI request throttling lives in `PokeApiClient`'s internal `Semaphore` (NETWORK_CONCURRENCY=10), enforced at the actual HTTP call site — don't re-add a cache-hit/cache-miss lane-splitting or pre-partition scheme in `PokedexRepository` to "protect" PokeAPI; that pattern used to force a full-range disk-existence scan before the first table row could render.
-- A regional-form/evolution-chain bug reported against one Pokemon is usually a whole category, not a one-off — this app's chains already group by shape (Muk-shaped, Yamask-shaped, Corsola-shaped, Mime-Jr-shaped, Obstagoon-shaped); check normalize.ts's existing shape comments for siblings before calling a chain fix complete.
-- A bulk "does this whole family have property X" computation (e.g. evolution stage count) must walk the RAW evolution chain directly (`evolves_to`), not `normalizeEvolutionChain`'s default (no-context) view — that view exists to pick ONE coherent path for a specific viewed form and silently drops a branch gated entirely on a regional form with no unconditional sibling (undercounted Farfetch'd, whose only evolution is Galarian-only, to 0 stages before this was caught live). See `evolutionFamilyDepth` in `normalize.ts` for the fix and full reasoning.
-- For a per-row derived value that needs more than the already-fetched pokemon+species response (e.g. evolution-family depth) and is stable until the next generation ships: don't add a runtime fetch to `PokedexRepository` — generate a static lookup table instead (`scripts/generate-*.ts`, reusing the real exported pure function from `src/data/*.ts` so it can't drift, writing a committed `src/data/*.json`; see `scripts/generate-evolution-stages.ts`/`EVOLUTION_STAGES`). Keeps `PokedexTableRow` fields "cheap, no extra fetch" — the original invariant a first attempt at this broke, visibly slowing table load, before being reverted to this pattern.
-- Adding a new generation also stales already-cached Moves/Flavor Text for species from *every* previously-supported generation (not just the new one) — a move/flavor-text cache is trimmed to the current MOVE_VERSION_GROUPS/FLAVOR_TEXT_TABS_BY_GEN at fetch time (destructive, one-way), and no `isStale` check covers this widening (see `resolveTabsForGen`'s fallback fix and `PokedexRepository`'s `isStale` comments). `resolveTabsForGen` now falls back gracefully instead of going blank, but seeing the *new* gen's actual data still needs a manual Settings → Refresh per generation.
-- To debug a normalize.ts (or other pure-function) discrepancy between hand-traced/expected behavior and live plugin output, don't hand-trace or eval-probe — write a standalone script (`bun run /path/to/script.ts`) that `import`s the real source file by absolute path and runs it against live-fetched PokeAPI data (or the plugin's own cached JSON via `obsidian eval` + `cache.readJson`). Add temporary `console.error` instrumentation directly in the source file if needed, then revert — faster and immune to hand-transcription errors than re-deriving the algorithm by reading it.
+House conventions for Obsidian plugin repos live in the `obsidian-plugin-dev` skill —
+bun, script contract, all Svelte 5 rune and scoping gotchas, `obsidian eval` mechanics,
+CSS specificity and containing-block traps, live-verification workflow. Only repo-specific
+facts are below.
+
+Has `graphify-out/` and `docs/adr/`. Deploys to the vault folder `pokedex` (intentionally
+≠ manifest id `obsidian-pokedex`), and to `test-vault/`.
+
+Inline comments here are unusually thorough and load-bearing. Most "shallow module" or
+"duplicate logic" findings from automated architecture review turn out to be deliberate,
+already-documented separations once the comments are read (6 of 8 candidates misdiagnosed
+in one round, 3 of 5 in another). Reread the full file and check for an existing ADR before
+writing a candidate into a report — not only before implementing one.
+
+## Repo-specific toolchain
+
+- `tsconfig.json` targets ES2020, so `Array.prototype.at()` (ES2022) fails typecheck with a
+  misleading "change your target library?" error. Use `arr[arr.length - 1]`; do not bump
+  the target (Obsidian runtime compat risk).
+- `eslint-comments/no-restricted-disable` blocks disabling **any** rule via inline comment.
+  There is no comment escape hatch — fix the underlying issue or leave the warning. This
+  also rules out `expect.any(...)` in vitest (typed as `any`, trips
+  `no-unsafe-assignment`): assert `Object.keys(...)` plus `typeof x` separately instead.
+- `bun run lint` fails repo-wide on a pre-existing ESLint config error (type-info parsing
+  on `vitest.config.ts`), confirmed via `git stash` to predate current work. Not your
+  regression.
+- `svelte-check` crashes with a TypeScript internal error here. The esbuild-svelte step in
+  `bun run build` is the real Svelte-compile-error catcher.
+
+## Data layer
+
+- `PokeApiClient` owns request throttling via an internal `Semaphore`
+  (`NETWORK_CONCURRENCY = 10`) enforced at the HTTP call site. Do not re-add cache-hit /
+  cache-miss lane splitting or pre-partitioning in `PokedexRepository` to "protect"
+  PokeAPI — that pattern forced a full-range disk scan before the first table row could
+  render.
+- `mapWithConcurrency` (`src/utils/concurrency.ts`) swallows per-item errors, so
+  `cacheRange` / `refreshRange` / `getTableRows` never reject on a single failed id, and
+  `FakePokeApiClient.failIds` cannot produce a real rejection through them. For classes
+  that only orchestrate repository calls (e.g. `GenerationCacheController`), test against a
+  narrow `Pick<PokedexRepository, …>` plus `vi.fn()` stubs; reserve the heavier
+  repository + `FakePokeApiClient` stack (`PokedexLoadState.test.ts`,
+  `DetailLoadState.test.ts`) for classes that need real fetch/cache behavior.
+- Adding a genuinely new field to a raw PokeAPI response (e.g. `held_items` — as opposed to
+  a trim-down of something already cached, like `moves`/`flavor_text_entries`) needs a
+  matching `isStale` check on its `getOrFetch` call in `PokedexRepository.ts`. Otherwise an
+  existing user's disk cache has the field `undefined` and crashes instead of self-healing.
+- For a per-row derived value needing more than the already-fetched pokemon+species
+  response and stable until the next generation ships (e.g. evolution-family depth), do not
+  add a runtime fetch. Generate a static lookup table via `scripts/generate-*.ts`, reusing
+  the real exported pure function from `src/data/*.ts` so it cannot drift, writing a
+  committed `src/data/*.json` — see `scripts/generate-evolution-stages.ts` and
+  `EVOLUTION_STAGES`. This keeps `PokedexTableRow` fields cheap, the invariant a first
+  attempt broke by visibly slowing table load.
+
+## Cache
+
+Disk cache lives at `{manifest.dir}/cache` — the vault's deployed folder, not the manifest
+id. `DiskCache.forPlugin` derives it from `manifest.dir` specifically because keying off
+`manifest.id` used to orphan the cache in a sibling folder; `Cache.ts` holds one-time
+migration logic. Inspect from eval via
+`app.plugins.plugins['obsidian-pokedex'].manifest.dir + '/cache'`.
+
+Regional forms have two distinct cache keys: the detail view fetches by numeric PokeAPI id
+(`pokemon/10229.json` for Hisuian Growlithe) while table load's
+`deriveRegionalForms`/`getOrFetchPokemonVariant` writes the name-keyed one
+(`pokemon/growlithe-hisui.json`). `cacheRange` prefetches both unconditionally.
+`clearRange` sweeps both, but only when the variant's own
+`REGIONAL_FORMS[suffix].generationId` matches the generation being cleared — not its base
+dex number's range, since those diverge (Alolan Rattata is dex #19 but `generationId: 7`).
+
+Known residual gaps (ADR-0006): `getCacheStatus` does not count variants at all, so its
+"X/Y cached" figure undercounts once a generation has regional forms; and because
+`clearRange` only visits base ids inside its own range, a variant whose generation differs
+from its base species' range survives every per-generation Delete and yields only to the
+global "Clear cache".
+
+Gating a cache-eviction sweep on a matching condition can silently make the *correctly*
+scoped case unreachable too, if discovery is still keyed by the old range. Live-verify both
+directions before calling such a fix done.
+
+## Domain rules
+
+- Never recompute a generation from `dexNumber` via `resolveGenerationId()` in UI code —
+  use the row/entry's precomputed `generationId`. `resolveGenerationId(dexNumber)` is wrong
+  for every regional form (Alolan Rattata: dexNumber 19/Gen 1, real generationId 7).
+  `DetailScreen.svelte` did this and showed the wrong Roman numeral.
+- Roman numerals come from `romanNumeral()` (`utils/romanNumeral.ts`) applied to
+  `entry.generationId` — a generic algorithm, so it cannot drift the way the old
+  hand-curated `ROMAN_NUMERALS` array did (it stopped at "VII" and rendered a blank `()`
+  on every Gen 8 detail page).
+- Adding a generation still means updating `GENERATIONS` plus the curated tables on
+  `docs/multi-gen-expansion-plan.md`'s Recipe checklist: `FOSSIL_IDS`, `REGIONAL_FORMS`,
+  `MEGA_VARIETY_KEYS`, `STAT_OVERRIDES`, `QUIRKS`/`TRAITS`.
+- Adding a generation also stales cached Moves and Flavor Text for species from *every*
+  previously-supported generation: those caches are trimmed to the current
+  `MOVE_VERSION_GROUPS`/`FLAVOR_TEXT_TABS_BY_GEN` at fetch time (destructive, one-way) and
+  no `isStale` check covers the widening. `resolveTabsForGen` now falls back gracefully
+  instead of going blank, but seeing the new gen's data still needs a manual
+  Settings → Refresh per generation.
+- A regional-form or evolution-chain bug reported against one Pokemon is usually a whole
+  category. Chains already group by shape (Muk-shaped, Yamask-shaped, Corsola-shaped,
+  Mime-Jr-shaped, Obstagoon-shaped) — check `normalize.ts`'s shape comments for siblings
+  before calling a chain fix complete.
+- A bulk "does this whole family have property X" computation must walk the **raw**
+  evolution chain (`evolves_to`), not `normalizeEvolutionChain`'s default no-context view.
+  That view picks one coherent path for a specific viewed form and silently drops a branch
+  gated entirely on a regional form with no unconditional sibling — it undercounted
+  Farfetch'd (Galarian-only evolution) to 0 stages. See `evolutionFamilyDepth` in
+  `normalize.ts`.
+- Names are capitalized purely via CSS `text-transform` — `.textContent` returns the raw
+  lowercase value (`"ivysaur"`). Match lowercase when locating elements via eval.
+
+## PokeAPI
+
+- `GET /pokemon?limit=N` silently truncates when `N` is below the true count (1351 as of
+  Gen 8). Pass `limit=2000` or read the response's own `count`. A `limit=1300` scan once
+  hid 46 non-canon fan "-mega" varieties and shipped a real bug.
+- Numbered list resources are **not** contiguous — guessing sequential ids 404s (8 of 541
+  evolution chains, confirmed live). Paginate the real list endpoint
+  (`/evolution-chain?limit=600`) and use `results[].url`.
+- Official-artwork shiny PNGs crop up to 31% tighter than non-shiny for ~46 of 97 Mega
+  species (classic Gen 6 megas on a 475x475 canvas); newer fan-added megas (534x534) are
+  unaffected. `DetailScreen.svelte`'s `portraitScale`, via `imageBounds.ts`'s
+  `contentScale`, decodes each render's alpha bbox and scales the outlier down, shrink-only.
+  Treat "this sprite looks bigger/smaller" reports as a whole-variety-group bbox scan
+  before assuming a plugin bug.
+
+## Table layout
+
+- `table-layout: fixed` breaks "percentage width with a minimum floor" two ways silently:
+  its sizing pass ignores `min-width`/`max-width` on `<col>`/`th`/`td` entirely, and it
+  ignores `max()`/`calc()` on `<col>` width (falling back to equal splits). Use
+  `table-layout: auto` with a plain `width: N%` on `<col>` for the extra-space share and a
+  real `min-width` on the `<th>` as the floor — auto layout's never-shrink-below-content
+  guarantee does the rest. Do **not** add `overflow: hidden; text-overflow: ellipsis` as a
+  safety net: ellipsis collapses intrinsic min-content width to ~1 character and defeats
+  that guarantee. Working pattern: `TableScreen.svelte`'s column widths.
+- `tr:nth-child(odd)` striping breaks once a row can be conditionally inserted (a divider
+  shifts parity for everything after it). Track alternation with an explicit index computed
+  over real data rows only, applied as a class.
+- A `<tr>`/`<td>` can take `height: 0` (with `position: relative; overflow: visible` on the
+  `td`) and still show `position: absolute` content — absolutely positioned children do not
+  contribute to auto-height. Used for `MoveBrowser`'s evolution-level divider overlay.
+- `stroke-dasharray` with a dash shorter than `stroke-width` plus `stroke-linecap: round`
+  (EvolutionTree's connector: width 3, dasharray "2 6") renders pill-shaped blobs, not
+  circles — the two round caps overlap. CSS `radial-gradient`/dashed borders cannot
+  reproduce it; reuse a real inline `<svg><line>`.
+
+## Live-verify recipes
+
+- Focus first: `getLeavesOfType('pokedex-view')` + `setActiveLeaf(leaf, {focus:true})`. For
+  a genuinely fresh Svelte mount, detach and reopen via
+  `executeCommandById('obsidian-pokedex:open-pokedex')`.
+- `.pokedex-view` — not `.workspace-leaf-content` or `.table-wrap`, both of which merely
+  wrap it — is the actual `overflow-y: auto` scroll container for the table screen.
+- Current screen: `.pokedex-view > div`'s `className` contains `hidden-screen` when the
+  table is hidden (i.e. viewing detail); `.dex-eyebrow`'s `textContent` (`"No. 004"`) says
+  which Pokemon.
+- FilterBar's Type/Gen/Ability/Stats/Rarity/EV/Quirks dropdowns are native
+  `<details>`/`<summary>`, not JS popovers — click the `<summary>` (match trimmed text with
+  `startsWith`; some carry a live count badge like "Gen 1").
+- Truncation/wrapping across the whole table:
+  `[...containerEl.querySelectorAll('.name-cell')].filter(c => c.scrollWidth > c.clientWidth)`,
+  and compare `getBoundingClientRect().top` across a flex-wrap container's children. A
+  screenshot only covers visible rows.
+- Fixtures: Venusaur has both Mega (single "M" badge) and Gigantamax ("G"); Charizard's Mega
+  splits into X/Y badges and is the `portraitScale` fixture (shiny crops ~9% tighter);
+  Farfetch'd always holds an item (Stick, 5%).
+- To verify an unfamiliar Lucide icon name, render it via `<Icon name=… />` in a live
+  component and check `el.querySelector('svg')?.innerHTML` (non-empty = valid) — do not
+  probe the icon registry from eval.
+- To debug a `normalize.ts` discrepancy, do not hand-trace or eval-probe: write a
+  standalone script (`bun run /path/to/script.ts`) importing the real source file by
+  absolute path, run it against live-fetched PokeAPI data or the plugin's cached JSON, and
+  add temporary `console.error` instrumentation in the source, then revert.
+
+`temp/` is gitignored and already used for scratch output — prefer it over the OS tmp dir.
