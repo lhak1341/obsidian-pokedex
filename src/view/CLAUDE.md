@@ -8,6 +8,10 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   use the row/entry's precomputed `generationId`. `resolveGenerationId(dexNumber)` is wrong
   for every regional form (Alolan Rattata: dexNumber 19/Gen 1, real generationId 7).
   `DetailScreen.svelte` did this and showed the wrong Roman numeral.
+  Stays prose: confirmed once (`DetailScreen.svelte`), and a lint rule would not have caught
+  it anyway — `bun run lint` globs `src/**/*.ts`, and eslint parses no `.svelte` file here.
+  The mechanism if a second instance lands is a scan test over `src/view/**/*.svelte` for
+  `resolveGenerationId`, with a liveness assertion that it found files to scan.
 - Roman numerals come from `romanNumeral()` (`utils/romanNumeral.ts`) applied to
   `entry.generationId` — a generic algorithm, so it cannot drift the way the old
   hand-curated `ROMAN_NUMERALS` array did (it stopped at "VII" and rendered a blank `()`

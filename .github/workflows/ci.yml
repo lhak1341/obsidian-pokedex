@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      # esbuild strips types rather than checking them, so `bun run build`
+      # succeeds on a tree that does not typecheck. These three run before it
+      # for that reason — the build alone is not a correctness gate.
+      - run: bun run typecheck
+
+      # lint:ratchet, not lint: every rule this repo trips is warn-severity,
+      # so eslint's own exit code is 0 regardless of how many it reports.
+      - run: bun run lint:ratchet
+
+      - run: bun run test
+
+      # Catches Svelte compile errors, which nothing above sees.
+      - run: bun run build
+
+      # Not tag-gated: manifest.json and versions.json can drift apart in any
+      # commit, and finding out at tag-push time is finding out too late.
+      - run: bun run verify:release

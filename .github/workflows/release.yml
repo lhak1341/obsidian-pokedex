@@ -20,16 +20,20 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      - run: bun run build
+      # A tag can be pushed from any commit, including one CI never saw, so
+      # these run here as well as in ci.yml. esbuild only transpiles, so
+      # without them a `bun run build` that succeeds still publishes a main.js
+      # that does not typecheck and whose tests fail.
+      - run: bun run typecheck
 
-      - name: Verify manifest version matches tag
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          VERSION=$(node -p "require('./manifest.json').version")
-          if [ "$TAG" != "$VERSION" ]; then
-            echo "Tag ($TAG) does not match manifest.json version ($VERSION)"
-            exit 1
-          fi
+      - run: bun run lint:ratchet
+
+      - run: bun run test
+
+      - name: Verify manifest and versions.json match the tag
+        run: bun run scripts/verify-release.mjs "${GITHUB_REF#refs/tags/}"
+
+      - run: bun run build
 
       - name: Create release
         env:

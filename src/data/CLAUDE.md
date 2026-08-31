@@ -28,6 +28,12 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `Cache`/`DiskCache`, `normalize.
   committed `src/data/*.json` — see `scripts/generate-evolution-stages.ts` and
   `EVOLUTION_STAGES`. This keeps `PokedexTableRow` fields cheap, the invariant a first
   attempt broke by visibly slowing table load.
+  No gate catches the committed `evolutionStages.json` going stale against
+  `evolutionFamilyDepth` — the generator walks live PokeAPI, so CI cannot regenerate it.
+  Ruled out for now, not triaged away: a committed-fixture test (assert
+  `evolutionFamilyDepth(bulbasaur-evolution-chain.json) === EVOLUTION_STAGES[1]`) would tie
+  the function to the table offline. Build it when a second drift instance lands, or when a
+  change to `evolutionFamilyDepth` is actually proposed.
 - A regional-form or evolution-chain bug reported against one Pokemon is usually a whole
   category. Chains already group by shape (Muk-shaped, Yamask-shaped, Corsola-shaped,
   Mime-Jr-shaped, Obstagoon-shaped) — check `normalize.ts`'s shape comments for siblings

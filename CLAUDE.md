@@ -18,6 +18,15 @@ in one round, 3 of 5 in another). Reread the full file and check for an existing
 
 ## Repo-specific toolchain
 
+`bun run check` (typecheck + lint:ratchet + test) is the gate. `.github/workflows/ci.yml`
+runs it plus `build` and `verify:release` on every push and PR, and `release.yml` reruns
+them before publishing — a tag can be pushed from a commit CI never saw. Nothing below is a
+"remember to" any more; it explains why the gate is shaped the way it is.
+
+- `bun run build` transpiles with esbuild and never typechecks, so a green build proves
+  nothing about types (verified: a deliberate type error builds clean). It is still a
+  required step — esbuild-svelte is the only thing that catches a Svelte compile error, and
+  `svelte-check` is not a dependency here.
 - `tsconfig.json` targets ES2020, so `Array.prototype.at()` (ES2022) fails typecheck with a
   misleading "change your target library?" error. Use `arr[arr.length - 1]`; do not bump
   the target (Obsidian runtime compat risk).
@@ -25,10 +34,15 @@ in one round, 3 of 5 in another). Reread the full file and check for an existing
   There is no comment escape hatch — fix the underlying issue or leave the warning. This
   also rules out `expect.any(...)` in vitest (typed as `any`, trips
   `no-unsafe-assignment`): assert `Object.keys(...)` plus `typeof x` separately instead.
-- `bun run lint` fails repo-wide on a pre-existing ESLint config error (type-info parsing
-  on `vitest.config.ts`), confirmed via `git stash` to predate current work. Not your
-  regression.
-- `svelte-check` crashes with a TypeScript internal error here. The esbuild-svelte step in
-  `bun run build` is the real Svelte-compile-error catcher.
+  (Stays prose — the rule is already enforced; what a reader needs here is the workaround.)
+- Every obsidianmd rule this repo trips is warn-severity, so `bun run lint` exits 0 however
+  many it reports. `bun run lint:ratchet` is the part that can fail: it pins the warning
+  count to a baseline in **both** directions, so paying warnings down without lowering
+  `BASELINE` in `scripts/lint-ratchet.mjs` fails too, and the number never drifts into a
+  ceiling nobody re-checks. Obsidian runtime/UI rules are scoped away from `*.test.ts` in
+  `eslint.config.mjs` rather than absorbed into that count.
+- `manifest.json` and `versions.json` are checked against each other (and against the tag,
+  in `release.yml`) by `bun run verify:release`. Obsidian's catalog reads `versions.json` to
+  decide which app versions may install a release, and no build step looks at it.
 
 `temp/` is gitignored and already used for scratch output — prefer it over the OS tmp dir.

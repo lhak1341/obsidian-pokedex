@@ -51,4 +51,18 @@ export default defineConfig([
 			},
 		},
 	},
+	// Obsidian runtime/UI rules that describe how the *plugin* must behave
+	// inside the app, switched off for test code the same way
+	// ui/sentence-case is above. hardcoded-config-path fires on
+	// Cache.test.ts's fixtures, where ".obsidian" is the fake App's own
+	// configDir and the assertions are self-consistent; prefer-window-timers
+	// fires on tests that run under vitest's node environment, where there
+	// is no `window` at all (see the comment on `timers` in utils/retry.ts).
+	{
+		files: ["src/**/*.test.ts"],
+		rules: {
+			"obsidianmd/hardcoded-config-path": "off",
+			"obsidianmd/prefer-window-timers": "off",
+		},
+	},
 ]);
