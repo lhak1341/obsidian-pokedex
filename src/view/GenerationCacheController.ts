@@ -37,11 +37,14 @@ export class GenerationCacheController {
 		this.status = await this.repository.getCacheStatus(this.generation);
 	}
 
-	async run(onProgress?: (loaded: number, total: number) => void): Promise<void> {
+	async run(
+		onProgress?: (loaded: number, total: number) => void,
+		isCancelled?: () => boolean,
+	): Promise<void> {
 		if (this.actionKind === "refresh") {
-			await this.repository.refreshRange(this.generation, onProgress);
+			await this.repository.refreshRange(this.generation, onProgress, isCancelled);
 		} else {
-			await this.repository.cacheRange(this.generation, onProgress);
+			await this.repository.cacheRange(this.generation, onProgress, isCancelled);
 		}
 		await this.refreshStatus();
 	}

@@ -29,9 +29,26 @@ export class PokedexSettingTab extends PluginSettingTab {
 		return [];
 	}
 
+	// Per-generation cache/refresh runs (see the "Cache"/"Refresh" button
+	// below) are network-bound and can outlive this tab being open — closing
+	// Settings (or switching to another tab) doesn't stop them by itself,
+	// since display() rebuilds fresh buttons/controllers on next open with no
+	// memory of a still-running one. hide() cancels whatever's in flight so a
+	// stale run doesn't keep going in the background and race a fresh one
+	// started after reopening. Only covers cache/refresh, not the Delete
+	// button: clearRange has no isCancelled hook, since it's a bounded local
+	// disk sweep, not a network fetch loop.
+	private cancelActiveRuns: (() => void)[] = [];
+
+	hide(): void {
+		for (const cancel of this.cancelActiveRuns) cancel();
+		this.cancelActiveRuns = [];
+	}
+
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
+		this.cancelActiveRuns = [];
 
 		new Setting(containerEl).setName("Generations").setHeading();
 		const generationItems = containerEl.createDiv("setting-group").createDiv("setting-items");
@@ -43,6 +60,10 @@ export class PokedexSettingTab extends PluginSettingTab {
 			let actionButton: ButtonComponent | undefined;
 			let deleteButton: ButtonComponent | undefined;
 			const controller = new GenerationCacheController(this.plugin.repository, gen);
+			let cancelled = false;
+			this.cancelActiveRuns.push(() => {
+				cancelled = true;
+			});
 
 			const applyActionButtonIcon = () => {
 				const { icon, tooltip } = describeGenerationAction(controller.actionKind);
@@ -86,7 +107,7 @@ export class PokedexSettingTab extends PluginSettingTab {
 					await withButtonsDisabled(async () => {
 						await controller.run((loaded, total) => {
 							setting.setDesc(describeGenerationStatus(baseDesc, controller.status, { kind, loaded, total }));
-						});
+						}, () => cancelled);
 						new Notice(`Pokedex: ${gen.name} ${kind === "refresh" ? "refreshed" : "cached"}.`);
 					});
 				});

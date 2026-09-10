@@ -515,61 +515,71 @@ export class PokedexRepository {
 	// deleting it here could evict data a sibling species outside this range
 	// still depends on.
 	//
-	// Also sweeps any regional-form row this range's species produce (see
-	// deriveRegionalForms) — a variant's own numeric id (e.g. 10229 for
-	// Hisuian Growlithe) has nothing to do with this range even though its
-	// BASE species' id does, so it needs its own explicit removal rather
-	// than falling out of the `ids` loop below. Read from whatever species
-	// JSON is STILL on disk (before this id's own files get removed further
-	// down) rather than an extra network fetch — if the species was never
-	// cached, there's nothing to derive a variant from anyway, consistent
-	// with that variant equally never having been cached.
+	// Two independent, sequentially-run loops — each with exactly one job,
+	// deliberately not merged into one shared iteration:
 	//
-	// Gated on the variant's OWN generationId matching the generation being
-	// cleared (REGIONAL_FORMS[suffix].generationId), not the base species'
-	// dex range — a regional variant's real generation can diverge from its
-	// base dex number's range (Alolan Rattata is dex #19/Gen 1's range, but
-	// generationId 7), so clearing Gen 1 must not also evict Gen 7's data.
+	// 1. Variant discovery, over EVERY cached species id (via
+	// listCachedSpeciesIds(), independent of this generation's own numeric
+	// range) — evicts any discovered regional-form row (see
+	// deriveRegionalForms) whose OWN generationId matches the generation
+	// being cleared. A variant's numeric id (e.g. 10229 for Hisuian
+	// Growlithe) has nothing to do with its BASE species' dex range, and a
+	// regional variant's real generation can diverge from that range too
+	// (Alolan Rattata is dex #19/Gen 1's range, but generationId 7) — so
+	// discovery can't be scoped to this generation's own range without
+	// missing exactly the cross-generation case this loop exists to close
+	// (see ADR-0006: clearing Gen 7 must still reach dex #19's species JSON
+	// to find Alolan Rattata, even though 19 is nowhere in Gen 7's range).
 	//
-	// Known, deliberate gap this gate introduces (see ADR-0006): this loop
-	// only ever visits base ids inside THIS generation's own numeric range,
-	// so a variant whose own generationId differs from its base species'
-	// range (e.g. Alolan Rattata) is never even discovered when clearing the
-	// generation it actually belongs to (Gen 7's range never reaches id 19).
-	// Such a variant can't be evicted by any per-generation Delete button —
-	// only the global "Clear cache" removes it. Deliberately not fixed here:
-	// doing so needs a cache-directory-listing capability DiskCache doesn't
-	// have (it's read/write/exists/remove by exact path only), a real scope
-	// expansion for what's a cosmetic gap, not a correctness bug — the
-	// correctness bug (silently evicting the WRONG generation's data) is
-	// what this gate exists to close.
+	// 2. Base-id eviction, over this generation's own numeric range —
+	// unconditional, same as before: every id in range gets its species/
+	// pokemon/image cache entries removed regardless of what loop 1 found.
 	async clearRange(generation: Generation): Promise<void> {
+		for (const speciesId of await this.listCachedSpeciesIds()) {
+			const cachedSpecies = await this.cache.readJson<RawSpecies>(speciesPath(speciesId));
+			if (!cachedSpecies) continue;
+			for (const form of deriveRegionalForms(cachedSpecies)) {
+				if (REGIONAL_FORMS[form.suffix].generationId !== generation.id) continue;
+				// Two independent cache entries per variant — the name-keyed one
+				// table-load writes (getOrFetchPokemonVariant) and the
+				// numeric-id-keyed one the detail view writes (getOrFetchPokemon)
+				// — see this repo's CLAUDE.md cache-duplication gotcha. Read the
+				// name-keyed file first to learn the variant's own numeric id
+				// before removing it out from under itself.
+				const cachedVariant = await this.cache.readJson<RawPokemon>(pokemonPath(form.key));
+				await this.evictPokemonAssets(this.pokemonVariantMemCache, form.key);
+				if (cachedVariant) {
+					await this.evictPokemonAssets(this.pokemonMemCache, cachedVariant.id);
+				}
+			}
+		}
+
 		const ids = Array.from(
 			{ length: generation.end - generation.start + 1 },
 			(_, i) => generation.start + i,
 		);
 		for (const id of ids) {
-			const cachedSpecies = await this.cache.readJson<RawSpecies>(speciesPath(id));
-			if (cachedSpecies) {
-				for (const form of deriveRegionalForms(cachedSpecies)) {
-					if (REGIONAL_FORMS[form.suffix].generationId !== generation.id) continue;
-					// Two independent cache entries per variant — the name-keyed
-					// one table-load writes (getOrFetchPokemonVariant) and the
-					// numeric-id-keyed one the detail view writes (getOrFetchPokemon)
-					// — see this repo's CLAUDE.md cache-duplication gotcha. Read
-					// the name-keyed file first to learn the variant's own numeric
-					// id before removing it out from under itself.
-					const cachedVariant = await this.cache.readJson<RawPokemon>(pokemonPath(form.key));
-					await this.evictPokemonAssets(this.pokemonVariantMemCache, form.key);
-					if (cachedVariant) {
-						await this.evictPokemonAssets(this.pokemonMemCache, cachedVariant.id);
-					}
-				}
-			}
 			await this.evictPokemonAssets(this.pokemonMemCache, id);
 			this.speciesMemCache.delete(id);
 			await this.cache.remove(speciesPath(id));
 		}
+	}
+
+	// Every cached species id, discovered by listing the flat species/
+	// subdirectory directly (DiskCache.listFilesIn) rather than a full
+	// listFiles() tree walk — species/ never nests further (see
+	// cachePaths.ts's speciesPath()), so a single non-recursive list() call
+	// covers it without also walking every cached image file. DiskCache
+	// itself stays agnostic of this naming convention (see cachePaths.ts's
+	// own header comment) — the id-parsing lives here, next to the other
+	// callers of speciesPath()/pokemonPath().
+	private async listCachedSpeciesIds(): Promise<number[]> {
+		const ids: number[] = [];
+		for (const file of await this.cache.listFilesIn("species")) {
+			const match = /(\d+)\.json$/.exec(file);
+			if (match) ids.push(Number(match[1]));
+		}
+		return ids;
 	}
 
 	// Shared by clearRange's 3 eviction cases (variant key, a variant's

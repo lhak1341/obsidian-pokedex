@@ -48,7 +48,11 @@ describe("GenerationCacheController", () => {
 
 		await controller.run();
 
-		expect(repository.cacheRange).toHaveBeenCalledWith({ id: 1, name: "Test Gen", start: 1, end: 3 }, undefined);
+		expect(repository.cacheRange).toHaveBeenCalledWith(
+			{ id: 1, name: "Test Gen", start: 1, end: 3 },
+			undefined,
+			undefined,
+		);
 		expect(repository.refreshRange).not.toHaveBeenCalled();
 		expect(repository.getCacheStatus).toHaveBeenCalledTimes(1);
 	});
@@ -60,8 +64,35 @@ describe("GenerationCacheController", () => {
 
 		await controller.run();
 
-		expect(repository.refreshRange).toHaveBeenCalledWith({ id: 1, name: "Test Gen", start: 1, end: 3 }, undefined);
+		expect(repository.refreshRange).toHaveBeenCalledWith(
+			{ id: 1, name: "Test Gen", start: 1, end: 3 },
+			undefined,
+			undefined,
+		);
 		expect(repository.cacheRange).not.toHaveBeenCalled();
+	});
+
+	it("run() forwards isCancelled through to cacheRange/refreshRange", async () => {
+		const repository = makeRepository();
+		const controller = new GenerationCacheController(repository, { id: 1, name: "Test Gen", start: 1, end: 3 });
+		const isCancelled = () => true;
+
+		await controller.run(undefined, isCancelled);
+
+		expect(repository.cacheRange).toHaveBeenCalledWith(
+			{ id: 1, name: "Test Gen", start: 1, end: 3 },
+			undefined,
+			isCancelled,
+		);
+
+		controller.status = { cached: 3, total: 3 };
+		await controller.run(undefined, isCancelled);
+
+		expect(repository.refreshRange).toHaveBeenCalledWith(
+			{ id: 1, name: "Test Gen", start: 1, end: 3 },
+			undefined,
+			isCancelled,
+		);
 	});
 
 	it("run() propagates a rejected repository call without refreshing status", async () => {

@@ -228,7 +228,7 @@ describe("PokedexRepository", () => {
 		expect(await cache.readJson("pokemon/10091.json")).not.toBeNull();
 	});
 
-	it("clearRange evicts a discovered regional-form row's cache entries when the variant's OWN generation matches", async () => {
+	it("clearRange evicts a discovered regional-form row's cache entries when the variant's OWN generation matches, even when its base dex id sits outside the range being cleared", async () => {
 		const { client, cache, repository } = makeRepository();
 		await setUpRattataWithAlolanForm(client, cache);
 		// Populate both cache entities the way real usage would: the
@@ -239,14 +239,17 @@ describe("PokedexRepository", () => {
 		expect(await cache.readJson("pokemon/rattata-alola.json")).not.toBeNull();
 		expect(await cache.readJson("pokemon/10091.json")).not.toBeNull();
 
-		// "alola" is REGIONAL_FORMS-tagged generationId 7 (see constants.ts) —
-		// clearing a generation record whose id actually matches evicts it.
-		await repository.clearRange({ id: 7, name: "Test Gen 7", start: 19, end: 19 });
+		// "alola" is REGIONAL_FORMS-tagged generationId 7 (see constants.ts).
+		// Gen 7's REAL range (722-809) never reaches dex #19 — this is the
+		// disjoint-range case ADR-0006 describes: discovery must not depend on
+		// this range containing the base species id at all.
+		await repository.clearRange({ id: 7, name: "Test Gen 7", start: 722, end: 809 });
 
 		expect(await cache.readJson("pokemon/rattata-alola.json")).toBeNull();
 		expect(await cache.readJson("pokemon/10091.json")).toBeNull();
-		expect(await cache.readJson("pokemon/19.json")).toBeNull();
-		expect(await cache.readJson("species/19.json")).toBeNull();
+		// Dex #19 itself is outside this range, so its own base entry survives.
+		expect(await cache.readJson("pokemon/19.json")).not.toBeNull();
+		expect(await cache.readJson("species/19.json")).not.toBeNull();
 	});
 
 	it("clearRange preserves a regional-form variant whose OWN generation doesn't match the range being cleared", async () => {
@@ -258,7 +261,7 @@ describe("PokedexRepository", () => {
 		// Alolan Rattata's base dex number (#19) sits in Gen 1's range, but its
 		// own generationId is 7 — clearing "Gen 1" (id: 1) must not evict a
 		// variant that actually belongs to a different generation.
-		await repository.clearRange({ id: 1, name: "Test Gen 1", start: 19, end: 19 });
+		await repository.clearRange({ id: 1, name: "Test Gen 1", start: 1, end: 151 });
 
 		expect(await cache.readJson("pokemon/rattata-alola.json")).not.toBeNull();
 		expect(await cache.readJson("pokemon/10091.json")).not.toBeNull();

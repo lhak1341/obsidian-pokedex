@@ -124,6 +124,25 @@ describe("DiskCache", () => {
 		expect(paths.some((p) => p.endsWith("images/1-sprite.png"))).toBe(true);
 	});
 
+	it("listFilesIn() returns an empty array for a subdirectory that doesn't exist yet", async () => {
+		const cache = makeCache();
+		expect(await cache.listFilesIn("species")).toEqual([]);
+	});
+
+	it("listFilesIn() returns only the given subdirectory's own files, not other subdirectories", async () => {
+		const cache = makeCache();
+		await cache.writeJson("species/1.json", { id: 1 });
+		await cache.writeJson("species/2.json", { id: 2 });
+		await cache.writeJson("pokemon/1.json", { id: 1 });
+
+		const paths = await cache.listFilesIn("species");
+
+		expect(paths).toHaveLength(2);
+		expect(paths.some((p) => p.endsWith("species/1.json"))).toBe(true);
+		expect(paths.some((p) => p.endsWith("species/2.json"))).toBe(true);
+		expect(paths.some((p) => p.endsWith("pokemon/1.json"))).toBe(false);
+	});
+
 	it("remove() deletes a single cached file, leaving the rest of the cache alone", async () => {
 		const cache = makeCache();
 		await cache.writeJson("pokemon/1.json", { id: 1 });

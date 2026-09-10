@@ -60,12 +60,13 @@ Regional forms have two distinct cache keys: the detail view fetches by numeric 
 `clearRange` sweeps both, but only when the variant's own
 `REGIONAL_FORMS[suffix].generationId` matches the generation being cleared — not its base
 dex number's range, since those diverge (Alolan Rattata is dex #19 but `generationId: 7`).
+Discovery is independent of the range being cleared too — `listCachedSpeciesIds()` lists
+every cached species id via `DiskCache.listFilesIn("species")`, so a variant survives only
+if its own generation truly doesn't match, never because its base id sits outside this
+range (see ADR-0006).
 
-Known residual gaps (ADR-0006): `getCacheStatus` does not count variants at all, so its
-"X/Y cached" figure undercounts once a generation has regional forms; and because
-`clearRange` only visits base ids inside its own range, a variant whose generation differs
-from its base species' range survives every per-generation Delete and yields only to the
-global "Clear cache".
+Known residual gap (ADR-0006): `getCacheStatus` does not count variants at all, so its
+"X/Y cached" figure undercounts once a generation has regional forms.
 
 Gating a cache-eviction sweep on a matching condition can silently make the *correctly*
 scoped case unreachable too, if discovery is still keyed by the old range. Live-verify both

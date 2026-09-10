@@ -7,6 +7,7 @@
 	import QuickJumpDropdown from "./QuickJumpDropdown.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 	import Icon from "./Icon.svelte";
+	import FilterGroup from "./FilterGroup.svelte";
 
 	let { filters = $bindable(), abilityOptions, useTypeIcons, rows, onQuickSelect }: {
 		filters: PokedexFilters;
@@ -109,12 +110,7 @@
 	</div>
 
 	<div class="filter-rail" bind:this={filterRailEl}>
-		<details class="filter-group" ontoggle={onDetailsToggle}>
-			<summary>
-				<Icon name="swatch-book" size={14} strokeWidth={2} />
-				<span>Type</span>
-				{#if filters.types.length}<span class="filter-count">{filters.types.length}</span>{/if}
-			</summary>
+		<FilterGroup icon="swatch-book" label="Type" count={filters.types.length} ontoggle={onDetailsToggle}>
 			<div class="filter-chips type-chips">
 				{#each TYPE_NAMES as type (type)}
 					<button
@@ -129,14 +125,9 @@
 					</button>
 				{/each}
 			</div>
-		</details>
+		</FilterGroup>
 
-		<details class="filter-group" ontoggle={onDetailsToggle}>
-			<summary>
-				<Icon name="layers" size={14} strokeWidth={2} />
-				<span>Gen</span>
-				{#if filters.generations.length}<span class="filter-count">{filters.generations.length}</span>{/if}
-			</summary>
+		<FilterGroup icon="layers" label="Gen" count={filters.generations.length} ontoggle={onDetailsToggle}>
 			<div class="filter-chips">
 				{#each GENERATIONS as gen (gen.id)}
 					<button
@@ -148,14 +139,9 @@
 					</button>
 				{/each}
 			</div>
-		</details>
+		</FilterGroup>
 
-		<details class="filter-group" ontoggle={onDetailsToggle}>
-			<summary>
-				<Icon name="sparkles" size={14} strokeWidth={2} />
-				<span>Ability</span>
-				{#if filters.abilities.length}<span class="filter-count">{filters.abilities.length}</span>{/if}
-			</summary>
+		<FilterGroup icon="sparkles" label="Ability" count={filters.abilities.length} ontoggle={onDetailsToggle}>
 			<div class="filter-chips ability-panel">
 				<input
 					type="text"
@@ -178,13 +164,9 @@
 					{/if}
 				</div>
 			</div>
-		</details>
+		</FilterGroup>
 
-		<details class="filter-group" ontoggle={onDetailsToggle}>
-			<summary>
-				<Icon name="bar-chart-3" size={14} strokeWidth={2} />
-				<span>Stats</span>
-			</summary>
+		<FilterGroup icon="bar-chart-3" label="Stats" ontoggle={onDetailsToggle}>
 			<div class="stat-filters">
 				{#each STAT_COLUMNS as col (col.key)}
 					<div class="stat-filter-row">
@@ -207,14 +189,9 @@
 					</div>
 				{/each}
 			</div>
-		</details>
+		</FilterGroup>
 
-		<details class="filter-group" ontoggle={onDetailsToggle}>
-			<summary>
-				<Icon name="crown" size={14} strokeWidth={2} />
-				<span>Rarity</span>
-				{#if filters.rarities.length}<span class="filter-count">{filters.rarities.length}</span>{/if}
-			</summary>
+		<FilterGroup icon="crown" label="Rarity" count={filters.rarities.length} ontoggle={onDetailsToggle}>
 			<div class="filter-chips">
 				{#each RARITIES as rarity (rarity.key)}
 					<button
@@ -226,14 +203,9 @@
 					</button>
 				{/each}
 			</div>
-		</details>
+		</FilterGroup>
 
-		<details class="filter-group" ontoggle={onDetailsToggle}>
-			<summary>
-				<Icon name="dumbbell" size={14} strokeWidth={2} />
-				<span>EV</span>
-				{#if filters.evStats.length}<span class="filter-count">{filters.evStats.length}</span>{/if}
-			</summary>
+		<FilterGroup icon="dumbbell" label="EV" count={filters.evStats.length} ontoggle={onDetailsToggle}>
 			<div class="filter-chips">
 				{#each STAT_COLUMNS as col (col.key)}
 					<button
@@ -246,14 +218,9 @@
 					</button>
 				{/each}
 			</div>
-		</details>
+		</FilterGroup>
 
-		<details class="filter-group" ontoggle={onDetailsToggle}>
-			<summary>
-				<Icon name="star" size={14} strokeWidth={2} />
-				<span>Traits</span>
-				{#if filters.traits.length}<span class="filter-count">{filters.traits.length}</span>{/if}
-			</summary>
+		<FilterGroup icon="star" label="Traits" count={filters.traits.length} ontoggle={onDetailsToggle}>
 			<div class="filter-chips">
 				{#each TRAITS as trait (trait.key)}
 					<button
@@ -266,14 +233,9 @@
 					</button>
 				{/each}
 			</div>
-		</details>
+		</FilterGroup>
 
-		<details class="filter-group filter-group-last" ontoggle={onDetailsToggle}>
-			<summary>
-				<Icon name="glasses" size={14} strokeWidth={2} />
-				<span>Quirks</span>
-				{#if filters.quirks.length}<span class="filter-count">{filters.quirks.length}</span>{/if}
-			</summary>
+		<FilterGroup icon="glasses" label="Quirks" count={filters.quirks.length} ontoggle={onDetailsToggle}>
 			<div class="filter-chips">
 				{#each QUIRKS as quirk (quirk.key)}
 					<button
@@ -286,7 +248,7 @@
 					</button>
 				{/each}
 			</div>
-		</details>
+		</FilterGroup>
 	</div>
 
 	<button class="filter-reset" onclick={reset}>
@@ -327,67 +289,31 @@
 		background: var(--background-primary);
 		overflow: visible;
 	}
-	.filter-group {
-		position: relative;
+	/* .filter-group's own shell (details/summary/count-badge chrome) now
+	lives in FilterGroup.svelte — this file only styles the flyout content
+	each group supplies as children, which is why .filter-chips/.stat-filters
+	stay here instead of moving too (see their own comments below). */
+	/* Every other filter-group's dropdown opens flush against its own left
+	edge, which is fine as long as there's 320px of room to its right — the
+	last group in the rail doesn't have that, so it opens flush against its
+	own right edge instead. :last-child self-adjusts to whichever group is
+	actually last, rather than a manually-placed marker class that silently
+	stops matching if the groups above get reordered. */
+	/* :global() on the ancestor half is load-bearing, not decorative — .filter-group
+	is rendered by the FilterGroup child component now, not by this component's own
+	template, so Svelte's scoped-CSS analysis can't see it and silently drops the
+	whole selector as "unused" without :global() (confirmed live: the Quirks flyout
+	overflowed past the rail's right edge instead of aligning flush). .filter-chips
+	stays scoped normally — that class is on FilterBar's own snippet content. */
+	:global(.filter-group:last-child) .filter-chips {
+		left: auto;
+		right: 0;
 	}
-	.filter-group:not(:last-child) summary {
-		border-right: 1px solid var(--background-modifier-border);
-	}
-	.filter-group:first-child summary {
-		border-radius: 6px 0 0 6px;
-	}
-	.filter-group:last-child summary {
-		border-radius: 0 6px 6px 0;
-	}
-	.filter-group summary {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		cursor: pointer;
-		padding: 5px 10px;
-		list-style: none;
-		user-select: none;
-		color: var(--text-muted);
-		transition: background-color 100ms ease-out, color 100ms ease-out;
-	}
-	.filter-group summary::-webkit-details-marker {
-		display: none;
-	}
-	.filter-group summary:hover {
-		background: var(--background-modifier-hover);
-		color: var(--text-normal);
-	}
-	.filter-group summary::after {
-		content: "";
-		width: 12px;
-		height: 12px;
-		margin-left: 2px;
-		background-color: var(--text-faint);
-		-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") center / contain no-repeat;
-		mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") center / contain no-repeat;
-		transition: transform 100ms ease-out;
-	}
-	.filter-group[open] summary::after {
-		transform: rotate(180deg);
-	}
-	.filter-group[open] summary {
-		background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
-		color: var(--interactive-accent);
-	}
-	.filter-count {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		min-width: 15px;
-		height: 15px;
-		padding: 0 4px;
-		border-radius: 999px;
-		background: var(--interactive-accent);
-		color: var(--text-on-accent);
-		font-size: 0.7em;
-		font-weight: 600;
-		line-height: 1;
-	}
+	/* .filter-chips and .stat-filters duplicate the same flyout-panel chrome
+	(position/border/background/box-shadow below), differing only in
+	width/flex-direction — a real, smaller finding, deliberately left as two
+	blocks rather than folded into a shared base class in this pass (see
+	architecture review candidate 4's own follow-up note). */
 	.filter-chips {
 		position: absolute;
 		top: calc(100% + 4px);
@@ -403,14 +329,6 @@
 		border: 1px solid var(--background-modifier-border);
 		border-radius: 4px;
 		box-shadow: var(--shadow-s);
-	}
-	/* Every other filter-group's dropdown opens flush against its own left
-	edge, which is fine as long as there's 320px of room to its right — the
-	rightmost group in the rail doesn't have that, so it opens flush against
-	its own right edge instead (see Quirks, currently the last group). */
-	.filter-group-last .filter-chips {
-		left: auto;
-		right: 0;
 	}
 	.type-chips {
 		width: 260px;

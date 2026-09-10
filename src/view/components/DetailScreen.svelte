@@ -83,15 +83,16 @@
 	// leaves a previous one's shiny toggle silently applied.
 	let showShiny = $state(false);
 
-	// Not reset on id change — moves repeat heavily across species (nearly
-	// everything learns Tackle or Growl), so this accumulates across every
-	// entry viewed this session rather than discarding what's already been
-	// fetched each time `id` changes. Fed by startLoad's onMoveDetail
-	// callback below (streaming, one move at a time — not part of
-	// entryLoad's wholesale mirror, see mirror()/entryLoadKeys above), and
-	// passed down to MoveBrowser as a read-only snapshot; MoveBrowser owns
-	// its own tab-selection state but never triggers a fetch itself, since
-	// DetailLoadState.load() already fetches the whole movepool up front.
+	// loadState.moveDetails is the real accumulator (not reset on id change —
+	// moves repeat heavily across species, nearly everything learns Tackle or
+	// Growl — see DetailLoadState.ts's own comment) and the only place that
+	// invariant is unit-tested (DetailLoadState.test.ts). This is a bare
+	// mirror of it, reassigned wholesale by reference in startLoad's
+	// onMoveDetail callback below — not a second accumulator. Fed streaming,
+	// one move at a time (not part of entryLoad's wholesale mirror, since
+	// DetailLoadState.load() already fetches the whole movepool up front),
+	// and passed down to MoveBrowser as a read-only snapshot; MoveBrowser
+	// owns its own tab-selection state but never triggers a fetch itself.
 	let moveDetails = $state<Record<string, MoveDetail>>({});
 
 	// Owns which Mega/Gigantamax variety (if any) is currently displayed and
@@ -181,8 +182,8 @@
 		showShiny = false;
 		varietyToggle.resetSelection();
 		mirrorVariety();
-		const result = loadState.load(currentId, mirror, (name, moveDetail) => {
-			moveDetails = { ...moveDetails, [name]: moveDetail };
+		const result = loadState.load(currentId, mirror, () => {
+			moveDetails = loadState.moveDetails;
 		});
 		// The synchronous prefix of load() (up to its first await) has
 		// already run by the time it returns a pending promise, so this

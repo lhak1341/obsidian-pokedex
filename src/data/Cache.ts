@@ -168,6 +168,20 @@ export class DiskCache {
 		return paths;
 	}
 
+	// Non-recursive counterpart to listFiles() — one list() call scoped to a
+	// single flat subdirectory (e.g. "species", which cachePaths.ts's
+	// speciesPath() never nests further), existence-guarded the same way
+	// listFiles() guards its own top-level walk. Cheaper than listFiles() for
+	// a caller that only needs one known-flat folder's contents, since it
+	// skips recursing into every other cached subdirectory (images in
+	// particular dwarf everything else by file count).
+	async listFilesIn(relDir: string): Promise<string[]> {
+		const dir = this.resolve(relDir);
+		if (!(await this.adapter.exists(dir))) return [];
+		const { files } = await this.adapter.list(dir);
+		return files;
+	}
+
 	async getSizeBytes(): Promise<number> {
 		let total = 0;
 		for (const file of await this.listFiles()) {
