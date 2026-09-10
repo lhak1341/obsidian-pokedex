@@ -43,6 +43,9 @@ them before publishing — a tag can be pushed from a commit CI never saw. Nothi
   `eslint.config.mjs` rather than absorbed into that count.
 - `manifest.json` and `versions.json` are checked against each other (and against the tag,
   in `release.yml`) by `bun run verify:release`. Obsidian's catalog reads `versions.json` to
-  decide which app versions may install a release, and no build step looks at it.
+  decide which app versions may install a release, and no build step looks at it. The tag
+  itself must be the bare version string (`0.1.1`), not `v`-prefixed — `verify-release.mjs`
+  string-matches it exactly against `manifest.json`'s version, and nothing catches a wrong
+  format until after that tag is already pushed.
 
 `temp/` is gitignored and already used for scratch output — prefer it over the OS tmp dir.

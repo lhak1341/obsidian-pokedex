@@ -39,5 +39,8 @@
   "37": "GENERATIONS",
   "38": "moveRows.ts",
   "39": "imageBounds.ts",
-  "40": "abilityOptions.ts"
+  "40": "abilityOptions.ts",
+  "41": "src/view",
+  "42": "deploy.mjs",
+  "43": "lint-ratchet.mjs"
 }
