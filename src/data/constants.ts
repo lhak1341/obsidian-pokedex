@@ -1,4 +1,5 @@
 import evolutionStagesData from "./evolutionStages.json";
+import finalEvolutionStageData from "./finalEvolutionStage.json";
 import type { StatBlock } from "./types";
 
 export const POKEAPI_BASE = "https://pokeapi.co/api/v2";
@@ -162,6 +163,23 @@ export const FLAVOR_TEXT_VERSION_GROUPS: string[] = Object.values(FLAVOR_TEXT_TA
 	tabs.flatMap((tab) => tab.versions),
 );
 
+// Reverse lookup from a raw PokeAPI version name ("platinum") to the
+// generation it belongs to — built off FLAVOR_TEXT_TABS_BY_GEN rather than a
+// hand-curated table so it can't drift from it. Used by
+// normalizeHeldItemDetails to tag each held-item rarity with a generation,
+// so the UI can filter a Pokemon's held items down to just the versions in
+// the user's Active Gen (see utils/heldItemGen.ts) — the same reason this
+// table starts at Gen 3, not Gen 1: PokeAPI's held-item/flavor-text/move
+// data for Gens 1-2 isn't tracked by this app at all (no "red"/"gold"/
+// "silver" entries here), so Active Gen 1 or 2 legitimately shows no held
+// items for any species, matching MoveBrowser/FlavorTextPanel's existing
+// gap for those same two generations rather than introducing a new one.
+export const VERSION_TO_GENERATION: Record<string, number> = Object.fromEntries(
+	Object.entries(FLAVOR_TEXT_TABS_BY_GEN).flatMap(([genId, tabs]) =>
+		tabs.flatMap((tab) => tab.versions.map((v) => [v, Number(genId)])),
+	),
+);
+
 export const TYPE_NAMES = [
 	"normal", "fire", "water", "electric", "grass", "ice",
 	"fighting", "poison", "ground", "flying", "psychic", "bug",
@@ -238,6 +256,15 @@ export const TRAITS: QuirkDef[] = [
 	{ key: "no-evolution", label: "No Evolution", icon: "minus" },
 	{ key: "one-evolution", label: "1 Evolution", icon: "arrow-up" },
 	{ key: "two-plus-evolutions", label: "2+ Evolutions", icon: "chevrons-up" },
+	// Independent of the three buckets above (per-species leaf-ness, not a
+	// whole-family bucket — see IS_FINAL_EVOLUTION_STAGE) — meaningfully
+	// combines with them via AND (e.g. "2+ Evolutions" + "Last Stage" finds
+	// only the fully-evolved member of a multi-stage family, like Charizard
+	// but not Charmander/Charmeleon), unlike the three buckets which are
+	// mutually exclusive with each other. Includes every No Evolution
+	// species too, since a species with no evolution at all is trivially its
+	// own last stage.
+	{ key: "last-stage", label: "Last Stage", icon: "flag" },
 ];
 
 // PokeAPI's species.varieties naming convention ("{species}-mega"/"-mega-x"/
@@ -379,6 +406,15 @@ export const REGIONAL_FORMS: Record<string, { label: string; generationId: numbe
 // assign that depth to every member species id) for how to regenerate this
 // after a future generation adds new evolution chains.
 export const EVOLUTION_STAGES: readonly number[] = evolutionStagesData;
+
+// Per-species (not whole-family, unlike EVOLUTION_STAGES above) — true iff
+// nothing evolves FROM this species (a leaf in its evolution chain). True
+// for every member of a single-stage family (Tauros) and only the final
+// member(s) of a deeper one (Charizard, not Charmander/Charmeleon) — see
+// TRAITS' "Last Stage" option and matchesTrait in filterPokemon.ts. Same
+// generated-array shape/reasoning as EVOLUTION_STAGES, produced by the same
+// script in the same fetch pass (scripts/generate-evolution-stages.ts).
+export const IS_FINAL_EVOLUTION_STAGE: readonly boolean[] = finalEvolutionStageData;
 
 export const STAT_NAMES = [
 	"hp", "attack", "defense", "special-attack", "special-defense", "speed",

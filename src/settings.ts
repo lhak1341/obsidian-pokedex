@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	// who never touches the Active Gen selector) sees exactly the same
 	// stats/moves/flavor text as before this setting existed.
 	activeGen: Math.max(...GENERATIONS.map((g) => g.id)),
+	favoritePokemonIds: [],
 };
 
 export class PokedexSettingTab extends PluginSettingTab {

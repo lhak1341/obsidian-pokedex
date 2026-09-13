@@ -12,7 +12,6 @@ import {
 	normalizeEvolutionChain,
 	normalizeEvYield,
 	normalizeHeldItemDetails,
-	normalizeHeldItems,
 	normalizeMoveDetail,
 	normalizeMoves,
 	normalizeStats,
@@ -30,17 +29,20 @@ const pokemon = bulbasaur as unknown as RawPokemon;
 const species: RawSpecies = bulbasaurSpecies;
 const chain = bulbasaurChain as unknown as RawEvolutionChain;
 
-describe("normalizeHeldItems", () => {
+describe("normalizeHeldItemDetails", () => {
 	it("returns an empty list for a species with no wild held items", () => {
-		expect(normalizeHeldItems(pokemon.held_items)).toEqual([]);
+		expect(normalizeHeldItemDetails(pokemon.held_items)).toEqual([]);
 	});
 
-	it("extracts item names, ignoring per-version rarity", () => {
+	it("extracts item names with their per-version rarities, tagged by generation", () => {
 		const heldItems = [
 			{ item: { name: "oran-berry", url: "" }, version_details: [{ rarity: 50, version: { name: "ruby", url: "" } }] },
 			{ item: { name: "leftovers", url: "" }, version_details: [{ rarity: 5, version: { name: "emerald", url: "" } }] },
 		];
-		expect(normalizeHeldItems(heldItems)).toEqual(["oran-berry", "leftovers"]);
+		expect(normalizeHeldItemDetails(heldItems)).toEqual([
+			{ name: "oran-berry", rarities: [{ value: 50, generationId: 3 }] },
+			{ name: "leftovers", rarities: [{ value: 5, generationId: 3 }] },
+		]);
 	});
 
 	it("drops an item that only exists in an out-of-scope generation (e.g. Parasect's Balm Mushroom, Gen 5 only)", () => {
@@ -48,12 +50,12 @@ describe("normalizeHeldItems", () => {
 			{ item: { name: "tiny-mushroom", url: "" }, version_details: [{ rarity: 50, version: { name: "platinum", url: "" } }] },
 			{ item: { name: "balm-mushroom", url: "" }, version_details: [{ rarity: 1, version: { name: "black", url: "" } }] },
 		];
-		expect(normalizeHeldItems(heldItems, ["platinum"])).toEqual(["tiny-mushroom"]);
+		expect(normalizeHeldItemDetails(heldItems, ["platinum"])).toEqual([
+			{ name: "tiny-mushroom", rarities: [{ value: 50, generationId: 4 }] },
+		]);
 	});
-});
 
-describe("normalizeHeldItemDetails", () => {
-	it("keeps only distinct rarities from in-scope versions, dropping items with none left", () => {
+	it("keeps only distinct (rarity, generation) pairs from in-scope versions, dropping items with none left", () => {
 		const heldItems = [
 			{
 				item: { name: "tiny-mushroom", url: "" },
@@ -69,7 +71,28 @@ describe("normalizeHeldItemDetails", () => {
 			},
 		];
 		expect(normalizeHeldItemDetails(heldItems, ["ruby", "emerald"])).toEqual([
-			{ name: "tiny-mushroom", rarities: [50] },
+			{ name: "tiny-mushroom", rarities: [{ value: 50, generationId: 3 }] },
+		]);
+	});
+
+	it("keeps rarities from different generations as separate entries", () => {
+		const heldItems = [
+			{
+				item: { name: "oran-berry", url: "" },
+				version_details: [
+					{ rarity: 50, version: { name: "ruby", url: "" } },
+					{ rarity: 30, version: { name: "platinum", url: "" } },
+				],
+			},
+		];
+		expect(normalizeHeldItemDetails(heldItems, ["ruby", "platinum"])).toEqual([
+			{
+				name: "oran-berry",
+				rarities: [
+					{ value: 50, generationId: 3 },
+					{ value: 30, generationId: 4 },
+				],
+			},
 		]);
 	});
 });
@@ -849,7 +872,7 @@ describe("toTableRow", () => {
 		expect(row.catchRate).toBe(45);
 		expect(row.hatchCounter).toBe(20);
 		expect(row.evYield).toEqual([{ stat: "specialAttack", amount: 1 }]);
-		expect(row.heldItemNames).toEqual([]);
+		expect(row.heldItems).toEqual([]);
 		expect(row.isBaby).toBe(false);
 		expect(row.canMegaEvolve).toBe(false);
 		expect(row.canGigantamax).toBe(false);
@@ -924,6 +947,9 @@ describe("toEntry", () => {
 		// From the static EVOLUTION_STAGES lookup (species.id 1 = bulbasaur),
 		// not derived from the `node` passed in above.
 		expect(entry.evolutionStages).toBe(2);
+		// Bulbasaur is the FIRST of its 3 stages, not the last — unlike
+		// evolutionStages (a whole-family value), isFinalStage is per-species.
+		expect(entry.isFinalStage).toBe(false);
 	});
 });
 

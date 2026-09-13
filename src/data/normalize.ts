@@ -2,11 +2,13 @@ import {
 	EVOLUTION_STAGES,
 	FLAVOR_TEXT_TABS_BY_GEN,
 	FLAVOR_TEXT_VERSION_GROUPS,
+	IS_FINAL_EVOLUTION_STAGE,
 	MEGA_VARIETY_KEYS,
 	MOVE_DESCRIPTION_VERSION_GROUPS,
 	MOVE_VERSION_GROUPS,
 	REGIONAL_FORMS,
 	resolveGenerationId,
+	VERSION_TO_GENERATION,
 } from "./constants";
 import type {
 	EvolutionNode,
@@ -607,34 +609,33 @@ export function trimFlavorTextEntries(
 // Rarity is per game version, scoped down to `supportedVersions` (defaults
 // to every version this app currently supports across all generations) so
 // an item only appearing in an out-of-scope game (a spinoff like
-// Colosseum/XD, or a future generation not yet added — e.g. Parasect's
-// Balm Mushroom, Gen 5 (Black/White) only) doesn't show at all while this
-// app is capped at Gen 4, and doesn't pollute an in-scope item's rarity
-// with that other game's possibly-different number. An item with no
-// version_details left after filtering is dropped entirely.
+// Colosseum/XD, or a generation not yet added) doesn't show at all, and
+// doesn't pollute an in-scope item's rarity with that other game's possibly-
+// different number. Each rarity is also tagged with its generation (via
+// VERSION_TO_GENERATION) — this function itself stays Active-Gen-agnostic
+// (every in-scope generation's rarities come back together), the same
+// design as normalizeMoves/extractFlavorTexts; filterHeldItemsForGen
+// (utils/heldItemGen.ts) does the actual Active Gen scoping, at display
+// time. An item with no version_details left after filtering is dropped
+// entirely.
 export function normalizeHeldItemDetails(
 	heldItems: RawPokemon["held_items"],
 	supportedVersions: readonly string[] = FLAVOR_TEXT_VERSION_GROUPS,
-): { name: string; rarities: number[] }[] {
+): { name: string; rarities: { value: number; generationId: number }[] }[] {
 	return heldItems
-		.map((h) => ({
-			name: h.item.name,
-			rarities: [...new Set(
-				h.version_details
-					.filter((v) => supportedVersions.includes(v.version.name))
-					.map((v) => v.rarity),
-			)].sort((a, b) => a - b),
-		}))
+		.map((h) => {
+			const distinct = new Map<string, { value: number; generationId: number }>();
+			for (const v of h.version_details) {
+				if (!supportedVersions.includes(v.version.name)) continue;
+				const generationId = VERSION_TO_GENERATION[v.version.name];
+				distinct.set(`${v.rarity}:${generationId}`, { value: v.rarity, generationId });
+			}
+			return {
+				name: h.item.name,
+				rarities: [...distinct.values()].sort((a, b) => a.generationId - b.generationId || a.value - b.value),
+			};
+		})
 		.filter((h) => h.rarities.length > 0);
-}
-
-// Table-column shape (see PokedexTableRow.heldItemNames) — same era scope as
-// normalizeHeldItemDetails above, just names instead of rarity.
-export function normalizeHeldItems(
-	heldItems: RawPokemon["held_items"],
-	supportedVersions: readonly string[] = FLAVOR_TEXT_VERSION_GROUPS,
-): string[] {
-	return normalizeHeldItemDetails(heldItems, supportedVersions).map((h) => h.name);
 }
 
 export function normalizeEvYield(rawStats: RawPokemon["stats"]): EvYieldEntry[] {
@@ -775,7 +776,7 @@ export function toTableRow(
 				.filter((m) => m.learnMethod === "level-up")
 				.map((m) => m.name),
 		)],
-		heldItemNames: normalizeHeldItems(pokemon.held_items),
+		heldItems: normalizeHeldItemDetails(pokemon.held_items),
 		spriteDataUri,
 		height: pokemon.height,
 		weight: pokemon.weight,
@@ -787,6 +788,7 @@ export function toTableRow(
 		canGigantamax: deriveGigantamaxForms(pokemon, species).length > 0,
 		// Static lookup, not a fetch — see EVOLUTION_STAGES in constants.ts.
 		evolutionStages: EVOLUTION_STAGES[species.id] ?? 0,
+		isFinalStage: IS_FINAL_EVOLUTION_STAGE[species.id] ?? false,
 	};
 }
 
@@ -809,7 +811,6 @@ export function toEntry(
 		genderRate: species.gender_rate,
 		moves: normalizeMoves(pokemon.moves),
 		evolutionChain,
-		heldItems: normalizeHeldItemDetails(pokemon.held_items),
 		megaForms: deriveMegaForms(pokemon, species),
 		gigantamaxForms: deriveGigantamaxForms(pokemon, species),
 	};

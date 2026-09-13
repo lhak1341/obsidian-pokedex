@@ -21,6 +21,7 @@
 	import RegionalFormNav from "./RegionalFormNav.svelte";
 	import StatBars from "./StatBars.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
+	import { filterHeldItemsForGen } from "../../utils/heldItemGen";
 	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { romanNumeral } from "../../utils/romanNumeral";
 	import { resolveStatsForGen } from "../../utils/stats";
@@ -289,6 +290,7 @@
 			<button onclick={retry}>Retry</button>
 		{:else if entryLoad.entry}
 			{@const entry = entryLoad.entry}
+			{@const activeHeldItems = filterHeldItemsForGen(entry.heldItems, activeGen)}
 			<!-- container-type (not a viewport media query) because this is an
 			Obsidian pane: it can be a narrow sidebar in a wide window or fill a
 			whole ultrawide window, independent of the window's own size. Three
@@ -374,11 +376,11 @@
 				<section class="panel">
 					<h3 class="section-heading">Breeding & Capture</h3>
 					<p class="breeding-line">Egg groups: {entry.eggGroups.join(", ") || "None"}</p>
-					{#if entry.heldItems.length > 0}
+					{#if activeHeldItems.length > 0}
 						<p class="breeding-line">
 							Wild held item:
 							<HeldItemsPanel
-								heldItems={entry.heldItems}
+								heldItems={activeHeldItems}
 								getDescription={(name) => repository.getItemDescription(name)}
 							/>
 						</p>

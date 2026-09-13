@@ -56,7 +56,7 @@ describe("PokedexRepository", () => {
 		const result = await repository.getTableRows({ start: 1, end: 1 });
 
 		expect(client.fetchPokemon).toHaveBeenCalledTimes(1);
-		expect(result.rows[0].heldItemNames).toEqual([]);
+		expect(result.rows[0].heldItems).toEqual([]);
 	});
 
 	it("tracks per-id failures without aborting the rest of the batch", async () => {

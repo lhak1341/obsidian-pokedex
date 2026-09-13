@@ -18,6 +18,12 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   on every Gen 8 detail page).
 - Names are capitalized purely via CSS `text-transform` — `.textContent` returns the raw
   lowercase value (`"ivysaur"`). Match lowercase when locating elements via eval.
+- `heldItems` carries every supported generation's rarities unfiltered by design (tagged
+  with `generationId`, not scoped) — a new consumer (display, filter, tooltip) must
+  explicitly call `filterHeldItemsForGen` (`utils/heldItemGen.ts`) with the current Active
+  Gen. The raw field silently ignores Active Gen otherwise; this was missed independently
+  for the table cell, its tooltip, the detail page, and the Quirks "Held Item" filter in
+  one session before the pattern was caught.
 
 Adding a generation stales cached Moves/Flavor Text and needs a checklist walk — see
 `docs/multi-gen-expansion-plan.md`'s Recipe section, not a bespoke fix here.
@@ -75,3 +81,8 @@ before assuming a plugin bug.
 - To verify an unfamiliar Lucide icon name, render it via `<Icon name=… />` in a live
   component and check `el.querySelector('svg')?.innerHTML` (non-empty = valid) — do not
   probe the icon registry from eval.
+- A `$state` field seeded once via `untrack(() => initialX)` (TableScreen.svelte's
+  `visibleColumnKeys`, `sortColumn`, `favoriteIds`) never re-seeds when its prop changes —
+  it owns the value locally and only pushes out via a callback. Verifying one live via eval
+  needs a real remount (force `saveSettings()`'s refresh, or leaf detach+reopen), not just
+  mutating `plugin.settings.X` in place.

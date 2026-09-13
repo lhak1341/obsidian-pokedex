@@ -20,7 +20,7 @@ function row(overrides: Partial<PokedexTableRow>): PokedexTableRow {
 		evYield: [],
 		abilityNames: ["overgrow", "chlorophyll"],
 		levelUpMoveNames: [],
-		heldItemNames: [],
+		heldItems: [],
 		spriteDataUri: null,
 		height: 7,
 		weight: 69,
@@ -31,6 +31,7 @@ function row(overrides: Partial<PokedexTableRow>): PokedexTableRow {
 		canMegaEvolve: false,
 		canGigantamax: false,
 		evolutionStages: 0,
+		isFinalStage: false,
 		...overrides,
 	};
 }
@@ -105,13 +106,33 @@ describe("filterPokemon", () => {
 			row({ id: 1, name: "bulbasaur", abilityNames: ["overgrow"] }),
 			row({ id: 190, name: "aipom", abilityNames: ["pickup"] }),
 			row({ id: 302, name: "sableye", levelUpMoveNames: ["covet"] }),
-			row({ id: 12, name: "butterfree", heldItemNames: ["silver-powder"] }),
+			row({ id: 12, name: "butterfree", heldItems: [{ name: "silver-powder", rarities: [{ value: 50, generationId: 3 }] }] }),
 			row({ id: 7, name: "squirtle", abilityNames: ["torrent"], levelUpMoveNames: [] }),
 		];
 
 		const result = filterPokemon(quirkRows, { ...EMPTY_FILTERS, quirks: ["pickup", "covet", "held-item"] });
 
 		expect(result.map((r) => r.name)).toEqual(["aipom", "sableye", "butterfree"]);
+	});
+
+	it("held-item quirk is scoped to activeGen when given, same as the table cell/tooltip", () => {
+		const quirkRows: PokedexTableRow[] = [
+			// Gen 3-only item: matches at activeGen 3, not at activeGen 4.
+			row({ id: 12, name: "butterfree", heldItems: [{ name: "silver-powder", rarities: [{ value: 50, generationId: 3 }] }] }),
+			// No held item at all, any generation.
+			row({ id: 7, name: "squirtle", heldItems: [] }),
+		];
+
+		expect(
+			filterPokemon(quirkRows, { ...EMPTY_FILTERS, quirks: ["held-item"] }, { activeGen: 3 }).map((r) => r.name),
+		).toEqual(["butterfree"]);
+		expect(
+			filterPokemon(quirkRows, { ...EMPTY_FILTERS, quirks: ["held-item"] }, { activeGen: 4 }),
+		).toHaveLength(0);
+		// Omitted activeGen falls back to the any-generation union.
+		expect(
+			filterPokemon(quirkRows, { ...EMPTY_FILTERS, quirks: ["held-item"] }).map((r) => r.name),
+		).toEqual(["butterfree"]);
 	});
 
 	it("matches ALL selected traits (AND semantics), across id/boolean checks alike", () => {
@@ -157,6 +178,42 @@ describe("filterPokemon", () => {
 		expect(
 			filterPokemon(stageRows, { ...EMPTY_FILTERS, traits: ["no-evolution", "one-evolution"] }).map((r) => r.name),
 		).toEqual([]);
+	});
+
+	it("last-stage is per-species (not the whole-family bucket) and includes No Evolution too", () => {
+		const stageRows: PokedexTableRow[] = [
+			// Single-stage family — its own last (and only) stage.
+			row({ id: 128, name: "tauros", evolutionStages: 0, isFinalStage: true }),
+			// 3-stage family: only the final member is isFinalStage.
+			row({ id: 4, name: "charmander", evolutionStages: 2, isFinalStage: false }),
+			row({ id: 5, name: "charmeleon", evolutionStages: 2, isFinalStage: false }),
+			row({ id: 6, name: "charizard", evolutionStages: 2, isFinalStage: true }),
+		];
+
+		expect(
+			filterPokemon(stageRows, { ...EMPTY_FILTERS, traits: ["last-stage"] }).map((r) => r.name),
+		).toEqual(["tauros", "charizard"]);
+		// Combines meaningfully (AND) with the whole-family bucket, unlike the
+		// buckets among themselves: finds only the fully-evolved multi-stage
+		// member, not every last-stage species.
+		expect(
+			filterPokemon(stageRows, { ...EMPTY_FILTERS, traits: ["last-stage", "two-plus-evolutions"] }).map((r) => r.name),
+		).toEqual(["charizard"]);
+	});
+
+	it("favoritesOnly with no favorite ids given matches nothing", () => {
+		const result = filterPokemon(rows, { ...EMPTY_FILTERS, favoritesOnly: true });
+		expect(result).toHaveLength(0);
+	});
+
+	it("favoritesOnly keeps only rows in the given favorite id set", () => {
+		const result = filterPokemon(rows, { ...EMPTY_FILTERS, favoritesOnly: true }, { favoriteIds: new Set([4, 151]) });
+		expect(result.map((r) => r.name)).toEqual(["charmander", "mew"]);
+	});
+
+	it("favorite id set is ignored when favoritesOnly is false", () => {
+		const result = filterPokemon(rows, EMPTY_FILTERS, { favoriteIds: new Set([4]) });
+		expect(result).toHaveLength(6);
 	});
 
 	it("combines multiple filter axes with AND", () => {

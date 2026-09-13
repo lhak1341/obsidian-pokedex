@@ -24,6 +24,7 @@ export default class PokedexPlugin extends Plugin {
 				this.repository,
 				() => this.settings,
 				(columns) => void this.setVisibleColumns(columns),
+				(ids) => void this.setFavorites(ids),
 			),
 		);
 
@@ -55,6 +56,17 @@ export default class PokedexPlugin extends Plugin {
 	// need a fresh reload).
 	async setVisibleColumns(columns: string[]): Promise<void> {
 		this.settings.visibleColumns = columns;
+		await this.saveData(this.settings);
+	}
+
+	// Same "persist without forcing every open tab to remount" reasoning as
+	// setVisibleColumns above — the table already updates its own favorite
+	// marker/right-click state locally the instant a row is toggled, so a
+	// full saveSettings()-triggered refresh would just be a redundant (and
+	// disruptive: it'd reset scroll/sort/filter state) re-render of what's
+	// already on screen.
+	async setFavorites(ids: number[]): Promise<void> {
+		this.settings.favoritePokemonIds = ids;
 		await this.saveData(this.settings);
 	}
 

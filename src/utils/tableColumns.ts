@@ -76,9 +76,9 @@ export const TOGGLEABLE_COLUMNS: ColumnDef[] = [
 		label: "Held item",
 		headerIcon: "gift",
 		render: (row) =>
-			row.heldItemNames.length === 0
+			row.heldItems.length === 0
 				? "-"
-				: row.heldItemNames.map((name) => formatItemName(name)).join(", "),
+				: row.heldItems.map((item) => formatItemName(item.name)).join(", "),
 		widthPercent: "6%",
 		minWidth: "140px",
 	},

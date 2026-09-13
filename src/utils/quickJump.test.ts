@@ -15,7 +15,7 @@ function row(id: number, name: string): PokedexTableRow {
 		evYield: [],
 		abilityNames: [],
 		levelUpMoveNames: [],
-		heldItemNames: [],
+		heldItems: [],
 		spriteDataUri: null,
 		height: 0,
 		weight: 0,
@@ -26,6 +26,7 @@ function row(id: number, name: string): PokedexTableRow {
 		canMegaEvolve: false,
 		canGigantamax: false,
 	evolutionStages: 0,
+	isFinalStage: false,
 	};
 }
 

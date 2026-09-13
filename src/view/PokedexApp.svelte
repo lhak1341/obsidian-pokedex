@@ -11,10 +11,11 @@
 	import { PokedexLoadState } from "./PokedexLoadState";
 	import TableScreen from "./components/TableScreen.svelte";
 
-	let { repository, settings, onColumnsChange }: {
+	let { repository, settings, onColumnsChange, onFavoritesChange }: {
 		repository: PokedexRepository;
 		settings: PluginSettings;
 		onColumnsChange: (columns: string[]) => void;
+		onFavoritesChange: (ids: number[]) => void;
 	} = $props();
 
 	let screen = $state<"table" | "detail">("table");
@@ -188,7 +189,11 @@
 				defaultSortColumn={settings.defaultSortColumn}
 				initialVisibleColumns={settings.visibleColumns}
 				useTypeIcons={settings.useTypeIcons}
+				{repository}
+				activeGen={settings.activeGen}
+				initialFavoriteIds={settings.favoritePokemonIds}
 				{onColumnsChange}
+				{onFavoritesChange}
 				onSelect={openDetail}
 			/>
 		</div>

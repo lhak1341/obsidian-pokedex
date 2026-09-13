@@ -33,9 +33,11 @@ export interface RawPokemon {
 	}[];
 	// Items a wild-encountered individual of this species may be holding —
 	// most species have none (empty array), not every entry has this field
-	// populated. Per-game rarity % lives in version_details but isn't
-	// currently surfaced (see normalizeHeldItems) — same simplicity level as
-	// abilityNames/levelUpMoveNames below, not version/generation-scoped.
+	// populated. Per-game rarity % lives in version_details, surfaced via
+	// normalizeHeldItemDetails, filtered to FLAVOR_TEXT_VERSION_GROUPS and
+	// tagged per-rarity with its generation via VERSION_TO_GENERATION — the
+	// Active Gen scoping itself happens later, at display time (see
+	// utils/heldItemGen.ts), not here.
 	held_items: {
 		item: NamedApiResource;
 		version_details: { rarity: number; version: NamedApiResource }[];
@@ -297,8 +299,16 @@ export interface PokedexTableRow {
 	// part of the same RawPokemon response abilityNames/stats come from.
 	levelUpMoveNames: string[];
 	// Wild-encounter held items (see RawPokemon.held_items) — empty for most
-	// species, which is a real fact (nothing to hold), not missing data.
-	heldItemNames: string[];
+	// species, which is a real fact (nothing to hold), not missing data. Kept
+	// unfiltered by Active Gen here (every supported game's rarity, tagged
+	// with its generation) — the raw form both PokedexTableRow and
+	// PokedexEntry (via inheritance, not redeclared there) need, since the
+	// UI-layer Active Gen scoping happens at display time via
+	// utils/heldItemGen.ts's filterHeldItemsForGen, not at normalize time.
+	// Each distinct (rarity %, generation) pair is its own entry — almost
+	// always one per item (a drop % rarely differs across a generation's own
+	// games), a list for the rare case it does; see normalizeHeldItemDetails.
+	heldItems: { name: string; rarities: { value: number; generationId: number }[] }[];
 	spriteDataUri: string | null;
 	height: number;
 	weight: number;
@@ -309,7 +319,7 @@ export interface PokedexTableRow {
 	// at table-load time (species/pokemon), no extra fetch. Fossil and held-
 	// item aren't duplicated here: fossil checks FOSSIL_IDS.has(dexNumber)
 	// directly (curated list, same as before), held-item checks
-	// heldItemNames.length > 0 directly — see matchesTrait in filterPokemon.ts.
+	// heldItems.length > 0 directly — see matchesTrait in filterPokemon.ts.
 	isBaby: boolean;
 	canMegaEvolve: boolean;
 	canGigantamax: boolean;
@@ -320,6 +330,13 @@ export interface PokedexTableRow {
 	// at all (Tauros) or when the family's evolution-chain fetch failed
 	// (non-fatal fallback, same as elsewhere in this repo).
 	evolutionStages: number;
+	// Per-species (not whole-family, unlike evolutionStages above) — true iff
+	// nothing evolves FROM this species. See IS_FINAL_EVOLUTION_STAGE in
+	// constants.ts and TRAITS' "Last Stage" option. false (not true) when the
+	// family's evolution-chain fetch failed, same non-fatal-fallback shape as
+	// evolutionStages' 0 — a failed fetch should never silently include a row
+	// in a filter result.
+	isFinalStage: boolean;
 }
 
 // Full record shown in the detail screen.
@@ -335,13 +352,6 @@ export interface PokedexEntry extends PokedexTableRow {
 	genderRate: number;
 	moves: MoveEntry[];
 	evolutionChain: EvolutionNode | null;
-	// Rarity is per PokeAPI game *version*, scoped down to the ones this app
-	// currently supports (see normalizeHeldItemDetails) — `rarities` is
-	// almost always one value (an item's drop % rarely differs across a
-	// species' supported games), kept as a list of distinct values for the
-	// rare case it does. Table column (heldItemNames on PokedexTableRow)
-	// deliberately stays name-only; this richer shape is detail-view-only.
-	heldItems: { name: string; rarities: number[] }[];
 	// Mega Evolution varieties this species has, if any (empty for the ~95%
 	// of species that don't) — cheap to derive from species.varieties at
 	// getEntryCore time, no extra fetch. Selecting one lazily fetches the
@@ -419,4 +429,10 @@ export interface PluginSettings {
 	// to the latest supported generation's data wherever the active
 	// generation has nothing of its own for a given species.
 	activeGen: number;
+	// Table-row ids (PokedexTableRow.id, not dexNumber — a regional form's
+	// own row can be favorited independent of its base species) a user has
+	// starred via the table's right-click menu. Saved through
+	// PokedexPlugin.setFavorites, not the general saveSettings path — see
+	// its own comment for why (same reasoning as visibleColumns).
+	favoritePokemonIds: number[];
 }

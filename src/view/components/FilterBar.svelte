@@ -99,6 +99,16 @@
 			onblur={quickJump.onBlur}
 			onkeydown={quickJump.onKeydown}
 		/>
+		<button
+			type="button"
+			class="favorites-filter-toggle"
+			class:active={filters.favoritesOnly}
+			aria-label={filters.favoritesOnly ? "Show all Pokemon" : "Show only favorites"}
+			aria-pressed={filters.favoritesOnly}
+			onclick={() => (filters.favoritesOnly = !filters.favoritesOnly)}
+		>
+			<Icon name="asterisk" size={15} strokeWidth={2.25} />
+		</button>
 		{#if quickJump.open && quickJump.matches.length > 0}
 			<QuickJumpDropdown
 				matches={quickJump.matches}
@@ -280,6 +290,42 @@
 	}
 	.filter-search {
 		width: 100%;
+		/* Room for .favorites-filter-toggle sitting inside the same wrapper,
+		on top of the input's own right edge — see its own comment. */
+		padding-right: 28px;
+	}
+	/* Sits inside .filter-search-wrapper on top of the input's own right
+	edge (position: relative on the wrapper, absolute here) rather than
+	beside it, so it reads as part of the search box itself ("seamless")
+	instead of a separate control — same idiom as a browser's inline
+	clear-search button. Toggles filters.favoritesOnly directly; no
+	separate FilterGroup entry since this is a single always-visible
+	on/off, not a set of chips needing a flyout. */
+	.favorites-filter-toggle {
+		position: absolute;
+		top: 50%;
+		right: 4px;
+		transform: translateY(-50%);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 22px;
+		height: 22px;
+		padding: 0;
+		background: transparent;
+		border: none;
+		box-shadow: none;
+		color: var(--text-faint);
+		cursor: pointer;
+		transition: color 100ms ease-out;
+	}
+	.favorites-filter-toggle:hover {
+		color: var(--text-normal);
+		background: transparent;
+		box-shadow: none;
+	}
+	.favorites-filter-toggle.active {
+		color: var(--interactive-accent);
 	}
 	.filter-rail {
 		display: inline-flex;

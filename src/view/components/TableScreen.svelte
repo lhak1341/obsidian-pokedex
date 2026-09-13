@@ -1,25 +1,61 @@
 <script lang="ts">
+	import { Menu } from "obsidian";
 	import { STAT_COLORS } from "../../data/constants";
+	import type { PokedexRepository } from "../../data/PokedexRepository";
 	import type { PokedexTableRow } from "../../data/types";
 	import { EMPTY_FILTERS, filterPokemon } from "../../utils/filterPokemon";
+	import { filterHeldItemsForGen } from "../../utils/heldItemGen";
 	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { sortPokemon, type SortColumn, type SortDirection } from "../../utils/sortPokemon";
-	import { STAT_LABEL_BY_KEY, TOGGLEABLE_COLUMNS } from "../../utils/tableColumns";
+	import { formatItemName, STAT_LABEL_BY_KEY, TOGGLEABLE_COLUMNS } from "../../utils/tableColumns";
 	import { untrack } from "svelte";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
+	import { createHoverDescription } from "../hoverDescription.svelte";
+	import { createHoverPopover } from "../hoverPopover.svelte";
 	import FilterBar from "./FilterBar.svelte";
+	import HoverPopoverBox from "./HoverPopoverBox.svelte";
 	import Icon from "./Icon.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 
-	let { rows, density, defaultSortColumn, initialVisibleColumns, useTypeIcons, onColumnsChange, onSelect }: {
+	let {
+		rows, density, defaultSortColumn, initialVisibleColumns, useTypeIcons, repository, activeGen,
+		initialFavoriteIds, onColumnsChange, onFavoritesChange, onSelect,
+	}: {
 		rows: PokedexTableRow[];
 		density: "compact" | "comfortable";
 		defaultSortColumn: "id" | "name";
 		initialVisibleColumns: string[];
 		useTypeIcons: boolean;
+		repository: PokedexRepository;
+		activeGen: number;
+		initialFavoriteIds: number[];
 		onColumnsChange: (columns: string[]) => void;
+		onFavoritesChange: (ids: number[]) => void;
 		onSelect: (id: number) => void;
 	} = $props();
+
+	// Same fetch-once-and-cache-per-name hook as DetailScreen's HeldItemsPanel
+	// (see hoverDescription.svelte.ts) — shared across every row/cell instead
+	// of a per-cell instance, so hovering "oran-berry" on row 4 doesn't
+	// re-fetch it after already hovering it on row 1.
+	const itemPopover = createHoverDescription(".table-screen", (name) => repository.getItemDescription(name));
+	// Unlike HeldItemsPanel (which prints "Name (X%)" inline and keeps the
+	// tooltip to description-only), the table cell shows bare names to save
+	// column width — rarity moves into the tooltip instead. Rarity isn't
+	// keyed by item name like the description cache: the same item name can
+	// carry a different % on a different row, so this tracks whichever
+	// row/item is currently hovered directly, set alongside itemPopover.show.
+	let hoveredItemRarities = $state<number[]>([]);
+
+	// TypeBadge's icon mode already carries a native `title` for the type
+	// name, but a native title tooltip is unverifiable through this repo's
+	// live-debug tooling (see obsidian-plugin-dev's debugging.md — it never
+	// shows up in a screenshot, and reading `.title` alone passes even on an
+	// invisible/clipped element) and was reported not actually appearing on
+	// hover in the table. This custom popover is a guaranteed-visible
+	// fallback, same mechanism as the held-item tooltip above — only wired
+	// up in icon mode, since text mode already shows the type name directly.
+	const typePopover = createHoverPopover(".table-screen");
 
 	let hoveredSpriteId = $state<number | null>(null);
 	let previewPos = $state<{ top: number; left: number } | null>(null);
@@ -60,12 +96,15 @@
 	// the user's in-table sort choice shouldn't get clobbered if it changes.
 	let sortColumn = $state<SortColumn>(untrack(() => defaultSortColumn));
 	let sortDirection = $state<SortDirection>("asc");
+	// Same "seed once, own it locally, push changes up via callback" shape as
+	// visibleColumnKeys/toggleColumn below.
+	let favoriteIds = $state(new Set(untrack(() => initialFavoriteIds)));
 
 	const abilityOptions = $derived(
 		[...new Set(rows.flatMap((r) => r.abilityNames))].sort(),
 	);
 	const visibleRows = $derived(
-		sortPokemon(filterPokemon(rows, filters), sortColumn, sortDirection),
+		sortPokemon(filterPokemon(rows, filters, { favoriteIds, activeGen }), sortColumn, sortDirection),
 	);
 	const activeColumns = $derived(
 		TOGGLEABLE_COLUMNS.filter((col) => visibleColumnKeys.has(col.key)),
@@ -107,6 +146,27 @@
 		else next.add(key);
 		visibleColumnKeys = next;
 		onColumnsChange([...next]);
+	}
+
+	function toggleFavorite(id: number) {
+		const next = new Set(favoriteIds);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		favoriteIds = next;
+		onFavoritesChange([...next]);
+	}
+
+	function showRowMenu(e: MouseEvent, row: PokedexTableRow) {
+		e.preventDefault();
+		const isFavorite = favoriteIds.has(row.id);
+		const menu = new Menu();
+		menu.addItem((item) =>
+			item
+				.setTitle(isFavorite ? "Remove from favorites" : "Add to favorites")
+				.setIcon("asterisk")
+				.onClick(() => toggleFavorite(row.id))
+		);
+		menu.showAtMouseEvent(e);
 	}
 </script>
 
@@ -192,7 +252,7 @@
 			</thead>
 			<tbody>
 				{#each visibleRows as row (row.id)}
-					<tr onclick={() => onSelect(row.id)}>
+					<tr onclick={() => onSelect(row.id)} oncontextmenu={(e) => showRowMenu(e, row)}>
 						<td>{String(row.dexNumber).padStart(3, "0")}</td>
 						<td
 							class="center sprite-cell"
@@ -203,10 +263,28 @@
 								<img src={row.spriteDataUri} alt={formatPokemonDisplayName(row)} class="sprite-thumb" />
 							{/if}
 						</td>
-						<td class="name-cell">{formatPokemonDisplayName(row)}</td>
+						<td class="name-cell">
+						{formatPokemonDisplayName(row)}
+						{#if favoriteIds.has(row.id)}
+							<span class="favorite-mark" title="Favorited">
+								<Icon name="asterisk" size={13} strokeWidth={2.5} />
+							</span>
+						{/if}
+					</td>
 						<td>
 							{#each row.types as type (type)}
-								<TypeBadge {type} useIcon={useTypeIcons} />
+								{#if useTypeIcons}
+									<span
+										class="type-icon-hover-target"
+										role="note"
+										onmouseenter={(e) => typePopover.show(type, e.currentTarget)}
+										onmouseleave={typePopover.hide}
+									>
+										<TypeBadge {type} useIcon />
+									</span>
+								{:else}
+									<TypeBadge {type} />
+								{/if}
 							{/each}
 						</td>
 						{#each activeColumns as col (col.key)}
@@ -221,6 +299,25 @@
 											<span class="ev-empty">-</span>
 										{/each}
 									</div>
+								</td>
+							{:else if col.key === "heldItems"}
+								{@const genItems = filterHeldItemsForGen(row.heldItems, activeGen)}
+								<td>
+									{#if genItems.length === 0}
+										-
+									{:else}
+										{#each genItems as item (item.name)}
+											<span
+												class="held-item-name"
+												role="note"
+												onmouseenter={(e) => {
+													itemPopover.show(item.name, e.currentTarget);
+													hoveredItemRarities = item.rarities;
+												}}
+												onmouseleave={itemPopover.hide}
+											>{formatItemName(item.name)}</span>
+										{/each}
+									{/if}
 								</td>
 							{:else}
 								<td class:right={col.align === "right"}>{col.render(row)}</td>
@@ -243,6 +340,21 @@
 			/>
 		{/if}
 	{/if}
+
+	<HoverPopoverBox hoverState={itemPopover}>
+		<span class="held-item-rarity">({hoveredItemRarities.join("/")}%)</span>
+		{#if !itemPopover.status}
+			Loading…
+		{:else if itemPopover.status === "error"}
+			Couldn't load description.
+		{:else}
+			{itemPopover.status.text ?? "No description available."}
+		{/if}
+	</HoverPopoverBox>
+
+	<HoverPopoverBox hoverState={typePopover}>
+		<span class="type-tooltip-text">{typePopover.hovered}</span>
+	</HoverPopoverBox>
 </div>
 
 <style>
@@ -393,6 +505,12 @@
 		text-transform: capitalize;
 		font-weight: 600;
 	}
+	.favorite-mark {
+		display: inline-flex;
+		vertical-align: middle;
+		margin-left: 4px;
+		color: var(--interactive-accent);
+	}
 	.ev-cell {
 		display: flex;
 		flex-wrap: wrap;
@@ -426,6 +544,23 @@
 	}
 	.ev-empty {
 		color: var(--text-faint);
+	}
+	.held-item-name {
+		cursor: help;
+	}
+	.held-item-name:not(:last-child)::after {
+		content: ", ";
+		cursor: default;
+	}
+	.held-item-rarity {
+		font-weight: 600;
+	}
+	.type-icon-hover-target {
+		display: inline-flex;
+		cursor: help;
+	}
+	.type-tooltip-text {
+		text-transform: capitalize;
 	}
 	.sprite-thumb {
 		width: 32px;

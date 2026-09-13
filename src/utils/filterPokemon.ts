@@ -1,5 +1,6 @@
 import { FOSSIL_IDS, GENERATIONS } from "../data/constants";
 import type { PokedexTableRow, StatBlock } from "../data/types";
+import { filterHeldItemsForGen } from "./heldItemGen";
 import { formatPokemonDisplayName } from "./pokemonDisplay";
 
 export interface StatRange {
@@ -31,6 +32,11 @@ export interface PokedexFilters {
 	// below) — unlike quirks, these are independent yes/no properties with
 	// no meaningful "any of" reading (e.g. Baby + Fossil should mean both).
 	traits: string[];
+	// Not derivable from a PokedexTableRow field — favorites are user state
+	// (TableScreen's right-click menu), not fetched data, so filterPokemon
+	// takes the actual favorite id set as a separate argument (see below)
+	// rather than this flag alone.
+	favoritesOnly: boolean;
 }
 
 export const EMPTY_FILTERS: PokedexFilters = {
@@ -43,6 +49,7 @@ export const EMPTY_FILTERS: PokedexFilters = {
 	evStats: [],
 	quirks: [],
 	traits: [],
+	favoritesOnly: false,
 };
 
 // Exported for QuickSearch.svelte's quick-check input, which needs the same
@@ -120,11 +127,19 @@ function matchesEvStats(row: PokedexTableRow, evStats: string[]): boolean {
 // evolution-stage buckets live in matchesTrait below instead (see TRAITS'
 // own comment for why); held-item stays here rather than moving alongside
 // fossil, since "pickup OR holds an item" is a meaningful combined search
-// the way "baby AND fossil" isn't.
-function matchesQuirk(row: PokedexTableRow, quirk: string): boolean {
+// the way "baby AND fossil" isn't. held-item is scoped to activeGen when
+// given — same reasoning as the table cell/tooltip (see heldItemGen.ts): a
+// species whose only held item is from an out-of-scope generation shouldn't
+// surface under this quirk any more than it shows an item in the row
+// itself. `undefined` (no Active Gen context available) falls back to the
+// raw any-generation union, same permissive-when-omitted shape as
+// `favoriteIds` below.
+function matchesQuirk(row: PokedexTableRow, quirk: string, activeGen: number | undefined): boolean {
 	switch (quirk) {
 		case "held-item":
-			return row.heldItemNames.length > 0;
+			return activeGen === undefined
+				? row.heldItems.length > 0
+				: filterHeldItemsForGen(row.heldItems, activeGen).length > 0;
 		case "compound-eyes":
 		case "pickup":
 			return row.abilityNames.includes(quirk);
@@ -137,9 +152,9 @@ function matchesQuirk(row: PokedexTableRow, quirk: string): boolean {
 	}
 }
 
-function matchesQuirks(row: PokedexTableRow, quirks: string[]): boolean {
+function matchesQuirks(row: PokedexTableRow, quirks: string[], activeGen: number | undefined): boolean {
 	if (quirks.length === 0) return true;
-	return quirks.some((q) => matchesQuirk(row, q));
+	return quirks.some((q) => matchesQuirk(row, q, activeGen));
 }
 
 // Each trait key checks a different independent yes/no property — a curated
@@ -164,6 +179,10 @@ function matchesTrait(row: PokedexTableRow, trait: string): boolean {
 			return row.evolutionStages >= 2;
 		case "gigantamax":
 			return row.canGigantamax;
+		// Per-species leaf-ness (see IS_FINAL_EVOLUTION_STAGE), not a bucket
+		// off evolutionStages — combines meaningfully with the three above.
+		case "last-stage":
+			return row.isFinalStage;
 		default:
 			return false;
 	}
@@ -174,7 +193,29 @@ function matchesTraits(row: PokedexTableRow, traits: string[]): boolean {
 	return traits.every((t) => matchesTrait(row, t));
 }
 
-export function filterPokemon(rows: PokedexTableRow[], filters: PokedexFilters): PokedexTableRow[] {
+function matchesFavorite(row: PokedexTableRow, favoritesOnly: boolean, favoriteIds: ReadonlySet<number>): boolean {
+	if (!favoritesOnly) return true;
+	return favoriteIds.has(row.id);
+}
+
+// Bundled rather than two more positional params — both are "external
+// context not derivable from a PokedexTableRow field alone" (favorites are
+// user state, Active Gen is a setting), and both are safely omittable: an
+// omitted favoriteIds matches nothing extra (favoritesOnly still gates it),
+// an omitted activeGen falls back to matchesQuirk's any-generation union
+// (see its own comment) — so most test call sites that don't care about
+// either can just omit this argument entirely.
+export interface FilterContext {
+	favoriteIds?: ReadonlySet<number>;
+	activeGen?: number;
+}
+
+export function filterPokemon(
+	rows: PokedexTableRow[],
+	filters: PokedexFilters,
+	context: FilterContext = {},
+): PokedexTableRow[] {
+	const favoriteIds = context.favoriteIds ?? new Set<number>();
 	return rows.filter((row) =>
 		matchesSearch(row, filters.search) &&
 		matchesTypes(row, filters.types) &&
@@ -183,7 +224,8 @@ export function filterPokemon(rows: PokedexTableRow[], filters: PokedexFilters):
 		matchesAbilities(row, filters.abilities) &&
 		matchesRarities(row, filters.rarities) &&
 		matchesEvStats(row, filters.evStats) &&
-		matchesQuirks(row, filters.quirks) &&
-		matchesTraits(row, filters.traits)
+		matchesQuirks(row, filters.quirks, context.activeGen) &&
+		matchesTraits(row, filters.traits) &&
+		matchesFavorite(row, filters.favoritesOnly, favoriteIds)
 	);
 }

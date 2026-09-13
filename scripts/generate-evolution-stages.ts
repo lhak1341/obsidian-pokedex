@@ -1,8 +1,10 @@
-// Regenerates src/data/evolutionStages.json — see EVOLUTION_STAGES in
-// data/constants.ts for what the output means and why it's a static table
-// rather than a runtime fetch. Rerun this after a generation ships new
-// evolution chains (a new dex range on its own never changes an EXISTING
-// chain's depth, but a fresh generation always adds new chains of its own).
+// Regenerates src/data/evolutionStages.json AND src/data/finalEvolutionStage.json
+// from one fetch pass over the same 600 evolution-chain resources — see
+// EVOLUTION_STAGES/IS_FINAL_EVOLUTION_STAGE in data/constants.ts for what each
+// output means and why both are static tables rather than a runtime fetch.
+// Rerun this after a generation ships new evolution chains (a new dex range
+// on its own never changes an EXISTING chain's depth/final-stage membership,
+// but a fresh generation always adds new chains of its own).
 //
 // Reuses the real evolutionFamilyDepth from src/data/normalize.ts rather
 // than reimplementing the walk here, so this script can never silently drift
@@ -35,9 +37,18 @@ function idFromUrl(url: string): number {
 	return match ? Number(match[1]) : 0;
 }
 
-function collectMemberIds(link: RawEvolutionChainLink, out: number[] = []): number[] {
-	out.push(idFromUrl(link.species.url));
-	for (const child of link.evolves_to) collectMemberIds(child, out);
+// Unlike evolutionFamilyDepth (called once on the chain root, for the
+// whole-family value every member shares), "final stage" is per-node: a
+// species is its OWN family's final stage iff nothing evolves from it
+// (`evolves_to` is empty at that specific node) — true for every member of a
+// single-stage family (Tauros) and only the leaf member(s) of a deeper one
+// (Charizard, not Charmander/Charmeleon).
+function collectMembers(
+	link: RawEvolutionChainLink,
+	out: { id: number; isFinalStage: boolean }[] = [],
+): { id: number; isFinalStage: boolean }[] {
+	out.push({ id: idFromUrl(link.species.url), isFinalStage: link.evolves_to.length === 0 });
+	for (const child of link.evolves_to) collectMembers(child, out);
 	return out;
 }
 
@@ -45,7 +56,8 @@ async function main() {
 	const list = await fetchJson<{ results: { url: string }[] }>(`${POKEAPI_BASE}/evolution-chain?limit=600`);
 	console.log(`fetched ${list.results.length} evolution-chain resources`);
 
-	const table = new Array<number>(MAX_DEX_NUMBER + 1).fill(0);
+	const stagesTable = new Array<number>(MAX_DEX_NUMBER + 1).fill(0);
+	const finalStageTable = new Array<boolean>(MAX_DEX_NUMBER + 1).fill(false);
 	const seen = new Set<number>();
 	const failures: { url: string; error: unknown }[] = [];
 
@@ -55,10 +67,11 @@ async function main() {
 		async (r) => {
 			const chain = await fetchJson<RawEvolutionChain>(r.url);
 			const depth = evolutionFamilyDepth(chain.chain);
-			for (const id of collectMemberIds(chain.chain)) {
-				if (id >= 1 && id <= MAX_DEX_NUMBER) {
-					table[id] = depth;
-					seen.add(id);
+			for (const member of collectMembers(chain.chain)) {
+				if (member.id >= 1 && member.id <= MAX_DEX_NUMBER) {
+					stagesTable[member.id] = depth;
+					finalStageTable[member.id] = member.isFinalStage;
+					seen.add(member.id);
 				}
 			}
 		},
@@ -78,9 +91,13 @@ async function main() {
 		throw new Error(`missing evolution-chain data for dex numbers: ${missing.join(", ")}`);
 	}
 
-	const outPath = new URL("../src/data/evolutionStages.json", import.meta.url);
-	writeFileSync(outPath, JSON.stringify(table));
-	console.log(`wrote ${outPath.pathname} (${table.length} entries)`);
+	const stagesPath = new URL("../src/data/evolutionStages.json", import.meta.url);
+	writeFileSync(stagesPath, JSON.stringify(stagesTable) + "\n");
+	console.log(`wrote ${stagesPath.pathname} (${stagesTable.length} entries)`);
+
+	const finalStagePath = new URL("../src/data/finalEvolutionStage.json", import.meta.url);
+	writeFileSync(finalStagePath, JSON.stringify(finalStageTable) + "\n");
+	console.log(`wrote ${finalStagePath.pathname} (${finalStageTable.length} entries)`);
 }
 
 main().catch((err: unknown) => {

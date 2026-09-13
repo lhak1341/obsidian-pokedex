@@ -14,6 +14,7 @@ export class PokedexView extends ItemView {
 		private repository: PokedexRepository,
 		private getSettings: () => PluginSettings,
 		private onColumnsChange: (columns: string[]) => void,
+		private onFavoritesChange: (ids: number[]) => void,
 	) {
 		super(leaf);
 	}
@@ -80,6 +81,7 @@ export class PokedexView extends ItemView {
 				repository: this.repository,
 				settings: this.getSettings(),
 				onColumnsChange: this.onColumnsChange,
+				onFavoritesChange: this.onFavoritesChange,
 			},
 		});
 	}

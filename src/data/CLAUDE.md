@@ -27,13 +27,26 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `Cache`/`DiskCache`, `normalize.
   the real exported pure function from `src/data/*.ts` so it cannot drift, writing a
   committed `src/data/*.json` — see `scripts/generate-evolution-stages.ts` and
   `EVOLUTION_STAGES`. This keeps `PokedexTableRow` fields cheap, the invariant a first
-  attempt broke by visibly slowing table load.
-  No gate catches the committed `evolutionStages.json` going stale against
-  `evolutionFamilyDepth` — the generator walks live PokeAPI, so CI cannot regenerate it.
-  Ruled out for now, not triaged away: a committed-fixture test (assert
-  `evolutionFamilyDepth(bulbasaur-evolution-chain.json) === EVOLUTION_STAGES[1]`) would tie
-  the function to the table offline. Build it when a second drift instance lands, or when a
-  change to `evolutionFamilyDepth` is actually proposed.
+  attempt broke by visibly slowing table load. A second per-species fact needing the same
+  underlying walk (e.g. `IS_FINAL_EVOLUTION_STAGE`, per-node leaf-ness off the same
+  evolution-chain data `EVOLUTION_STAGES` already walks) belongs in the SAME script/fetch
+  pass, not a second one refetching all 541 chains again — write both output files from one
+  `main()`. `writeFileSync(JSON.stringify(table))` alone drops the trailing newline the
+  already-committed file has, showing a spurious diff on regen even when every value is
+  identical — append `+ "\n"`.
+  No gate catches a committed table like `evolutionStages.json`/`finalEvolutionStage.json`
+  going stale against the function that produced it — the generator walks live PokeAPI, so
+  CI cannot regenerate it. Ruled out for now, not triaged away: a committed-fixture test
+  (assert `evolutionFamilyDepth(bulbasaur-evolution-chain.json) === EVOLUTION_STAGES[1]`)
+  would tie the function to the table offline. Build it when a second drift instance lands,
+  or when a change to `evolutionFamilyDepth` is actually proposed.
+- Adding a required field to `PokedexTableRow` breaks every test file that builds one as a
+  literal (`dexNav.test.ts`, `filterPokemon.test.ts`, `generationScope.test.ts`,
+  `quickJump.test.ts`, `sortPokemon.test.ts`, `tableColumns.test.ts` each have their own
+  `row()`-shaped builder — no single shared fixture) — run `bun run typecheck` to enumerate
+  every site needing the new field, rather than grepping for existing field names: a
+  `{ ...overrides }` spread from `Partial<PokedexTableRow>` can make the field type-check as
+  optional in isolation and not surface via a text search for a sibling field.
 - A regional-form or evolution-chain bug reported against one Pokemon is usually a whole
   category. Chains already group by shape (Muk-shaped, Yamask-shaped, Corsola-shaped,
   Mime-Jr-shaped, Obstagoon-shaped) — check `normalize.ts`'s shape comments for siblings

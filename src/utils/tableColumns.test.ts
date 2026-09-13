@@ -14,7 +14,7 @@ function makeRow(overrides: Partial<PokedexTableRow> = {}): PokedexTableRow {
 		evYield: [],
 		abilityNames: ["overgrow"],
 		levelUpMoveNames: [],
-		heldItemNames: [],
+		heldItems: [],
 		spriteDataUri: null,
 		height: 7,
 		weight: 69,
@@ -25,6 +25,7 @@ function makeRow(overrides: Partial<PokedexTableRow> = {}): PokedexTableRow {
 		canMegaEvolve: false,
 		canGigantamax: false,
 		evolutionStages: 0,
+		isFinalStage: false,
 		...overrides,
 	};
 }
@@ -68,11 +69,16 @@ describe("TOGGLEABLE_COLUMNS", () => {
 	});
 
 	it("renders '-' for no wild held items", () => {
-		expect(renderOf("heldItems", makeRow({ heldItemNames: [] }))).toBe("-");
+		expect(renderOf("heldItems", makeRow({ heldItems: [] }))).toBe("-");
 	});
 
 	it("renders wild held item names, formatted and comma-joined", () => {
-		const row = makeRow({ heldItemNames: ["oran-berry", "leftovers"] });
+		const row = makeRow({
+			heldItems: [
+				{ name: "oran-berry", rarities: [{ value: 50, generationId: 3 }] },
+				{ name: "leftovers", rarities: [{ value: 5, generationId: 3 }] },
+			],
+		});
 		expect(renderOf("heldItems", row)).toBe("Oran Berry, Leftovers");
 	});
 });

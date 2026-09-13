@@ -6,12 +6,13 @@ function rowWith(overrides: Partial<PokedexTableRow>): PokedexTableRow {
 	return {
 		id: 1, dexNumber: 1, formLabel: null, generationId: 1, name: "test",
 		types: [], stats: { hp: 0, attack: 0, defense: 0, specialAttack: 0, specialDefense: 0, speed: 0 },
-		evYield: [], abilityNames: [], levelUpMoveNames: [], heldItemNames: [], spriteDataUri: null,
+		evYield: [], abilityNames: [], levelUpMoveNames: [], heldItems: [], spriteDataUri: null,
 		height: 0, weight: 0, catchRate: 0, hatchCounter: 0, rarity: "normal",
 		isBaby: false,
 		canMegaEvolve: false,
 		canGigantamax: false,
 		evolutionStages: 0,
+		isFinalStage: false,
 		...overrides,
 	};
 }

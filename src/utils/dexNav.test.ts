@@ -17,7 +17,7 @@ function row(overrides: Partial<PokedexTableRow>): PokedexTableRow {
 		evYield: [],
 		abilityNames: [],
 		levelUpMoveNames: [],
-		heldItemNames: [],
+		heldItems: [],
 		spriteDataUri: null,
 		height: 7,
 		weight: 69,
@@ -28,6 +28,7 @@ function row(overrides: Partial<PokedexTableRow>): PokedexTableRow {
 		canMegaEvolve: false,
 		canGigantamax: false,
 		evolutionStages: 0,
+		isFinalStage: false,
 		...overrides,
 	};
 }

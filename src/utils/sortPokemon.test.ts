@@ -16,7 +16,7 @@ function row(id: number, name: string, speed: number, overrides: Partial<Pokedex
 		evYield: [],
 		abilityNames: [],
 		levelUpMoveNames: [],
-		heldItemNames: [],
+		heldItems: [],
 		spriteDataUri: null,
 		height: 0,
 		weight: 0,
@@ -27,6 +27,7 @@ function row(id: number, name: string, speed: number, overrides: Partial<Pokedex
 		canMegaEvolve: false,
 		canGigantamax: false,
 		evolutionStages: 0,
+		isFinalStage: false,
 		...overrides,
 	};
 }
