@@ -1,4 +1,5 @@
 import {
+	ENCOUNTER_LOCATIONS,
 	EVOLUTION_STAGES,
 	FLAVOR_TEXT_TABS_BY_GEN,
 	FLAVOR_TEXT_VERSION_GROUPS,
@@ -777,6 +778,9 @@ export function toTableRow(
 				.map((m) => m.name),
 		)],
 		heldItems: normalizeHeldItemDetails(pokemon.held_items),
+		// Static lookup keyed by pokemon.name, not a fetch — see
+		// ENCOUNTER_LOCATIONS in constants.ts.
+		encounterLocations: ENCOUNTER_LOCATIONS[pokemon.name] ?? [],
 		spriteDataUri,
 		height: pokemon.height,
 		weight: pokemon.weight,

@@ -26,7 +26,10 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `Cache`/`DiskCache`, `normalize.
   add a runtime fetch. Generate a static lookup table via `scripts/generate-*.ts`, reusing
   the real exported pure function from `src/data/*.ts` so it cannot drift, writing a
   committed `src/data/*.json` — see `scripts/generate-evolution-stages.ts` and
-  `EVOLUTION_STAGES`. This keeps `PokedexTableRow` fields cheap, the invariant a first
+  `EVOLUTION_STAGES`. Same pattern covers genuinely NEW data too (no existing pure function
+  to reuse at all) — see `scripts/generate-encounters.ts`/`ENCOUNTER_LOCATIONS`, which fetches
+  a PokeAPI endpoint (`/pokemon/{id}/encounters`) nothing else in this app touches; staleness
+  risk there is live PokeAPI drifting, not function drift. This keeps `PokedexTableRow` fields cheap, the invariant a first
   attempt broke by visibly slowing table load. A second per-species fact needing the same
   underlying walk (e.g. `IS_FINAL_EVOLUTION_STAGE`, per-node leaf-ness off the same
   evolution-chain data `EVOLUTION_STAGES` already walks) belongs in the SAME script/fetch
@@ -34,8 +37,8 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `Cache`/`DiskCache`, `normalize.
   `main()`. `writeFileSync(JSON.stringify(table))` alone drops the trailing newline the
   already-committed file has, showing a spurious diff on regen even when every value is
   identical — append `+ "\n"`.
-  No gate catches a committed table like `evolutionStages.json`/`finalEvolutionStage.json`
-  going stale against the function that produced it — the generator walks live PokeAPI, so
+  No gate catches a committed table like `evolutionStages.json`/`finalEvolutionStage.json`/
+  `encounterLocations.json` going stale against the function that produced it — the generator walks live PokeAPI, so
   CI cannot regenerate it. Ruled out for now, not triaged away: a committed-fixture test
   (assert `evolutionFamilyDepth(bulbasaur-evolution-chain.json) === EVOLUTION_STAGES[1]`)
   would tie the function to the table offline. Build it when a second drift instance lands,

@@ -21,7 +21,9 @@
 	import RegionalFormNav from "./RegionalFormNav.svelte";
 	import StatBars from "./StatBars.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
+	import { filterEncounterLocationsForGen } from "../../utils/encounterGen";
 	import { filterHeldItemsForGen } from "../../utils/heldItemGen";
+	import { groupEncounterLocations } from "../../utils/tableColumns";
 	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { romanNumeral } from "../../utils/romanNumeral";
 	import { resolveStatsForGen } from "../../utils/stats";
@@ -291,6 +293,7 @@
 		{:else if entryLoad.entry}
 			{@const entry = entryLoad.entry}
 			{@const activeHeldItems = filterHeldItemsForGen(entry.heldItems, activeGen)}
+			{@const activeEncounterLocations = filterEncounterLocationsForGen(entry.encounterLocations, activeGen)}
 			<!-- container-type (not a viewport media query) because this is an
 			Obsidian pane: it can be a narrow sidebar in a wide window or fill a
 			whole ultrawide window, independent of the window's own size. Three
@@ -374,8 +377,20 @@
 				</div>
 
 				<section class="panel">
-					<h3 class="section-heading">Breeding & Capture</h3>
-					<p class="breeding-line">Egg groups: {entry.eggGroups.join(", ") || "None"}</p>
+					<h3 class="section-heading">Capture & Breeding</h3>
+					{#if activeEncounterLocations.length > 0}
+						{@const locationGroups = groupEncounterLocations(activeEncounterLocations)}
+						{@const showRegion = new Set(locationGroups.map((g) => g.region)).size > 1}
+						{#if locationGroups.length > 1}
+							<ul class="breeding-line capture-locations">
+								{#each locationGroups as group (group.text)}
+									<li>{#if showRegion && group.region}<b>{group.region}:</b>{/if} {group.text}</li>
+								{/each}
+							</ul>
+						{:else}
+							<p class="breeding-line">{locationGroups[0].text}</p>
+						{/if}
+					{/if}
 					{#if activeHeldItems.length > 0}
 						<p class="breeding-line">
 							Wild held item:
@@ -404,9 +419,10 @@
 						</div>
 					{/if}
 					<div class="breeding-bars">
-						<BarRow label="Hatch counter" value={entry.hatchCounter} max={MAX_HATCH_COUNTER} />
 						<BarRow label="Catch rate" value={entry.catchRate} max={MAX_CATCH_RATE} />
+						<BarRow label="Hatch counter" value={entry.hatchCounter} max={MAX_HATCH_COUNTER} />
 					</div>
+					<p class="breeding-line">Egg groups: {entry.eggGroups.join(", ") || "None"}</p>
 				</section>
 			</div>
 
@@ -691,6 +707,19 @@
 
 	.breeding-line {
 		margin: 0 0 6px;
+	}
+	.capture-locations {
+		/* list-style-position: inside keeps the bullet in the text's own flow
+		instead of floating it in a separate marker box to the left of
+		padding-left — the default "outside" combo reads as double-indented
+		next to this panel's other flush-left breeding-line text. Zero
+		padding-left puts the bullet glyph itself flush with that same left
+		edge, rather than adding its own extra indent on top. */
+		padding-left: 0;
+		list-style-position: inside;
+	}
+	.capture-locations li {
+		margin: 0;
 	}
 	.gender-bar {
 		display: flex;

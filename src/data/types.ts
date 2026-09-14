@@ -309,6 +309,33 @@ export interface PokedexTableRow {
 	// always one per item (a drop % rarely differs across a generation's own
 	// games), a list for the rare case it does; see normalizeHeldItemDetails.
 	heldItems: { name: string; rarities: { value: number; generationId: number }[] }[];
+	// Wild-encounter location areas, from the static ENCOUNTER_LOCATIONS table
+	// (constants.ts) — not a per-row fetch, see scripts/generate-encounters.ts.
+	// `region` is PokeAPI's own Location.region field (null only for the
+	// handful of PokeAPI locations that carry no region at all), NOT guessed
+	// from the location name's own "kanto-"/"hoenn-" prefix — PokeAPI only
+	// adds that prefix when disambiguation is actually needed, so an
+	// unambiguous Hoenn place like "mirage-tower-area" has no prefix at all
+	// and would silently fall out of a prefix-guessing grouping. Empty for a
+	// Pokemon never found in the wild (starter, evolve-only, legendary/
+	// mythical, gift) AND for any regional-form row (v1 scope gap, documented
+	// in the generator script). Kept unfiltered by Active Gen here, same
+	// reasoning/shape as heldItems above — scope down via
+	// utils/encounterGen.ts's filterEncounterLocationsForGen at display time.
+	// `method` is non-null when this "location" isn't a wild encounter at all
+	// but an NPC hand-off — "trade" (Jynx: trade a Poliwhirl in Cerulean
+	// City, `tradeFor` names the species being traded away), "gift" (a
+	// starter or other story gift — PokeAPI has no separate "starter" method,
+	// so the two are indistinguishable from this data alone), or "egg" (an
+	// NPC hands over an egg, not the Pokemon itself). See
+	// scripts/generate-encounters.ts's acquisitionFromEncounterDetails.
+	encounterLocations: {
+		name: string;
+		generationId: number;
+		region: string | null;
+		method: "trade" | "gift" | "egg" | null;
+		tradeFor: string | null;
+	}[];
 	spriteDataUri: string | null;
 	height: number;
 	weight: number;

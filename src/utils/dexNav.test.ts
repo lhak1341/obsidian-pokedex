@@ -18,6 +18,7 @@ function row(overrides: Partial<PokedexTableRow>): PokedexTableRow {
 		abilityNames: [],
 		levelUpMoveNames: [],
 		heldItems: [],
+		encounterLocations: [],
 		spriteDataUri: null,
 		height: 7,
 		weight: 69,

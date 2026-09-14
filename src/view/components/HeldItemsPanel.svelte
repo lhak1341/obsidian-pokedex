@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { createHoverDescription } from "../hoverDescription.svelte";
+	import { formatPokedollarSigns } from "../../utils/pokedollar";
 	import { formatItemName } from "../../utils/tableColumns";
 	import HoverPopoverBox from "./HoverPopoverBox.svelte";
 
@@ -16,11 +17,11 @@
 
 {#each heldItems as item (item.name)}
 	<span
-		class="held-item-name"
+		class="held-item-entry"
 		role="note"
 		onmouseenter={(e) => popover.show(item.name, e.currentTarget)}
 		onmouseleave={popover.hide}
-	>{formatItemName(item.name)} ({item.rarities.join("/")}%)</span>
+	><span class="held-item-name">{formatItemName(item.name)}</span> ({item.rarities.join("/")}%)</span>
 {/each}
 
 <HoverPopoverBox hoverState={popover}>
@@ -29,16 +30,19 @@
 	{:else if popover.status === "error"}
 		Couldn't load description.
 	{:else}
-		{popover.status.text ?? "No description available."}
+		{popover.status.text ? formatPokedollarSigns(popover.status.text) : "No description available."}
 	{/if}
 </HoverPopoverBox>
 
 <style>
-	.held-item-name {
+	.held-item-entry {
 		cursor: help;
 	}
-	.held-item-name:not(:last-child)::after {
+	.held-item-entry:not(:last-child)::after {
 		content: ", ";
 		cursor: default;
+	}
+	.held-item-name {
+		text-decoration: underline dotted;
 	}
 </style>

@@ -878,6 +878,15 @@ describe("toTableRow", () => {
 		expect(row.canGigantamax).toBe(false);
 	});
 
+	it("falls back to an empty list for a pokemon name absent from the static encounter table", () => {
+		// ENCOUNTER_LOCATIONS is keyed by pokemon.name, generated live (see
+		// scripts/generate-encounters.ts) — a name it was never generated for
+		// (v1 scope: regional forms, or simply a typo) must render as "not
+		// found in the wild", not crash on an undefined lookup.
+		const row = toTableRow({ ...pokemon, name: "not-a-real-species-name" }, species, null);
+		expect(row.encounterLocations).toEqual([]);
+	});
+
 	it("reads isBaby straight off species.is_baby", () => {
 		const babySpecies: RawSpecies = { ...species, is_baby: true };
 		expect(toTableRow(pokemon, babySpecies, null).isBaby).toBe(true);

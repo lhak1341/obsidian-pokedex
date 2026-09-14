@@ -1,16 +1,16 @@
-# Graph Report - obsidian-pokedex  (2026-09-14)
+# Graph Report - obsidian-pokedex  (2026-09-15)
 
 ## Corpus Check
-- 125 files · ~78,228 words
+- 131 files · ~83,700 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 615 nodes · 1236 edges · 38 communities (29 shown, 9 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 8 edges (avg confidence: 0.8)
+- 651 nodes · 1306 edges · 46 communities (36 shown, 10 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 9 edges (avg confidence: 0.77)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `099ee1a4`
+- Built from commit: `0717733c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -22,6 +22,7 @@
 - devDependencies
 - DiskCache
 - main.ts
+- PokeApiClient.ts
 - compilerOptions
 - Multi-Generation Expansion Plan
 - PokeApiClient
@@ -35,21 +36,28 @@
 - CLAUDE.md
 - 0004-repository-cache-fields-not-a-slot-registry.md
 - 0005-evolution-node-branch-selection-not-extracted.md
+- constants.ts
 - sortPokemon.ts
+- resolveGenerationId
 - 0001-two-generation-membership-checks.md
 - 0002-mega-form-cache-not-on-getOrFetch.md
 - 0003-pokedexview-stays-untested.md
 - tableColumns.ts
+- PokedexTableRow
+- quickJump.ts
+- GENERATIONS
 - GENERATIONS
 - imageBounds.ts
 - abilityOptions.ts
 - src/view
 - deploy.mjs
 - lint-ratchet.mjs
+- generationScope.ts
+- pokedollar.ts
 
 ## God Nodes (most connected - your core abstractions)
 1. `PokedexRepository` - 48 edges
-2. `PokedexTableRow` - 31 edges
+2. `PokedexTableRow` - 32 edges
 3. `DiskCache` - 27 edges
 4. `RawPokemon` - 18 edges
 5. `PokeApiClient` - 14 edges
@@ -62,43 +70,47 @@
 ## Surprising Connections (you probably didn't know these)
 - `fetchJson()` --calls--> `withRetry()`  [EXTRACTED]
   scripts/generate-evolution-stages.ts → src/utils/retry.ts
+- `fetchJson()` --calls--> `withRetry()`  [EXTRACTED]
+  scripts/generate-encounters.ts → src/utils/retry.ts
+- `buildAreaRegionMap()` --calls--> `mapWithConcurrency()`  [EXTRACTED]
+  scripts/generate-encounters.ts → src/utils/concurrency.ts
 - `main()` --calls--> `mapWithConcurrency()`  [EXTRACTED]
-  scripts/generate-evolution-stages.ts → src/utils/concurrency.ts
+  scripts/generate-encounters.ts → src/utils/concurrency.ts
 - `main()` --calls--> `evolutionFamilyDepth()`  [EXTRACTED]
   scripts/generate-evolution-stages.ts → src/data/normalize.ts
-- `row()` --calls--> `resolveGenerationId()`  [EXTRACTED]
-  src/utils/filterPokemon.test.ts → src/data/constants.ts
-- `PokedexPlugin` --references--> `DiskCache`  [EXTRACTED]
-  src/main.ts → src/data/Cache.ts
 
 ## Import Cycles
 - 1-file cycle: `src/view/components/EvolutionChain.svelte -> src/view/components/EvolutionChain.svelte`
 
-## Communities (38 total, 9 thin omitted)
+## Communities (46 total, 10 thin omitted)
 
 ### Community 0 - "constants.ts"
-Cohesion: 0.08
-Nodes (33): FOSSIL_IDS, TableLoadResult, PokedexTableRow, EMPTY_FILTERS, FilterContext, filterPokemon(), isIdInGenerations(), matchesAbilities() (+25 more)
+Cohesion: 0.18
+Nodes (17): FOSSIL_IDS, FilterContext, filterPokemon(), matchesAbilities(), matchesEvStats(), matchesFavorite(), matchesQuirk(), matchesQuirks() (+9 more)
 
 ### Community 1 - "DetailScreen.svelte"
 Cohesion: 0.06
-Nodes (45): ./AbilitiesPanel.svelte, popover, ./BarRow.svelte, retry(), startLoad(), ./EvolutionChain.svelte, ./FilterBar.svelte, activeFlavorIndex (+37 more)
+Nodes (47): ./AbilitiesPanel.svelte, popover, ./BarRow.svelte, retry(), startLoad(), ./EvolutionChain.svelte, ./FilterBar.svelte, activeFlavorIndex (+39 more)
 
 ### Community 2 - "types.ts"
-Cohesion: 0.06
-Nodes (53): ADR-0002, EVOLUTION_STAGES, IS_FINAL_EVOLUTION_STAGE, MEGA_VARIETY_KEYS, MOVE_DESCRIPTION_VERSION_GROUPS, buildEvolutionNode(), collectChainIds(), deriveGigantamaxForms() (+45 more)
+Cohesion: 0.11
+Nodes (33): EVOLUTION_STAGES, IS_FINAL_EVOLUTION_STAGE, MEGA_VARIETY_KEYS, MOVE_DESCRIPTION_VERSION_GROUPS, buildEvolutionNode(), collectChainIds(), deriveGigantamaxForms(), deriveMegaForms() (+25 more)
 
 ### Community 3 - "PokedexRepository"
 Cohesion: 0.11
-Nodes (11): ALL_IMAGE_SUFFIXES, imagePath(), ImageSuffix, pokemonPath(), speciesPath(), Generation, PokedexRepository, MoveDetail (+3 more)
+Nodes (15): ADR-0002, ALL_IMAGE_SUFFIXES, imagePath(), ImageSuffix, pokemonPath(), speciesPath(), Generation, trimFlavorTextEntries() (+7 more)
 
 ### Community 4 - "devDependencies"
 Cohesion: 0.05
 Nodes (43): builtin-modules, esbuild, esbuild-svelte, eslint, eslint-plugin-obsidianmd, description, devDependencies, builtin-modules (+35 more)
 
 ### Community 6 - "main.ts"
-Cohesion: 0.06
-Nodes (19): DEFAULT_ENABLED_GENERATIONS, DEFAULT_VISIBLE_COLUMNS, GENERATIONS, PluginSettings, PokedexPlugin, DEFAULT_SETTINGS, PokedexSettingTab, formatBytes() (+11 more)
+Cohesion: 0.08
+Nodes (14): DEFAULT_ENABLED_GENERATIONS, DEFAULT_VISIBLE_COLUMNS, PluginSettings, PokedexPlugin, DEFAULT_SETTINGS, PokedexSettingTab, formatBytes(), describeGenerationAction() (+6 more)
+
+### Community 7 - "PokeApiClient.ts"
+Cohesion: 0.09
+Nodes (24): acquisitionFromEncounterDetails(), buildAreaRegionMap(), fetchJson(), main(), RawEncounter, RawLocation, RawPokemonMinimal, collectMembers() (+16 more)
 
 ### Community 8 - "compilerOptions"
 Cohesion: 0.10
@@ -109,8 +121,8 @@ Cohesion: 0.12
 Nodes (16): Current state (baseline), Design principle: generation is a first-class axis, not bolted on later, Explicitly deferred — needs its own go/no-go, not a default yes, Goal, Log, Multi-Generation Expansion Plan, Open questions — none blocking Phase 1 start, Phase 1 — Gen 4 (Sinnoh, #387-493), no forms/Mega/Gigantamax (+8 more)
 
 ### Community 10 - "PokeApiClient"
-Cohesion: 0.05
-Nodes (32): collectMembers(), fetchJson(), idFromUrl(), main(), arrayBufferToBase64(), DiskCache, extOf(), MIME_BY_EXT (+24 more)
+Cohesion: 0.10
+Nodes (17): arrayBufferToBase64(), DiskCache, extOf(), MIME_BY_EXT, makeCache(), ADR-0006, createFakeDataAdapter(), FakePokeApiClient (+9 more)
 
 ### Community 11 - "manifest.json"
 Cohesion: 0.25
@@ -125,8 +137,8 @@ Cohesion: 0.26
 Nodes (6): pushHistory(), stepBack(), stepForward(), ViewHistoryStep, DetailNavigationState, ScrollInstruction
 
 ### Community 14 - "VarietyToggleState"
-Cohesion: 0.48
-Nodes (5): PortraitImageSource, basePortrait(), resolvePortrait(), shinyPortrait(), full
+Cohesion: 0.09
+Nodes (22): toGigantamaxFormDetail(), EvolutionChainVisual, EvYieldEntry, GigantamaxFormDetail, GigantamaxFormSummary, MegaFormDetail, MegaFormSummary, MoveEntry (+14 more)
 
 ### Community 15 - "Pokedex"
 Cohesion: 0.18
@@ -136,17 +148,37 @@ Nodes (9): obsidian-pokedex, Repo-specific toolchain, Development, Disclosures, 
 Cohesion: 0.33
 Nodes (5): sideAnchoredPreviewPosition(), computeSideAnchoredPreviewPosition(), relativeRect, createHoverDescription(), createHoverPopover()
 
+### Community 28 - "constants.ts"
+Cohesion: 0.12
+Nodes (15): ENCOUNTER_LOCATIONS, FLAVOR_TEXT_TABS_BY_GEN, FLAVOR_TEXT_VERSION_GROUPS, MOVE_VERSION_GROUPS, MOVE_VERSION_TABS_BY_GEN, QuirkDef, QUIRKS, RARITIES (+7 more)
+
 ### Community 29 - "sortPokemon.ts"
-Cohesion: 0.06
-Nodes (37): FLAVOR_TEXT_TABS_BY_GEN, FLAVOR_TEXT_VERSION_GROUPS, MOVE_VERSION_GROUPS, MOVE_VERSION_TABS_BY_GEN, QuirkDef, QUIRKS, RARITIES, REGIONAL_FORMS (+29 more)
+Cohesion: 0.09
+Nodes (31): STAT_COLUMNS, STAT_OVERRIDES, StatBlock, PokedexFilters, SortColumn, SortDirection, sortPokemon(), valueOf() (+23 more)
+
+### Community 30 - "resolveGenerationId"
+Cohesion: 0.18
+Nodes (11): resolveGenerationId(), DexNavEntry, getAdjacentDexEntries(), row(), toNavEntry(), EMPTY_FILTERS, row(), rows (+3 more)
 
 ### Community 34 - "tableColumns.ts"
 Cohesion: 0.33
 Nodes (4): failures, manifest, tag, versions
 
+### Community 35 - "PokedexTableRow"
+Cohesion: 0.35
+Nodes (4): TableLoadResult, PokedexTableRow, isIdInGenerations(), PokedexLoadState
+
+### Community 36 - "quickJump.ts"
+Cohesion: 0.36
+Nodes (6): quickJumpMatches(), QuickJumpNavResult, stepQuickJumpNav(), onKeydown(), registerGlobalHotkey(), createQuickJumpDropdown()
+
 ### Community 37 - "GENERATIONS"
 Cohesion: 0.33
 Nodes (5): Cache, Data layer, Debugging normalize.ts, PokeAPI, src/data (and the utils/view code that touches its cache)
+
+### Community 38 - "GENERATIONS"
+Cohesion: 0.33
+Nodes (5): GENERATIONS, resolveTabsForGen(), FLAVOR_TABS_BY_GEN, LATEST_GEN, MOVE_TABS_BY_GEN
 
 ### Community 39 - "imageBounds.ts"
 Cohesion: 0.67
@@ -164,25 +196,29 @@ Nodes (3): OPTIONAL, REQUIRED, targets
 Cohesion: 0.40
 Nodes (4): report, run, start, warningLines
 
+### Community 44 - "generationScope.ts"
+Cohesion: 0.47
+Nodes (3): matchesGenerations(), GenerationScope, resolveGenerationScope()
+
 ## Knowledge Gaps
-- **155 isolated node(s):** `id`, `name`, `version`, `minAppVersion`, `description` (+150 more)
+- **161 isolated node(s):** `id`, `name`, `version`, `minAppVersion`, `description` (+156 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **9 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **10 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `PokedexRepository` connect `PokedexRepository` to `constants.ts`, `types.ts`, `PokeApiClient`, `main.ts`?**
-  _High betweenness centrality (0.058) - this node is a cross-community bridge._
-- **Why does `DiskCache` connect `PokeApiClient` to `constants.ts`, `types.ts`, `PokedexRepository`, `main.ts`?**
-  _High betweenness centrality (0.037) - this node is a cross-community bridge._
+- **Why does `PokedexRepository` connect `PokedexRepository` to `PokedexTableRow`, `main.ts`, `PokeApiClient.ts`, `PokeApiClient`, `VarietyToggleState`?**
+  _High betweenness centrality (0.054) - this node is a cross-community bridge._
+- **Why does `DiskCache` connect `PokeApiClient` to `PokedexRepository`, `main.ts`, `PokeApiClient.ts`?**
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
+- **Why does `PokedexTableRow` connect `PokedexTableRow` to `constants.ts`, `types.ts`, `PokedexRepository`, `quickJump.ts`, `PokeApiClient`, `generationScope.ts`, `VarietyToggleState`, `sortPokemon.ts`, `resolveGenerationId`?**
+  _High betweenness centrality (0.032) - this node is a cross-community bridge._
 - **What connects `id`, `name`, `version` to the rest of the system?**
-  _155 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `constants.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.07767722473604827 - nodes in this community are weakly interconnected._
+  _161 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `DetailScreen.svelte` be split into smaller, more focused modules?**
-  _Cohesion score 0.0597567424643046 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05721153846153846 - nodes in this community are weakly interconnected._
 - **Should `types.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.06219918548685672 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.10512820512820513 - nodes in this community are weakly interconnected._
 - **Should `PokedexRepository` be split into smaller, more focused modules?**
-  _Cohesion score 0.10938775510204081 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.10595065312046444 - nodes in this community are weakly interconnected._

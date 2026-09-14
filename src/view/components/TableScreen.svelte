@@ -4,10 +4,15 @@
 	import type { PokedexRepository } from "../../data/PokedexRepository";
 	import type { PokedexTableRow } from "../../data/types";
 	import { EMPTY_FILTERS, filterPokemon } from "../../utils/filterPokemon";
+	import { filterEncounterLocationsForGen } from "../../utils/encounterGen";
 	import { filterHeldItemsForGen } from "../../utils/heldItemGen";
+	import { formatPokedollarSigns } from "../../utils/pokedollar";
 	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { sortPokemon, type SortColumn, type SortDirection } from "../../utils/sortPokemon";
-	import { formatItemName, STAT_LABEL_BY_KEY, TOGGLEABLE_COLUMNS } from "../../utils/tableColumns";
+	import {
+		formatEncounterLocationsPlain, formatItemName, groupEncounterLocations, STAT_LABEL_BY_KEY,
+		summarizeAcquisitionMethods, TOGGLEABLE_COLUMNS,
+	} from "../../utils/tableColumns";
 	import { untrack } from "svelte";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
 	import { createHoverDescription } from "../hoverDescription.svelte";
@@ -319,6 +324,11 @@
 										{/each}
 									{/if}
 								</td>
+							{:else if col.key === "encounterLocation"}
+								{@const activeLocations = filterEncounterLocationsForGen(row.encounterLocations, activeGen)}
+								<td title={formatEncounterLocationsPlain(groupEncounterLocations(activeLocations))}>
+									{activeLocations.length === 0 ? "-" : summarizeAcquisitionMethods(activeLocations)}
+								</td>
 							{:else}
 								<td class:right={col.align === "right"}>{col.render(row)}</td>
 							{/if}
@@ -348,7 +358,7 @@
 		{:else if itemPopover.status === "error"}
 			Couldn't load description.
 		{:else}
-			{itemPopover.status.text ?? "No description available."}
+			{itemPopover.status.text ? formatPokedollarSigns(itemPopover.status.text) : "No description available."}
 		{/if}
 	</HoverPopoverBox>
 

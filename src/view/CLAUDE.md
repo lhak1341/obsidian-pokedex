@@ -67,7 +67,10 @@ before assuming a plugin bug.
   wrap it — is the actual `overflow-y: auto` scroll container for the table screen.
 - Current screen: `.pokedex-view > div`'s `className` contains `hidden-screen` when the
   table is hidden (i.e. viewing detail); `.dex-eyebrow`'s `textContent` (`"No. 004"`) says
-  which Pokemon.
+  which Pokemon. Both screens' DOM stay mounted regardless — a class name reused across a
+  table cell and a detail-page component (e.g. `.held-item-name` in both `TableScreen.svelte`
+  and `HeldItemsPanel.svelte`) can match the wrong (hidden) screen's element unless the
+  selector is scoped to `.table-screen`/`.detail-screen` first.
 - FilterBar's Type/Gen/Ability/Stats/Rarity/EV/Quirks dropdowns are native
   `<details>`/`<summary>`, not JS popovers — click the `<summary>` (match trimmed text with
   `startsWith`; some carry a live count badge like "Gen 1").

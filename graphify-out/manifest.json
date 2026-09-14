@@ -10,13 +10,13 @@
     "semantic_hash": ""
   },
   "manifest.json": {
-    "mtime": 1789043807.4237874,
-    "ast_hash": "2187491b3af8b128539fa83c5276d72f",
+    "mtime": 1789324294.5489697,
+    "ast_hash": "c6326b619e3c8958e70d4d1328092856",
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1789043803.1298652,
-    "ast_hash": "6d10371564cbcd108be31175389c7b20",
+    "mtime": 1789324297.3965414,
+    "ast_hash": "93e64639c5a0a1f19e1ac6b60d9bfd38",
     "semantic_hash": ""
   },
   "src/data/Cache.test.ts": {
@@ -70,23 +70,23 @@
     "semantic_hash": ""
   },
   "src/data/constants.ts": {
-    "mtime": 1789323203.7056015,
-    "ast_hash": "1c342b8f4579d09f189172978d642145",
+    "mtime": 1789403332.1156952,
+    "ast_hash": "bc088fc1e004cae9ce40801652743ec5",
     "semantic_hash": ""
   },
   "src/data/normalize.test.ts": {
-    "mtime": 1789323313.8596656,
-    "ast_hash": "ae157a92dcc3b2cb9fad7463052d0ef7",
+    "mtime": 1789397034.4384334,
+    "ast_hash": "3723e700e52105e358d7671463f2101f",
     "semantic_hash": ""
   },
   "src/data/normalize.ts": {
-    "mtime": 1789323231.535868,
-    "ast_hash": "93a254fefa75dfa633d33660f675ba0d",
+    "mtime": 1789396831.629575,
+    "ast_hash": "caf8a63a4e5af8f548b0fd781e6c4ad0",
     "semantic_hash": ""
   },
   "src/data/types.ts": {
-    "mtime": 1789323217.543523,
-    "ast_hash": "d9a3f4264cd9e3ccf74a0dd35a93361b",
+    "mtime": 1789403173.701896,
+    "ast_hash": "be038a7b832214091f31655c1c3e05e6",
     "semantic_hash": ""
   },
   "src/main.ts": {
@@ -110,8 +110,8 @@
     "semantic_hash": ""
   },
   "src/utils/filterPokemon.test.ts": {
-    "mtime": 1789323291.5213618,
-    "ast_hash": "5a8ee9bcbb73d34bac65e2b12dad7606",
+    "mtime": 1789396966.421303,
+    "ast_hash": "e204daaf35c0b1724b34d6938e07482b",
     "semantic_hash": ""
   },
   "src/utils/filterPokemon.ts": {
@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "src/utils/generationScope.test.ts": {
-    "mtime": 1789323265.5914516,
-    "ast_hash": "fbe823d30ccde49dd6b9f12b9547e153",
+    "mtime": 1789396973.3904943,
+    "ast_hash": "8a190fff1062bb3f0b552bd3f4f97b3e",
     "semantic_hash": ""
   },
   "src/utils/generationScope.ts": {
@@ -180,8 +180,8 @@
     "semantic_hash": ""
   },
   "src/utils/quickJump.test.ts": {
-    "mtime": 1789323268.2838995,
-    "ast_hash": "1b9950e23f0addb1017ab091297f54e3",
+    "mtime": 1789396979.6957796,
+    "ast_hash": "5225e7bb7f237bc8fab54be74301b509",
     "semantic_hash": ""
   },
   "src/utils/quickJump.ts": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "src/utils/sortPokemon.test.ts": {
-    "mtime": 1789323271.1992617,
-    "ast_hash": "db1ab7256abb1743779182c25366a06e",
+    "mtime": 1789396986.346561,
+    "ast_hash": "8635feec5e245ac1fa7e0db907c664fb",
     "semantic_hash": ""
   },
   "src/utils/sortPokemon.ts": {
@@ -220,13 +220,13 @@
     "semantic_hash": ""
   },
   "src/utils/tableColumns.test.ts": {
-    "mtime": 1789323274.1813276,
-    "ast_hash": "29397f5aef0d4c42712822cb37f939ca",
+    "mtime": 1789405629.3077116,
+    "ast_hash": "cc0e02b4824572c3ead5bc7de21c3d83",
     "semantic_hash": ""
   },
   "src/utils/tableColumns.ts": {
-    "mtime": 1789316620.8461637,
-    "ast_hash": "af2d072100eeceb37853a7becfef98cc",
+    "mtime": 1789405572.5085194,
+    "ast_hash": "77ecec9bd1e9b51023605ca45d11016d",
     "semantic_hash": ""
   },
   "src/utils/viewHistory.test.ts": {
@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   "src/view/components/DetailScreen.svelte": {
-    "mtime": 1789317122.9802303,
-    "ast_hash": "5d86ec175c755eb4153998cd498eacc5",
+    "mtime": 1789405595.3351288,
+    "ast_hash": "52a22b96790e4ec5cbfd0e75ed558f8e",
     "semantic_hash": ""
   },
   "src/view/components/EvolutionChain.svelte": {
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "src/view/components/TableScreen.svelte": {
-    "mtime": 1789322034.6209214,
-    "ast_hash": "9323f92ef62d65ebd486c0b6d74b8e88",
+    "mtime": 1789405495.4787853,
+    "ast_hash": "6ca65dc680db999c6654894fc76d3e92",
     "semantic_hash": ""
   },
   "src/view/components/TypeBadge.svelte": {
@@ -355,8 +355,8 @@
     "semantic_hash": ""
   },
   "versions.json": {
-    "mtime": 1789043811.529614,
-    "ast_hash": "34028ec7a0f40abda29055bb34234dd3",
+    "mtime": 1789324299.8830786,
+    "ast_hash": "6fc832f32a5cb401d564e15df6a02fed",
     "semantic_hash": ""
   },
   "vitest.config.ts": {
@@ -390,8 +390,8 @@
     "semantic_hash": ""
   },
   "src/view/components/HeldItemsPanel.svelte": {
-    "mtime": 1785260822.9626925,
-    "ast_hash": "95edd5d2b7d0b84768b4d97b6a4b2b1f",
+    "mtime": 1789405474.2177045,
+    "ast_hash": "fc87b13f104a5dda849d0848cbeeb8db",
     "semantic_hash": ""
   },
   "src/view/components/RegionalFormNav.svelte": {
@@ -400,8 +400,8 @@
     "semantic_hash": ""
   },
   "src/utils/dexNav.test.ts": {
-    "mtime": 1789323259.7994754,
-    "ast_hash": "7938f02a0cd95a6b0f18cca0f796e419",
+    "mtime": 1789396959.8499708,
+    "ast_hash": "96092cb3fa432bce6c785323f2f0b2d9",
     "semantic_hash": ""
   },
   "src/utils/dexNav.ts": {
@@ -610,13 +610,13 @@
     "semantic_hash": ""
   },
   "src/data/CLAUDE.md": {
-    "mtime": 1789323697.2196636,
-    "ast_hash": "923e0cc6f4ac9d9e42093d0fb5d47b8c",
+    "mtime": 1789406258.271067,
+    "ast_hash": "84f02306c718d100160dc2ac2852806c",
     "semantic_hash": ""
   },
   "src/view/CLAUDE.md": {
-    "mtime": 1789322939.997591,
-    "ast_hash": "d07a0200e2124074282d4cda025b3fcd",
+    "mtime": 1789406265.5868552,
+    "ast_hash": "ee4af21698ffffe17171a1732eebaa7a",
     "semantic_hash": ""
   },
   "src/data/finalEvolutionStage.json": {
@@ -632,6 +632,36 @@
   "src/utils/heldItemGen.ts": {
     "mtime": 1789317053.8040428,
     "ast_hash": "04067a377de98a98266883fb8bee0072",
+    "semantic_hash": ""
+  },
+  "scripts/generate-encounters.ts": {
+    "mtime": 1789403147.0233731,
+    "ast_hash": "2e7a31b6f7a80f06c62b862394f5fbd0",
+    "semantic_hash": ""
+  },
+  "src/data/encounterLocations.json": {
+    "mtime": 1789403193.292794,
+    "ast_hash": "0c24b0d68b7fb0a41749e93774cb47bf",
+    "semantic_hash": ""
+  },
+  "src/utils/encounterGen.test.ts": {
+    "mtime": 1789403346.4867327,
+    "ast_hash": "ad842502c89e79564d9ac18067e48ce1",
+    "semantic_hash": ""
+  },
+  "src/utils/encounterGen.ts": {
+    "mtime": 1789403198.3393362,
+    "ast_hash": "1b6042b2274dba9cf2e427621bf60ac9",
+    "semantic_hash": ""
+  },
+  "src/utils/pokedollar.test.ts": {
+    "mtime": 1789405503.0863266,
+    "ast_hash": "ab66e2ab3cc00fb79ba6e7e9b31603fe",
+    "semantic_hash": ""
+  },
+  "src/utils/pokedollar.ts": {
+    "mtime": 1789405457.9479108,
+    "ast_hash": "2c6dfb24339dccc53abe9b4dcde02623",
     "semantic_hash": ""
   }
 }
