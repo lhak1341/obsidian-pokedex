@@ -166,7 +166,7 @@
 		margin: 0 0 10px;
 		padding-left: 9px;
 		border-left: 3px solid var(--accent);
-		font-family: var(--font-monospace);
+		font-family: var(--pkx-fm);
 		font-size: 0.7rem;
 		font-weight: 600;
 		letter-spacing: 0.09em;

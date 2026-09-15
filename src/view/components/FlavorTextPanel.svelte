@@ -78,6 +78,7 @@
 		padding-left: 10px;
 		border-left: 2px solid var(--background-modifier-border);
 		color: var(--text-muted);
+		font-family: var(--pkx-fb);
 		font-size: 0.82rem;
 		line-height: 1.45;
 	}

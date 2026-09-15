@@ -1,6 +1,17 @@
+/* Overridable per-instance via inline style (see PokedexView.applyFontVars) -- the
+   Appearance setting tab's default "Pokedex" choice leaves these unset there, falling
+   through to these theme fonts. contentEl (not the Svelte-mounted .pokedex-view child, which
+   gets torn down and rebuilt on every remount) carries this class -- see PokedexView.ts. */
+.pokedex-outer {
+	--pkx-fh: var(--font-interface);
+	--pkx-fb: var(--font-text);
+	--pkx-fm: var(--font-monospace);
+}
+
 .pokedex-view {
 	height: 100%;
 	overflow: auto;
 	scrollbar-gutter: stable;
 	padding: var(--size-4-4);
+	font-family: var(--pkx-fh);
 }

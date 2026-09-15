@@ -639,7 +639,7 @@
 	}
 	.dex-eyebrow {
 		margin: 0;
-		font-family: var(--font-monospace);
+		font-family: var(--pkx-fm);
 		font-size: 0.78rem;
 		font-weight: 600;
 		letter-spacing: 0.08em;
@@ -681,7 +681,7 @@
 	}
 	.physical-readout dd {
 		margin: 0;
-		font-family: var(--font-monospace);
+		font-family: var(--pkx-fm);
 		font-size: 0.92rem;
 		color: var(--text-normal);
 	}
@@ -696,7 +696,7 @@
 		margin: 0 0 10px;
 		padding-left: 9px;
 		border-left: 3px solid var(--accent);
-		font-family: var(--font-monospace);
+		font-family: var(--pkx-fm);
 		font-size: 0.7rem;
 		font-weight: 600;
 		letter-spacing: 0.09em;
@@ -746,7 +746,7 @@
 		display: flex;
 		align-items: center;
 		gap: 3px;
-		font-family: var(--font-monospace);
+		font-family: var(--pkx-fm);
 	}
 	.gender-male {
 		color: #4a90d9;

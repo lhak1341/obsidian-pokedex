@@ -1,13 +1,27 @@
 import { Notice, PluginSettingTab, Setting, type ButtonComponent, type SettingDefinitionItem } from "obsidian";
 import { DEFAULT_ENABLED_GENERATIONS, DEFAULT_VISIBLE_COLUMNS, GENERATIONS } from "./data/constants";
-import type { PluginSettings } from "./data/types";
+import type { FontChoice, PluginSettings } from "./data/types";
 import type PokedexPlugin from "./main";
 import { describeGenerationAction, describeGenerationStatus } from "./utils/generationCacheDescription";
 import { formatBytes } from "./utils/formatBytes";
 import { resolveGenerationToggle } from "./utils/generationToggle";
 import { GenerationCacheController } from "./view/GenerationCacheController";
 
+const FONT_OPTIONS: Record<FontChoice, string> = {
+	pokedex: "Pokedex default (theme fonts)",
+	"obsidian-interface": "Obsidian: Interface font",
+	"obsidian-text": "Obsidian: Text font",
+	"obsidian-monospace": "Obsidian: Monospace font",
+	custom: "Custom…",
+};
+
 export const DEFAULT_SETTINGS: PluginSettings = {
+	fontHeading: "pokedex",
+	fontHeadingCustom: "",
+	fontBody: "pokedex",
+	fontBodyCustom: "",
+	fontMono: "pokedex",
+	fontMonoCustom: "",
 	enabledGenerations: DEFAULT_ENABLED_GENERATIONS,
 	spriteStyle: "official-artwork",
 	gridDensity: "comfortable",
@@ -214,6 +228,34 @@ export class PokedexSettingTab extends PluginSettingTab {
 					})
 			);
 
+		new Setting(containerEl).setName("Appearance").setHeading();
+		const appearanceItems = containerEl.createDiv("setting-group").createDiv("setting-items");
+
+		this.renderFontPicker(appearanceItems, {
+			name: "Heading font",
+			desc: "Font for the table, section headers, and hover-popover text.",
+			getValue: () => this.plugin.settings.fontHeading,
+			setValue: (value) => { this.plugin.settings.fontHeading = value; },
+			getCustom: () => this.plugin.settings.fontHeadingCustom,
+			setCustom: (value) => { this.plugin.settings.fontHeadingCustom = value; },
+		});
+		this.renderFontPicker(appearanceItems, {
+			name: "Body font",
+			desc: "Font for the detail screen's flavor text.",
+			getValue: () => this.plugin.settings.fontBody,
+			setValue: (value) => { this.plugin.settings.fontBody = value; },
+			getCustom: () => this.plugin.settings.fontBodyCustom,
+			setCustom: (value) => { this.plugin.settings.fontBodyCustom = value; },
+		});
+		this.renderFontPicker(appearanceItems, {
+			name: "Monospace font",
+			desc: "Font for stats and other numeric/data-style text.",
+			getValue: () => this.plugin.settings.fontMono,
+			setValue: (value) => { this.plugin.settings.fontMono = value; },
+			getCustom: () => this.plugin.settings.fontMonoCustom,
+			setCustom: (value) => { this.plugin.settings.fontMonoCustom = value; },
+		});
+
 		new Setting(containerEl).setName("Cache").setHeading();
 		const cacheItems = containerEl.createDiv("setting-group").createDiv("setting-items");
 
@@ -237,5 +279,39 @@ export class PokedexSettingTab extends PluginSettingTab {
 						this.display();
 					})
 			);
+	}
+
+	private renderFontPicker(items: HTMLElement, opts: {
+		name: string;
+		desc: string;
+		getValue: () => FontChoice;
+		setValue: (value: FontChoice) => void;
+		getCustom: () => string;
+		setCustom: (value: string) => void;
+	}): void {
+		let customFontEl: Setting;
+		new Setting(items)
+			.setName(opts.name)
+			.setDesc(opts.desc)
+			.addDropdown((dropdown) => {
+				Object.entries(FONT_OPTIONS).forEach(([v, label]) => { dropdown.addOption(v, label); });
+				dropdown.setValue(opts.getValue()).onChange(async (value) => {
+					opts.setValue(value as FontChoice);
+					customFontEl.settingEl.style.display = value === "custom" ? "" : "none";
+					await this.plugin.saveSettings();
+				});
+			});
+		customFontEl = new Setting(items)
+			.setName("")
+			.addText((text) =>
+				text
+					.setPlaceholder("Font family name")
+					.setValue(opts.getCustom())
+					.onChange(async (value) => {
+						opts.setCustom(value.trim());
+						await this.plugin.saveSettings();
+					}),
+			);
+		customFontEl.settingEl.style.display = opts.getValue() === "custom" ? "" : "none";
 	}
 }

@@ -2,6 +2,7 @@ import { ItemView, type WorkspaceLeaf } from "obsidian";
 import { mount, unmount } from "svelte";
 import type { PokedexRepository } from "../data/PokedexRepository";
 import type { PluginSettings } from "../data/types";
+import { resolveFontVar } from "../utils/fonts";
 import PokedexApp from "./PokedexApp.svelte";
 
 export const VIEW_TYPE_POKEDEX = "pokedex-view";
@@ -75,6 +76,8 @@ export class PokedexView extends ItemView {
 			this.appInstance = undefined;
 		}
 		this.contentEl.empty();
+		this.contentEl.addClass("pokedex-outer");
+		this.applyFontVars();
 		this.appInstance = mount(PokedexApp, {
 			target: this.contentEl,
 			props: {
@@ -84,5 +87,23 @@ export class PokedexView extends ItemView {
 				onFavoritesChange: this.onFavoritesChange,
 			},
 		});
+	}
+
+	// --pkx-fh/fb/fm as inline style on contentEl -- inline wins over the
+	// `.pokedex-outer` class rule that declares the theme-following ("pokedex")
+	// defaults, so choosing that default is a no-op removeProperty. contentEl
+	// itself survives every mountApp() remount (only its children get emptied
+	// above), so this only needs to run once per remount, not per Svelte update.
+	private applyFontVars(): void {
+		const { fontHeading, fontHeadingCustom, fontBody, fontBodyCustom, fontMono, fontMonoCustom } = this.getSettings();
+		const el = this.contentEl;
+		const set = (prop: string, choice: PluginSettings["fontHeading"], custom: string) => {
+			const v = resolveFontVar(choice, custom);
+			if (v) el.style.setProperty(prop, v);
+			else el.style.removeProperty(prop);
+		};
+		set("--pkx-fh", fontHeading, fontHeadingCustom);
+		set("--pkx-fb", fontBody, fontBodyCustom);
+		set("--pkx-fm", fontMono, fontMonoCustom);
 	}
 }

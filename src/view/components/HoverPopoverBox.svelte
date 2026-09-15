@@ -37,6 +37,7 @@
 		border-radius: var(--radius-m, 8px);
 		box-shadow: var(--shadow-s);
 		padding: 8px 10px;
+		font-family: var(--pkx-fh);
 		font-size: 0.85em;
 		color: var(--text-normal);
 		pointer-events: none;

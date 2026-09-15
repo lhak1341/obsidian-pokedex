@@ -442,7 +442,15 @@ export interface MegaFormDetail extends PortraitImageSource {
 	stats: StatBlock;
 }
 
+export type FontChoice = "pokedex" | "obsidian-interface" | "obsidian-text" | "obsidian-monospace" | "custom";
+
 export interface PluginSettings {
+	fontHeading: FontChoice;
+	fontHeadingCustom: string;
+	fontBody: FontChoice;
+	fontBodyCustom: string;
+	fontMono: FontChoice;
+	fontMonoCustom: string;
 	enabledGenerations: number[];
 	spriteStyle: "official-artwork" | "sprite";
 	gridDensity: "compact" | "comfortable";
