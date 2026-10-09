@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { describeEvolutionRequirement } from "../../data/normalize";
 	import type { EvolutionNode } from "../../data/types";
-	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
+	import { formatDexNumber, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import EvolutionChain from "./EvolutionChain.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 
@@ -44,7 +44,7 @@
 		(whitespace-only inline content gets trimmed away), which silently
 		defeated that — a non-breaking space renders like real text instead. -->
 		<span class="evo-method">{evolveLabel || " "}</span>
-		<span class="evo-label">#{String(node.dexNumber).padStart(3, "0")} {formatPokemonDisplayName(node)}</span>
+		<span class="evo-label">#{formatDexNumber(node.dexNumber)} {formatPokemonDisplayName(node)}</span>
 		<span class="evo-types">
 			{#each types[node.id] ?? [] as type (type)}
 				<TypeBadge {type} useIcon={useTypeIcons} compact />

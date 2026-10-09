@@ -35,13 +35,13 @@
     "semantic_hash": ""
   },
   "src/data/PokedexRepository.test.ts": {
-    "mtime": 1789316433.356055,
-    "ast_hash": "1abb2bc5053c015738970e84e735494e",
+    "mtime": 1791559091.760423,
+    "ast_hash": "797cf37d18d1b79e6c36dedb79fd7b9e",
     "semantic_hash": ""
   },
   "src/data/PokedexRepository.ts": {
-    "mtime": 1789042876.5584123,
-    "ast_hash": "848802e4af6dedca0f64d83cc590471d",
+    "mtime": 1791557933.0391579,
+    "ast_hash": "b486594b1db6bb69b33fe561574f2a85",
     "semantic_hash": ""
   },
   "src/data/__fixtures__/bulbasaur-evolution-chain.json": {
@@ -70,23 +70,23 @@
     "semantic_hash": ""
   },
   "src/data/constants.ts": {
-    "mtime": 1789403332.1156952,
-    "ast_hash": "bc088fc1e004cae9ce40801652743ec5",
+    "mtime": 1791559100.1249695,
+    "ast_hash": "2a4e2cbac5c85e5cbd500695688b955f",
     "semantic_hash": ""
   },
   "src/data/normalize.test.ts": {
-    "mtime": 1789397034.4384334,
-    "ast_hash": "3723e700e52105e358d7671463f2101f",
+    "mtime": 1791559091.7666013,
+    "ast_hash": "ff48c05cf7ed6138ed55b8037d9931d5",
     "semantic_hash": ""
   },
   "src/data/normalize.ts": {
-    "mtime": 1789396831.629575,
-    "ast_hash": "caf8a63a4e5af8f548b0fd781e6c4ad0",
+    "mtime": 1791559114.8646219,
+    "ast_hash": "39b6681b9fc5f450c3742cbf027a3e7b",
     "semantic_hash": ""
   },
   "src/data/types.ts": {
-    "mtime": 1789403173.701896,
-    "ast_hash": "be038a7b832214091f31655c1c3e05e6",
+    "mtime": 1791559091.770165,
+    "ast_hash": "15a130f18677a380762f21e398cb2452",
     "semantic_hash": ""
   },
   "src/main.ts": {
@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "src/settings.ts": {
-    "mtime": 1789320302.2307775,
-    "ast_hash": "9df24bf78748c6796ab422361ce889c9",
+    "mtime": 1789484283.566969,
+    "ast_hash": "8f6ff587e58346e7701f14de5d9206f1",
     "semantic_hash": ""
   },
   "src/utils/concurrency.test.ts": {
@@ -110,13 +110,13 @@
     "semantic_hash": ""
   },
   "src/utils/filterPokemon.test.ts": {
-    "mtime": 1789396966.421303,
-    "ast_hash": "e204daaf35c0b1724b34d6938e07482b",
+    "mtime": 1791559148.4509022,
+    "ast_hash": "5dd2254028d64d2caf3eab834e85aab2",
     "semantic_hash": ""
   },
   "src/utils/filterPokemon.ts": {
-    "mtime": 1789323241.0369885,
-    "ast_hash": "5790cc249f2aaf94a2c05e1eb2c4c152",
+    "mtime": 1791559137.5588973,
+    "ast_hash": "dc831d88f52e6e83ef0975b45c48d3d5",
     "semantic_hash": ""
   },
   "src/utils/formatBytes.test.ts": {
@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "src/utils/generationScope.test.ts": {
-    "mtime": 1789396973.3904943,
-    "ast_hash": "8a190fff1062bb3f0b552bd3f4f97b3e",
+    "mtime": 1791559091.7755363,
+    "ast_hash": "6078695dca11cb86b984fa6ed90f22b3",
     "semantic_hash": ""
   },
   "src/utils/generationScope.ts": {
@@ -180,8 +180,8 @@
     "semantic_hash": ""
   },
   "src/utils/quickJump.test.ts": {
-    "mtime": 1789396979.6957796,
-    "ast_hash": "5225e7bb7f237bc8fab54be74301b509",
+    "mtime": 1791559091.7776234,
+    "ast_hash": "c06a7ea3e3326f623c28b523d946af9e",
     "semantic_hash": ""
   },
   "src/utils/quickJump.ts": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "src/utils/sortPokemon.test.ts": {
-    "mtime": 1789396986.346561,
-    "ast_hash": "8635feec5e245ac1fa7e0db907c664fb",
+    "mtime": 1791559091.7784405,
+    "ast_hash": "0a0d3886c9f51ef65b15a99bd9a46640",
     "semantic_hash": ""
   },
   "src/utils/sortPokemon.ts": {
@@ -220,13 +220,13 @@
     "semantic_hash": ""
   },
   "src/utils/tableColumns.test.ts": {
-    "mtime": 1789405629.3077116,
-    "ast_hash": "cc0e02b4824572c3ead5bc7de21c3d83",
+    "mtime": 1791559196.963928,
+    "ast_hash": "2c65f988a2bf45f21d8a7ef53e476d74",
     "semantic_hash": ""
   },
   "src/utils/tableColumns.ts": {
-    "mtime": 1789405572.5085194,
-    "ast_hash": "77ecec9bd1e9b51023605ca45d11016d",
+    "mtime": 1791560287.7762923,
+    "ast_hash": "94f9b94e07fe60b2c72bae242b04b979",
     "semantic_hash": ""
   },
   "src/utils/viewHistory.test.ts": {
@@ -265,8 +265,8 @@
     "semantic_hash": ""
   },
   "src/view/PokedexView.ts": {
-    "mtime": 1789320318.361622,
-    "ast_hash": "06af36f649447b2227baf6727a1202eb",
+    "mtime": 1789484193.2618454,
+    "ast_hash": "ebbdb3741102a9e9e8333f56b5fd0c7a",
     "semantic_hash": ""
   },
   "src/view/components/AbilitiesPanel.svelte": {
@@ -280,13 +280,13 @@
     "semantic_hash": ""
   },
   "src/view/components/DetailScreen.svelte": {
-    "mtime": 1789405595.3351288,
-    "ast_hash": "52a22b96790e4ec5cbfd0e75ed558f8e",
+    "mtime": 1791560287.7761595,
+    "ast_hash": "d898e48edfed83e1bd57ab935224f922",
     "semantic_hash": ""
   },
   "src/view/components/EvolutionChain.svelte": {
-    "mtime": 1784135504.163798,
-    "ast_hash": "858f249edc9dd602a6d05198f657d833",
+    "mtime": 1791560302.2465196,
+    "ast_hash": "285ae7c8b45f1a04bf81dc680c6c2e21",
     "semantic_hash": ""
   },
   "src/view/components/EvolutionTree.svelte": {
@@ -300,8 +300,8 @@
     "semantic_hash": ""
   },
   "src/view/components/FlavorTextPanel.svelte": {
-    "mtime": 1784079549.0782065,
-    "ast_hash": "6ea7305f9d9dc5325f2618629c94d186",
+    "mtime": 1789484246.0366707,
+    "ast_hash": "6895cb739c3f804f450d9a4f78a391b0",
     "semantic_hash": ""
   },
   "src/view/components/Icon.svelte": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "src/view/components/MoveBrowser.svelte": {
-    "mtime": 1785260822.963457,
-    "ast_hash": "77d5c25c7c111f386d698de043dc2c5e",
+    "mtime": 1789484261.862251,
+    "ast_hash": "a1c2901814ba7d4dfc791b4e993a23a8",
     "semantic_hash": ""
   },
   "src/view/components/QuickSearch.svelte": {
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "src/view/components/TableScreen.svelte": {
-    "mtime": 1789405495.4787853,
-    "ast_hash": "6ca65dc680db999c6654894fc76d3e92",
+    "mtime": 1791560287.7751892,
+    "ast_hash": "bd9af5c757524a032f4e6689ded83806",
     "semantic_hash": ""
   },
   "src/view/components/TypeBadge.svelte": {
@@ -370,8 +370,8 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1784851136.8660922,
-    "ast_hash": "8ae06104687bd106a8cc67182b45c836",
+    "mtime": 1791559221.2586052,
+    "ast_hash": "45ba21c3967365b5b5283ce1a077f952",
     "semantic_hash": ""
   },
   "README.md": {
@@ -385,13 +385,13 @@
     "semantic_hash": ""
   },
   "src/utils/pokemonDisplay.ts": {
-    "mtime": 1784134761.5819716,
-    "ast_hash": "95882ef713578b2cdca401cbc83592ef",
+    "mtime": 1791560287.774382,
+    "ast_hash": "2a25f436fd50f53929e4bfc46d252d13",
     "semantic_hash": ""
   },
   "src/view/components/HeldItemsPanel.svelte": {
-    "mtime": 1789405474.2177045,
-    "ast_hash": "fc87b13f104a5dda849d0848cbeeb8db",
+    "mtime": 1791559190.4461064,
+    "ast_hash": "2b8a7e490fa8728cfd0e6471901dd071",
     "semantic_hash": ""
   },
   "src/view/components/RegionalFormNav.svelte": {
@@ -400,8 +400,8 @@
     "semantic_hash": ""
   },
   "src/utils/dexNav.test.ts": {
-    "mtime": 1789396959.8499708,
-    "ast_hash": "96092cb3fa432bce6c785323f2f0b2d9",
+    "mtime": 1791559091.7717261,
+    "ast_hash": "5e3d5089728b9aa5d2b7de0823163404",
     "semantic_hash": ""
   },
   "src/utils/dexNav.ts": {
@@ -455,8 +455,8 @@
     "semantic_hash": ""
   },
   "src/view/components/QuickJumpDropdown.svelte": {
-    "mtime": 1784654170.6706412,
-    "ast_hash": "5c3d1b570d3157047e46e4dc78cad2da",
+    "mtime": 1791560302.2458172,
+    "ast_hash": "a86769356d97f95335ef74d09a33f49d",
     "semantic_hash": ""
   },
   "src/view/quickJumpDropdown.svelte.ts": {
@@ -465,13 +465,13 @@
     "semantic_hash": ""
   },
   "scripts/generate-evolution-stages.ts": {
-    "mtime": 1789323175.2399216,
-    "ast_hash": "04dda1a243e38a5e2cbd21ce5fb2885c",
+    "mtime": 1791557926.6027799,
+    "ast_hash": "f9693dd1ad7d260d461623dbb589a248",
     "semantic_hash": ""
   },
   "src/data/evolutionStages.json": {
-    "mtime": 1789323180.6184075,
-    "ast_hash": "aeefd0f917c257f919c496e62e4da328",
+    "mtime": 1791558092.0008004,
+    "ast_hash": "e6560129d28c36873d9a6dee6cf42f84",
     "semantic_hash": ""
   },
   "src/view/VarietyToggleState.test.ts": {
@@ -540,8 +540,8 @@
     "semantic_hash": ""
   },
   "src/view/components/HoverPopoverBox.svelte": {
-    "mtime": 1785260999.725311,
-    "ast_hash": "6185cc95eccaa432b6e07e43a605ea95",
+    "mtime": 1789484201.3727741,
+    "ast_hash": "256c0444481d7337ba293edd5c7312b1",
     "semantic_hash": ""
   },
   "src/utils/abilityOptions.test.ts": {
@@ -610,28 +610,28 @@
     "semantic_hash": ""
   },
   "src/data/CLAUDE.md": {
-    "mtime": 1789406258.271067,
-    "ast_hash": "84f02306c718d100160dc2ac2852806c",
+    "mtime": 1791558189.1450417,
+    "ast_hash": "805d7eaa3c9bba7b708f3fe83a7d659d",
     "semantic_hash": ""
   },
   "src/view/CLAUDE.md": {
-    "mtime": 1789406265.5868552,
-    "ast_hash": "ee4af21698ffffe17171a1732eebaa7a",
+    "mtime": 1791562213.2519693,
+    "ast_hash": "477177f272264736948fdf7bd64551fc",
     "semantic_hash": ""
   },
   "src/data/finalEvolutionStage.json": {
-    "mtime": 1789323180.6185899,
-    "ast_hash": "0477493b45760e0e856644be73723640",
+    "mtime": 1791558092.0028567,
+    "ast_hash": "cbbe8c4e6436b6bf3c05de5c1db8ea89",
     "semantic_hash": ""
   },
   "src/utils/heldItemGen.test.ts": {
-    "mtime": 1789317160.7507772,
-    "ast_hash": "3e5282dfce20de534664f9f7e844cfe7",
+    "mtime": 1791559091.7762547,
+    "ast_hash": "7c276687d0d685ce0ad98bbf595fedf5",
     "semantic_hash": ""
   },
   "src/utils/heldItemGen.ts": {
-    "mtime": 1789317053.8040428,
-    "ast_hash": "04067a377de98a98266883fb8bee0072",
+    "mtime": 1791559100.1261292,
+    "ast_hash": "bf36b3abbd3b18d1b239a8572cadb241",
     "semantic_hash": ""
   },
   "scripts/generate-encounters.ts": {
@@ -644,16 +644,6 @@
     "ast_hash": "0c24b0d68b7fb0a41749e93774cb47bf",
     "semantic_hash": ""
   },
-  "src/utils/encounterGen.test.ts": {
-    "mtime": 1789403346.4867327,
-    "ast_hash": "ad842502c89e79564d9ac18067e48ce1",
-    "semantic_hash": ""
-  },
-  "src/utils/encounterGen.ts": {
-    "mtime": 1789403198.3393362,
-    "ast_hash": "1b6042b2274dba9cf2e427621bf60ac9",
-    "semantic_hash": ""
-  },
   "src/utils/pokedollar.test.ts": {
     "mtime": 1789405503.0863266,
     "ast_hash": "ab66e2ab3cc00fb79ba6e7e9b31603fe",
@@ -662,6 +652,51 @@
   "src/utils/pokedollar.ts": {
     "mtime": 1789405457.9479108,
     "ast_hash": "2c6dfb24339dccc53abe9b4dcde02623",
+    "semantic_hash": ""
+  },
+  "src/data/evolutionStageOverrides.json": {
+    "mtime": 1791558092.0170667,
+    "ast_hash": "55a571adb9ec4c9f5b1f0f252da9f1ff",
+    "semantic_hash": ""
+  },
+  "src/utils/encounters.test.ts": {
+    "mtime": 1791559165.370917,
+    "ast_hash": "04c77a037e15267efe032c963327f227",
+    "semantic_hash": ""
+  },
+  "src/utils/encounters.ts": {
+    "mtime": 1791559091.7580614,
+    "ast_hash": "24c7ca3f4cbb5355343a4777d356ed24",
+    "semantic_hash": ""
+  },
+  "src/utils/fonts.test.ts": {
+    "mtime": 1789484179.3553464,
+    "ast_hash": "117e94c8d5db9ae3fe80f565c50907e5",
+    "semantic_hash": ""
+  },
+  "src/utils/fonts.ts": {
+    "mtime": 1789484175.1563077,
+    "ast_hash": "ae427be3b288d04bb497829c95995196",
+    "semantic_hash": ""
+  },
+  "src/utils/pokemonDisplay.test.ts": {
+    "mtime": 1791560302.2697718,
+    "ast_hash": "da02a5253f3b2850acba1f3250cbed4d",
+    "semantic_hash": ""
+  },
+  "docs/adr/0007-local-preference-callbacks-stay-plumbed.md": {
+    "mtime": 1791559902.3628645,
+    "ast_hash": "6a307f97b13d61e64ee3f1812d0210b4",
+    "semantic_hash": ""
+  },
+  "docs/adr/0008-font-picker-stays-the-shared-recipe-shape.md": {
+    "mtime": 1791560213.4223409,
+    "ast_hash": "a941f2f63f7c23be302d6a9f569ad73a",
+    "semantic_hash": ""
+  },
+  "docs/adr/0009-detail-screen-derivations-stay-in-the-component.md": {
+    "mtime": 1791560324.533988,
+    "ast_hash": "c7541ae09945a34f1d7891318041c587",
     "semantic_hash": ""
   }
 }

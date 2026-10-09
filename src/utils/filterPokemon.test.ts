@@ -1,7 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { resolveGenerationId } from "../data/constants";
 import type { PokedexTableRow } from "../data/types";
-import { EMPTY_FILTERS, filterPokemon } from "./filterPokemon";
+import { EMPTY_FILTERS, type FilterContext, filterPokemon as filterPokemonIn } from "./filterPokemon";
+
+// activeGen is required by filterPokemon (an omitted one used to mean "skip
+// Active Gen scoping" silently), so tests that don't care about it share
+// this default instead of each passing a context. 3 is the generation the
+// held-item fixtures below are tagged with; a test about scoping passes its
+// own.
+function filterPokemon(
+	rows: PokedexTableRow[],
+	filters: Parameters<typeof filterPokemonIn>[1],
+	context: Partial<FilterContext> = {},
+): PokedexTableRow[] {
+	return filterPokemonIn(rows, filters, { activeGen: 3, ...context });
+}
 
 // dexNumber/generationId default to matching `id` (overridable, but derived
 // from it when not explicit) since every row here models a plain
@@ -20,8 +33,8 @@ function row(overrides: Partial<PokedexTableRow>): PokedexTableRow {
 		evYield: [],
 		abilityNames: ["overgrow", "chlorophyll"],
 		levelUpMoveNames: [],
-		heldItems: [],
-		encounterLocations: [],
+		heldItemsAllGens: [],
+		encounterLocationsAllGens: [],
 		spriteDataUri: null,
 		height: 7,
 		weight: 69,
@@ -107,7 +120,7 @@ describe("filterPokemon", () => {
 			row({ id: 1, name: "bulbasaur", abilityNames: ["overgrow"] }),
 			row({ id: 190, name: "aipom", abilityNames: ["pickup"] }),
 			row({ id: 302, name: "sableye", levelUpMoveNames: ["covet"] }),
-			row({ id: 12, name: "butterfree", heldItems: [{ name: "silver-powder", rarities: [{ value: 50, generationId: 3 }] }] }),
+			row({ id: 12, name: "butterfree", heldItemsAllGens: [{ name: "silver-powder", rarities: [{ value: 50, generationId: 3 }] }] }),
 			row({ id: 7, name: "squirtle", abilityNames: ["torrent"], levelUpMoveNames: [] }),
 		];
 
@@ -116,12 +129,12 @@ describe("filterPokemon", () => {
 		expect(result.map((r) => r.name)).toEqual(["aipom", "sableye", "butterfree"]);
 	});
 
-	it("held-item quirk is scoped to activeGen when given, same as the table cell/tooltip", () => {
+	it("held-item quirk is scoped to activeGen, same as the table cell/tooltip", () => {
 		const quirkRows: PokedexTableRow[] = [
 			// Gen 3-only item: matches at activeGen 3, not at activeGen 4.
-			row({ id: 12, name: "butterfree", heldItems: [{ name: "silver-powder", rarities: [{ value: 50, generationId: 3 }] }] }),
+			row({ id: 12, name: "butterfree", heldItemsAllGens: [{ name: "silver-powder", rarities: [{ value: 50, generationId: 3 }] }] }),
 			// No held item at all, any generation.
-			row({ id: 7, name: "squirtle", heldItems: [] }),
+			row({ id: 7, name: "squirtle", heldItemsAllGens: [] }),
 		];
 
 		expect(
@@ -130,10 +143,6 @@ describe("filterPokemon", () => {
 		expect(
 			filterPokemon(quirkRows, { ...EMPTY_FILTERS, quirks: ["held-item"] }, { activeGen: 4 }),
 		).toHaveLength(0);
-		// Omitted activeGen falls back to the any-generation union.
-		expect(
-			filterPokemon(quirkRows, { ...EMPTY_FILTERS, quirks: ["held-item"] }).map((r) => r.name),
-		).toEqual(["butterfree"]);
 	});
 
 	it("matches ALL selected traits (AND semantics), across id/boolean checks alike", () => {

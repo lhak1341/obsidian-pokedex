@@ -39,10 +39,11 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `Cache`/`DiskCache`, `normalize.
   identical — append `+ "\n"`.
   No gate catches a committed table like `evolutionStages.json`/`finalEvolutionStage.json`/
   `encounterLocations.json` going stale against the function that produced it — the generator walks live PokeAPI, so
-  CI cannot regenerate it. Ruled out for now, not triaged away: a committed-fixture test
-  (assert `evolutionFamilyDepth(bulbasaur-evolution-chain.json) === EVOLUTION_STAGES[1]`)
-  would tie the function to the table offline. Build it when a second drift instance lands,
-  or when a change to `evolutionFamilyDepth` is actually proposed.
+  CI cannot regenerate it. `normalize.test.ts` ties the per-form rule (`evolutionReachByForm`) and the
+  known divergent rows in `evolutionStageOverrides.json` together offline (the second drift instance
+  that the deferred fixture test was waiting for: species-id tables mis-served regional-gated rows).
+  Regenerating also picks up any live PokeAPI drift (Meltan -> Melmetal flipped #808/#809 in one
+  run), so diff all three files and read the logged override list before keeping a regen.
 - Adding a required field to `PokedexTableRow` breaks every test file that builds one as a
   literal (`dexNav.test.ts`, `filterPokemon.test.ts`, `generationScope.test.ts`,
   `quickJump.test.ts`, `sortPokemon.test.ts`, `tableColumns.test.ts` each have their own
@@ -60,6 +61,14 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `Cache`/`DiskCache`, `normalize.
   gated entirely on a regional form with no unconditional sibling — it undercounted
   Farfetch'd (Galarian-only evolution) to 0 stages. See `evolutionFamilyDepth` in
   `normalize.ts`.
+- A per-row fact stored in a table indexed by species id is wrong for any row whose own form
+  differs from the species (plain Farfetch'd is final; its species-wide entry says it evolves).
+  Key by `pokemon.name` (`EVOLUTION_STAGE_OVERRIDES`, `ENCOUNTER_LOCATIONS`) or check
+  `evolutionReachByForm` before adding another species-id table. See CONTEXT.md "Evolution stage".
+- PokeAPI renamed `evolution_details.base_form`/`evolved_form` to `required_pokemon_form`/
+  `evolved_pokemon_form`. A raw chain read anywhere must go through `canonicalizeEvolutionChain`
+  (the repository does; the generator does), or a fresh fetch silently loses all regional gating.
+  Check a live response before trusting a field name in a "verified live" comment.
 
 ## Cache
 

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createHoverDescription } from "../hoverDescription.svelte";
 	import { formatPokedollarSigns } from "../../utils/pokedollar";
-	import { formatItemName } from "../../utils/tableColumns";
+	import { formatItemName } from "../../utils/pokemonDisplay";
 	import HoverPopoverBox from "./HoverPopoverBox.svelte";
 
 	let { heldItems, getDescription }: {

@@ -4,15 +4,12 @@
 	import type { PokedexRepository } from "../../data/PokedexRepository";
 	import type { PokedexTableRow } from "../../data/types";
 	import { EMPTY_FILTERS, filterPokemon } from "../../utils/filterPokemon";
-	import { filterEncounterLocationsForGen } from "../../utils/encounterGen";
+	import { describeEncounters } from "../../utils/encounters";
 	import { filterHeldItemsForGen } from "../../utils/heldItemGen";
 	import { formatPokedollarSigns } from "../../utils/pokedollar";
-	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
+	import { formatDexNumber, formatItemName, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { sortPokemon, type SortColumn, type SortDirection } from "../../utils/sortPokemon";
-	import {
-		formatEncounterLocationsPlain, formatItemName, groupEncounterLocations, STAT_LABEL_BY_KEY,
-		summarizeAcquisitionMethods, TOGGLEABLE_COLUMNS,
-	} from "../../utils/tableColumns";
+	import { STAT_LABEL_BY_KEY, TOGGLEABLE_COLUMNS } from "../../utils/tableColumns";
 	import { untrack } from "svelte";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
 	import { createHoverDescription } from "../hoverDescription.svelte";
@@ -258,7 +255,7 @@
 			<tbody>
 				{#each visibleRows as row (row.id)}
 					<tr onclick={() => onSelect(row.id)} oncontextmenu={(e) => showRowMenu(e, row)}>
-						<td>{String(row.dexNumber).padStart(3, "0")}</td>
+						<td>{formatDexNumber(row.dexNumber)}</td>
 						<td
 							class="center sprite-cell"
 							onmouseenter={(e) => showPreview(row.id, e.currentTarget)}
@@ -293,7 +290,31 @@
 							{/each}
 						</td>
 						{#each activeColumns as col (col.key)}
-							{#if col.key === "ev"}
+							{#if col.custom}
+								{#if col.key === "heldItems"}
+									{@const genItems = filterHeldItemsForGen(row.heldItemsAllGens, activeGen)}
+									<td>
+										{#if genItems.length === 0}
+											-
+										{:else}
+											{#each genItems as item (item.name)}
+												<span
+													class="held-item-name"
+													role="note"
+													onmouseenter={(e) => {
+														itemPopover.show(item.name, e.currentTarget);
+														hoveredItemRarities = item.rarities;
+													}}
+													onmouseleave={itemPopover.hide}
+												>{formatItemName(item.name)}</span>
+											{/each}
+										{/if}
+									</td>
+								{:else}
+									{@const encounters = describeEncounters(row.encounterLocationsAllGens, activeGen)}
+									<td title={encounters.tooltip}>{encounters.isEmpty ? "-" : encounters.summary}</td>
+								{/if}
+							{:else if col.key === "ev"}
 								<td title={col.render(row)}>
 									<div class="ev-cell">
 										{#each row.evYield as y (y.stat)}
@@ -304,30 +325,6 @@
 											<span class="ev-empty">-</span>
 										{/each}
 									</div>
-								</td>
-							{:else if col.key === "heldItems"}
-								{@const genItems = filterHeldItemsForGen(row.heldItems, activeGen)}
-								<td>
-									{#if genItems.length === 0}
-										-
-									{:else}
-										{#each genItems as item (item.name)}
-											<span
-												class="held-item-name"
-												role="note"
-												onmouseenter={(e) => {
-													itemPopover.show(item.name, e.currentTarget);
-													hoveredItemRarities = item.rarities;
-												}}
-												onmouseleave={itemPopover.hide}
-											>{formatItemName(item.name)}</span>
-										{/each}
-									{/if}
-								</td>
-							{:else if col.key === "encounterLocation"}
-								{@const activeLocations = filterEncounterLocationsForGen(row.encounterLocations, activeGen)}
-								<td title={formatEncounterLocationsPlain(groupEncounterLocations(activeLocations))}>
-									{activeLocations.length === 0 ? "-" : summarizeAcquisitionMethods(activeLocations)}
 								</td>
 							{:else}
 								<td class:right={col.align === "right"}>{col.render(row)}</td>

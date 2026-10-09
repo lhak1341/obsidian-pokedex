@@ -1,4 +1,5 @@
-// Regenerates src/data/evolutionStages.json AND src/data/finalEvolutionStage.json
+// Regenerates src/data/evolutionStages.json, src/data/finalEvolutionStage.json AND
+// src/data/evolutionStageOverrides.json
 // from one fetch pass over the same 600 evolution-chain resources — see
 // EVOLUTION_STAGES/IS_FINAL_EVOLUTION_STAGE in data/constants.ts for what each
 // output means and why both are static tables rather than a runtime fetch.
@@ -15,7 +16,7 @@
 // Usage: bun run scripts/generate-evolution-stages.ts
 
 import { writeFileSync } from "node:fs";
-import { evolutionFamilyDepth } from "../src/data/normalize";
+import { canonicalizeEvolutionChain, evolutionFamilyDepth, evolutionReachByForm } from "../src/data/normalize";
 import type { RawEvolutionChain, RawEvolutionChainLink } from "../src/data/types";
 import { mapWithConcurrency } from "../src/utils/concurrency";
 import { withRetry } from "../src/utils/retry";
@@ -45,9 +46,9 @@ function idFromUrl(url: string): number {
 // (Charizard, not Charmander/Charmeleon).
 function collectMembers(
 	link: RawEvolutionChainLink,
-	out: { id: number; isFinalStage: boolean }[] = [],
-): { id: number; isFinalStage: boolean }[] {
-	out.push({ id: idFromUrl(link.species.url), isFinalStage: link.evolves_to.length === 0 });
+	out: { id: number; name: string; isFinalStage: boolean }[] = [],
+): { id: number; name: string; isFinalStage: boolean }[] {
+	out.push({ id: idFromUrl(link.species.url), name: link.species.name, isFinalStage: link.evolves_to.length === 0 });
 	for (const child of link.evolves_to) collectMembers(child, out);
 	return out;
 }
@@ -59,15 +60,31 @@ async function main() {
 	const stagesTable = new Array<number>(MAX_DEX_NUMBER + 1).fill(0);
 	const finalStageTable = new Array<boolean>(MAX_DEX_NUMBER + 1).fill(false);
 	const seen = new Set<number>();
+	// Rows whose own form differs from their species-wide table entry (plain
+	// Farfetch'd never evolves; the table says it does) — see
+	// evolutionReachByForm in normalize.ts and EVOLUTION_STAGE_OVERRIDES.
+	const overrides: Record<string, { evolutionStages: number; isFinalStage: boolean }> = {};
 	const failures: { url: string; error: unknown }[] = [];
 
 	await mapWithConcurrency(
 		list.results,
 		CONCURRENCY,
 		async (r) => {
-			const chain = await fetchJson<RawEvolutionChain>(r.url);
+			const chain = canonicalizeEvolutionChain(await fetchJson<RawEvolutionChain>(r.url));
 			const depth = evolutionFamilyDepth(chain.chain);
-			for (const member of collectMembers(chain.chain)) {
+			const members = collectMembers(chain.chain);
+			const memberByName = new Map(members.map((m) => [m.name, m]));
+			for (const reach of evolutionReachByForm(chain.chain)) {
+				const member = memberByName.get(reach.speciesName);
+				if (!member || member.id < 1 || member.id > MAX_DEX_NUMBER) continue;
+				if (reach.evolutionStages !== depth || reach.isFinalStage !== member.isFinalStage) {
+					overrides[reach.varietyName] = {
+						evolutionStages: reach.evolutionStages,
+						isFinalStage: reach.isFinalStage,
+					};
+				}
+			}
+			for (const member of members) {
 				if (member.id >= 1 && member.id <= MAX_DEX_NUMBER) {
 					stagesTable[member.id] = depth;
 					finalStageTable[member.id] = member.isFinalStage;
@@ -98,6 +115,16 @@ async function main() {
 	const finalStagePath = new URL("../src/data/finalEvolutionStage.json", import.meta.url);
 	writeFileSync(finalStagePath, JSON.stringify(finalStageTable) + "\n");
 	console.log(`wrote ${finalStagePath.pathname} (${finalStageTable.length} entries)`);
+
+	// Sorted so a regen's diff only shows real changes (chains finish in
+	// arbitrary order under concurrency).
+	const sortedOverrides = Object.fromEntries(Object.entries(overrides).sort(([a], [b]) => a.localeCompare(b)));
+	const overridesPath = new URL("../src/data/evolutionStageOverrides.json", import.meta.url);
+	writeFileSync(overridesPath, JSON.stringify(sortedOverrides, null, "\t") + "\n");
+	console.log(`wrote ${overridesPath.pathname} (${Object.keys(sortedOverrides).length} entries)`);
+	for (const [name, v] of Object.entries(sortedOverrides)) {
+		console.log(`  override ${name}: stages=${v.evolutionStages} final=${v.isFinalStage}`);
+	}
 }
 
 main().catch((err: unknown) => {

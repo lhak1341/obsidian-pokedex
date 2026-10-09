@@ -98,6 +98,14 @@ export interface RawEvolutionChainLink {
 		// currentFormSuffix parameter for how these are selected per-row.
 		base_form: NamedApiResource | null;
 		evolved_form: NamedApiResource | null;
+		// PokeAPI renamed base_form -> required_pokemon_form and evolved_form ->
+		// evolved_pokemon_form (verified live, 2026-10: a fresh /evolution-chain
+		// response carries ONLY these two; a cache written earlier carries only
+		// the old pair). Everything in this repo reads base_form/evolved_form;
+		// canonicalizeEvolutionChain (normalize.ts) copies the new names onto the
+		// old ones at the repository seam so no reader has to know about either.
+		required_pokemon_form?: NamedApiResource | null;
+		evolved_pokemon_form?: NamedApiResource | null;
 		// Gen 8+: the region an evolution must occur in, when that's the only
 		// thing distinguishing two otherwise-identical entries (e.g. Mime Jr. ->
 		// Mr. Mime vs. -> Galarian Mr. Mime, both requiring the known move
@@ -308,7 +316,7 @@ export interface PokedexTableRow {
 	// Each distinct (rarity %, generation) pair is its own entry — almost
 	// always one per item (a drop % rarely differs across a generation's own
 	// games), a list for the rare case it does; see normalizeHeldItemDetails.
-	heldItems: { name: string; rarities: { value: number; generationId: number }[] }[];
+	heldItemsAllGens: { name: string; rarities: { value: number; generationId: number }[] }[];
 	// Wild-encounter location areas, from the static ENCOUNTER_LOCATIONS table
 	// (constants.ts) — not a per-row fetch, see scripts/generate-encounters.ts.
 	// `region` is PokeAPI's own Location.region field (null only for the
@@ -320,7 +328,7 @@ export interface PokedexTableRow {
 	// Pokemon never found in the wild (starter, evolve-only, legendary/
 	// mythical, gift) AND for any regional-form row (v1 scope gap, documented
 	// in the generator script). Kept unfiltered by Active Gen here, same
-	// reasoning/shape as heldItems above — scope down via
+	// reasoning/shape as heldItemsAllGens above — scope down via
 	// utils/encounterGen.ts's filterEncounterLocationsForGen at display time.
 	// `method` is non-null when this "location" isn't a wild encounter at all
 	// but an NPC hand-off — "trade" (Jynx: trade a Poliwhirl in Cerulean
@@ -329,7 +337,7 @@ export interface PokedexTableRow {
 	// so the two are indistinguishable from this data alone), or "egg" (an
 	// NPC hands over an egg, not the Pokemon itself). See
 	// scripts/generate-encounters.ts's acquisitionFromEncounterDetails.
-	encounterLocations: {
+	encounterLocationsAllGens: {
 		name: string;
 		generationId: number;
 		region: string | null;
@@ -346,7 +354,7 @@ export interface PokedexTableRow {
 	// at table-load time (species/pokemon), no extra fetch. Fossil and held-
 	// item aren't duplicated here: fossil checks FOSSIL_IDS.has(dexNumber)
 	// directly (curated list, same as before), held-item checks
-	// heldItems.length > 0 directly — see matchesTrait in filterPokemon.ts.
+	// heldItemsAllGens.length > 0 directly — see matchesTrait in filterPokemon.ts.
 	isBaby: boolean;
 	canMegaEvolve: boolean;
 	canGigantamax: boolean;

@@ -9,10 +9,10 @@ import type { PokedexTableRow } from "../data/types";
 // HeldItemsPanel already render, now carrying only the values, since the
 // generation tag has done its job by this point.
 export function filterHeldItemsForGen(
-	heldItems: PokedexTableRow["heldItems"],
+	heldItemsAllGens: PokedexTableRow["heldItemsAllGens"],
 	activeGen: number,
 ): { name: string; rarities: number[] }[] {
-	return heldItems.flatMap((item) => {
+	return heldItemsAllGens.flatMap((item) => {
 		const rarities = item.rarities.filter((r) => r.generationId === activeGen).map((r) => r.value);
 		return rarities.length === 0 ? [] : [{ name: item.name, rarities }];
 	});

@@ -44,5 +44,9 @@
   "42": "deploy.mjs",
   "43": "lint-ratchet.mjs",
   "44": "generationScope.ts",
-  "45": "pokedollar.ts"
+  "45": "pokedollar.ts",
+  "46": "pokemonDisplay.ts",
+  "47": "0007-local-preference-callbacks-stay-plumbed.md",
+  "48": "0008-font-picker-stays-the-shared-recipe-shape.md",
+  "49": "0009-detail-screen-derivations-stay-in-the-component.md"
 }

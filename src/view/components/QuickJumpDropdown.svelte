@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { PokedexTableRow } from "../../data/types";
-	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
+	import { formatDexNumber, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 
 	let { matches, activeIndex, onSelect, onHover }: {
 		matches: PokedexTableRow[];
@@ -22,7 +22,7 @@
 				onmousedown={(e) => { e.preventDefault(); onSelect(row.id); }}
 				onmouseenter={() => onHover(i)}
 			>
-				<span class="quick-jump-dropdown-id">#{String(row.dexNumber).padStart(3, "0")}</span>
+				<span class="quick-jump-dropdown-id">#{formatDexNumber(row.dexNumber)}</span>
 				<span class="quick-jump-dropdown-name">{formatPokemonDisplayName(row)}</span>
 			</button>
 		</li>

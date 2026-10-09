@@ -2,6 +2,7 @@ import { mapWithConcurrency } from "../utils/concurrency";
 import { DiskCache } from "./Cache";
 import { ALL_IMAGE_SUFFIXES, imagePath, pokemonPath, speciesPath } from "./cachePaths";
 import {
+	canonicalizeEvolutionChain,
 	deriveRegionalForms,
 	inferAncestorFormSuffix,
 	normalizeEvolutionChain,
@@ -253,7 +254,10 @@ export class PokedexRepository {
 			this.evolutionChainMemCache,
 			chainId,
 			`evolution-chain/${chainId}.json`,
-			() => this.client.fetchEvolutionChain(url),
+			async () => canonicalizeEvolutionChain(await this.client.fetchEvolutionChain(url)),
+			// Heals a chain cached in PokeAPI's renamed format (see
+			// RawEvolutionChainLink.evolution_details.required_pokemon_form).
+			canonicalizeEvolutionChain,
 		);
 	}
 

@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
+import overrides from "./evolutionStageOverrides.json";
 import {
+	canonicalizeEvolutionChain,
 	collectChainIds,
 	deriveGigantamaxForms,
 	deriveMegaForms,
 	deriveRegionalForms,
 	describeEvolutionRequirement,
 	evolutionFamilyDepth,
+	evolutionReachByForm,
 	extractFlavorTexts,
 	inferAncestorFormSuffix,
 	nextEvolutionLevels,
@@ -35,28 +38,28 @@ describe("normalizeHeldItemDetails", () => {
 	});
 
 	it("extracts item names with their per-version rarities, tagged by generation", () => {
-		const heldItems = [
+		const heldItemsAllGens = [
 			{ item: { name: "oran-berry", url: "" }, version_details: [{ rarity: 50, version: { name: "ruby", url: "" } }] },
 			{ item: { name: "leftovers", url: "" }, version_details: [{ rarity: 5, version: { name: "emerald", url: "" } }] },
 		];
-		expect(normalizeHeldItemDetails(heldItems)).toEqual([
+		expect(normalizeHeldItemDetails(heldItemsAllGens)).toEqual([
 			{ name: "oran-berry", rarities: [{ value: 50, generationId: 3 }] },
 			{ name: "leftovers", rarities: [{ value: 5, generationId: 3 }] },
 		]);
 	});
 
 	it("drops an item that only exists in an out-of-scope generation (e.g. Parasect's Balm Mushroom, Gen 5 only)", () => {
-		const heldItems = [
+		const heldItemsAllGens = [
 			{ item: { name: "tiny-mushroom", url: "" }, version_details: [{ rarity: 50, version: { name: "platinum", url: "" } }] },
 			{ item: { name: "balm-mushroom", url: "" }, version_details: [{ rarity: 1, version: { name: "black", url: "" } }] },
 		];
-		expect(normalizeHeldItemDetails(heldItems, ["platinum"])).toEqual([
+		expect(normalizeHeldItemDetails(heldItemsAllGens, ["platinum"])).toEqual([
 			{ name: "tiny-mushroom", rarities: [{ value: 50, generationId: 4 }] },
 		]);
 	});
 
 	it("keeps only distinct (rarity, generation) pairs from in-scope versions, dropping items with none left", () => {
-		const heldItems = [
+		const heldItemsAllGens = [
 			{
 				item: { name: "tiny-mushroom", url: "" },
 				version_details: [
@@ -70,13 +73,13 @@ describe("normalizeHeldItemDetails", () => {
 				version_details: [{ rarity: 1, version: { name: "black", url: "" } }], // entirely out of scope
 			},
 		];
-		expect(normalizeHeldItemDetails(heldItems, ["ruby", "emerald"])).toEqual([
+		expect(normalizeHeldItemDetails(heldItemsAllGens, ["ruby", "emerald"])).toEqual([
 			{ name: "tiny-mushroom", rarities: [{ value: 50, generationId: 3 }] },
 		]);
 	});
 
 	it("keeps rarities from different generations as separate entries", () => {
-		const heldItems = [
+		const heldItemsAllGens = [
 			{
 				item: { name: "oran-berry", url: "" },
 				version_details: [
@@ -85,7 +88,7 @@ describe("normalizeHeldItemDetails", () => {
 				],
 			},
 		];
-		expect(normalizeHeldItemDetails(heldItems, ["ruby", "platinum"])).toEqual([
+		expect(normalizeHeldItemDetails(heldItemsAllGens, ["ruby", "platinum"])).toEqual([
 			{
 				name: "oran-berry",
 				rarities: [
@@ -872,7 +875,7 @@ describe("toTableRow", () => {
 		expect(row.catchRate).toBe(45);
 		expect(row.hatchCounter).toBe(20);
 		expect(row.evYield).toEqual([{ stat: "specialAttack", amount: 1 }]);
-		expect(row.heldItems).toEqual([]);
+		expect(row.heldItemsAllGens).toEqual([]);
 		expect(row.isBaby).toBe(false);
 		expect(row.canMegaEvolve).toBe(false);
 		expect(row.canGigantamax).toBe(false);
@@ -884,7 +887,7 @@ describe("toTableRow", () => {
 		// (v1 scope: regional forms, or simply a typo) must render as "not
 		// found in the wild", not crash on an undefined lookup.
 		const row = toTableRow({ ...pokemon, name: "not-a-real-species-name" }, species, null);
-		expect(row.encounterLocations).toEqual([]);
+		expect(row.encounterLocationsAllGens).toEqual([]);
 	});
 
 	it("reads isBaby straight off species.is_baby", () => {
@@ -1248,5 +1251,148 @@ describe("resolveRegionalFormSuffix", () => {
 
 	it("returns undefined for a Mega variety (not a regional form)", () => {
 		expect(resolveRegionalFormSuffix(pokemonNamed("charizard-mega-x"), speciesNamed("charizard"))).toBeUndefined();
+	});
+});
+
+// Builds a RawEvolutionChainLink by species name. `gate` is the base_form a
+// detail entry requires, `evolved` the variety it produces (both PokeAPI's
+// old field names — see canonicalizeEvolutionChain for the renamed pair).
+function link(
+	name: string,
+	details: { gate?: string; evolved?: string }[] = [],
+	evolvesTo: RawEvolutionChainLink[] = [],
+): RawEvolutionChainLink {
+	return {
+		species: { name, url: "" },
+		evolution_details: details.map((d) => ({
+			min_level: null, trigger: { name: "level-up", url: "" }, item: null,
+			min_happiness: null, time_of_day: "", held_item: null, min_beauty: null,
+			relative_physical_stats: null, location: null, known_move: null, party_species: null,
+			gender: null, trade_species: null, needs_overworld_rain: false, turn_upside_down: false,
+			base_form: d.gate ? { name: d.gate, url: "" } : null,
+			evolved_form: d.evolved ? { name: d.evolved, url: "" } : null,
+			region: null, min_damage_taken: null, used_move: null, min_move_count: null, min_steps: null,
+			needs_multiplayer: false,
+		})),
+		evolves_to: evolvesTo,
+	};
+}
+
+describe("evolutionReachByForm", () => {
+	const byVariety = (root: RawEvolutionChainLink) =>
+		Object.fromEntries(evolutionReachByForm(root).map((r) => [r.varietyName, r]));
+
+	it("makes plain Farfetch'd a leaf with 0 stages while Galarian Farfetch'd keeps its evolution", () => {
+		const farfetchd = link("farfetchd", [], [link("sirfetchd", [{ gate: "farfetchd-galar" }])]);
+		const r = byVariety(farfetchd);
+		expect(r["farfetchd"]).toMatchObject({ isFinalStage: true, evolutionStages: 0 });
+		expect(r["farfetchd-galar"]).toMatchObject({ isFinalStage: false, evolutionStages: 1 });
+		// Sirfetch'd has no variety of its own, so it is reached as its plain name.
+		expect(r["sirfetchd"]).toMatchObject({ isFinalStage: true, evolutionStages: 1 });
+	});
+
+	it("keeps the Kanto Mr. Mime family at 1 and the Galarian one at 2", () => {
+		const mimeJr = link("mime-jr", [], [
+			link("mr-mime", [{}, { evolved: "mr-mime-galar" }], [
+				link("mr-rime", [{ gate: "mr-mime-galar" }]),
+			]),
+		]);
+		const r = byVariety(mimeJr);
+		expect(r["mr-mime"]).toMatchObject({ isFinalStage: true, evolutionStages: 1 });
+		expect(r["mr-mime-galar"]).toMatchObject({ isFinalStage: false, evolutionStages: 2 });
+	});
+
+	it("does not diverge for a Meowth-shaped species whose base form also evolves", () => {
+		const meowth = link("meowth", [], [
+			link("persian", [{}, { gate: "meowth-alola", evolved: "persian-alola" }]),
+		]);
+		const r = byVariety(meowth);
+		expect(r["meowth"]).toMatchObject({ isFinalStage: false, evolutionStages: 1 });
+		expect(r["meowth-alola"]).toMatchObject({ isFinalStage: false, evolutionStages: 1 });
+	});
+
+	it("keeps whole-family depth across ungated siblings (Applin-shaped)", () => {
+		const applin = link("applin", [], [
+			link("flapple", [{}]),
+			link("dipplin", [{}], [link("hydrapple", [{}])]),
+		]);
+		const r = byVariety(applin);
+		expect(r["flapple"]).toMatchObject({ isFinalStage: true, evolutionStages: 2 });
+	});
+
+	it("ignores a gate on a form the app does not model as regional (Deerling seasons)", () => {
+		const deerling = link("deerling", [], [
+			link("sawsbuck", [{ gate: "deerling-spring" }, { gate: "deerling-summer" }]),
+		]);
+		const r = byVariety(deerling);
+		expect(r["deerling"]).toMatchObject({ isFinalStage: false, evolutionStages: 1 });
+		expect(r["deerling-spring"]).toBeUndefined();
+	});
+
+	it("splits a Zigzagoon-shaped three-stage line by whether Obstagoon is reachable", () => {
+		const zigzagoon = link("zigzagoon", [], [
+			link("linoone", [{}, { gate: "zigzagoon-galar", evolved: "linoone-galar" }], [
+				link("obstagoon", [{ gate: "linoone-galar" }]),
+			]),
+		]);
+		const r = byVariety(zigzagoon);
+		expect(r["zigzagoon"]).toMatchObject({ isFinalStage: false, evolutionStages: 1 });
+		expect(r["linoone"]).toMatchObject({ isFinalStage: true, evolutionStages: 1 });
+		expect(r["zigzagoon-galar"]).toMatchObject({ isFinalStage: false, evolutionStages: 2 });
+		expect(r["linoone-galar"]).toMatchObject({ isFinalStage: false, evolutionStages: 2 });
+	});
+});
+
+describe("EVOLUTION_STAGE_OVERRIDES wiring", () => {
+	it("pins the known regional-gating cases in the committed override table", () => {
+		for (const name of ["farfetchd", "mr-mime", "qwilfish", "corsola", "linoone"]) {
+			expect(overrides).toHaveProperty([name, "isFinalStage"], true);
+		}
+		expect(overrides).toHaveProperty(["zigzagoon", "evolutionStages"], 1);
+	});
+
+	it("makes toTableRow read the override ahead of the species-wide table", () => {
+		// Farfetch'd is dex #83; the species-wide table says it evolves (the
+		// family includes Sirfetch'd), the override says THIS row cannot.
+		const farfetchd = { ...pokemon, id: 83, name: "farfetchd" };
+		const row = toTableRow(farfetchd, { ...species, id: 83, name: "farfetchd" }, null);
+		expect(row.isFinalStage).toBe(true);
+		expect(row.evolutionStages).toBe(0);
+	});
+
+	it("still reads the species-wide table for a form with no override", () => {
+		const galar = { ...pokemon, id: 10163, name: "farfetchd-galar" };
+		const row = toTableRow(galar, { ...species, id: 83, name: "farfetchd" }, null);
+		expect(row.isFinalStage).toBe(false);
+		expect(row.evolutionStages).toBe(1);
+	});
+});
+
+describe("canonicalizeEvolutionChain", () => {
+	const renamed = (): RawEvolutionChain => {
+		const sirfetchd = link("sirfetchd", [{}]);
+		const detail = sirfetchd.evolution_details[0];
+		// A fresh PokeAPI response: only the renamed pair, no old names at all.
+		const { base_form: _b, evolved_form: _e, ...rest } = detail;
+		sirfetchd.evolution_details[0] = {
+			...rest,
+			required_pokemon_form: { name: "farfetchd-galar", url: "" },
+			evolved_pokemon_form: null,
+		} as unknown as typeof detail;
+		return { id: 1, chain: link("farfetchd", [], [sirfetchd]) };
+	};
+
+	it("copies the renamed fields onto base_form / evolved_form", () => {
+		const out = canonicalizeEvolutionChain(renamed());
+		expect(out.chain.evolves_to[0].evolution_details[0].base_form?.name).toBe("farfetchd-galar");
+	});
+
+	it("lets the rest of the pipeline see the gate", () => {
+		const r = evolutionReachByForm(canonicalizeEvolutionChain(renamed()).chain);
+		expect(r.find((x) => x.varietyName === "farfetchd")?.isFinalStage).toBe(true);
+	});
+
+	it("returns the same object for a chain already in the old format", () => {
+		expect(canonicalizeEvolutionChain(chain)).toBe(chain);
 	});
 });

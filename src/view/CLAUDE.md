@@ -18,12 +18,18 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   on every Gen 8 detail page).
 - Names are capitalized purely via CSS `text-transform` — `.textContent` returns the raw
   lowercase value (`"ivysaur"`). Match lowercase when locating elements via eval.
-- `heldItems` carries every supported generation's rarities unfiltered by design (tagged
-  with `generationId`, not scoped) — a new consumer (display, filter, tooltip) must
-  explicitly call `filterHeldItemsForGen` (`utils/heldItemGen.ts`) with the current Active
-  Gen. The raw field silently ignores Active Gen otherwise; this was missed independently
-  for the table cell, its tooltip, the detail page, and the Quirks "Held Item" filter in
-  one session before the pattern was caught.
+- `heldItemsAllGens` and `encounterLocationsAllGens` (on `PokedexTableRow`/`PokedexEntry`)
+  carry every supported generation's data unfiltered by design, tagged with `generationId`.
+  The name is the guard: a consumer has to type "AllGens" to reach unscoped data, then scope
+  it with `filterHeldItemsForGen` (`utils/heldItemGen.ts`) or `describeEncounters`
+  (`utils/encounters.ts`) using the current Active Gen. It used to be a plain `heldItems`
+  field and was missed independently for the table cell, its tooltip, the detail page and the
+  Quirks filter in one session. `filterPokemon`'s `FilterContext.activeGen` is required for the
+  same reason (no silent any-generation fallback).
+- Table columns are `{ render }` text columns or `{ custom: true }` columns TableScreen draws
+  itself (`heldItems`, `encounterLocation`: they need the Active Gen). A custom column has no
+  `render`; do not add a text fallback, it can only show every generation's data.
+- `tsc` (`bun run typecheck`) skips `.svelte` files and the build only catches compile errors, so after renaming or removing a field/export, grep `src/**/*.svelte` for the old name by hand. A stale use builds clean and reads `undefined` live.
 
 Adding a generation stales cached Moves/Flavor Text and needs a checklist walk — see
 `docs/multi-gen-expansion-plan.md`'s Recipe section, not a bespoke fix here.

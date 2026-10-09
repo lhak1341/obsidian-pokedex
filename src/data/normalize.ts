@@ -1,5 +1,6 @@
 import {
 	ENCOUNTER_LOCATIONS,
+	EVOLUTION_STAGE_OVERRIDES,
 	EVOLUTION_STAGES,
 	FLAVOR_TEXT_TABS_BY_GEN,
 	FLAVOR_TEXT_VERSION_GROUPS,
@@ -22,6 +23,7 @@ import type {
 	MoveEntry,
 	PokedexEntry,
 	PokedexTableRow,
+	RawEvolutionChain,
 	RawEvolutionChainLink,
 	RawMove,
 	RawPokemon,
@@ -488,6 +490,140 @@ export function evolutionFamilyDepth(link: RawEvolutionChainLink): number {
 	return 1 + Math.max(...link.evolves_to.map(evolutionFamilyDepth));
 }
 
+// Copies PokeAPI's renamed evolution_details fields (required_pokemon_form,
+// evolved_pokemon_form — see RawEvolutionChainLink) onto the base_form /
+// evolved_form names every reader in this file uses. Idempotent, and returns
+// the SAME object when no entry needs touching, so getOrFetch's migrate hook
+// only rewrites a cached chain that genuinely held new-format data.
+export function canonicalizeEvolutionChain(raw: RawEvolutionChain): RawEvolutionChain {
+	let changed = false;
+	const walk = (link: RawEvolutionChainLink): RawEvolutionChainLink => {
+		const evolution_details = link.evolution_details.map((d) => {
+			const baseForm = d.base_form ?? d.required_pokemon_form ?? null;
+			const evolvedForm = d.evolved_form ?? d.evolved_pokemon_form ?? null;
+			if (baseForm === (d.base_form ?? null) && evolvedForm === (d.evolved_form ?? null)) return d;
+			changed = true;
+			return { ...d, base_form: baseForm, evolved_form: evolvedForm };
+		});
+		return { ...link, evolution_details, evolves_to: link.evolves_to.map(walk) };
+	};
+	const chain = walk(raw.chain);
+	return changed ? { ...raw, chain } : raw;
+}
+
+// Per-form version of evolutionFamilyDepth + leaf-ness, for the generator
+// (scripts/generate-evolution-stages.ts) to find rows whose species-wide
+// EVOLUTION_STAGES / IS_FINAL_EVOLUTION_STAGE entry is wrong for their own
+// form. evolutionFamilyDepth deliberately counts every `evolves_to` child
+// (so Farfetch'd's family reads 1), which makes plain Kanto Farfetch'd — that
+// can never evolve — look like it has an evolution. This walks the same raw
+// chain but only follows an `evolution_details` entry a given form can
+// actually take: no base_form (open to every form, same reading as
+// inferAncestorFormSuffix) or base_form naming exactly that variety. The
+// child's variety on the way down is the entry's evolved_form if it has one
+// ("persian-alola"), else the child's plain species name.
+//
+// Returns one row per (species, variety) state visited, keyed by varietyName
+// (a RawPokemon.name). evolutionStages keeps the whole-family meaning (edges
+// root -> viewed -> deepest descendant on any path through this state), so
+// Kanto Mr. Mime (Mime Jr. -> Mr. Mime) is 1 and Galarian Mr. Mime
+// (-> Mr. Rime) is 2. A variety this never names (an unmodeled form, or one
+// with no gating at all) isn't returned; the caller falls back to the
+// species-wide table, which is correct for every ungated row.
+export interface FormEvolutionReach {
+	speciesName: string;
+	varietyName: string;
+	evolutionStages: number;
+	isFinalStage: boolean;
+}
+
+// An entry gated on a form the app doesn't model as regional (Deerling's
+// seasons, Shellos' west/east sea, Basculin's white stripe) is treated as
+// open to every form — same REGIONAL_FORMS filter inferAncestorFormSuffix
+// uses, so those species keep their species-wide table value instead of
+// being split into rows that don't exist.
+function isRegionalFormGate(baseForm: { name: string }, parentSpeciesName: string): boolean {
+	const suffix = extractFormSuffix(baseForm.name, parentSpeciesName);
+	return suffix !== undefined && suffix in REGIONAL_FORMS;
+}
+
+function reachableEntries(parent: RawEvolutionChainLink, child: RawEvolutionChainLink, parentVariety: string) {
+	// A child with no evolution_details at all has nothing gating it.
+	if (child.evolution_details.length === 0) return [null];
+	return child.evolution_details.filter(
+		(d) => !d.base_form || !isRegionalFormGate(d.base_form, parent.species.name) || d.base_form.name === parentVariety,
+	);
+}
+
+function childVariety(child: RawEvolutionChainLink, entry: RawEvolutionChainLink["evolution_details"][number] | null): string {
+	return entry?.evolved_form?.name ?? child.species.name;
+}
+
+function reachBelow(node: RawEvolutionChainLink, variety: string): { depth: number; isFinal: boolean } {
+	let depth = 0;
+	let isFinal = true;
+	for (const child of node.evolves_to) {
+		for (const entry of reachableEntries(node, child, variety)) {
+			isFinal = false;
+			depth = Math.max(depth, 1 + reachBelow(child, childVariety(child, entry)).depth);
+		}
+	}
+	return { depth, isFinal };
+}
+
+export function evolutionReachByForm(root: RawEvolutionChainLink): FormEvolutionReach[] {
+	// One candidate per way of arriving at a (node, variety) state; `ancestors`
+	// is the path taken (nearest last), each with the child it descended to.
+	interface Ancestor { node: RawEvolutionChainLink; variety: string; via: RawEvolutionChainLink }
+	const states = new Map<string, { node: RawEvolutionChainLink; paths: Ancestor[][] }>();
+	const visit = (node: RawEvolutionChainLink, variety: string, ancestors: Ancestor[]) => {
+		const seen = states.get(variety);
+		if (seen) seen.paths.push(ancestors);
+		else states.set(variety, { node, paths: [ancestors] });
+		for (const child of node.evolves_to) {
+			for (const entry of reachableEntries(node, child, variety)) {
+				visit(child, childVariety(child, entry), [...ancestors, { node, variety, via: child }]);
+			}
+		}
+	};
+	// The root species can itself exist as several varieties (Meowth,
+	// Farfetch'd); the only ones that can behave differently are those a
+	// child's base_form names.
+	const rootVarieties = new Set([root.species.name]);
+	for (const child of root.evolves_to) {
+		for (const d of child.evolution_details) {
+			if (d.base_form && isRegionalFormGate(d.base_form, root.species.name)) rootVarieties.add(d.base_form.name);
+		}
+	}
+	for (const v of rootVarieties) visit(root, v, []);
+
+	return [...states].map(([varietyName, { node, paths }]) => {
+		const below = reachBelow(node, varietyName);
+		// Whole-family depth in the world this form lives in: the path down to
+		// it is fixed (its own ancestors' varieties), but every OTHER branch
+		// off that path stays open — so Flapple still counts Applin's
+		// Dipplin -> Hydrapple line (2), while Kanto Farfetch'd, whose only
+		// route is gated on another form, reads 0.
+		let evolutionStages = 0;
+		for (const ancestors of paths) {
+			let acc = below.depth;
+			for (let i = ancestors.length - 1; i >= 0; i--) {
+				const { node: a, variety, via } = ancestors[i];
+				let best = 1 + acc;
+				for (const sibling of a.evolves_to) {
+					if (sibling === via) continue;
+					for (const entry of reachableEntries(a, sibling, variety)) {
+						best = Math.max(best, 1 + reachBelow(sibling, childVariety(sibling, entry)).depth);
+					}
+				}
+				acc = best;
+			}
+			evolutionStages = Math.max(evolutionStages, acc);
+		}
+		return { speciesName: node.species.name, varietyName, evolutionStages, isFinalStage: below.isFinal };
+	});
+}
+
 // Human-readable label for what triggers `node`'s own evolution (e.g. "Lv.
 // 16", "Thunder Stone", "Trade (metal-coat)") — used as the method line on
 // EvolutionChain's card for this node. Priority-ordered: the base label
@@ -757,6 +893,7 @@ export function toTableRow(
 ): PokedexTableRow {
 	const formSuffix = resolveRegionalFormSuffix(pokemon, species);
 	const form = formSuffix ? REGIONAL_FORMS[formSuffix] : undefined;
+	const stageOverride = EVOLUTION_STAGE_OVERRIDES[pokemon.name];
 	return {
 		id: pokemon.id,
 		dexNumber: species.id,
@@ -777,10 +914,10 @@ export function toTableRow(
 				.filter((m) => m.learnMethod === "level-up")
 				.map((m) => m.name),
 		)],
-		heldItems: normalizeHeldItemDetails(pokemon.held_items),
+		heldItemsAllGens: normalizeHeldItemDetails(pokemon.held_items),
 		// Static lookup keyed by pokemon.name, not a fetch — see
 		// ENCOUNTER_LOCATIONS in constants.ts.
-		encounterLocations: ENCOUNTER_LOCATIONS[pokemon.name] ?? [],
+		encounterLocationsAllGens: ENCOUNTER_LOCATIONS[pokemon.name] ?? [],
 		spriteDataUri,
 		height: pokemon.height,
 		weight: pokemon.weight,
@@ -790,9 +927,11 @@ export function toTableRow(
 		isBaby: species.is_baby,
 		canMegaEvolve: deriveMegaForms(pokemon, species).length > 0,
 		canGigantamax: deriveGigantamaxForms(pokemon, species).length > 0,
-		// Static lookup, not a fetch — see EVOLUTION_STAGES in constants.ts.
-		evolutionStages: EVOLUTION_STAGES[species.id] ?? 0,
-		isFinalStage: IS_FINAL_EVOLUTION_STAGE[species.id] ?? false,
+		// Static lookups, not fetches — see EVOLUTION_STAGES in constants.ts.
+		// The override (keyed by pokemon.name) wins for the few rows whose own
+		// form diverges from the species-wide table, e.g. plain Farfetch'd.
+		evolutionStages: stageOverride?.evolutionStages ?? EVOLUTION_STAGES[species.id] ?? 0,
+		isFinalStage: stageOverride?.isFinalStage ?? IS_FINAL_EVOLUTION_STAGE[species.id] ?? false,
 	};
 }
 

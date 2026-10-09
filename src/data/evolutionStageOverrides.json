@@ -1,0 +1,26 @@
+{
+	"corsola": {
+		"evolutionStages": 0,
+		"isFinalStage": true
+	},
+	"farfetchd": {
+		"evolutionStages": 0,
+		"isFinalStage": true
+	},
+	"linoone": {
+		"evolutionStages": 1,
+		"isFinalStage": true
+	},
+	"mr-mime": {
+		"evolutionStages": 1,
+		"isFinalStage": true
+	},
+	"qwilfish": {
+		"evolutionStages": 0,
+		"isFinalStage": true
+	},
+	"zigzagoon": {
+		"evolutionStages": 1,
+		"isFinalStage": false
+	}
+}

@@ -21,10 +21,9 @@
 	import RegionalFormNav from "./RegionalFormNav.svelte";
 	import StatBars from "./StatBars.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
-	import { filterEncounterLocationsForGen } from "../../utils/encounterGen";
+	import { describeEncounters } from "../../utils/encounters";
 	import { filterHeldItemsForGen } from "../../utils/heldItemGen";
-	import { groupEncounterLocations } from "../../utils/tableColumns";
-	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
+	import { formatDexNumber, formatHeight, formatPokemonDisplayName, formatWeight } from "../../utils/pokemonDisplay";
 	import { romanNumeral } from "../../utils/romanNumeral";
 	import { resolveStatsForGen } from "../../utils/stats";
 	import { VarietyToggleState, type VarietyToggleSnapshot } from "../VarietyToggleState";
@@ -256,7 +255,7 @@
 							{#if prev.spriteDataUri}
 								<img src={prev.spriteDataUri} alt="" class="dex-nav-sprite" />
 							{/if}
-							<span class="dex-nav-label">#{String(prev.dexNumber).padStart(3, "0")} {formatPokemonDisplayName(prev)}</span>
+							<span class="dex-nav-label">#{formatDexNumber(prev.dexNumber)} {formatPokemonDisplayName(prev)}</span>
 						</button>
 					{/if}
 				</div>
@@ -269,7 +268,7 @@
 					{#if adjacent.next}
 						{@const next = adjacent.next}
 						<button type="button" class="dex-nav-button dex-nav-next" onclick={() => onSelect(next.id)}>
-							<span class="dex-nav-label">#{String(next.dexNumber).padStart(3, "0")} {formatPokemonDisplayName(next)}</span>
+							<span class="dex-nav-label">#{formatDexNumber(next.dexNumber)} {formatPokemonDisplayName(next)}</span>
 							{#if next.spriteDataUri}
 								<img src={next.spriteDataUri} alt="" class="dex-nav-sprite" />
 							{/if}
@@ -286,14 +285,14 @@
 			this row's dexNumber before the entry itself finishes loading; a
 			regional-form row's own `id` (e.g. 10091) would otherwise flash as
 			the "No." briefly, which isn't what a user typed/clicked to get here. -->
-			<p>Loading #{String(rows.find((r) => r.id === id)?.dexNumber ?? id).padStart(3, "0")}...</p>
+			<p>Loading #{formatDexNumber(rows.find((r) => r.id === id)?.dexNumber ?? id)}...</p>
 		{:else if entryLoad.error && !entryLoad.entry}
 			<p class="error">Couldn't load this Pokemon: {entryLoad.error}</p>
 			<button onclick={retry}>Retry</button>
 		{:else if entryLoad.entry}
 			{@const entry = entryLoad.entry}
-			{@const activeHeldItems = filterHeldItemsForGen(entry.heldItems, activeGen)}
-			{@const activeEncounterLocations = filterEncounterLocationsForGen(entry.encounterLocations, activeGen)}
+			{@const activeHeldItems = filterHeldItemsForGen(entry.heldItemsAllGens, activeGen)}
+			{@const encounters = describeEncounters(entry.encounterLocationsAllGens, activeGen)}
 			<!-- container-type (not a viewport media query) because this is an
 			Obsidian pane: it can be a narrow sidebar in a wide window or fill a
 			whole ultrawide window, independent of the window's own size. Three
@@ -320,7 +319,7 @@
 				/>
 
 				<div class="name-block">
-					<p class="dex-eyebrow">No. {String(entry.dexNumber).padStart(3, "0")} ({romanNumeral(entry.generationId)})</p>
+					<p class="dex-eyebrow">No. {formatDexNumber(entry.dexNumber)} ({romanNumeral(entry.generationId)})</p>
 					<p class="mon-name" role="heading" aria-level="2">{formatPokemonDisplayName(entry)}</p>
 					<div class="type-row">
 						{#each (activeMegaData ?? entry).types as type (type)}
@@ -332,11 +331,11 @@
 				<dl class="physical-readout">
 					<div>
 						<dt>Height</dt>
-						<dd>{(entry.height / 10).toFixed(1)} m</dd>
+						<dd>{formatHeight(entry.height)}</dd>
 					</div>
 					<div>
 						<dt>Weight</dt>
-						<dd>{(entry.weight / 10).toFixed(1)} kg</dd>
+						<dd>{formatWeight(entry.weight)}</dd>
 					</div>
 				</dl>
 				<FlavorTextPanel flavorTexts={entry.flavorTexts} {activeGen} />
@@ -378,17 +377,15 @@
 
 				<section class="panel">
 					<h3 class="section-heading">Capture & Breeding</h3>
-					{#if activeEncounterLocations.length > 0}
-						{@const locationGroups = groupEncounterLocations(activeEncounterLocations)}
-						{@const showRegion = new Set(locationGroups.map((g) => g.region)).size > 1}
-						{#if locationGroups.length > 1}
+					{#if !encounters.isEmpty}
+						{#if encounters.groups.length > 1}
 							<ul class="breeding-line capture-locations">
-								{#each locationGroups as group (group.text)}
-									<li>{#if showRegion && group.region}<b>{group.region}:</b>{/if} {group.text}</li>
+								{#each encounters.groups as group (group.text)}
+									<li>{#if encounters.showRegion && group.region}<b>{group.region}:</b>{/if} {group.text}</li>
 								{/each}
 							</ul>
 						{:else}
-							<p class="breeding-line">{locationGroups[0].text}</p>
+							<p class="breeding-line">{encounters.groups[0].text}</p>
 						{/if}
 					{/if}
 					{#if activeHeldItems.length > 0}

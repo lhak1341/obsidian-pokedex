@@ -43,3 +43,24 @@ The detail screen's Mega/Gigantamax display state: which variety (if any) is cur
 Implemented as `VarietyToggleState` in `src/view/VarietyToggleState.ts` — a plain, non-reactive class (same shape as `DetailLoadState`/`DetailNavigationState`), exposing `selectMega`/`selectGigantamax`/`resetSelection`/`snapshot`. `DetailScreen.svelte` mirrors `snapshot()` into its own `$state` after every `onUpdate` callback, same reasoning as `entryLoad`/`DetailLoadState`. `resetSelection()` (called from `startLoad` on every id change, same spot as `showShiny`'s reset) clears only the active selection — never the caches, since a variety key (e.g. `"charizard-mega-x"`) is globally unique across species and never needs discarding. The fetch behind `selectMega`/`selectGigantamax` is fire-and-forget and swallows a rejection explicitly (a dropped connection just leaves the toggle unpopulated until a retry click succeeds) rather than leaving an unhandled promise rejection. Tested in `VarietyToggleState.test.ts`.
 
 `GigantamaxFormDetail` (`src/data/types.ts`) is only `PortraitImageSource` — no `types`/`stats`/`abilities` fields at all, since Gigantamax changes none of those (verified live, Gengar vs. gengar-gmax). This means `DetailScreen.svelte` has two genuinely different priority chains that read as one duplicated rule but aren't: `activeMegaData ?? activeGigantamaxData ?? entry` (3-way, portrait/shiny display only) vs `activeMegaData ?? entry` (2-way, accentColor/types/stats/abilities — gigantamax deliberately excluded, since it structurally lacks those fields). Don't unify them. Only the 3-way sites are true duplication — already deduped by reusing the `activePortraitSource` `$derived` rather than re-deriving the ternary.
+
+## Evolution stage
+
+How many evolution stages a row's family has (`evolutionStages`: 0 = none, 1, 2+) and whether nothing evolves from that row (`isFinalStage`, the "Last Stage" trait). Both are judged **per form**, not per species: only the evolution routes that row's own form can actually take count. Plain Kanto Farfetch'd, Mr. Mime, Qwilfish, Corsola and Linoone are final (their only evolution is Galarian/Hisuian-gated), while the Galarian rows keep theirs. `evolutionStages` is still a whole-family depth, not "stages remaining": a branch off the same parent stays open (Flapple reads 2 because of Applin's Dipplin -> Hydrapple line), only a branch gated on another regional form closes.
+
+Two sources, in this order, read by `toTableRow` in `src/data/normalize.ts`:
+- `EVOLUTION_STAGE_OVERRIDES` (`evolutionStageOverrides.json`, keyed by `pokemon.name`): only the rows whose own form differs from their species.
+- `EVOLUTION_STAGES` / `IS_FINAL_EVOLUTION_STAGE`, indexed by species id: every other row, including regional rows with no gating (Alolan Rattata).
+
+All three are written by one pass of `scripts/generate-evolution-stages.ts`, which calls `evolutionReachByForm` (`normalize.ts`) so the rule is unit-tested offline. Only a gate on a form in `REGIONAL_FORMS` counts. A gate on a cosmetic form (Deerling's seasons, Shellos' sea, Basculin's white stripe) is treated as open to every form, same filter as `inferAncestorFormSuffix`.
+
+PokeAPI renamed `base_form` -> `required_pokemon_form` and `evolved_form` -> `evolved_pokemon_form` on `evolution_details`. `canonicalizeEvolutionChain` copies the new names onto the old ones at the repository seam (`getOrFetchEvolutionChain`, fresh fetch and cache read), so every reader keeps using `base_form`/`evolved_form`.
+
+## Active Gen scoping
+
+Generation-tagged row data (wild held items, capture locations) is stored for every supported generation and shown for the Active Gen only. The unscoped fields are named `heldItemsAllGens` and `encounterLocationsAllGens`, so reading one without scoping is visible at the call site.
+
+Held items are scoped by `filterHeldItemsForGen` (`src/utils/heldItemGen.ts`). Capture locations go through one module, `describeEncounters(locations, activeGen)` in `src/utils/encounters.ts`, which returns everything the UI shows from a single scoped list: `summary` (table cell), `tooltip` (table title), `groups` (detail page lines) and `showRegion`. `showRegion` is the one rule for "a line needs its region header": more than one distinct region, not merely more than one line (a single-region Pokemon with a wild line and a trade line has two lines and one region). The helpers inside `encounters.ts` are exported only for their own regression tests (Mirage Tower, compass/bike slugs); callers use `describeEncounters`.
+
+Not the same as Generation fallback: that rule picks a different generation's tabs when the Active Gen has no data; Active Gen scoping just filters.
+
