@@ -1,11 +1,15 @@
+import { describeHoverStatus, type HoverDescriptionStatus } from "../utils/hoverDescriptionText";
 import { createHoverPopover } from "./hoverPopover.svelte";
 
-// Shared by AbilitiesPanel and HeldItemsPanel: hover-a-name-to-show-a-
-// description popover, fetched once per name and cached for the hook
+// Shared by TableScreen, AbilitiesPanel and HeldItemsPanel:
+// hover-a-name-to-show-a-description popover, fetched once per name and
+// cached for the hook
 // instance's lifetime (never reset — both callers' component instances
 // persist across Pokemon navigation, same reasoning as the old per-panel
 // abilityDescriptions/itemDescriptions state). A failed fetch is cached too
-// and never retried, matching the pre-extraction behavior exactly.
+// and never retried, matching the pre-extraction behavior exactly. `body` is
+// the popover's text for the hovered name (loading, error, description or
+// "none available"), see describeHoverStatus — callers render it as is.
 export function createHoverDescription(
 	anchorSelector: string,
 	getDescription: (name: string) => Promise<string | null>,
@@ -34,12 +38,11 @@ export function createHoverDescription(
 		get pos() {
 			return popover.pos;
 		},
-		get status(): undefined | "error" | { text: string | null } {
+		get body(): string {
 			const hovered = popover.hovered;
-			if (hovered === null) return undefined;
-			const state = descriptions[hovered];
-			if (!state) return undefined;
-			return "error" in state ? "error" : state;
+			const state = hovered === null ? undefined : descriptions[hovered];
+			const status: HoverDescriptionStatus = !state ? undefined : "error" in state ? "error" : state;
+			return describeHoverStatus(status);
 		},
 		show,
 		hide: popover.hide,

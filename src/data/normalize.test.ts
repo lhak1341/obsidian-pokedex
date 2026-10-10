@@ -13,6 +13,7 @@ import {
 	inferAncestorFormSuffix,
 	nextEvolutionLevels,
 	normalizeEvolutionChain,
+	normalizeEvolutionChainForViewed,
 	normalizeEvYield,
 	normalizeHeldItemDetails,
 	normalizeMoveDetail,
@@ -580,6 +581,43 @@ describe("normalizeEvolutionChain", () => {
 		expect(node.children[0].children[0].name).toBe("obstagoon");
 		expect(node.children[0].children[0].id).toBe(862);
 		expect(node.children[0].children[0].formLabel).toBeNull(); // Obstagoon isn't itself a variety
+	});
+
+	describe("normalizeEvolutionChainForViewed", () => {
+		it("scopes the chain to a regional-variant row's own suffix (Alolan Meowth)", () => {
+			const node = normalizeEvolutionChainForViewed(meowthChain, {
+				id: 10107,
+				pokemonName: "meowth-alola",
+				speciesName: "meowth",
+			});
+			expect(node.id).toBe(10107);
+			expect(node.children[0].minHappiness).toBe(160);
+			expect(node.children[0].id).toBe(10108);
+		});
+
+		it("infers the gating ancestor's suffix for a non-suffixed, variant-exclusive species (Obstagoon)", () => {
+			const node = normalizeEvolutionChainForViewed(zigzagoonChain, {
+				id: 862,
+				pokemonName: "obstagoon",
+				speciesName: "obstagoon",
+			});
+			expect(node.id).toBe(10174);
+			expect(node.children[0].id).toBe(10175);
+			expect(node.children[0].children[0].name).toBe("obstagoon");
+			expect(node.children[0].children[0].id).toBe(862);
+		});
+
+		it("gives a base-species row the default no-context view", () => {
+			const viewed = { id: 52, pokemonName: "meowth", speciesName: "meowth" };
+			expect(normalizeEvolutionChainForViewed(meowthChain, viewed)).toEqual(normalizeEvolutionChain(meowthChain));
+		});
+
+		it("gives an unconditionally reachable species the default view (Linoone)", () => {
+			const viewed = { id: 264, pokemonName: "linoone", speciesName: "linoone" };
+			expect(normalizeEvolutionChainForViewed(zigzagoonChain, viewed)).toEqual(
+				normalizeEvolutionChain(zigzagoonChain),
+			);
+		});
 	});
 });
 

@@ -50,13 +50,20 @@
 	// supported generation's games when the active generation predates this
 	// species (e.g. viewing a Gen 4 mon with Active Gen set to Gen 3, which
 	// has no data for it at all), see resolveTabsForGen.
-	const moveVersionTabs = $derived.by(() => {
+	const resolvedMoveVersions = $derived.by(() => {
 		const versionsWithMoves = new Set(moves.map((m) => m.versionGroup));
-		return resolveTabsForGen(MOVE_VERSION_TABS_BY_GEN, activeGen, (tab) => versionsWithMoves.has(tab.key));
+		return resolveTabsForGen(
+			MOVE_VERSION_TABS_BY_GEN,
+			activeGen,
+			(tab) => versionsWithMoves.has(tab.key),
+			activeMoveVersion,
+		);
 	});
-	const effectiveMoveVersion = $derived(
-		moveVersionTabs.some((t) => t.key === activeMoveVersion) ? activeMoveVersion : (moveVersionTabs[0]?.key ?? ""),
-	);
+	const moveVersionTabs = $derived(resolvedMoveVersions.tabs);
+	const effectiveMoveVersion = $derived(resolvedMoveVersions.selected?.key ?? "");
+	// The generation the tabs actually came from — differs from activeGen
+	// after a fallback, and null when no generation has moves for this entry.
+	const shownGen = $derived(resolvedMoveVersions.gen ?? activeGen);
 
 	const filteredMoves = $derived(
 		moves.filter((m) => m.learnMethod === activeMoveMethod && m.versionGroup === effectiveMoveVersion),
@@ -66,7 +73,7 @@
 </script>
 
 <div class="moves-heading-row">
-	<h3 class="section-heading">Moves (G{activeGen})</h3>
+	<h3 class="section-heading">Moves (G{shownGen}{shownGen !== activeGen ? ` · no G${activeGen} data` : ""})</h3>
 	<div class="move-tabs move-version-tabs">
 		{#each moveVersionTabs as tab (tab.key)}
 			<button

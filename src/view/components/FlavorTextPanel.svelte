@@ -21,13 +21,12 @@
 	// active generation predates this species (e.g. viewing a Gen 4 mon with
 	// Active Gen set to Gen 3, which has no data for it at all), see
 	// resolveTabsForGen.
-	const flavorTabs = $derived.by(() =>
-		resolveTabsForGen(FLAVOR_TEXT_TABS_BY_GEN, activeGen, (tab) => !!flavorTexts[tab.key]),
+	const resolvedFlavor = $derived.by(() =>
+		resolveTabsForGen(FLAVOR_TEXT_TABS_BY_GEN, activeGen, (tab) => !!flavorTexts[tab.key], activeFlavorVersion),
 	);
-	const activeFlavorIndex = $derived(
-		Math.max(0, flavorTabs.findIndex((tab) => tab.key === activeFlavorVersion)),
-	);
-	const currentFlavorTab = $derived(flavorTabs[activeFlavorIndex] ?? null);
+	const flavorTabs = $derived(resolvedFlavor.tabs);
+	const activeFlavorIndex = $derived(resolvedFlavor.selectedIndex);
+	const currentFlavorTab = $derived(resolvedFlavor.selected);
 	const currentFlavorText = $derived(currentFlavorTab ? flavorTexts[currentFlavorTab.key] ?? null : null);
 
 	function cycleFlavorVersion(direction: 1 | -1) {

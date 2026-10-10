@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { PokedexTableRow } from "../data/types";
 import { formatEvYield, TOGGLEABLE_COLUMNS } from "./tableColumns";
 import { makeRow } from "../data/__fixtures__/rows";
+import template from "../view/components/TableScreen.svelte?raw";
 
 function renderOf(key: string, row: PokedexTableRow): string {
 	const column = TOGGLEABLE_COLUMNS.find((c) => c.key === key);
@@ -55,6 +56,25 @@ describe("custom columns", () => {
 			const column = TOGGLEABLE_COLUMNS.find((c) => c.key === key);
 			expect(column?.custom).toBe(cell);
 			expect(column && "render" in column).toBe(false);
+		}
+	});
+
+	// tsc skips .svelte, so nothing else notices a CustomCell value that
+	// TableScreen's template has no branch for: it falls into the `{:else}
+	// <td></td>` alignment fallback and renders blank. The expected values come
+	// from TOGGLEABLE_COLUMNS itself, so a new custom column is covered the
+	// moment it is added.
+	it("has a TableScreen template branch for every custom column", () => {
+		const customValues = [
+			...new Set(TOGGLEABLE_COLUMNS.flatMap((c) => (c.custom ? [c.custom] : []))),
+		];
+		// Liveness: an empty list or an empty template would pass vacuously.
+		expect(customValues.length).toBeGreaterThan(0);
+		expect(template).toContain("{#each activeColumns as col");
+		for (const value of customValues) {
+			expect(template, `no \`col.custom === "${value}"\` branch in TableScreen.svelte`).toContain(
+				`col.custom === "${value}"`,
+			);
 		}
 	});
 });

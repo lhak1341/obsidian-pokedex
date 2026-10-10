@@ -4,7 +4,7 @@
 
 The rule "scope to the currently Active Gen's data, fall back to the latest supported generation's data when Active Gen predates this entry" (e.g. viewing a Gen 4 mon with Active Gen set to Gen 3, which has no data for it at all).
 
-Implemented once, generically, as `resolveTabsForGen` in `src/utils/generationFallback.ts` — tested in `generationFallback.test.ts`. Used by:
+Implemented once, generically, as `resolveTabsForGen` in `src/utils/generationFallback.ts` — tested in `generationFallback.test.ts`. It returns the tabs, the generation they actually came from (`gen`, null when no generation has data) and the caller's remembered tab key resolved to a selection ("remembered key, else first tab"). `MoveBrowser`'s heading reads `gen` so it names the generation it shows (`Moves (G4 · no G3 data)` after a fallback); `FlavorTextPanel` has no label and ignores it. Used by:
 - `MoveBrowser.svelte`'s `moveVersionTabs` (move version-group tabs)
 - `FlavorTextPanel.svelte`'s `flavorTabs` (flavor-text version tabs)
 
@@ -26,7 +26,7 @@ The search text itself (`query()` in the hook's options) also stays caller-owned
 
 The human-readable description of what triggers a node's own evolution (e.g. "Lv. 16", "Thunder Stone", "Trade (metal coat)", "Lv. 30 (Female)") — shown as the method line on `EvolutionChain.svelte`'s card for that node.
 
-Computed by `describeEvolutionRequirement` in `src/data/normalize.ts`, tested in `normalize.test.ts` alongside every other pure function derived from `EvolutionNode` (`normalizeEvolutionChain`, `collectChainIds`, `nextEvolutionLevels`). Priority-ordered base label (minLevel > item > minHappiness > minBeauty > knownMove > partySpecies > location > trigger), then relativePhysicalStats/trade+heldItem-override/gender/timeOfDay layered on top in that fixed order — see the function's own comment for why trade+heldItem is a hard override rather than a suffix.
+Computed by `describeEvolutionRequirement` in `src/data/normalize.ts`, tested in `normalize.test.ts` alongside every other pure function derived from `EvolutionNode` (`normalizeEvolutionChain`, `normalizeEvolutionChainForViewed`, `collectChainIds`, `nextEvolutionLevels`). `normalizeEvolutionChainForViewed(chain, { id, pokemonName, speciesName })` is the entry the repository calls: it picks the regional-variant path (the viewed Pokemon's own suffix, else the gating ancestor's suffix as for Obstagoon, else the default view) and builds the context. Priority-ordered base label (minLevel > item > minHappiness > minBeauty > knownMove > partySpecies > location > trigger), then relativePhysicalStats/trade+heldItem-override/gender/timeOfDay layered on top in that fixed order — see the function's own comment for why trade+heldItem is a hard override rather than a suffix.
 
 ## View history
 
@@ -61,6 +61,8 @@ PokeAPI renamed `base_form` -> `required_pokemon_form` and `evolved_form` -> `ev
 Generation-tagged row data (wild held items, capture locations) is stored for every supported generation and shown for the Active Gen only. The unscoped fields are named `heldItemsAllGens` and `encounterLocationsAllGens`, so reading one without scoping is visible at the call site.
 
 Held items are scoped by `filterHeldItemsForGen` (`src/utils/heldItemGen.ts`). Capture locations go through one module, `describeEncounters(locations, activeGen)` in `src/utils/encounters.ts`, which returns everything the UI shows from a single scoped list: `summary` (table cell), `tooltip` (table title), `groups` (detail page lines) and `showRegion`. `showRegion` is the one rule for "a line needs its region header": more than one distinct region, not merely more than one line (a single-region Pokemon with a wild line and a trade line has two lines and one region). The helpers inside `encounters.ts` are exported only for their own regression tests (Mirage Tower, compass/bike slugs); callers use `describeEncounters`.
+
+Base stats are scoped too, but by overlay rather than filter: `resolveStatsForGen` (`src/utils/stats.ts`) patches a finite list of buffed species (`STAT_OVERRIDES`) back to their pre-buff values. The detail page calls it per entry; the browse table calls `scopeRowsToGen` once over its rows in `TableScreen.svelte`, so stat columns, Total, stat sort and the stat-range filter read the Active Gen's numbers. `row.stats` on a `PokedexTableRow` is always the latest-game line; only the `scopedRows` derived in `TableScreen` is scoped.
 
 Not the same as Generation fallback: that rule picks a different generation's tabs when the Active Gen has no data; Active Gen scoping just filters.
 

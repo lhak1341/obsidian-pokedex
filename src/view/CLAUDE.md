@@ -31,12 +31,15 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   field and was missed independently for the table cell, its tooltip, the detail page and the
   Quirks filter in one session. `filterPokemon`'s `FilterContext.activeGen` is required for the
   same reason (no silent any-generation fallback).
+- Stats in the browse table are Active Gen scoped by `scopeRowsToGen` (`utils/stats.ts`), applied once as `TableScreen`'s `scopedRows`; filter, sort and `col.render` take those rows. A new table reader must be fed `scopedRows`, not the raw `rows` prop, or it shows latest-game stats (`row.stats` itself is unscoped).
 - Table columns are `{ render }` text columns or `{ custom: CustomCell }` columns TableScreen
   draws itself (`heldItems`, `encounterLocation`: they need the Active Gen; `ev`: it draws chips,
   its tooltip text is `formatEvYield`). A custom column has no `render`; do not add a text
   fallback (for the Active Gen columns it can only show every generation's data). A new custom
   column needs its own `col.custom === …` branch in `TableScreen.svelte`; there is no default
-  (an unhandled value renders an empty `<td>`, and `tsc` cannot check the template).
+  (an unhandled value renders an empty `<td>`, and `tsc` cannot check the template), so
+  `tableColumns.test.ts` scans the template for one branch per `custom` value in
+  `TOGGLEABLE_COLUMNS` (imports the template with `?raw`, see root CLAUDE.md).
 - `tsc` (`bun run typecheck`) skips `.svelte` files and the build only catches compile errors, so after renaming or removing a field/export, grep `src/**/*.svelte` for the old name by hand. A stale use builds clean and reads `undefined` live.
 - `vitest.config.ts` has no Svelte plugin or jsdom, so a `.svelte.ts` rune module (`hoverPopover.svelte.ts`, `quickJumpDropdown.svelte.ts`) can't be tested. Put the branching in `utils/` and inject the DOM-bound piece: `resolvePortraitScale(…, measure)` takes `contentScale` as a parameter. ADR-0003 covers adding jsdom itself.
 
@@ -111,3 +114,4 @@ before assuming a plugin bug.
   it owns the value locally and only pushes out via a callback. Verifying one live via eval
   needs a real remount (force `saveSettings()`'s refresh, or leaf detach+reopen), not just
   mutating `plugin.settings.X` in place.
+- Hover popovers (`.hover-popover-box`): dispatch `new MouseEvent('mouseenter', {bubbles:false})` on the element carrying `onmouseenter`; the body fills after an async fetch, so wait ~2.5s, then read the box scoped to `.table-screen` or `.detail-screen`, then dispatch `mouseleave`. Read right after the event and the box is not rendered yet, so the Loading state is not observable this way.

@@ -13,10 +13,8 @@ import {
 	deriveGigantamaxForms,
 	deriveMegaForms,
 	deriveRegionalForms,
-	inferAncestorFormSuffix,
-	normalizeEvolutionChain,
+	normalizeEvolutionChainForViewed,
 	normalizeMoveDetail,
-	resolveRegionalFormSuffix,
 	toEntry,
 	toGigantamaxFormDetail,
 	toMegaFormDetail,
@@ -848,28 +846,16 @@ export class PokedexRepository {
 	): Promise<Pick<PokedexEntry, "artworkDataUri" | "shinyDataUri" | "shinyArtworkDataUri" | "evolutionChain">> {
 		const pokemon = await this.getOrFetchPokemon(id);
 		const species = await this.getOrFetchSpecies(this.speciesIdFromPokemon(pokemon));
-		// Scopes the chain to whichever variety `id` actually is — undefined
-		// (the default/base behavior) for a normal row, or { formSuffix,
-		// rootId: id } for a regional-form row, so e.g. Alolan Vulpix's
-		// evolution card shows the Ice Stone requirement and links onward to
-		// Alolan Ninetales rather than the base Fire-Stone line. See
-		// normalizeEvolutionChain's own comment for the selection rules.
-		const ownFormSuffix = resolveRegionalFormSuffix(pokemon, species);
-
 		let evolutionChain: EvolutionNode | null = null;
 		try {
 			const rawChain = await this.getOrFetchEvolutionChain(species.evolution_chain.url);
-			// Obstagoon/Cursola/Perrserker/Runerigus/Sirfetch'd/Mr. Rime shape:
-			// `ownFormSuffix` is undefined (the viewed species has no suffix of
-			// its own) but it may still only be reachable via a regional-variant
-			// ancestor — inferAncestorFormSuffix walks the raw chain to find
-			// that suffix so the branch leading to it isn't dropped as an
-			// unrelated regional edge. See inferAncestorFormSuffix's own comment.
-			const pathSuffix = ownFormSuffix ?? inferAncestorFormSuffix(rawChain.chain, species.name);
-			evolutionChain = normalizeEvolutionChain(
-				rawChain.chain,
-				pathSuffix ? { formSuffix: pathSuffix, ownFormSuffix, rootId: id, speciesName: species.name } : undefined,
-			);
+			// Which regional variety (if any) the chain is scoped to is worked
+			// out inside normalizeEvolutionChainForViewed — see its comment.
+			evolutionChain = normalizeEvolutionChainForViewed(rawChain.chain, {
+				id,
+				pokemonName: pokemon.name,
+				speciesName: species.name,
+			});
 		} catch {
 			evolutionChain = null; // non-fatal: detail view still renders without it
 		}

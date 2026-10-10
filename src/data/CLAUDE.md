@@ -55,6 +55,10 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `Cache`/`DiskCache`, `normalize.
   category. Chains already group by shape (Muk-shaped, Yamask-shaped, Corsola-shaped,
   Mime-Jr-shaped, Obstagoon-shaped) — check `normalize.ts`'s shape comments for siblings
   before calling a chain fix complete.
+- The repository never builds `normalizeEvolutionChain`'s context itself: `getEntryExtras` calls
+  `normalizeEvolutionChainForViewed(chain, { id, pokemonName, speciesName })`, which owns the
+  own-suffix / ancestor-suffix / no-context choice. A new chain shape gets its test there,
+  from raw inputs, not by hand-typing a `formSuffix`/`ownFormSuffix` context.
 - A bulk "does this whole family have property X" computation must walk the **raw**
   evolution chain (`evolves_to`), not `normalizeEvolutionChain`'s default no-context view.
   That view picks one coherent path for a specific viewed form and silently drops a branch

@@ -6,9 +6,9 @@
 	import { EMPTY_FILTERS, filterPokemon } from "../../utils/filterPokemon";
 	import { describeEncounters } from "../../utils/encounters";
 	import { filterHeldItemsForGen } from "../../utils/heldItemGen";
-	import { formatPokedollarSigns } from "../../utils/pokedollar";
 	import { formatDexNumber, formatItemName, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { sortPokemon, type SortColumn, type SortDirection } from "../../utils/sortPokemon";
+	import { scopeRowsToGen } from "../../utils/stats";
 	import { formatEvYield, STAT_LABEL_BY_KEY, TOGGLEABLE_COLUMNS } from "../../utils/tableColumns";
 	import { untrack } from "svelte";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
@@ -105,8 +105,12 @@
 	const abilityOptions = $derived(
 		[...new Set(rows.flatMap((r) => r.abilityNames))].sort(),
 	);
+	// Stats are scoped to the Active Gen once, here, so the stat columns,
+	// Total, stat sort and stat-range filter below all read the same numbers
+	// the detail page shows — see scopeRowsToGen.
+	const scopedRows = $derived(scopeRowsToGen(rows, activeGen));
 	const visibleRows = $derived(
-		sortPokemon(filterPokemon(rows, filters, { favoriteIds, activeGen }), sortColumn, sortDirection),
+		sortPokemon(filterPokemon(scopedRows, filters, { favoriteIds, activeGen }), sortColumn, sortDirection),
 	);
 	const activeColumns = $derived(
 		TOGGLEABLE_COLUMNS.filter((col) => visibleColumnKeys.has(col.key)),
@@ -353,13 +357,7 @@
 
 	<HoverPopoverBox hoverState={itemPopover}>
 		<span class="held-item-rarity">({hoveredItemRarities.join("/")}%)</span>
-		{#if !itemPopover.status}
-			Loading…
-		{:else if itemPopover.status === "error"}
-			Couldn't load description.
-		{:else}
-			{itemPopover.status.text ? formatPokedollarSigns(itemPopover.status.text) : "No description available."}
-		{/if}
+		{itemPopover.body}
 	</HoverPopoverBox>
 
 	<HoverPopoverBox hoverState={typePopover}>

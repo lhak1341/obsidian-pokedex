@@ -329,7 +329,7 @@ export interface PokedexTableRow {
 	// mythical, gift) AND for any regional-form row (v1 scope gap, documented
 	// in the generator script). Kept unfiltered by Active Gen here, same
 	// reasoning/shape as heldItemsAllGens above — scope down via
-	// utils/encounterGen.ts's filterEncounterLocationsForGen at display time.
+	// utils/encounters.ts's filterEncounterLocationsForGen at display time.
 	// `method` is non-null when this "location" isn't a wild encounter at all
 	// but an NPC hand-off — "trade" (Jynx: trade a Poliwhirl in Cerulean
 	// City, `tradeFor` names the species being traded away), "gift" (a

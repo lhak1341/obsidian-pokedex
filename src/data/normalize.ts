@@ -143,7 +143,10 @@ function extractFormSuffix(varietyName: string, speciesName: string): string | u
 // both by toTableRow (to compute dexNumber/formLabel/generationId) and by
 // PokedexRepository when building the `context` passed into
 // normalizeEvolutionChain for a regional-form row's own detail page.
-export function resolveRegionalFormSuffix(pokemon: RawPokemon, species: RawSpecies): string | undefined {
+export function resolveRegionalFormSuffix(
+	pokemon: Pick<RawPokemon, "name">,
+	species: Pick<RawSpecies, "name">,
+): string | undefined {
 	if (pokemon.name === species.name) return undefined;
 	const suffix = extractFormSuffix(pokemon.name, species.name);
 	return suffix !== undefined && suffix in REGIONAL_FORMS ? suffix : undefined;
@@ -420,6 +423,32 @@ export function normalizeEvolutionChain(
 	context?: { formSuffix: string; ownFormSuffix?: string; rootId: number; speciesName: string },
 ): EvolutionNode {
 	return buildEvolutionNode(link, idFromUrl(link.species.url), undefined, undefined, context);
+}
+
+// The entry PokedexRepository.getEntryExtras uses: given a species' raw chain
+// and the Pokemon actually being viewed (`id` is the row's own numeric fetch
+// id; `pokemonName`/`speciesName` are PokeAPI's, e.g. "vulpix-alola" /
+// "vulpix"), works out which regional-variant path the chain should be
+// walked down and builds the context normalizeEvolutionChain wants. That
+// composition is where the Obstagoon/Corsola context-propagation bugs lived:
+// the viewed Pokemon's own suffix (resolveRegionalFormSuffix), else the suffix
+// of the regional ancestor that gates the viewed species
+// (inferAncestorFormSuffix), else no context at all (the default/base view).
+// Callers pass only these three facts, so a caller cannot get `formSuffix`
+// vs `ownFormSuffix` out of step. normalizeEvolutionChain stays exported for
+// its own branch-selection tests.
+export function normalizeEvolutionChainForViewed(
+	chain: RawEvolutionChainLink,
+	viewed: { id: number; pokemonName: string; speciesName: string },
+): EvolutionNode {
+	const ownFormSuffix = resolveRegionalFormSuffix({ name: viewed.pokemonName }, { name: viewed.speciesName });
+	const pathSuffix = ownFormSuffix ?? inferAncestorFormSuffix(chain, viewed.speciesName);
+	return normalizeEvolutionChain(
+		chain,
+		pathSuffix
+			? { formSuffix: pathSuffix, ownFormSuffix, rootId: viewed.id, speciesName: viewed.speciesName }
+			: undefined,
+	);
 }
 
 // Flattens an evolution chain tree down to the ids of every member (the

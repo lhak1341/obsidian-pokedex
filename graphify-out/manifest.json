@@ -40,8 +40,8 @@
     "semantic_hash": ""
   },
   "src/data/PokedexRepository.ts": {
-    "mtime": 1791611120.9204583,
-    "ast_hash": "a95111b957bd0594c0084e93627d2323",
+    "mtime": 1791621611.307048,
+    "ast_hash": "e3c52341cf5bf937021c351057fe3240",
     "semantic_hash": ""
   },
   "src/data/__fixtures__/bulbasaur-evolution-chain.json": {
@@ -75,18 +75,18 @@
     "semantic_hash": ""
   },
   "src/data/normalize.test.ts": {
-    "mtime": 1791559091.7666013,
-    "ast_hash": "ff48c05cf7ed6138ed55b8037d9931d5",
+    "mtime": 1791621611.3078313,
+    "ast_hash": "d48ea6e576d3c5ad9141cabed950b860",
     "semantic_hash": ""
   },
   "src/data/normalize.ts": {
-    "mtime": 1791602275.975097,
-    "ast_hash": "66dcd6e199edbfab65d25c47bd534e20",
+    "mtime": 1791621602.9870133,
+    "ast_hash": "0464661f0266909d35af1009575ed5e3",
     "semantic_hash": ""
   },
   "src/data/types.ts": {
-    "mtime": 1791602280.50724,
-    "ast_hash": "c86f0a35016dade53ac7a32e7af21610",
+    "mtime": 1791622730.346593,
+    "ast_hash": "2f0d3e199a6e41f8cb7d6787823523a6",
     "semantic_hash": ""
   },
   "src/main.ts": {
@@ -130,13 +130,13 @@
     "semantic_hash": ""
   },
   "src/utils/generationFallback.test.ts": {
-    "mtime": 1784768257.5973043,
-    "ast_hash": "43190df2ef3f7d6696c1664c8ee4b908",
+    "mtime": 1791620718.1307797,
+    "ast_hash": "c19d259256caaec050be9fb74455c0b2",
     "semantic_hash": ""
   },
   "src/utils/generationFallback.ts": {
-    "mtime": 1784768245.8006651,
-    "ast_hash": "231b1a7667640572ca9f921ab2eb03e9",
+    "mtime": 1791620709.3649452,
+    "ast_hash": "9cc088b2f2ee0bee2116ce6b2ce6a6df",
     "semantic_hash": ""
   },
   "src/utils/generationScope.test.ts": {
@@ -210,18 +210,18 @@
     "semantic_hash": ""
   },
   "src/utils/stats.test.ts": {
-    "mtime": 1784052713.936308,
-    "ast_hash": "9d30e91e6ae952a4e7cf354a8ec3849b",
+    "mtime": 1791621153.5493963,
+    "ast_hash": "fc3bd5d8f8941fdd83b560480a250b63",
     "semantic_hash": ""
   },
   "src/utils/stats.ts": {
-    "mtime": 1784052713.9366007,
-    "ast_hash": "d317a99dcbe823890576fbe7f8e9692b",
+    "mtime": 1791621117.6170764,
+    "ast_hash": "e0f0f19370ade3d194eee7ec0c8e13b9",
     "semantic_hash": ""
   },
   "src/utils/tableColumns.test.ts": {
-    "mtime": 1791611918.486746,
-    "ast_hash": "b42062176c6144c346e1a7f9d815b76b",
+    "mtime": 1791622116.884668,
+    "ast_hash": "318f0994ee2d6ed9f8dd5867f4a98ab7",
     "semantic_hash": ""
   },
   "src/utils/tableColumns.ts": {
@@ -270,8 +270,8 @@
     "semantic_hash": ""
   },
   "src/view/components/AbilitiesPanel.svelte": {
-    "mtime": 1785260822.961957,
-    "ast_hash": "2430c45f33142f7702420ac7efee0353",
+    "mtime": 1791622317.4371784,
+    "ast_hash": "5241560420a5f0d456b57adce6e29f0b",
     "semantic_hash": ""
   },
   "src/view/components/BarRow.svelte": {
@@ -300,8 +300,8 @@
     "semantic_hash": ""
   },
   "src/view/components/FlavorTextPanel.svelte": {
-    "mtime": 1789484246.0366707,
-    "ast_hash": "6895cb739c3f804f450d9a4f78a391b0",
+    "mtime": 1791620709.3660917,
+    "ast_hash": "e219a91be84008c2ba0fdcfff55754a0",
     "semantic_hash": ""
   },
   "src/view/components/Icon.svelte": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "src/view/components/MoveBrowser.svelte": {
-    "mtime": 1789484261.862251,
-    "ast_hash": "a1c2901814ba7d4dfc791b4e993a23a8",
+    "mtime": 1791620709.365591,
+    "ast_hash": "c18f615aada49d1a31519ab073c70069",
     "semantic_hash": ""
   },
   "src/view/components/QuickSearch.svelte": {
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "src/view/components/TableScreen.svelte": {
-    "mtime": 1791611918.4863536,
-    "ast_hash": "8b9be9e76cd685320956646f556be9e9",
+    "mtime": 1791622317.4341495,
+    "ast_hash": "1083f3aecbd36ff190fe097dc02730c8",
     "semantic_hash": ""
   },
   "src/view/components/TypeBadge.svelte": {
@@ -365,13 +365,13 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1791612139.653812,
-    "ast_hash": "f1bd07ba77209fb29f5a60fbdb671c41",
+    "mtime": 1791622730.3469365,
+    "ast_hash": "c88584d618727311ae5547e75102fbb6",
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1791602286.3528492,
-    "ast_hash": "8a1e7a6d6f99bd4f777a34136f7fcc45",
+    "mtime": 1791621633.5617466,
+    "ast_hash": "8c5dcfd51f3e2200cba45ac5961183b7",
     "semantic_hash": ""
   },
   "README.md": {
@@ -380,8 +380,8 @@
     "semantic_hash": ""
   },
   "docs/multi-gen-expansion-plan.md": {
-    "mtime": 1791602275.9761243,
-    "ast_hash": "51389fac76b8c477a4f8854443a4bdea",
+    "mtime": 1791621117.6198847,
+    "ast_hash": "0068c1c5fc00d2cb1a42c869bb7cf638",
     "semantic_hash": ""
   },
   "src/utils/pokemonDisplay.ts": {
@@ -390,8 +390,8 @@
     "semantic_hash": ""
   },
   "src/view/components/HeldItemsPanel.svelte": {
-    "mtime": 1791559190.4461064,
-    "ast_hash": "2b8a7e490fa8728cfd0e6471901dd071",
+    "mtime": 1791622317.4355412,
+    "ast_hash": "008db8095fd202f9c5318ba92ddf5946",
     "semantic_hash": ""
   },
   "src/view/components/RegionalFormNav.svelte": {
@@ -515,8 +515,8 @@
     "semantic_hash": ""
   },
   "src/view/hoverDescription.svelte.ts": {
-    "mtime": 1784851828.1452687,
-    "ast_hash": "078b5f8e6bdb23bf6f6431f0aceaa326",
+    "mtime": 1791622317.4315035,
+    "ast_hash": "c61a632d9fe51b299d04c2e8de88759c",
     "semantic_hash": ""
   },
   "src/utils/romanNumeral.test.ts": {
@@ -610,13 +610,13 @@
     "semantic_hash": ""
   },
   "src/data/CLAUDE.md": {
-    "mtime": 1791611537.537572,
-    "ast_hash": "3a5dc7527b39dded9a051a9de50ae024",
+    "mtime": 1791621633.5613997,
+    "ast_hash": "bbcf6ed2575f0c4794a7dd4ff4bfb9a6",
     "semantic_hash": ""
   },
   "src/view/CLAUDE.md": {
-    "mtime": 1791611918.4873073,
-    "ast_hash": "b55b9bf23da10f45f84e85e4616dddf9",
+    "mtime": 1791622730.3475308,
+    "ast_hash": "66ec0334e5dbd10f05ab0c3f1cff2f5b",
     "semantic_hash": ""
   },
   "src/data/finalEvolutionStage.json": {
@@ -717,6 +717,21 @@
   "src/data/__fixtures__/rows.ts": {
     "mtime": 1791611486.3544047,
     "ast_hash": "3e32abb570e5dacf21e530457f4dafcc",
+    "semantic_hash": ""
+  },
+  "src/raw-imports.d.ts": {
+    "mtime": 1791622116.8614202,
+    "ast_hash": "2413897baf7fdd5185a86aa3083815f4",
+    "semantic_hash": ""
+  },
+  "src/utils/hoverDescriptionText.test.ts": {
+    "mtime": 1791622317.3888435,
+    "ast_hash": "9f2dd5df28df9caeb7ce149a0976083d",
+    "semantic_hash": ""
+  },
+  "src/utils/hoverDescriptionText.ts": {
+    "mtime": 1791622317.3726976,
+    "ast_hash": "51991a8fe33a99c6c96f6e447120763c",
     "semantic_hash": ""
   }
 }

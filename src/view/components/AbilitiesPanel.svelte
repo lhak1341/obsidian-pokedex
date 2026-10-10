@@ -44,13 +44,7 @@
 {/each}
 
 <HoverPopoverBox hoverState={popover}>
-	{#if !popover.status}
-		Loading…
-	{:else if popover.status === "error"}
-		Couldn't load description.
-	{:else}
-		{popover.status.text ?? "No description available."}
-	{/if}
+	{popover.body}
 </HoverPopoverBox>
 
 <style>

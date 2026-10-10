@@ -29,6 +29,8 @@ them before publishing — a tag can be pushed from a commit CI never saw. Nothi
   nothing about types (verified: a deliberate type error builds clean). It is still a
   required step — esbuild-svelte is the only thing that catches a Svelte compile error, and
   `svelte-check` is not a dependency here.
+- TypeScript 6 does not auto-include `@types/*`, so `node:fs` in a test fails typecheck even with
+  `@types/node` installed. Read source text with Vite's `?raw` (declared in `src/raw-imports.d.ts`).
 - `tsconfig.json` targets ES2020, so `Array.prototype.at()` (ES2022) fails typecheck with a
   misleading "change your target library?" error. Use `arr[arr.length - 1]`; do not bump
   the target (Obsidian runtime compat risk).

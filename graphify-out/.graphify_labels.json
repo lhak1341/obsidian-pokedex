@@ -34,6 +34,8 @@
   "32": "0002-mega-form-cache-not-on-getOrFetch.md",
   "33": "0003-pokedexview-stays-untested.md",
   "34": "tableColumns.ts",
+  "35": "quirksAndTraits.ts",
+  "36": "PokedexTableRow",
   "37": "GENERATIONS",
   "38": "GENERATIONS",
   "39": "imageBounds.ts",
@@ -43,7 +45,9 @@
   "43": "lint-ratchet.mjs",
   "44": "generationScope.ts",
   "45": "pokedollar.ts",
+  "46": "generationScope.ts",
   "47": "0007-local-preference-callbacks-stay-plumbed.md",
   "48": "0008-font-picker-stays-the-shared-recipe-shape.md",
-  "49": "0009-detail-screen-derivations-stay-in-the-component.md"
+  "49": "0009-detail-screen-derivations-stay-in-the-component.md",
+  "50": "raw-imports.d.ts"
 }
