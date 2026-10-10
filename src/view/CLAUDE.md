@@ -26,10 +26,13 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   field and was missed independently for the table cell, its tooltip, the detail page and the
   Quirks filter in one session. `filterPokemon`'s `FilterContext.activeGen` is required for the
   same reason (no silent any-generation fallback).
-- Table columns are `{ render }` text columns or `{ custom: true }` columns TableScreen draws
-  itself (`heldItems`, `encounterLocation`: they need the Active Gen). A custom column has no
-  `render`; do not add a text fallback, it can only show every generation's data.
+- Table columns are `{ render }` text columns or `{ custom: CustomCell }` columns TableScreen
+  draws itself (`heldItems`, `encounterLocation`: they need the Active Gen). A custom column has no
+  `render`; do not add a text fallback, it can only show every generation's data. A new custom
+  column needs its own `col.custom === …` branch in `TableScreen.svelte`; there is no default
+  (an unhandled value renders an empty `<td>`, and `tsc` cannot check the template).
 - `tsc` (`bun run typecheck`) skips `.svelte` files and the build only catches compile errors, so after renaming or removing a field/export, grep `src/**/*.svelte` for the old name by hand. A stale use builds clean and reads `undefined` live.
+- `vitest.config.ts` has no Svelte plugin or jsdom, so a `.svelte.ts` rune module (`hoverPopover.svelte.ts`, `quickJumpDropdown.svelte.ts`) can't be tested. Put the branching in `utils/` and inject the DOM-bound piece: `resolvePortraitScale(…, measure)` takes `contentScale` as a parameter. ADR-0003 covers adding jsdom itself.
 
 Adding a generation stales cached Moves/Flavor Text and needs a checklist walk — see
 `docs/multi-gen-expansion-plan.md`'s Recipe section, not a bespoke fix here.
@@ -38,7 +41,7 @@ Adding a generation stales cached Moves/Flavor Text and needs a checklist walk �
 
 Official-artwork shiny PNGs crop up to 31% tighter than non-shiny for ~46 of 97 Mega
 species (classic Gen 6 megas on a 475x475 canvas); newer fan-added megas (534x534) are
-unaffected. `DetailScreen.svelte`'s `portraitScale`, via `imageBounds.ts`'s
+unaffected. `PortraitPanel.svelte`'s `portraitScale` (rule: `resolvePortraitScale` in `utils/portrait.ts`), via `imageBounds.ts`'s
 `contentScale`, decodes each render's alpha bbox and scales the outlier down, shrink-only.
 Treat "this sprite looks bigger/smaller" reports as a whole-variety-group bbox scan
 before assuming a plugin bug.
@@ -87,6 +90,13 @@ before assuming a plugin bug.
 - Fixtures: Venusaur has both Mega (single "M" badge) and Gigantamax ("G"); Charizard's Mega
   splits into X/Y badges and is the `portraitScale` fixture (shiny crops ~9% tighter);
   Farfetch'd always holds an item (Stick, 5%).
+- Table rows stream in while loading, so a row count or before/after comparison taken right
+  after a reload is meaningless: poll the `tbody tr` count until two reads 1.5s apart match
+  before measuring.
+- Open a detail page by clicking the row's `.name-cell`. Toggle `aria-label`s flip with state
+  ("Show shiny sprite" / "Show normal sprite", "Show Mega X form" / "Show base Mega X form"),
+  so find a button by its current label or the click throws. Charizard Mega X + shiny should
+  read `scale(0.907)` on `.portrait-image` and on `.portrait-preview`.
 - To verify an unfamiliar Lucide icon name, render it via `<Icon name=… />` in a live
   component and check `el.querySelector('svg')?.innerHTML` (non-empty = valid) — do not
   probe the icon registry from eval.

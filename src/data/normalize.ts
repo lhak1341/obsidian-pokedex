@@ -460,8 +460,8 @@ export function nextEvolutionLevels(root: EvolutionNode, id: number): number[] {
 // Max depth (number of evolution "levels" from the family's root to its
 // deepest branch, NOT the count of species in it) of the WHOLE family
 // tree — every member of a family reports the same value regardless of
-// which stage it itself is (see QUIRKS' no-evolution/one-evolution/
-// two-plus-evolutions options and PokedexTableRow.evolutionStages).
+// which stage it itself is (see TRAITS' no-evolution/one-evolution/
+// two-plus-evolutions options in utils/quirksAndTraits.ts and PokedexTableRow.evolutionStages).
 // Branching width (e.g. Eevee's 8 evolutions) doesn't add depth, only extra
 // branches at the same level — Eevee and every Eeveelution alike report
 // depth 1.

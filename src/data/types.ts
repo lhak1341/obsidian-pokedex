@@ -354,12 +354,12 @@ export interface PokedexTableRow {
 	// at table-load time (species/pokemon), no extra fetch. Fossil and held-
 	// item aren't duplicated here: fossil checks FOSSIL_IDS.has(dexNumber)
 	// directly (curated list, same as before), held-item checks
-	// heldItemsAllGens.length > 0 directly — see matchesTrait in filterPokemon.ts.
+	// heldItemsAllGens.length > 0 directly — see TRAITS in utils/quirksAndTraits.ts.
 	isBaby: boolean;
 	canMegaEvolve: boolean;
 	canGigantamax: boolean;
 	// Total evolution stages in this species' WHOLE family (same value for
-	// every member, including every regional-form sibling) — see QUIRKS'
+	// every member, including every regional-form sibling) — see TRAITS' (utils/quirksAndTraits.ts)
 	// no-evolution/one-evolution/two-plus-evolutions options,
 	// normalize.ts's evolutionFamilyDepth. 0 for a species with no evolution
 	// at all (Tauros) or when the family's evolution-chain fetch failed
@@ -367,7 +367,7 @@ export interface PokedexTableRow {
 	evolutionStages: number;
 	// Per-species (not whole-family, unlike evolutionStages above) — true iff
 	// nothing evolves FROM this species. See IS_FINAL_EVOLUTION_STAGE in
-	// constants.ts and TRAITS' "Last Stage" option. false (not true) when the
+	// constants.ts and TRAITS' "Last Stage" option (utils/quirksAndTraits.ts). false (not true) when the
 	// family's evolution-chain fetch failed, same non-fatal-fallback shape as
 	// evolutionStages' 0 — a failed fetch should never silently include a row
 	// in a filter result.

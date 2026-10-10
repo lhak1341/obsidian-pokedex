@@ -3,19 +3,22 @@ import { createFakeDataAdapter, FakePokeApiClient } from "../data/__fixtures__/f
 import { DiskCache } from "../data/Cache";
 import { PokedexRepository } from "../data/PokedexRepository";
 import type { PokedexTableRow } from "../data/types";
+import type { GenerationScope } from "../utils/generationScope";
 import { PokedexLoadState } from "./PokedexLoadState";
 
+// A plain permissive scope (not resolveGenerationScope, whose empty list
+// would give an Infinity range): these tests exercise fetch/retry behavior,
+// while generation resolution is covered by generationScope.test.ts.
 function makeLoadState(
 	range: { start: number; end: number },
 	includes: (row: PokedexTableRow) => boolean = () => true,
-	// Empty = unfiltered (matches EMPTY_FILTERS semantics) — only the
-	// generation-filter-specific tests need a real list.
-	enabledGenerations: number[] = [],
+	includesFailedId: (id: number) => boolean = () => true,
 ) {
 	const client = new FakePokeApiClient();
 	const cache = DiskCache.forTest(createFakeDataAdapter(), "cache");
 	const repository = new PokedexRepository(client, cache);
-	return { client, loadState: new PokedexLoadState(repository, range, includes, enabledGenerations) };
+	const scope: GenerationScope = { fetchRange: range, includes, includesFailedId };
+	return { client, loadState: new PokedexLoadState(repository, scope) };
 }
 
 describe("PokedexLoadState", () => {

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { GENERATIONS, QUIRKS, RARITIES, STAT_COLORS, STAT_COLUMNS, TRAITS, TYPE_NAMES } from "../../data/constants";
+	import { GENERATIONS, RARITIES, STAT_COLORS, STAT_COLUMNS, TYPE_NAMES } from "../../data/constants";
+	import { QUIRKS, TRAITS } from "../../utils/quirksAndTraits";
 	import { filterAndOrderAbilityOptions } from "../../utils/abilityOptions";
 	import { EMPTY_FILTERS, type PokedexFilters } from "../../utils/filterPokemon";
 	import type { PokedexTableRow, StatBlock } from "../../data/types";

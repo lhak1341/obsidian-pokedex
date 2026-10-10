@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { GigantamaxFormDetail, MegaFormDetail, PluginSettings, PokedexEntry } from "../../data/types";
+	import type { PluginSettings, PokedexEntry, PortraitImageSource } from "../../data/types";
 	import { contentScale } from "../imageBounds";
 	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
-	import { resolvePortrait } from "../../utils/portrait";
+	import { resolvePortrait, resolvePortraitScale } from "../../utils/portrait";
 	import Icon from "./Icon.svelte";
 	import VarietyFormToggle from "./VarietyFormToggle.svelte";
 
@@ -17,14 +17,14 @@
 	// the ≥920px container-query breakpoint, which would make IT the
 	// containing block for a position: absolute descendant nested here
 	// instead of .detail-screen — silently mispositioning the overlay on
-	// every normal desktop-width pane. portraitUri/portraitScale are
-	// surfaced to DetailScreen via $bindable so it can still render that
-	// overlay with the right image/scale; onHoverPortrait/onLeavePortrait
+	// every normal desktop-width pane. DetailScreen derives portraitSource
+	// and portraitUri itself (it owns every input) and hands them down;
+	// portraitScale is async, so it is surfaced back via $bindable; onHoverPortrait/onLeavePortrait
 	// forward the raw hover events up for the same reason.
 	let {
 		entry,
-		activeMegaData,
-		activeGigantamaxData,
+		portraitSource,
+		portraitUri,
 		spriteStyle,
 		showShiny,
 		onToggleShiny,
@@ -34,12 +34,14 @@
 		onSelectGigantamax,
 		onHoverPortrait,
 		onLeavePortrait,
-		portraitUri = $bindable(),
 		portraitScale = $bindable(),
 	}: {
 		entry: PokedexEntry;
-		activeMegaData: MegaFormDetail | null;
-		activeGigantamaxData: GigantamaxFormDetail | null;
+		// Which image set renders: the active Mega/Gigantamax form, else the
+		// entry itself (Mega and Gigantamax are mutually exclusive, enforced
+		// by VarietyToggleState) — chosen once in DetailScreen.
+		portraitSource: PortraitImageSource;
+		portraitUri: string | null;
 		spriteStyle: PluginSettings["spriteStyle"];
 		showShiny: boolean;
 		onToggleShiny: () => void;
@@ -49,20 +51,9 @@
 		onSelectGigantamax: (key: string | null) => void;
 		onHoverPortrait: (target: EventTarget | null) => void;
 		onLeavePortrait: () => void;
-		portraitUri: string | null;
 		portraitScale: number;
 	} = $props();
 
-	// Shared by the base-species, Mega-form, and Gigantamax-form image sets
-	// (see MegaFormDetail/GigantamaxFormDetail's comment on why each mirrors
-	// PokedexEntry's four image fields) so switching either toggle and the
-	// shiny toggle compose freely. Mega and Gigantamax are mutually
-	// exclusive (enforced by VarietyToggleState in DetailScreen), so only one
-	// of activeMegaData/activeGigantamaxData is ever non-null at once.
-	const activePortraitSource = $derived(activeMegaData ?? activeGigantamaxData ?? entry);
-	$effect(() => {
-		portraitUri = activePortraitSource ? resolvePortrait(activePortraitSource, spriteStyle, showShiny) : null;
-	});
 	// Always the non-shiny render — resolvePortrait(..., false) is the same
 	// "official-artwork falls back to spriteDataUri" logic portraitUri itself
 	// uses, just pinned to showShiny=false so it stays a stable reference
@@ -70,25 +61,22 @@
 	// official-artwork shiny PNGs crop tighter than their non-shiny
 	// counterpart, so this is what the scale effect below normalizes against.
 	const basePortraitUri = $derived(
-		activePortraitSource ? resolvePortrait(activePortraitSource, spriteStyle, false) : null,
+		portraitSource ? resolvePortrait(portraitSource, spriteStyle, false) : null,
 	);
 
 	// 1 unless the currently-shown render's own artwork crops noticeably
-	// tighter than basePortraitUri's (official-artwork style only — the
-	// small game sprites don't exhibit this crop drift). Capped at 1 (never
-	// enlarges) so the non-shiny baseline's own on-screen size never changes.
+	// tighter than basePortraitUri's (rule and rationale: resolvePortraitScale
+	// in utils/portrait.ts). A null result means "no usable measurement" and
+	// keeps the previous scale.
 	$effect(() => {
-		const base = basePortraitUri;
-		const current = portraitUri;
-		const style = spriteStyle;
-		if (style !== "official-artwork" || !base || !current || base === current) {
-			portraitScale = 1;
-			return;
-		}
 		let cancelled = false;
-		Promise.all([contentScale(base), contentScale(current)]).then(([baseFill, currentFill]) => {
-			if (cancelled || currentFill <= 0) return;
-			portraitScale = Math.min(baseFill / currentFill, 1);
+		resolvePortraitScale({
+			style: spriteStyle,
+			baseUri: basePortraitUri,
+			currentUri: portraitUri,
+			measure: contentScale,
+		}).then((scale) => {
+			if (!cancelled && scale !== null) portraitScale = scale;
 		});
 		return () => {
 			cancelled = true;
@@ -108,7 +96,7 @@
 		class="portrait-image"
 		style:transform="scale({portraitScale})"
 	/>
-	{#if activePortraitSource?.shinyDataUri || activePortraitSource?.shinyArtworkDataUri}
+	{#if portraitSource?.shinyDataUri || portraitSource?.shinyArtworkDataUri}
 		<button
 			class="shiny-toggle"
 			class:active={showShiny}

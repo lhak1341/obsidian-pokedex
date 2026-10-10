@@ -22,6 +22,7 @@
 	import StatBars from "./StatBars.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 	import { describeEncounters } from "../../utils/encounters";
+	import { resolvePortrait } from "../../utils/portrait";
 	import { filterHeldItemsForGen } from "../../utils/heldItemGen";
 	import { formatDexNumber, formatHeight, formatPokemonDisplayName, formatWeight } from "../../utils/pokemonDisplay";
 	import { romanNumeral } from "../../utils/romanNumeral";
@@ -130,11 +131,15 @@
 
 	// Image resolution (base/Mega/Gigantamax, shiny toggle) and the
 	// shiny-crop scale correction (see imageBounds.ts) live in PortraitPanel
-	// now (architecture review candidate 1) — these two mirror its bindable
-	// outputs, needed here only because the hover-preview overlay below must
-	// render at this component's own root (see its comment), not nested
-	// inside PortraitPanel.
-	let portraitUri = $state<string | null>(null);
+	// now (architecture review candidate 1). portraitUri is derived here
+	// because every input is owned here, and the hover-preview overlay below
+	// must render at this component's own root (see its comment), not nested
+	// inside PortraitPanel. portraitScale is async (it decodes the images), so
+	// PortraitPanel reports it back through a bindable.
+	const portraitUri = $derived.by(() => {
+		const source = activeMegaData ?? activeGigantamaxData ?? entryLoad.entry;
+		return source ? resolvePortrait(source, spriteStyle, showShiny) : null;
+	});
 	let portraitScale = $state(1);
 
 	// Hover-to-enlarge for the portrait, mirroring TableScreen's
@@ -303,8 +308,8 @@
 				<aside class="identity-col">
 				<PortraitPanel
 					{entry}
-					{activeMegaData}
-					{activeGigantamaxData}
+					portraitSource={activeMegaData ?? activeGigantamaxData ?? entry}
+					{portraitUri}
 					{spriteStyle}
 					{showShiny}
 					onToggleShiny={() => (showShiny = !showShiny)}
@@ -314,7 +319,6 @@
 					onSelectGigantamax={selectGigantamaxForm}
 					onHoverPortrait={showPortraitPreview}
 					onLeavePortrait={hidePortraitPreview}
-					bind:portraitUri
 					bind:portraitScale
 				/>
 

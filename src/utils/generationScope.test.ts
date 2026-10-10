@@ -55,4 +55,16 @@ describe("resolveGenerationScope", () => {
 		expect(scope.includes(alolanRattata)).toBe(true);
 		expect(resolveGenerationScope([1]).includes(alolanRattata)).toBe(false);
 	});
+
+	// A failed fetch is a bare base dex number with no row behind it, so
+	// includesFailedId checks the dex range directly (ADR-0001) — still
+	// honoring a disabled generation sitting inside the fetch range's gap.
+	it("includesFailedId() checks a bare dex number against the enabled generations' ranges", () => {
+		const scope = resolveGenerationScope([1, 3]);
+
+		expect(scope.includesFailedId(25)).toBe(true); // Gen 1
+		expect(scope.includesFailedId(200)).toBe(false); // inside fetch range, but Gen 2 (excluded)
+		expect(scope.includesFailedId(300)).toBe(true); // Gen 3
+		expect(scope.includesFailedId(400)).toBe(false); // beyond every enabled generation
+	});
 });

@@ -75,9 +75,12 @@ describe("custom columns", () => {
 	it("leaves held items and capture to TableScreen, which scopes them to the Active Gen", () => {
 		// These two have no render(): production never called one, and a
 		// text fallback could only ever show every generation's data.
-		for (const key of ["heldItems", "encounterLocation"]) {
+		// The discriminant is what TableScreen's template branches on, with no
+		// default, so pin each column's exact value.
+		const expected = { heldItems: "heldItems", encounterLocation: "encounters" } as const;
+		for (const [key, cell] of Object.entries(expected)) {
 			const column = TOGGLEABLE_COLUMNS.find((c) => c.key === key);
-			expect(column?.custom).toBe(true);
+			expect(column?.custom).toBe(cell);
 			expect(column && "render" in column).toBe(false);
 		}
 	});

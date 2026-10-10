@@ -53,8 +53,7 @@
 	onDestroy(() => loadState?.cancel());
 
 	onMount(() => {
-		const { fetchRange, includes } = resolveGenerationScope(settings.enabledGenerations);
-		loadState = new PokedexLoadState(repository, fetchRange, includes, settings.enabledGenerations);
+		loadState = new PokedexLoadState(repository, resolveGenerationScope(settings.enabledGenerations));
 		loadState
 			.load(
 				(loaded, total) => (progress = { loaded, total }),

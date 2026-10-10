@@ -1,10 +1,15 @@
 import { GENERATIONS } from "../data/constants";
 import type { PokedexTableRow } from "../data/types";
-import { matchesGenerations } from "./filterPokemon";
+import { isIdInGenerations, matchesGenerations } from "./filterPokemon";
 
 export interface GenerationScope {
 	fetchRange: { start: number; end: number };
 	includes: (row: PokedexTableRow) => boolean;
+	// The bare-dex-number counterpart of `includes`, for a fetch that failed
+	// before any row existed (nothing to read generationId from). Correct only
+	// for base fetch ids, which is all a failure ever reports — see ADR-0001
+	// for why this stays a separate predicate rather than a merged one.
+	includesFailedId: (id: number) => boolean;
 }
 
 // Resolves which generations are enabled (settings.enabledGenerations) into
@@ -28,5 +33,6 @@ export function resolveGenerationScope(enabledGenerations: number[]): Generation
 			end: Math.max(...enabled.map((g) => g.end)),
 		},
 		includes: (row) => matchesGenerations(row, enabledGenerations),
+		includesFailedId: (id) => isIdInGenerations(id, enabledGenerations),
 	};
 }

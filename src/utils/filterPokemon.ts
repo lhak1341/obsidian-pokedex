@@ -1,7 +1,7 @@
-import { FOSSIL_IDS, GENERATIONS } from "../data/constants";
+import { GENERATIONS } from "../data/constants";
 import type { PokedexTableRow, StatBlock } from "../data/types";
-import { filterHeldItemsForGen } from "./heldItemGen";
 import { formatPokemonDisplayName } from "./pokemonDisplay";
+import { type FlagContext, type FlagDef, QUIRKS, TRAITS } from "./quirksAndTraits";
 
 export interface StatRange {
 	min: number;
@@ -25,11 +25,11 @@ export interface PokedexFilters {
 	// least one SpA EV, regardless of amount or what else it yields).
 	evStats: string[];
 	// OR semantics: matches if the Pokemon has ANY of the selected quirks
-	// (see QUIRKS in data/constants.ts and matchesQuirk below).
+	// (see QUIRKS in utils/quirksAndTraits.ts and matchesQuirks below).
 	quirks: string[];
 	// AND semantics, same idiom as `types` above: a Pokemon must have ALL
-	// selected traits (see TRAITS in data/constants.ts and matchesTrait
-	// below) — unlike quirks, these are independent yes/no properties with
+	// selected traits (see TRAITS in utils/quirksAndTraits.ts and
+	// matchesTraits below) — unlike quirks, these are independent yes/no properties with
 	// no meaningful "any of" reading (e.g. Baby + Fossil should mean both).
 	traits: string[];
 	// Not derivable from a PokedexTableRow field — favorites are user state
@@ -71,9 +71,10 @@ function matchesTypes(row: PokedexTableRow, types: string[]): boolean {
 	return types.every((type) => row.types.includes(type));
 }
 
-// Pure dex-*number* range membership — used by generationScope.ts to decide
-// which base ids to fetch at all, before any row exists yet. Deliberately
-// NOT used for row-visibility filtering (see matchesGenerations below): a
+// Pure dex-*number* range membership for a bare id with no row behind it —
+// generationScope.ts exposes it as `includesFailedId` for fetches that failed
+// before a row existed. Deliberately NOT used for row-visibility filtering
+// (see matchesGenerations below, and ADR-0001): a
 // regional-form row's own generation membership isn't derivable from a dex
 // range at all (see PokedexTableRow.generationId's own doc comment).
 export function isIdInGenerations(id: number, generations: number[]): boolean {
@@ -120,74 +121,20 @@ function matchesEvStats(row: PokedexTableRow, evStats: string[]): boolean {
 	return row.evYield.some((y) => evStats.includes(y.stat));
 }
 
-// Each quirk key checks a different underlying field — an array-length check
-// (held-item), an ability name (compound-eyes/pickup), or a level-up move
-// name (thief/trick/covet) — see QUIRKS in data/constants.ts for the
-// definitions this switch's keys must stay in sync with. Fossil and the
-// evolution-stage buckets live in matchesTrait below instead (see TRAITS'
-// own comment for why); held-item stays here rather than moving alongside
-// fossil, since "pickup OR holds an item" is a meaningful combined search
-// the way "baby AND fossil" isn't. held-item is scoped to activeGen — same
-// reasoning as the table cell/tooltip (see heldItemGen.ts): a species whose
-// only held item is from an out-of-scope generation shouldn't surface under
-// this quirk any more than it shows an item in the row itself. activeGen is
-// required (no "any generation" fallback): a caller that forgot it used to
-// get the unscoped union silently.
-function matchesQuirk(row: PokedexTableRow, quirk: string, activeGen: number): boolean {
-	switch (quirk) {
-		case "held-item":
-			return filterHeldItemsForGen(row.heldItemsAllGens, activeGen).length > 0;
-		case "compound-eyes":
-		case "pickup":
-			return row.abilityNames.includes(quirk);
-		case "thief":
-		case "trick":
-		case "covet":
-			return row.levelUpMoveNames.includes(quirk);
-		default:
-			return false;
-	}
+// A selected key with no entry in `defs` matches nothing (same as the old
+// switches' `default: return false`).
+function matchesFlag(defs: readonly FlagDef[], key: string, row: PokedexTableRow, ctx: FlagContext): boolean {
+	return defs.find((d) => d.key === key)?.matches(row, ctx) ?? false;
 }
 
-function matchesQuirks(row: PokedexTableRow, quirks: string[], activeGen: number): boolean {
+function matchesQuirks(row: PokedexTableRow, quirks: string[], ctx: FlagContext): boolean {
 	if (quirks.length === 0) return true;
-	return quirks.some((q) => matchesQuirk(row, q, activeGen));
+	return quirks.some((q) => matchesFlag(QUIRKS, q, row, ctx));
 }
 
-// Each trait key checks a different independent yes/no property — a curated
-// id list (fossil, same FOSSIL_IDS as before) or a derived-at-load-time
-// boolean (baby/mega/gigantamax) — see TRAITS in data/constants.ts for the
-// definitions this switch's keys must stay in sync with.
-function matchesTrait(row: PokedexTableRow, trait: string): boolean {
-	switch (trait) {
-		case "baby":
-			return row.isBaby;
-		case "fossil":
-			return FOSSIL_IDS.has(row.dexNumber);
-		case "mega":
-			return row.canMegaEvolve;
-		// Bucketed off the whole-family evolutionStages value — see TRAITS in
-		// data/constants.ts for the AND-semantics note.
-		case "no-evolution":
-			return row.evolutionStages === 0;
-		case "one-evolution":
-			return row.evolutionStages === 1;
-		case "two-plus-evolutions":
-			return row.evolutionStages >= 2;
-		case "gigantamax":
-			return row.canGigantamax;
-		// Per-species leaf-ness (see IS_FINAL_EVOLUTION_STAGE), not a bucket
-		// off evolutionStages — combines meaningfully with the three above.
-		case "last-stage":
-			return row.isFinalStage;
-		default:
-			return false;
-	}
-}
-
-function matchesTraits(row: PokedexTableRow, traits: string[]): boolean {
+function matchesTraits(row: PokedexTableRow, traits: string[], ctx: FlagContext): boolean {
 	if (traits.length === 0) return true;
-	return traits.every((t) => matchesTrait(row, t));
+	return traits.every((t) => matchesFlag(TRAITS, t, row, ctx));
 }
 
 function matchesFavorite(row: PokedexTableRow, favoritesOnly: boolean, favoriteIds: ReadonlySet<number>): boolean {
@@ -220,8 +167,8 @@ export function filterPokemon(
 		matchesAbilities(row, filters.abilities) &&
 		matchesRarities(row, filters.rarities) &&
 		matchesEvStats(row, filters.evStats) &&
-		matchesQuirks(row, filters.quirks, context.activeGen) &&
-		matchesTraits(row, filters.traits) &&
+		matchesQuirks(row, filters.quirks, context) &&
+		matchesTraits(row, filters.traits, context) &&
 		matchesFavorite(row, filters.favoritesOnly, favoriteIds)
 	);
 }

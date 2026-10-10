@@ -39,7 +39,8 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `Cache`/`DiskCache`, `normalize.
   identical — append `+ "\n"`.
   No gate catches a committed table like `evolutionStages.json`/`finalEvolutionStage.json`/
   `encounterLocations.json` going stale against the function that produced it — the generator walks live PokeAPI, so
-  CI cannot regenerate it. `normalize.test.ts` ties the per-form rule (`evolutionReachByForm`) and the
+  CI cannot regenerate it. `generationTables.test.ts` gates only consistency with `GENERATIONS` (array length
+  covers the last dex number, generation ids exist), not freshness. `normalize.test.ts` ties the per-form rule (`evolutionReachByForm`) and the
   known divergent rows in `evolutionStageOverrides.json` together offline (the second drift instance
   that the deferred fixture test was waiting for: species-id tables mis-served regional-gated rows).
   Regenerating also picks up any live PokeAPI drift (Meltan -> Melmetal flipped #808/#809 in one

@@ -217,58 +217,6 @@ export const FOSSIL_IDS = new Set([
 	880, 881, 882, 883,
 ]);
 
-export interface QuirkDef {
-	key: string;
-	label: string;
-	icon: string;
-}
-
-// A personal shortlist of specific traits that can genuinely overlap on one
-// Pokemon (not a formal in-game category) — mixes an ability check
-// (compoundEyes/pickup), a level-up-learnset check (thief/trick/covet), and a
-// held-item check, OR'd together in matchesQuirks (e.g. "pickup OR holds an
-// item" is a meaningful combined search, unlike Traits' independent flags
-// below). See matchesQuirk in filterPokemon.ts for how each key is evaluated.
-export const QUIRKS: QuirkDef[] = [
-	{ key: "held-item", label: "Held Item", icon: "gift" },
-	{ key: "compound-eyes", label: "Compound Eyes", icon: "eye" },
-	{ key: "pickup", label: "Pickup", icon: "boxes" },
-	{ key: "thief", label: "Thief", icon: "package" },
-	{ key: "trick", label: "Trick", icon: "package" },
-	{ key: "covet", label: "Covet", icon: "package" },
-];
-
-// Independent yes/no properties of a Pokemon itself — unlike QUIRKS' OR
-// semantics (show me any of these), TRAITS uses AND semantics (same idiom as
-// the Type filter): selecting Baby + Fossil finds only a Pokemon that is
-// BOTH, since there's no meaningful "either/or" reading of these flags. See
-// matchesTrait in filterPokemon.ts.
-export const TRAITS: QuirkDef[] = [
-	{ key: "baby", label: "Baby", icon: "baby" },
-	{ key: "fossil", label: "Fossil", icon: "bone" },
-	{ key: "mega", label: "Can Mega Evolve", icon: "wand-2" },
-	{ key: "gigantamax", label: "Can Gigantamax", icon: "expand" },
-	// Bucketed off PokedexTableRow.evolutionStages (a whole-family value, see
-	// its own comment). AND semantics still composes meaningfully with the
-	// OTHER traits here (e.g. Baby + No Evolution), but selecting two of
-	// these three buckets together always yields zero rows since they're
-	// mutually exclusive per row — same as any other Traits combo that
-	// happens not to overlap, not a special case. See matchesTrait in
-	// filterPokemon.ts for the bucket boundaries.
-	{ key: "no-evolution", label: "No Evolution", icon: "minus" },
-	{ key: "one-evolution", label: "1 Evolution", icon: "arrow-up" },
-	{ key: "two-plus-evolutions", label: "2+ Evolutions", icon: "chevrons-up" },
-	// Independent of the three buckets above (per-species leaf-ness, not a
-	// whole-family bucket — see IS_FINAL_EVOLUTION_STAGE) — meaningfully
-	// combines with them via AND (e.g. "2+ Evolutions" + "Last Stage" finds
-	// only the fully-evolved member of a multi-stage family, like Charizard
-	// but not Charmander/Charmeleon), unlike the three buckets which are
-	// mutually exclusive with each other. Includes every No Evolution
-	// species too, since a species with no evolution at all is trivially its
-	// own last stage.
-	{ key: "last-stage", label: "Last Stage", icon: "flag" },
-];
-
 // PokeAPI's species.varieties naming convention ("{species}-mega"/"-mega-x"/
 // "-mega-y") is NOT a reliable signal for "has an official in-game Mega
 // Evolution" — verified live (full /pokemon?limit=2000 scan) that it hosts
@@ -415,7 +363,7 @@ export const EVOLUTION_STAGES: readonly number[] = evolutionStagesData;
 // whose own form differs. True
 // for every member of a single-stage family (Tauros) and only the final
 // member(s) of a deeper one (Charizard, not Charmander/Charmeleon) — see
-// TRAITS' "Last Stage" option and matchesTrait in filterPokemon.ts. Same
+// TRAITS' "Last Stage" option (utils/quirksAndTraits.ts). Same
 // generated-array shape/reasoning as EVOLUTION_STAGES, produced by the same
 // script in the same fetch pass (scripts/generate-evolution-stages.ts).
 export const IS_FINAL_EVOLUTION_STAGE: readonly boolean[] = finalEvolutionStageData;

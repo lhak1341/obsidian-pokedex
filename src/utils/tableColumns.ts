@@ -37,10 +37,14 @@ interface ColumnBase {
 // Active Gen (Capture), which render(row) cannot receive. The type makes
 // "render exists but production never calls it" unrepresentable; those two
 // columns used to carry such a function, and tests pinned behavior the app
-// never ran.
+// never ran. `custom` names which cell TableScreen draws; the template
+// branches on each value with no default (tsc skips .svelte, so a new value
+// needs its own branch there by hand).
+export type CustomCell = "heldItems" | "encounters";
+
 export type ColumnDef =
 	| (ColumnBase & { render: (row: PokedexTableRow) => string; custom?: undefined })
-	| (ColumnBase & { custom: true });
+	| (ColumnBase & { custom: CustomCell });
 
 export const TOGGLEABLE_COLUMNS: ColumnDef[] = [
 	...STAT_COLUMNS.map((col) => ({
@@ -77,7 +81,7 @@ export const TOGGLEABLE_COLUMNS: ColumnDef[] = [
 		key: "heldItems",
 		label: "Held item",
 		headerIcon: "gift",
-		custom: true,
+		custom: "heldItems",
 		widthPercent: "6%",
 		minWidth: "140px",
 	},
@@ -85,7 +89,7 @@ export const TOGGLEABLE_COLUMNS: ColumnDef[] = [
 		key: "encounterLocation",
 		label: "Capture",
 		headerIcon: "map-pin",
-		custom: true,
+		custom: "encounters",
 		widthPercent: "6%",
 		minWidth: "140px",
 	},

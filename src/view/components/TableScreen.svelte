@@ -291,7 +291,7 @@
 						</td>
 						{#each activeColumns as col (col.key)}
 							{#if col.custom}
-								{#if col.key === "heldItems"}
+								{#if col.custom === "heldItems"}
 									{@const genItems = filterHeldItemsForGen(row.heldItemsAllGens, activeGen)}
 									<td>
 										{#if genItems.length === 0}
@@ -310,9 +310,12 @@
 											{/each}
 										{/if}
 									</td>
-								{:else}
+								{:else if col.custom === "encounters"}
 									{@const encounters = describeEncounters(row.encounterLocationsAllGens, activeGen)}
 									<td title={encounters.tooltip}>{encounters.isEmpty ? "-" : encounters.summary}</td>
+								{:else}
+									<!-- A CustomCell with no branch above: keep the row aligned (tsc skips .svelte). -->
+									<td></td>
 								{/if}
 							{:else if col.key === "ev"}
 								<td title={col.render(row)}>

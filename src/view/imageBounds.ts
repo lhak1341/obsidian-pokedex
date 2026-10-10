@@ -9,7 +9,7 @@
 // nothing wrong in this plugin's own fetch/cache/render path. contentScale
 // gives DetailScreen a per-image "how much of its own canvas does the
 // character actually fill" number so it can shrink the outlier back down to
-// match its non-shiny counterpart (see DetailScreen's portraitScale).
+// match its non-shiny counterpart (see resolvePortraitScale in utils/portrait.ts).
 const cache = new Map<string, Promise<number>>();
 
 function decode(dataUri: string): Promise<number> {

@@ -13,7 +13,8 @@ to `test-vault/`.
 Inline comments here are unusually thorough and load-bearing. Most "shallow module" or
 "duplicate logic" findings from automated architecture review turn out to be deliberate,
 already-documented separations once the comments are read (6 of 8 candidates misdiagnosed
-in one round, 3 of 5 in another). Reread the full file and check for an existing ADR in
+in one round, 3 of 5 in another; a third round's claim that "typecheck catches a missing
+cell kind" was false, since `tsc` skips `.svelte`). Reread the full file and check for an existing ADR in
 `docs/adr/` before writing a candidate into a report — not only before implementing one.
 
 ## Repo-specific toolchain
