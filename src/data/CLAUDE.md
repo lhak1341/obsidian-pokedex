@@ -45,13 +45,12 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `Cache`/`DiskCache`, `normalize.
   that the deferred fixture test was waiting for: species-id tables mis-served regional-gated rows).
   Regenerating also picks up any live PokeAPI drift (Meltan -> Melmetal flipped #808/#809 in one
   run), so diff all three files and read the logged override list before keeping a regen.
-- Adding a required field to `PokedexTableRow` breaks every test file that builds one as a
-  literal (`dexNav.test.ts`, `filterPokemon.test.ts`, `generationScope.test.ts`,
-  `quickJump.test.ts`, `sortPokemon.test.ts`, `tableColumns.test.ts` each have their own
-  `row()`-shaped builder — no single shared fixture) — run `bun run typecheck` to enumerate
-  every site needing the new field, rather than grepping for existing field names: a
-  `{ ...overrides }` spread from `Partial<PokedexTableRow>` can make the field type-check as
-  optional in isolation and not surface via a text search for a sibling field.
+- Tests build a `PokedexTableRow` through `makeRow` / `makeRegionalFormRow`
+  (`src/data/__fixtures__/rows.ts`), never a literal. Adding a required field is one edit
+  there: `tsc` fails the factory's return type until it is added. A plain row derives
+  `generationId` from the dex number; a regional-form row (`id !== dexNumber`) must be made
+  with `makeRegionalFormRow`, which takes its generation explicitly. `sortPokemon.test.ts` and
+  `quickJump.test.ts` keep positional `row(...)` wrappers over `makeRow`.
 - A regional-form or evolution-chain bug reported against one Pokemon is usually a whole
   category. Chains already group by shape (Muk-shaped, Yamask-shaped, Corsola-shaped,
   Mime-Jr-shaped, Obstagoon-shaped) — check `normalize.ts`'s shape comments for siblings
@@ -90,6 +89,17 @@ Discovery is independent of the range being cleared too — `listCachedSpeciesId
 every cached species id via `DiskCache.listFilesIn("species")`, so a variant survives only
 if its own generation truly doesn't match, never because its base id sits outside this
 range (see ADR-0006).
+
+`clearRange` also evicts each in-range base id's Mega and Gigantamax forms (`mega-forms/`,
+`gigantamax-forms/`, and their four images, paths from `megaFormPath`/`gigantamaxFormPath`).
+They belong to the base species' dex range, not their own generation, and their keys are
+derived from the cached species/pokemon JSON, so that read must happen before the base files
+are removed. `abilities/`, `items/`, `moves/` and `evolution-chain/` are shared across
+species and only the global clear removes them. That global clear is
+`PokedexRepository.clearAll()`, never `DiskCache.clear()` alone: `isIdCached`/`isExtrasCached`
+count a mem hit as cached, so a disk-only clear leaves the counters at "N/N cached" and the
+files are never written again this session. A fetch already in flight is not cancelled by
+either clear and can still write afterwards.
 
 Known residual gap (ADR-0006): `getCacheStatus` does not count variants at all, so its
 "X/Y cached" figure undercounts once a generation has regional forms.

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createFakeDataAdapter, FakePokeApiClient } from "../data/__fixtures__/fakes";
+import { makeRegionalFormRow } from "../data/__fixtures__/rows";
 import { DiskCache } from "../data/Cache";
 import { PokedexRepository } from "../data/PokedexRepository";
 import type { PokedexTableRow } from "../data/types";
@@ -72,6 +73,27 @@ describe("PokedexLoadState", () => {
 		expect(result?.failedIds).toEqual([]);
 		expect(loadState.rows.map((r) => r.id)).toEqual([1, 2, 3]);
 		expect(loadState.failedIds).toEqual([]);
+	});
+
+	it("retry() drops rows includes() rejects, from both loadState.rows and the returned result", async () => {
+		// Retrying a base id also returns its regional-form rows (getRowsForIds);
+		// includes() rejects them here the way a disabled generation would.
+		const { client, loadState } = makeLoadState({ start: 1, end: 3 }, (row) => row.generationId !== 7);
+		client.failIds.add(2);
+		await loadState.load();
+
+		client.failIds.delete(2);
+		const regional = makeRegionalFormRow(loadState.rows[0], { id: 10002, generationId: 7, formLabel: "Alolan" });
+		const repository = (loadState as unknown as { repository: PokedexRepository }).repository;
+		const real = repository.retryRows.bind(repository);
+		repository.retryRows = async (...args) => {
+			const result = await real(...args);
+			return { ...result, rows: [...result.rows, regional] };
+		};
+		const result = await loadState.retry();
+
+		expect(result?.rows.map((r) => r.id)).toEqual([2]);
+		expect(loadState.rows.map((r) => r.id)).toEqual([1, 2, 3]);
 	});
 
 	it("retry() is a no-op returning null when nothing failed", async () => {

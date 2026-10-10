@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { resolveGenerationId } from "../data/constants";
 import type { PokedexTableRow } from "../data/types";
 import { EMPTY_FILTERS, type FilterContext, filterPokemon as filterPokemonIn } from "./filterPokemon";
+import { makeRow } from "../data/__fixtures__/rows";
 
 // activeGen is required by filterPokemon (an omitted one used to mean "skip
 // Active Gen scoping" silently), so tests that don't care about it share
@@ -16,47 +16,13 @@ function filterPokemon(
 	return filterPokemonIn(rows, filters, { activeGen: 3, ...context });
 }
 
-// dexNumber/generationId default to matching `id` (overridable, but derived
-// from it when not explicit) since every row here models a plain
-// default-variety Pokemon, where those three are always equal/consistent —
-// no fixture here exercises a regional-form row's id !== dexNumber split.
-function row(overrides: Partial<PokedexTableRow>): PokedexTableRow {
-	const id = overrides.id ?? 1;
-	return {
-		id,
-		dexNumber: id,
-		formLabel: null,
-		generationId: resolveGenerationId(id),
-		name: "bulbasaur",
-		types: ["grass", "poison"],
-		stats: { hp: 45, attack: 49, defense: 49, specialAttack: 65, specialDefense: 65, speed: 45 },
-		evYield: [],
-		abilityNames: ["overgrow", "chlorophyll"],
-		levelUpMoveNames: [],
-		heldItemsAllGens: [],
-		encounterLocationsAllGens: [],
-		spriteDataUri: null,
-		height: 7,
-		weight: 69,
-		catchRate: 45,
-		hatchCounter: 20,
-		rarity: "normal",
-		isBaby: false,
-		canMegaEvolve: false,
-		canGigantamax: false,
-		evolutionStages: 0,
-		isFinalStage: false,
-		...overrides,
-	};
-}
-
 const rows: PokedexTableRow[] = [
-	row({ id: 1, name: "bulbasaur", types: ["grass", "poison"], abilityNames: ["overgrow"] }),
-	row({ id: 4, name: "charmander", types: ["fire"], abilityNames: ["blaze"], stats: { hp: 39, attack: 52, defense: 43, specialAttack: 60, specialDefense: 50, speed: 65 } }),
-	row({ id: 6, name: "charizard", types: ["fire", "flying"], abilityNames: ["blaze"], stats: { hp: 78, attack: 84, defense: 78, specialAttack: 109, specialDefense: 85, speed: 100 } }),
-	row({ id: 152, name: "chikorita", types: ["grass"], abilityNames: ["overgrow"] }),
-	row({ id: 144, name: "articuno", types: ["ice", "flying"], abilityNames: ["pressure"], rarity: "legendary" }),
-	row({ id: 151, name: "mew", types: ["psychic"], abilityNames: ["synchronize"], rarity: "mythical" }),
+	makeRow({ id: 1, name: "bulbasaur", types: ["grass", "poison"], abilityNames: ["overgrow"] }),
+	makeRow({ id: 4, name: "charmander", types: ["fire"], abilityNames: ["blaze"], stats: { hp: 39, attack: 52, defense: 43, specialAttack: 60, specialDefense: 50, speed: 65 } }),
+	makeRow({ id: 6, name: "charizard", types: ["fire", "flying"], abilityNames: ["blaze"], stats: { hp: 78, attack: 84, defense: 78, specialAttack: 109, specialDefense: 85, speed: 100 } }),
+	makeRow({ id: 152, name: "chikorita", types: ["grass"], abilityNames: ["overgrow"] }),
+	makeRow({ id: 144, name: "articuno", types: ["ice", "flying"], abilityNames: ["pressure"], rarity: "legendary" }),
+	makeRow({ id: 151, name: "mew", types: ["psychic"], abilityNames: ["synchronize"], rarity: "mythical" }),
 ];
 
 describe("filterPokemon", () => {
@@ -104,10 +70,10 @@ describe("filterPokemon", () => {
 
 	it("matches ANY selected EV yield stat, regardless of amount or co-yielded stats", () => {
 		const evRows: PokedexTableRow[] = [
-			row({ id: 1, name: "bulbasaur", evYield: [{ stat: "specialAttack", amount: 1 }] }),
-			row({ id: 2, name: "ivysaur", evYield: [{ stat: "specialAttack", amount: 1 }, { stat: "specialDefense", amount: 1 }] }),
-			row({ id: 4, name: "charmander", evYield: [{ stat: "speed", amount: 1 }] }),
-			row({ id: 7, name: "squirtle", evYield: [] }),
+			makeRow({ id: 1, name: "bulbasaur", evYield: [{ stat: "specialAttack", amount: 1 }] }),
+			makeRow({ id: 2, name: "ivysaur", evYield: [{ stat: "specialAttack", amount: 1 }, { stat: "specialDefense", amount: 1 }] }),
+			makeRow({ id: 4, name: "charmander", evYield: [{ stat: "speed", amount: 1 }] }),
+			makeRow({ id: 7, name: "squirtle", evYield: [] }),
 		];
 
 		const result = filterPokemon(evRows, { ...EMPTY_FILTERS, evStats: ["specialAttack"] });
@@ -117,11 +83,11 @@ describe("filterPokemon", () => {
 
 	it("matches ANY selected quirk, across held-item/ability/move-based checks alike", () => {
 		const quirkRows: PokedexTableRow[] = [
-			row({ id: 1, name: "bulbasaur", abilityNames: ["overgrow"] }),
-			row({ id: 190, name: "aipom", abilityNames: ["pickup"] }),
-			row({ id: 302, name: "sableye", levelUpMoveNames: ["covet"] }),
-			row({ id: 12, name: "butterfree", heldItemsAllGens: [{ name: "silver-powder", rarities: [{ value: 50, generationId: 3 }] }] }),
-			row({ id: 7, name: "squirtle", abilityNames: ["torrent"], levelUpMoveNames: [] }),
+			makeRow({ id: 1, name: "bulbasaur", abilityNames: ["overgrow"] }),
+			makeRow({ id: 190, name: "aipom", abilityNames: ["pickup"] }),
+			makeRow({ id: 302, name: "sableye", levelUpMoveNames: ["covet"] }),
+			makeRow({ id: 12, name: "butterfree", heldItemsAllGens: [{ name: "silver-powder", rarities: [{ value: 50, generationId: 3 }] }] }),
+			makeRow({ id: 7, name: "squirtle", abilityNames: ["torrent"], levelUpMoveNames: [] }),
 		];
 
 		const result = filterPokemon(quirkRows, { ...EMPTY_FILTERS, quirks: ["pickup", "covet", "held-item"] });
@@ -132,9 +98,9 @@ describe("filterPokemon", () => {
 	it("held-item quirk is scoped to activeGen, same as the table cell/tooltip", () => {
 		const quirkRows: PokedexTableRow[] = [
 			// Gen 3-only item: matches at activeGen 3, not at activeGen 4.
-			row({ id: 12, name: "butterfree", heldItemsAllGens: [{ name: "silver-powder", rarities: [{ value: 50, generationId: 3 }] }] }),
+			makeRow({ id: 12, name: "butterfree", heldItemsAllGens: [{ name: "silver-powder", rarities: [{ value: 50, generationId: 3 }] }] }),
 			// No held item at all, any generation.
-			row({ id: 7, name: "squirtle", heldItemsAllGens: [] }),
+			makeRow({ id: 7, name: "squirtle", heldItemsAllGens: [] }),
 		];
 
 		expect(
@@ -147,10 +113,10 @@ describe("filterPokemon", () => {
 
 	it("matches ALL selected traits (AND semantics), across id/boolean checks alike", () => {
 		const traitRows: PokedexTableRow[] = [
-			row({ id: 138, name: "omanyte" }), // fossil only
-			row({ id: 1, name: "bulbasaur", isBaby: true, canMegaEvolve: true }), // baby + mega
-			row({ id: 4, name: "charmander", isBaby: true }), // baby only (no mega)
-			row({ id: 6, name: "charizard", canMegaEvolve: true, canGigantamax: true }),
+			makeRow({ id: 138, name: "omanyte" }), // fossil only
+			makeRow({ id: 1, name: "bulbasaur", isBaby: true, canMegaEvolve: true }), // baby + mega
+			makeRow({ id: 4, name: "charmander", isBaby: true }), // baby only (no mega)
+			makeRow({ id: 6, name: "charizard", canMegaEvolve: true, canGigantamax: true }),
 		];
 
 		expect(
@@ -166,10 +132,10 @@ describe("filterPokemon", () => {
 
 	it("buckets the no-evolution/one-evolution/two-plus-evolutions traits off evolutionStages, ANDed like any other trait", () => {
 		const stageRows: PokedexTableRow[] = [
-			row({ id: 128, name: "tauros", evolutionStages: 0 }),
-			row({ id: 172, name: "pichu", evolutionStages: 1, isBaby: true }),
-			row({ id: 25, name: "pikachu", evolutionStages: 1 }),
-			row({ id: 1, name: "bulbasaur", evolutionStages: 2 }),
+			makeRow({ id: 128, name: "tauros", evolutionStages: 0 }),
+			makeRow({ id: 172, name: "pichu", evolutionStages: 1, isBaby: true }),
+			makeRow({ id: 25, name: "pikachu", evolutionStages: 1 }),
+			makeRow({ id: 1, name: "bulbasaur", evolutionStages: 2 }),
 		];
 
 		expect(
@@ -193,11 +159,11 @@ describe("filterPokemon", () => {
 	it("last-stage is per-species (not the whole-family bucket) and includes No Evolution too", () => {
 		const stageRows: PokedexTableRow[] = [
 			// Single-stage family — its own last (and only) stage.
-			row({ id: 128, name: "tauros", evolutionStages: 0, isFinalStage: true }),
+			makeRow({ id: 128, name: "tauros", evolutionStages: 0, isFinalStage: true }),
 			// 3-stage family: only the final member is isFinalStage.
-			row({ id: 4, name: "charmander", evolutionStages: 2, isFinalStage: false }),
-			row({ id: 5, name: "charmeleon", evolutionStages: 2, isFinalStage: false }),
-			row({ id: 6, name: "charizard", evolutionStages: 2, isFinalStage: true }),
+			makeRow({ id: 4, name: "charmander", evolutionStages: 2, isFinalStage: false }),
+			makeRow({ id: 5, name: "charmeleon", evolutionStages: 2, isFinalStage: false }),
+			makeRow({ id: 6, name: "charizard", evolutionStages: 2, isFinalStage: true }),
 		];
 
 		expect(
@@ -237,8 +203,8 @@ describe("filterPokemon", () => {
 
 	describe("regional-form rows", () => {
 		const regionalRows: PokedexTableRow[] = [
-			row({ id: 19, dexNumber: 19, formLabel: null, generationId: 1, name: "rattata" }),
-			row({ id: 10091, dexNumber: 19, formLabel: "Alolan", generationId: 7, name: "rattata", types: ["dark", "normal"] }),
+			makeRow({ id: 19, dexNumber: 19, formLabel: null, generationId: 1, name: "rattata" }),
+			makeRow({ id: 10091, dexNumber: 19, formLabel: "Alolan", generationId: 7, name: "rattata", types: ["dark", "normal"] }),
 		];
 
 		it("search by exact dex number matches every form sharing it", () => {

@@ -16,6 +16,7 @@ already-documented separations once the comments are read (6 of 8 candidates mis
 in one round, 3 of 5 in another; a third round's claim that "typecheck catches a missing
 cell kind" was false, since `tsc` skips `.svelte`). Reread the full file and check for an existing ADR in
 `docs/adr/` before writing a candidate into a report — not only before implementing one.
+Re-derive any count too: a grep-derived "8 files" included an assertion, not a builder (was 7).
 
 ## Repo-specific toolchain
 

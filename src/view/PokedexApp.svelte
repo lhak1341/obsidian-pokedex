@@ -85,7 +85,7 @@
 			if (!result || loadState.cancelled) return;
 			rows = loadState.rows;
 			failedIds = loadState.failedIds;
-			new Notice(describeRetryOutcome(attempted, result.rows.length, result.failedIds.length));
+			new Notice(describeRetryOutcome(attempted, attempted - result.failedIds.length, result.failedIds.length));
 		});
 	}
 

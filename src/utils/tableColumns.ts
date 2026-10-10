@@ -5,9 +5,17 @@ import { formatHeight, formatWeight } from "./pokemonDisplay";
 import { totalStat } from "./stats";
 
 // Exported for TableScreen's EV yield column, which renders colored chips
-// (see STAT_COLORS) rather than this plain-text join, but still needs the
+// (see STAT_COLORS) rather than a plain-text join, but still needs the
 // same stat-key-to-abbreviation lookup.
 export const STAT_LABEL_BY_KEY = new Map(STAT_COLUMNS.map((c) => [c.key, c.label]));
+
+// The EV yield as one string — the chip cell's hover tooltip. The cell body
+// itself is drawn by TableScreen, so this is not a `render`.
+export function formatEvYield(row: PokedexTableRow): string {
+	return row.evYield.length === 0
+		? "-"
+		: row.evYield.map((y) => `${y.amount} ${STAT_LABEL_BY_KEY.get(y.stat) ?? y.stat}`).join(", ");
+}
 
 interface ColumnBase {
 	key: string;
@@ -37,10 +45,11 @@ interface ColumnBase {
 // Active Gen (Capture), which render(row) cannot receive. The type makes
 // "render exists but production never calls it" unrepresentable; those two
 // columns used to carry such a function, and tests pinned behavior the app
-// never ran. `custom` names which cell TableScreen draws; the template
+// never ran. The EV yield column is custom for the same reason: it draws
+// chips, so a `render` string would be a second, unused cell body. `custom` names which cell TableScreen draws; the template
 // branches on each value with no default (tsc skips .svelte, so a new value
 // needs its own branch there by hand).
-export type CustomCell = "heldItems" | "encounters";
+export type CustomCell = "heldItems" | "encounters" | "ev";
 
 export type ColumnDef =
 	| (ColumnBase & { render: (row: PokedexTableRow) => string; custom?: undefined })
@@ -70,10 +79,7 @@ export const TOGGLEABLE_COLUMNS: ColumnDef[] = [
 		key: "ev",
 		label: "EV yield",
 		headerIcon: "dumbbell",
-		render: (row) =>
-			row.evYield.length === 0
-				? "-"
-				: row.evYield.map((y) => `${y.amount} ${STAT_LABEL_BY_KEY.get(y.stat) ?? y.stat}`).join(", "),
+		custom: "ev",
 		widthPercent: "6%",
 		minWidth: "204px",
 	},

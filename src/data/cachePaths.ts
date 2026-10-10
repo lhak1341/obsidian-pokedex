@@ -23,3 +23,14 @@ export function speciesPath(id: number): string {
 export function imagePath(idOrName: number | string, suffix: ImageSuffix): string {
 	return `images/${idOrName}-${suffix}.png`;
 }
+
+// Mega/Gigantamax variety forms (PokedexRepository.fetchVarietyForm writes
+// them, clearRange evicts them). Shared so the delete side has a
+// compiler-enforced link to the write side, like the paths above.
+export function megaFormPath(varietyKey: string): string {
+	return `mega-forms/${varietyKey}.json`;
+}
+
+export function gigantamaxFormPath(varietyKey: string): string {
+	return `gigantamax-forms/${varietyKey}.json`;
+}

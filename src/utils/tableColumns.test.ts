@@ -1,35 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PokedexTableRow } from "../data/types";
-import { TOGGLEABLE_COLUMNS } from "./tableColumns";
-
-function makeRow(overrides: Partial<PokedexTableRow> = {}): PokedexTableRow {
-	return {
-		id: 1,
-		dexNumber: 1,
-		formLabel: null,
-		generationId: 1,
-		name: "bulbasaur",
-		types: ["grass", "poison"],
-		stats: { hp: 45, attack: 49, defense: 49, specialAttack: 65, specialDefense: 65, speed: 45 },
-		evYield: [],
-		abilityNames: ["overgrow"],
-		levelUpMoveNames: [],
-		heldItemsAllGens: [],
-		encounterLocationsAllGens: [],
-		spriteDataUri: null,
-		height: 7,
-		weight: 69,
-		catchRate: 45,
-		hatchCounter: 20,
-		rarity: "normal",
-		isBaby: false,
-		canMegaEvolve: false,
-		canGigantamax: false,
-		evolutionStages: 0,
-		isFinalStage: false,
-		...overrides,
-	};
-}
+import { formatEvYield, TOGGLEABLE_COLUMNS } from "./tableColumns";
+import { makeRow } from "../data/__fixtures__/rows";
 
 function renderOf(key: string, row: PokedexTableRow): string {
 	const column = TOGGLEABLE_COLUMNS.find((c) => c.key === key);
@@ -48,12 +20,12 @@ describe("TOGGLEABLE_COLUMNS", () => {
 	});
 
 	it("renders '-' for empty EV yield", () => {
-		expect(renderOf("ev", makeRow({ evYield: [] }))).toBe("-");
+		expect(formatEvYield(makeRow({ evYield: [] }))).toBe("-");
 	});
 
 	it("renders EV yield entries with their stat labels, comma-joined", () => {
 		const row = makeRow({ evYield: [{ stat: "specialAttack", amount: 1 }, { stat: "hp", amount: 2 }] });
-		expect(renderOf("ev", row)).toBe("1 SpA, 2 HP");
+		expect(formatEvYield(row)).toBe("1 SpA, 2 HP");
 	});
 
 	it("passes catch rate and hatch counter through unchanged", () => {
@@ -72,12 +44,13 @@ describe("TOGGLEABLE_COLUMNS", () => {
 });
 
 describe("custom columns", () => {
-	it("leaves held items and capture to TableScreen, which scopes them to the Active Gen", () => {
-		// These two have no render(): production never called one, and a
-		// text fallback could only ever show every generation's data.
+	it("leaves held items, capture and EV yield to TableScreen, which draws their cells", () => {
+		// These have no render(): production never called one (held items and
+		// capture need the Active Gen, so a text fallback could only show every
+		// generation's data; EV yield draws chips).
 		// The discriminant is what TableScreen's template branches on, with no
 		// default, so pin each column's exact value.
-		const expected = { heldItems: "heldItems", encounterLocation: "encounters" } as const;
+		const expected = { heldItems: "heldItems", encounterLocation: "encounters", ev: "ev" } as const;
 		for (const [key, cell] of Object.entries(expected)) {
 			const column = TOGGLEABLE_COLUMNS.find((c) => c.key === key);
 			expect(column?.custom).toBe(cell);

@@ -274,7 +274,7 @@ export class PokedexSettingTab extends PluginSettingTab {
 					.setButtonText("Clear cache")
 					.setDestructive()
 					.onClick(async () => {
-						await this.plugin.cache.clear();
+						await this.plugin.repository.clearAll();
 						new Notice("Pokedex: cache cleared.");
 						this.display();
 					})

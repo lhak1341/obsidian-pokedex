@@ -1,8 +1,17 @@
 import { mapWithConcurrency } from "../utils/concurrency";
 import { DiskCache } from "./Cache";
-import { ALL_IMAGE_SUFFIXES, imagePath, pokemonPath, speciesPath } from "./cachePaths";
+import {
+	ALL_IMAGE_SUFFIXES,
+	gigantamaxFormPath,
+	imagePath,
+	megaFormPath,
+	pokemonPath,
+	speciesPath,
+} from "./cachePaths";
 import {
 	canonicalizeEvolutionChain,
+	deriveGigantamaxForms,
+	deriveMegaForms,
 	deriveRegionalForms,
 	inferAncestorFormSuffix,
 	normalizeEvolutionChain,
@@ -389,7 +398,7 @@ export class PokedexRepository {
 	private async fetchVarietyForm<T>(
 		varietyKey: string,
 		memCache: Map<string, T>,
-		cachePathPrefix: string,
+		cachePathFor: (varietyKey: string) => string,
 		normalize: (pokemon: RawPokemon, images: {
 			sprite: string | null;
 			artwork: string | null;
@@ -402,7 +411,7 @@ export class PokedexRepository {
 		const pending = this.varietyFormInFlight.get(varietyKey) as Promise<T> | undefined;
 		if (pending) return pending;
 
-		const cachePath = `${cachePathPrefix}/${varietyKey}.json`;
+		const cachePath = cachePathFor(varietyKey);
 		const load = (async (): Promise<T> => {
 			const cached = await this.cache.readJson<T>(cachePath);
 			if (cached) {
@@ -443,7 +452,7 @@ export class PokedexRepository {
 	// "charizard-mega-x") is a PokeAPI pokemon name, never a numeric id, so it
 	// can't collide with the `pokemon/{id}.json` cache getOrFetchPokemon uses.
 	async getMegaForm(varietyKey: string): Promise<MegaFormDetail> {
-		return this.fetchVarietyForm(varietyKey, this.megaFormMemCache, "mega-forms", toMegaFormDetail);
+		return this.fetchVarietyForm(varietyKey, this.megaFormMemCache, megaFormPath, toMegaFormDetail);
 	}
 
 	// Same lazy fetch-on-click shape as getMegaForm. Cached separately from
@@ -451,7 +460,7 @@ export class PokedexRepository {
 	// species' Gigantamax key always ends "-gmax", Mega always
 	// "-mega"/"-mega-x/-y").
 	async getGigantamaxForm(varietyKey: string): Promise<GigantamaxFormDetail> {
-		return this.fetchVarietyForm(varietyKey, this.gigantamaxFormMemCache, "gigantamax-forms", (_pokemon, images) =>
+		return this.fetchVarietyForm(varietyKey, this.gigantamaxFormMemCache, gigantamaxFormPath, (_pokemon, images) =>
 			toGigantamaxFormDetail(images),
 		);
 	}
@@ -514,10 +523,11 @@ export class PokedexRepository {
 	// id's mem-cache entries and cached disk files (both the table-row core
 	// and the detail-screen extras), without re-fetching — the generation
 	// just goes back to 0/N cached until it's browsed or cached again.
-	// Evolution-chain JSON is deliberately left alone — it's keyed by chain
-	// id, not Pokemon id, and shared across every member of a family, so
-	// deleting it here could evict data a sibling species outside this range
-	// still depends on.
+	// Evolution-chain, ability, item and move JSON are deliberately left
+	// alone — each is keyed by chain id or name, not Pokemon id, and shared
+	// across species, so deleting one here could evict data a sibling species
+	// outside this range still depends on. Only the global clearAll removes
+	// them.
 	//
 	// Two independent, sequentially-run loops — each with exactly one job,
 	// deliberately not merged into one shared iteration:
@@ -538,6 +548,12 @@ export class PokedexRepository {
 	// 2. Base-id eviction, over this generation's own numeric range —
 	// unconditional, same as before: every id in range gets its species/
 	// pokemon/image cache entries removed regardless of what loop 1 found.
+	// Its Mega and Gigantamax forms go with it (owned by the base species'
+	// dex range, not their own generation: they are only fetched from the
+	// species' detail screen, never filtered on, and ADR-0002 gives them no
+	// staleness check, so Refresh is the only way to pick up a changed
+	// shape). Their keys are derived from the cached species/pokemon JSON,
+	// so that read has to happen before those files are removed below.
 	async clearRange(generation: Generation): Promise<void> {
 		for (const speciesId of await this.listCachedSpeciesIds()) {
 			const cachedSpecies = await this.cache.readJson<RawSpecies>(speciesPath(speciesId));
@@ -563,10 +579,59 @@ export class PokedexRepository {
 			(_, i) => generation.start + i,
 		);
 		for (const id of ids) {
+			await this.evictVarietyForms(id);
 			await this.evictPokemonAssets(this.pokemonMemCache, id);
 			this.speciesMemCache.delete(id);
 			await this.cache.remove(speciesPath(id));
 		}
+	}
+
+	private async evictVarietyForms(id: number): Promise<void> {
+		const pokemon = await this.cache.readJson<RawPokemon>(pokemonPath(id));
+		const species = await this.cache.readJson<RawSpecies>(speciesPath(id));
+		if (!pokemon || !species) return;
+		for (const form of deriveMegaForms(pokemon, species)) {
+			this.megaFormMemCache.delete(form.key);
+			await this.cache.remove(megaFormPath(form.key));
+			await this.evictImages(form.key);
+		}
+		for (const form of deriveGigantamaxForms(pokemon, species)) {
+			this.gigantamaxFormMemCache.delete(form.key);
+			await this.cache.remove(gigantamaxFormPath(form.key));
+			await this.evictImages(form.key);
+		}
+	}
+
+	private async evictImages(key: number | string): Promise<void> {
+		for (const suffix of ALL_IMAGE_SUFFIXES) {
+			this.imageMemCache.delete(imagePath(key, suffix));
+			await this.cache.remove(imagePath(key, suffix));
+		}
+	}
+
+	// Settings page's global "Clear cache": the mem layer and the disk layer
+	// have to go together, since isIdCached/isExtrasCached count a mem hit as
+	// cached and later reads are served from mem without writing disk again —
+	// clearing disk alone leaves the settings counters at "N/N cached" and
+	// the files never come back. A fetch already in flight when this runs
+	// isn't cancelled (emptying the in-flight maps only stops new callers
+	// joining it), so it can still write its file afterwards; clearRange has
+	// the same window and it hasn't mattered.
+	async clearAll(): Promise<void> {
+		this.pokemonMemCache.clear();
+		this.pokemonVariantMemCache.clear();
+		this.speciesMemCache.clear();
+		this.evolutionChainMemCache.clear();
+		this.imageMemCache.clear();
+		this.abilityDescriptionMemCache.clear();
+		this.itemDescriptionMemCache.clear();
+		this.moveDetailMemCache.clear();
+		this.megaFormMemCache.clear();
+		this.gigantamaxFormMemCache.clear();
+		this.inFlight.clear();
+		this.imageInFlight.clear();
+		this.varietyFormInFlight.clear();
+		await this.cache.clear();
 	}
 
 	// Every cached species id, discovered by listing the flat species/
@@ -594,10 +659,7 @@ export class PokedexRepository {
 	private async evictPokemonAssets<K extends number | string>(memCache: Map<K, RawPokemon>, key: K): Promise<void> {
 		memCache.delete(key);
 		await this.cache.remove(pokemonPath(key));
-		for (const suffix of ALL_IMAGE_SUFFIXES) {
-			this.imageMemCache.delete(imagePath(key, suffix));
-			await this.cache.remove(imagePath(key, suffix));
-		}
+		await this.evictImages(key);
 	}
 
 	// Settings page's "Cache" action for a generation: the normal getTableRows

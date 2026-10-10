@@ -612,4 +612,69 @@ describe("PokedexRepository", () => {
 		expect(detail.shinyDataUri).toBeNull();
 		expect(detail.shinyArtworkDataUri).toBeNull();
 	});
+
+	it("clearAll() drops the mem layer too, so status reads 0/N and the next fetch hits the client again", async () => {
+		const { client, repository } = makeRepository();
+		const gen = { id: 1, name: "Test Gen", start: 1, end: 1 };
+		await repository.cacheRange(gen);
+		expect((await repository.getCacheStatus(gen)).cached).toBe(1);
+
+		await repository.clearAll();
+
+		expect(await repository.getCacheStatus(gen)).toEqual({ cached: 0, total: 1 });
+		client.fetchPokemon.mockClear();
+		await repository.getTableRows({ start: 1, end: 1 });
+		expect(client.fetchPokemon).toHaveBeenCalledTimes(1);
+	});
+
+	// A species with a Mega and a Gigantamax variety, cached the way a detail-
+	// screen visit leaves it. "venusaur-mega" must be in MEGA_VARIETY_KEYS.
+	async function setUpVenusaurWithVarietyForms(client: FakePokeApiClient, cache: DiskCache, repository: PokedexRepository) {
+		const venusaurSpecies: RawSpecies = {
+			...bulbasaurSpecies,
+			id: 3,
+			name: "venusaur",
+			varieties: [
+				{ is_default: true, pokemon: { name: "venusaur", url: "" } },
+				{ is_default: false, pokemon: { name: "venusaur-mega", url: "" } },
+				{ is_default: false, pokemon: { name: "venusaur-gmax", url: "" } },
+			],
+		};
+		for (const name of ["venusaur-mega", "venusaur-gmax"]) {
+			client.variantPokemon.set(name, { ...(bulbasaur as unknown as RawPokemon), id: 10000, name });
+		}
+		await cache.writeJson("species/3.json", venusaurSpecies);
+		await cache.writeJson("pokemon/3.json", {
+			...(bulbasaur as unknown as RawPokemon),
+			id: 3,
+			name: "venusaur",
+			species: { name: "venusaur", url: "" },
+		});
+		await repository.getMegaForm("venusaur-mega");
+		await repository.getGigantamaxForm("venusaur-gmax");
+	}
+
+	it("clearRange evicts a base species' Mega and Gigantamax forms and their images", async () => {
+		const { client, cache, repository } = makeRepository();
+		await setUpVenusaurWithVarietyForms(client, cache, repository);
+		expect(await cache.readJson("mega-forms/venusaur-mega.json")).not.toBeNull();
+		expect(await cache.exists("images/venusaur-mega-sprite.png")).toBe(true);
+
+		await repository.clearRange({ id: 1, name: "Test Gen 1", start: 1, end: 151 });
+
+		expect(await cache.readJson("mega-forms/venusaur-mega.json")).toBeNull();
+		expect(await cache.readJson("gigantamax-forms/venusaur-gmax.json")).toBeNull();
+		expect(await cache.exists("images/venusaur-mega-sprite.png")).toBe(false);
+		expect(await cache.exists("images/venusaur-gmax-shiny.png")).toBe(false);
+	});
+
+	it("clearRange leaves Mega and Gigantamax forms whose base species is outside the range", async () => {
+		const { client, cache, repository } = makeRepository();
+		await setUpVenusaurWithVarietyForms(client, cache, repository);
+
+		await repository.clearRange({ id: 2, name: "Test Gen 2", start: 152, end: 251 });
+
+		expect(await cache.readJson("mega-forms/venusaur-mega.json")).not.toBeNull();
+		expect(await cache.readJson("gigantamax-forms/venusaur-gmax.json")).not.toBeNull();
+	});
 });

@@ -9,7 +9,7 @@
 	import { formatPokedollarSigns } from "../../utils/pokedollar";
 	import { formatDexNumber, formatItemName, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { sortPokemon, type SortColumn, type SortDirection } from "../../utils/sortPokemon";
-	import { STAT_LABEL_BY_KEY, TOGGLEABLE_COLUMNS } from "../../utils/tableColumns";
+	import { formatEvYield, STAT_LABEL_BY_KEY, TOGGLEABLE_COLUMNS } from "../../utils/tableColumns";
 	import { untrack } from "svelte";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
 	import { createHoverDescription } from "../hoverDescription.svelte";
@@ -313,22 +313,22 @@
 								{:else if col.custom === "encounters"}
 									{@const encounters = describeEncounters(row.encounterLocationsAllGens, activeGen)}
 									<td title={encounters.tooltip}>{encounters.isEmpty ? "-" : encounters.summary}</td>
+								{:else if col.custom === "ev"}
+									<td title={formatEvYield(row)}>
+										<div class="ev-cell">
+											{#each row.evYield as y (y.stat)}
+												<span class="ev-chip" style:--ev-color={STAT_COLORS[y.stat]}>
+													{y.amount} {STAT_LABEL_BY_KEY.get(y.stat) ?? y.stat}
+												</span>
+											{:else}
+												<span class="ev-empty">-</span>
+											{/each}
+										</div>
+									</td>
 								{:else}
 									<!-- A CustomCell with no branch above: keep the row aligned (tsc skips .svelte). -->
 									<td></td>
 								{/if}
-							{:else if col.key === "ev"}
-								<td title={col.render(row)}>
-									<div class="ev-cell">
-										{#each row.evYield as y (y.stat)}
-											<span class="ev-chip" style:--ev-color={STAT_COLORS[y.stat]}>
-												{y.amount} {STAT_LABEL_BY_KEY.get(y.stat) ?? y.stat}
-											</span>
-										{:else}
-											<span class="ev-empty">-</span>
-										{/each}
-									</div>
-								</td>
 							{:else}
 								<td class:right={col.align === "right"}>{col.render(row)}</td>
 							{/if}

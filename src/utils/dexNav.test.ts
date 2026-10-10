@@ -1,48 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { resolveGenerationId } from "../data/constants";
 import type { PokedexTableRow } from "../data/types";
 import { getAdjacentDexEntries } from "./dexNav";
-
-// Same fixture-builder pattern as filterPokemon.test.ts.
-function row(overrides: Partial<PokedexTableRow>): PokedexTableRow {
-	const id = overrides.id ?? 1;
-	return {
-		id,
-		dexNumber: id,
-		formLabel: null,
-		generationId: resolveGenerationId(id),
-		name: "bulbasaur",
-		types: ["grass", "poison"],
-		stats: { hp: 45, attack: 49, defense: 49, specialAttack: 65, specialDefense: 65, speed: 45 },
-		evYield: [],
-		abilityNames: [],
-		levelUpMoveNames: [],
-		heldItemsAllGens: [],
-		encounterLocationsAllGens: [],
-		spriteDataUri: null,
-		height: 7,
-		weight: 69,
-		catchRate: 45,
-		hatchCounter: 20,
-		rarity: "normal",
-		isBaby: false,
-		canMegaEvolve: false,
-		canGigantamax: false,
-		evolutionStages: 0,
-		isFinalStage: false,
-		...overrides,
-	};
-}
+import { makeRow } from "../data/__fixtures__/rows";
 
 describe("getAdjacentDexEntries", () => {
 	const rows: PokedexTableRow[] = [
-		row({ id: 4, name: "charmander" }),
-		row({ id: 5, name: "charmeleon" }),
-		row({ id: 6, name: "charizard" }),
+		makeRow({ id: 4, name: "charmander" }),
+		makeRow({ id: 5, name: "charmeleon" }),
+		makeRow({ id: 6, name: "charizard" }),
 		// Alolan Rattata: shares dexNumber 19 with the default row but has its
 		// own id and a formLabel — must never surface as a prev/next target.
-		row({ id: 19, dexNumber: 19, name: "rattata" }),
-		row({ id: 10091, dexNumber: 19, name: "rattata", formLabel: "Alolan" }),
+		makeRow({ id: 19, dexNumber: 19, name: "rattata" }),
+		makeRow({ id: 10091, dexNumber: 19, name: "rattata", formLabel: "Alolan" }),
 	];
 
 	it("returns both neighbors for a middle entry", () => {
@@ -76,15 +45,15 @@ describe("getAdjacentDexEntries", () => {
 
 	// Growlithe/Arcanine-shaped: both species have a Hisuian form.
 	const hisuiRows: PokedexTableRow[] = [
-		row({ id: 58, dexNumber: 58, name: "growlithe" }),
-		row({ id: 10229, dexNumber: 58, name: "growlithe", formLabel: "Hisuian" }),
-		row({ id: 59, dexNumber: 59, name: "arcanine" }),
-		row({ id: 10230, dexNumber: 59, name: "arcanine", formLabel: "Hisuian" }),
+		makeRow({ id: 58, dexNumber: 58, name: "growlithe" }),
+		makeRow({ id: 10229, dexNumber: 58, name: "growlithe", formLabel: "Hisuian" }),
+		makeRow({ id: 59, dexNumber: 59, name: "arcanine" }),
+		makeRow({ id: 10230, dexNumber: 59, name: "arcanine", formLabel: "Hisuian" }),
 		// Rowlet/Dartrix/Decidueye-shaped: only Decidueye (not its pre-evos)
 		// has a Hisuian form, so stepping past it has nothing to land on.
-		row({ id: 724, dexNumber: 724, name: "decidueye" }),
-		row({ id: 10244, dexNumber: 724, name: "decidueye", formLabel: "Hisuian" }),
-		row({ id: 725, dexNumber: 725, name: "rowlet" }),
+		makeRow({ id: 724, dexNumber: 724, name: "decidueye" }),
+		makeRow({ id: 10244, dexNumber: 724, name: "decidueye", formLabel: "Hisuian" }),
+		makeRow({ id: 725, dexNumber: 725, name: "rowlet" }),
 	];
 
 	it("stays on the same regional-form line when the neighbor has a matching variant", () => {

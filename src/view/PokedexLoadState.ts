@@ -28,6 +28,15 @@ export class PokedexLoadState {
 		this.cancelled = true;
 	}
 
+	// The single place the generation scope is applied to fetched rows.
+	// `scope.fetchRange` is a contiguous span that can include ids from a
+	// disabled generation, and getRowsForIds adds regional-form rows next to
+	// each base id, so every path that hands rows to the caller (the onRow
+	// stream, load's final set, retry) has to cross this.
+	private admit(rows: PokedexTableRow[]): PokedexTableRow[] {
+		return rows.filter((row) => this.scope.includes(row));
+	}
+
 	private mergeRows(fetched: PokedexTableRow[]) {
 		const byId = new Map(this.rows.map((r) => [r.id, r]));
 		for (const row of fetched) byId.set(row.id, row);
@@ -41,10 +50,9 @@ export class PokedexLoadState {
 	// this instance. The callback lets the caller mirror progress into its
 	// own `$state` variable instead.
 	//
-	// `onRow` fires per row as it settles, filtered through `scope.includes` first
-	// since `scope.fetchRange` is a contiguous span that can include ids from a
-	// disabled generation (see resolveGenerationScope) — those get fetched
-	// but must never reach the caller, even transiently.
+	// `onRow` fires per row as it settles, filtered through `admit` first —
+	// out-of-scope rows (see resolveGenerationScope) get fetched but must never
+	// reach the caller, even transiently.
 	async load(
 		onProgress?: (loaded: number, total: number) => void,
 		onRow?: (row: PokedexTableRow) => void,
@@ -57,11 +65,11 @@ export class PokedexLoadState {
 			},
 			() => this.cancelled,
 			(row) => {
-				if (this.scope.includes(row)) onRow?.(row);
+				for (const admitted of this.admit([row])) onRow?.(admitted);
 			},
 		);
 		if (this.cancelled) return;
-		this.rows = result.rows.filter((row) => this.scope.includes(row));
+		this.rows = this.admit(result.rows);
 		// failedIds are bare ids (a row never got built, nothing to check
 		// generationId on) — a failure always happens on the *base* fetch id
 		// (see getRowsForIds: a regional-variant failure is caught separately
@@ -73,7 +81,8 @@ export class PokedexLoadState {
 
 	// Returns null (a no-op) if there's nothing to retry or a retry is
 	// already in flight, mirroring the guard the caller previously had to
-	// check itself. Returns the raw retry result otherwise, since the
+	// check itself. Returns the retry result otherwise, with `rows` already
+	// scoped (so it matches what was merged into `this.rows`), since the
 	// caller needs both how many recovered and how many are still failing
 	// to compose its own outcome message.
 	async retry(onProgress?: (loaded: number, total: number) => void): Promise<TableLoadResult | null> {
@@ -89,8 +98,9 @@ export class PokedexLoadState {
 		);
 		this.retrying = false;
 		if (this.cancelled) return result;
-		this.mergeRows(result.rows);
-		this.failedIds = result.failedIds;
-		return result;
+		const scoped = { ...result, rows: this.admit(result.rows) };
+		this.mergeRows(scoped.rows);
+		this.failedIds = scoped.failedIds;
+		return scoped;
 	}
 }

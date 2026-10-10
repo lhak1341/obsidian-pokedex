@@ -1,36 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { resolveGenerationId } from "../data/constants";
 import type { PokedexTableRow } from "../data/types";
 import { sortPokemon } from "./sortPokemon";
+import { makeRow } from "../data/__fixtures__/rows";
 
 function row(id: number, name: string, speed: number, overrides: Partial<PokedexTableRow> = {}): PokedexTableRow {
-	const dexNumber = overrides.dexNumber ?? id;
-	return {
+	return makeRow({
 		id,
-		dexNumber,
-		formLabel: null,
-		generationId: resolveGenerationId(dexNumber),
 		name,
 		types: [],
 		stats: { hp: 0, attack: 0, defense: 0, specialAttack: 0, specialDefense: 0, speed },
-		evYield: [],
-		abilityNames: [],
-		levelUpMoveNames: [],
-		heldItemsAllGens: [],
-		encounterLocationsAllGens: [],
-		spriteDataUri: null,
-		height: 0,
-		weight: 0,
-		catchRate: 0,
-		hatchCounter: 0,
-		rarity: "normal",
-		isBaby: false,
-		canMegaEvolve: false,
-		canGigantamax: false,
-		evolutionStages: 0,
-		isFinalStage: false,
 		...overrides,
-	};
+	});
 }
 
 const rows = [row(3, "venusaur", 80), row(1, "bulbasaur", 45), row(2, "ivysaur", 60)];

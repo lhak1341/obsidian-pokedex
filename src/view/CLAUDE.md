@@ -12,6 +12,11 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   it anyway — `bun run lint` globs `src/**/*.ts`, and eslint parses no `.svelte` file here.
   The mechanism if a second instance lands is a scan test over `src/view/**/*.svelte` for
   `resolveGenerationId`, with a liveness assertion that it found files to scan.
+- `PokedexLoadState.admit()` is the one place the generation scope is applied to fetched
+  rows; `onRow`, `load()` and `retry()` all go through it. `getRowsForIds` adds regional-form
+  rows next to every base id, so `retry()` once merged a disabled generation's Alolan Rattata
+  into the table. A new path that adds rows must cross `admit`. `retry()`'s recovered count
+  is ids (`attempted - failedIds.length`), not `result.rows.length`.
 - Roman numerals come from `romanNumeral()` (`utils/romanNumeral.ts`) applied to
   `entry.generationId` — a generic algorithm, so it cannot drift the way the old
   hand-curated `ROMAN_NUMERALS` array did (it stopped at "VII" and rendered a blank `()`
@@ -27,8 +32,9 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   Quirks filter in one session. `filterPokemon`'s `FilterContext.activeGen` is required for the
   same reason (no silent any-generation fallback).
 - Table columns are `{ render }` text columns or `{ custom: CustomCell }` columns TableScreen
-  draws itself (`heldItems`, `encounterLocation`: they need the Active Gen). A custom column has no
-  `render`; do not add a text fallback, it can only show every generation's data. A new custom
+  draws itself (`heldItems`, `encounterLocation`: they need the Active Gen; `ev`: it draws chips,
+  its tooltip text is `formatEvYield`). A custom column has no `render`; do not add a text
+  fallback (for the Active Gen columns it can only show every generation's data). A new custom
   column needs its own `col.custom === …` branch in `TableScreen.svelte`; there is no default
   (an unhandled value renders an empty `<td>`, and `tsc` cannot check the template).
 - `tsc` (`bun run typecheck`) skips `.svelte` files and the build only catches compile errors, so after renaming or removing a field/export, grep `src/**/*.svelte` for the old name by hand. A stale use builds clean and reads `undefined` live.

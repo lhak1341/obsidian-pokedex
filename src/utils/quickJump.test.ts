@@ -1,35 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { resolveGenerationId } from "../data/constants";
 import type { PokedexTableRow } from "../data/types";
 import { quickJumpMatches, stepQuickJumpNav } from "./quickJump";
+import { makeRow } from "../data/__fixtures__/rows";
 
-function row(id: number, name: string): PokedexTableRow {
-	return {
-		id,
-		dexNumber: id,
-		formLabel: null,
-		generationId: resolveGenerationId(id),
-		name,
-		types: [],
-		stats: { hp: 0, attack: 0, defense: 0, specialAttack: 0, specialDefense: 0, speed: 0 },
-		evYield: [],
-		abilityNames: [],
-		levelUpMoveNames: [],
-		heldItemsAllGens: [],
-		encounterLocationsAllGens: [],
-		spriteDataUri: null,
-		height: 0,
-		weight: 0,
-		catchRate: 0,
-		hatchCounter: 0,
-		rarity: "normal",
-		isBaby: false,
-		canMegaEvolve: false,
-		canGigantamax: false,
-	evolutionStages: 0,
-	isFinalStage: false,
-	};
-}
+const row = (id: number, name: string): PokedexTableRow => makeRow({ id, name });
 
 describe("quickJumpMatches", () => {
 	const rows = Array.from({ length: 12 }, (_, i) => row(i + 1, `mon${i + 1}`));
