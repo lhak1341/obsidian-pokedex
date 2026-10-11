@@ -49,5 +49,7 @@
   "47": "0007-local-preference-callbacks-stay-plumbed.md",
   "48": "0008-font-picker-stays-the-shared-recipe-shape.md",
   "49": "0009-detail-screen-derivations-stay-in-the-component.md",
-  "50": "raw-imports.d.ts"
+  "50": "raw-imports.d.ts",
+  "51": "pokemonDisplay.ts",
+  "52": "0010-per-species-cache-footprint-stays-two-questions.md"
 }

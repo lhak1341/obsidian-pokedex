@@ -2,13 +2,13 @@
 	import { Notice } from "obsidian";
 	import { onDestroy, onMount, tick } from "svelte";
 	import type { PokedexRepository } from "../data/PokedexRepository";
-	import type { PluginSettings, PokedexTableRow } from "../data/types";
+	import type { PluginSettings } from "../data/types";
 	import { resolveGenerationScope } from "../utils/generationScope";
 	import { describePartialLoadOutcome, describeRetryOutcome } from "../utils/loadNotices";
 	import { DetailNavigationState, type ScrollInstruction } from "./DetailNavigationState";
 	import { isEditableTarget } from "./domTarget";
 	import DetailScreen from "./components/DetailScreen.svelte";
-	import { PokedexLoadState } from "./PokedexLoadState";
+	import { emptyLoadSnapshot, type LoadSnapshot, PokedexLoadState } from "./PokedexLoadState";
 	import TableScreen from "./components/TableScreen.svelte";
 
 	let { repository, settings, onColumnsChange, onFavoritesChange }: {
@@ -34,14 +34,12 @@
 	// PokedexLoadState is a plain, non-reactive class (tested with plain
 	// vitest, see PokedexLoadState.test.ts) — Svelte 5's $state only
 	// deep-proxies plain objects/arrays, not class instances, so mutations
-	// to its fields wouldn't be visible to the template. These $state
-	// primitives are the reactive boundary instead, explicitly assigned
-	// from the worker's results/progress callback.
-	let rows = $state<PokedexTableRow[]>([]);
-	let failedIds = $state<number[]>([]);
-	let loading = $state(true);
-	let retrying = $state(false);
-	let progress = $state({ loaded: 0, total: 0 });
+	// to its fields wouldn't be visible to the template. `view` is the reactive
+	// boundary instead, reassigned wholesale from the snapshot the class hands
+	// its onUpdate callback after every change (same shape as DetailScreen's
+	// entryLoad). The class owns the rows, failed ids and outcome counts; this
+	// component only renders them and shows the Notices.
+	let view = $state<LoadSnapshot>(emptyLoadSnapshot());
 
 	let loadState: PokedexLoadState;
 
@@ -49,43 +47,30 @@
 	// saveSettings) unmounts this component and mounts a fresh one. Without
 	// cancelling here, a load still in flight when that happens keeps running
 	// in the background while the new instance starts its own load — every id
-	// the old one hadn't reached yet gets fetched twice for nothing.
+	// the old one hadn't reached yet gets fetched twice for nothing. A
+	// cancelled load also stops calling onUpdate and returns a null outcome,
+	// so nothing below needs its own cancelled check.
 	onDestroy(() => loadState?.cancel());
 
 	onMount(() => {
-		loadState = new PokedexLoadState(repository, resolveGenerationScope(settings.enabledGenerations));
-		loadState
-			.load(
-				(loaded, total) => (progress = { loaded, total }),
-				// Render the table as soon as the first row lands instead of
-				// blocking on the whole batch — the rest streams in behind a slim
-				// progress indicator (see the template) rather than a full-screen
-				// loader.
-				(row) => {
-					rows = [...rows, row];
-					loading = false;
-				},
-			)
-			.then(() => {
-				if (loadState.cancelled) return;
-				rows = loadState.rows;
-				failedIds = loadState.failedIds;
-				loading = false;
-				if (failedIds.length > 0) {
-					new Notice(describePartialLoadOutcome(rows.length, failedIds.length));
-				}
-			});
+		// Render the table as soon as the first row lands instead of blocking on
+		// the whole batch — the rest streams in behind a slim progress indicator
+		// (see the template) rather than a full-screen loader.
+		loadState = new PokedexLoadState(
+			repository,
+			resolveGenerationScope(settings.enabledGenerations),
+			(snapshot) => (view = snapshot),
+		);
+		void loadState.load().then((outcome) => {
+			if (outcome) new Notice(describePartialLoadOutcome(outcome.loaded, outcome.failed));
+		});
 	});
 
 	function retryFailed() {
-		const attempted = failedIds.length;
-		retrying = true;
-		loadState.retry((loaded, total) => (progress = { loaded, total })).then((result) => {
-			retrying = false;
-			if (!result || loadState.cancelled) return;
-			rows = loadState.rows;
-			failedIds = loadState.failedIds;
-			new Notice(describeRetryOutcome(attempted, attempted - result.failedIds.length, result.failedIds.length));
+		void loadState.retry().then((outcome) => {
+			if (outcome) {
+				new Notice(describeRetryOutcome(outcome.attempted, outcome.recovered, outcome.stillFailing));
+			}
 		});
 	}
 
@@ -153,13 +138,13 @@
 </script>
 
 <div class="pokedex-view" bind:this={rootEl}>
-	{#if loading}
+	{#if view.loading}
 		<div class="loading-panel">
-			<p>Loading Pokedex&hellip; {progress.loaded}/{progress.total || "?"}</p>
+			<p>Loading Pokedex&hellip; {view.progress.loaded}/{view.progress.total || "?"}</p>
 			<div class="loading-track">
 				<div
 					class="loading-fill"
-					style:width="{progress.total ? (progress.loaded / progress.total) * 100 : 0}%"
+					style:width="{view.progress.total ? (view.progress.loaded / view.progress.total) * 100 : 0}%"
 				></div>
 			</div>
 		</div>
@@ -169,21 +154,21 @@
 		state survives a round trip through the detail view instead of resetting
 		every time. -->
 		<div class:hidden-screen={screen !== "table"}>
-			{#if progress.loaded < progress.total}
+			{#if view.progress.loaded < view.progress.total}
 				<div class="loading-more-banner">
-					Loading more Pokemon&hellip; {progress.loaded}/{progress.total}
+					Loading more Pokemon&hellip; {view.progress.loaded}/{view.progress.total}
 				</div>
 			{/if}
-			{#if failedIds.length > 0}
+			{#if view.failedIds.length > 0}
 				<div class="fetch-failure-banner">
-					<span>{failedIds.length} Pokemon couldn't be fetched.</span>
-					<button onclick={retryFailed} disabled={retrying}>
-						{retrying ? "Retrying..." : `Retry ${failedIds.length}`}
+					<span>{view.failedIds.length} Pokemon couldn't be fetched.</span>
+					<button onclick={retryFailed} disabled={view.retrying}>
+						{view.retrying ? "Retrying..." : `Retry ${view.failedIds.length}`}
 					</button>
 				</div>
 			{/if}
 			<TableScreen
-				{rows}
+				rows={view.rows}
 				density={settings.gridDensity}
 				defaultSortColumn={settings.defaultSortColumn}
 				initialVisibleColumns={settings.visibleColumns}
@@ -200,7 +185,7 @@
 			<DetailScreen
 				{repository}
 				id={selectedId}
-				{rows}
+				rows={view.rows}
 				spriteStyle={settings.spriteStyle}
 				useTypeIcons={settings.useTypeIcons}
 				activeGen={settings.activeGen}

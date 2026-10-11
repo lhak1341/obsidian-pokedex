@@ -1,12 +1,9 @@
 // Single source of truth for the pokemon/species/image disk-cache path
 // templates, previously hand-built at a dozen+ call sites in
-// PokedexRepository.ts. The image suffix list in particular is load-bearing:
-// clearRange must delete every suffix any fetch site writes, and without one
-// shared list, a new suffix added at a write site has no compiler-enforced
-// link to the delete side (see clearRange's own comment).
+// PokedexRepository.ts. ImageSuffix is the key set of imageSet.ts's table, which
+// derives ALL_IMAGE_SUFFIXES for clearRange — that table, not this union alone,
+// is what ties the write sites to the delete side.
 export type ImageSuffix = "sprite" | "artwork" | "shiny" | "shiny-artwork";
-
-export const ALL_IMAGE_SUFFIXES: ImageSuffix[] = ["sprite", "artwork", "shiny", "shiny-artwork"];
 
 // idOrName covers both a numeric dex id (getOrFetchPokemon) and a PokeAPI
 // variety name (getOrFetchPokemonVariant's regional forms, getMegaForm's

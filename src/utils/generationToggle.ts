@@ -3,6 +3,7 @@ export type GenerationToggleResult = { allowed: true; enabled: number[] } | { al
 // The settings tab's "at least one generation must stay enabled" rule — a
 // species search needs SOME generation to fetch against, so disabling the
 // last one is rejected rather than left to silently produce an empty dex.
+// (hydrateSettings repairs the same invariant in stored data on load.)
 // Pure decision only; the caller (PokedexSettingTab) owns reverting the
 // toggle control and showing a Notice when allowed is false.
 export function resolveGenerationToggle(

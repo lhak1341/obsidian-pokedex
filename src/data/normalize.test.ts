@@ -20,6 +20,7 @@ import {
 	normalizeMoves,
 	normalizeStats,
 	resolveRegionalFormSuffix,
+	sortBySlot,
 	toEntry,
 	toTableRow,
 	trimMovesToVersionGroups,
@@ -1432,5 +1433,18 @@ describe("canonicalizeEvolutionChain", () => {
 
 	it("returns the same object for a chain already in the old format", () => {
 		expect(canonicalizeEvolutionChain(chain)).toBe(chain);
+	});
+});
+
+describe("sortBySlot", () => {
+	it("orders by slot", () => {
+		const out = sortBySlot([{ slot: 2, n: "b" }, { slot: 1, n: "a" }, { slot: 3, n: "c" }]);
+		expect(out.map((x) => x.n)).toEqual(["a", "b", "c"]);
+	});
+
+	it("does not reorder the input array (RawPokemon sits in a shared mem cache)", () => {
+		const input = [{ slot: 2, n: "b" }, { slot: 1, n: "a" }];
+		sortBySlot(input);
+		expect(input.map((x) => x.n)).toEqual(["b", "a"]);
 	});
 });

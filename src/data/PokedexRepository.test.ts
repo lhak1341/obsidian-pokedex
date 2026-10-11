@@ -270,6 +270,19 @@ describe("PokedexRepository", () => {
 		expect(await cache.readJson("species/19.json")).toBeNull();
 	});
 
+	it("clearRange leaves no image behind after every image-writing fetch path has run", async () => {
+		const { cache, repository } = makeRepository();
+		// Table load writes the sprite; getEntryExtras writes artwork, shiny and
+		// shiny-artwork. Together they cover all four suffixes for id 1.
+		await repository.getTableRows({ start: 1, end: 1 });
+		await repository.getEntryExtras(1);
+		expect((await cache.listFilesIn("images")).length).toBe(4);
+
+		await repository.clearRange({ id: 1, name: "Test Gen 1", start: 1, end: 151 });
+
+		expect(await cache.listFilesIn("images")).toEqual([]);
+	});
+
 	it("getCacheStatus reports 0/N when nothing has been fetched", async () => {
 		const { repository } = makeRepository();
 

@@ -1,13 +1,14 @@
 import { mapWithConcurrency } from "../utils/concurrency";
 import { DiskCache } from "./Cache";
 import {
-	ALL_IMAGE_SUFFIXES,
 	gigantamaxFormPath,
 	imagePath,
+	type ImageSuffix,
 	megaFormPath,
 	pokemonPath,
 	speciesPath,
 } from "./cachePaths";
+import { ALL_IMAGE_SUFFIXES, type ImageBundle, imageRequests } from "./imageSet";
 import {
 	canonicalizeEvolutionChain,
 	deriveGigantamaxForms,
@@ -15,6 +16,7 @@ import {
 	deriveRegionalForms,
 	normalizeEvolutionChainForViewed,
 	normalizeMoveDetail,
+	sortBySlot,
 	toEntry,
 	toGigantamaxFormDetail,
 	toMegaFormDetail,
@@ -397,12 +399,7 @@ export class PokedexRepository {
 		varietyKey: string,
 		memCache: Map<string, T>,
 		cachePathFor: (varietyKey: string) => string,
-		normalize: (pokemon: RawPokemon, images: {
-			sprite: string | null;
-			artwork: string | null;
-			shiny: string | null;
-			shinyArtwork: string | null;
-		}) => T,
+		normalize: (pokemon: RawPokemon, images: ImageBundle) => T,
 	): Promise<T> {
 		const mem = memCache.get(varietyKey);
 		if (mem) return mem;
@@ -417,19 +414,8 @@ export class PokedexRepository {
 				return cached;
 			}
 			const pokemon = await this.client.fetchPokemon(varietyKey);
-			const [sprite, artwork, shiny, shinyArtwork] = await Promise.all([
-				this.getOrFetchImage(pokemon.sprites.front_default, imagePath(varietyKey, "sprite")).catch(() => null),
-				this.getOrFetchImage(
-					pokemon.sprites.other?.["official-artwork"]?.front_default ?? null,
-					imagePath(varietyKey, "artwork"),
-				).catch(() => null),
-				this.getOrFetchImage(pokemon.sprites.front_shiny, imagePath(varietyKey, "shiny")).catch(() => null),
-				this.getOrFetchImage(
-					pokemon.sprites.other?.["official-artwork"]?.front_shiny ?? null,
-					imagePath(varietyKey, "shiny-artwork"),
-				).catch(() => null),
-			]);
-			const detail = normalize(pokemon, { sprite, artwork, shiny, shinyArtwork });
+			const images = await this.fetchImages(varietyKey, pokemon.sprites, ALL_IMAGE_SUFFIXES);
+			const detail = normalize(pokemon, images);
 			await this.cache.writeJson(cachePath, detail);
 			memCache.set(varietyKey, detail);
 			return detail;
@@ -598,6 +584,26 @@ export class PokedexRepository {
 			await this.cache.remove(gigantamaxFormPath(form.key));
 			await this.evictImages(form.key);
 		}
+	}
+
+	// Fetches the requested members of a Pokemon's image set (see imageSet.ts for
+	// the suffix -> sprites-field table). Every image is caught independently and
+	// resolves to null on failure — a dropped connection on just the shiny
+	// sprite shouldn't take the rest down. The core sprite is NOT fetched
+	// through here: a failed core sprite must fail the whole id (getEntryCore,
+	// getRowsForIds), the opposite policy. Suffixes not requested stay null.
+	private async fetchImages(
+		key: number | string,
+		sprites: RawPokemon["sprites"],
+		suffixes: readonly ImageSuffix[],
+	): Promise<ImageBundle> {
+		const bundle: ImageBundle = { sprite: null, artwork: null, shiny: null, shinyArtwork: null };
+		await Promise.all(
+			imageRequests(key, sprites, suffixes).map(async ({ field, url, relPath }) => {
+				bundle[field] = await this.getOrFetchImage(url, relPath).catch(() => null);
+			}),
+		);
+		return bundle;
 	}
 
 	private async evictImages(key: number | string): Promise<void> {
@@ -863,17 +869,8 @@ export class PokedexRepository {
 		// Each image fetch is caught independently — a dropped connection on
 		// just the shiny sprite, say, shouldn't take the artwork (or the rest
 		// of the already-rendered core view) down with it.
-		const [artworkDataUri, shinyDataUri, shinyArtworkDataUri] = await Promise.all([
-			this.getOrFetchImage(
-				pokemon.sprites.other?.["official-artwork"]?.front_default ?? null,
-				imagePath(id, "artwork"),
-			).catch(() => null),
-			this.getOrFetchImage(pokemon.sprites.front_shiny, imagePath(id, "shiny")).catch(() => null),
-			this.getOrFetchImage(
-				pokemon.sprites.other?.["official-artwork"]?.front_shiny ?? null,
-				imagePath(id, "shiny-artwork"),
-			).catch(() => null),
-		]);
+		const images = await this.fetchImages(id, pokemon.sprites, ["artwork", "shiny", "shiny-artwork"]);
+		const { artwork: artworkDataUri, shiny: shinyDataUri, shinyArtwork: shinyArtworkDataUri } = images;
 
 		return { artworkDataUri, shinyDataUri, shinyArtworkDataUri, evolutionChain };
 	}
@@ -902,7 +899,7 @@ export class PokedexRepository {
 						pokemon.sprites.front_default,
 						imagePath(id, "sprite"),
 					);
-					const types = pokemon.types.sort((a, b) => a.slot - b.slot).map((t) => t.type.name);
+					const types = sortBySlot(pokemon.types).map((t) => t.type.name);
 					return [id, { sprite, types }];
 				} catch {
 					return [id, { sprite: null, types: [] }];

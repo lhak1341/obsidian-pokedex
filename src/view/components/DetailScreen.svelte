@@ -54,11 +54,8 @@
 	// to its fields wouldn't be visible to the template. entryLoad is the
 	// reactive boundary instead, reassigned wholesale from loadState.snapshot()
 	// on every onUpdate callback. PokedexLoadState (the browse table's
-	// equivalent, see PokedexApp.svelte) solves the same "plain class into
-	// $state" problem by hand instead — its load() callbacks are
-	// payload-carrying and row-streaming-shaped (built for incremental
-	// render-as-you-go), not this class's payload-free wholesale-refresh
-	// shape, so a snapshot()-style method doesn't fit there.
+	// equivalent, see PokedexApp.svelte) uses the same shape: its onUpdate
+	// callback carries a snapshot() that PokedexApp assigns into one $state.
 	// $derived (not a plain const) so Svelte doesn't warn about capturing the
 	// `repository` prop outside a reactive scope — it never actually changes
 	// across this component's lifetime (see PokedexApp's template, which

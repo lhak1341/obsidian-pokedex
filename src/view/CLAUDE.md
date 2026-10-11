@@ -13,10 +13,14 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   The mechanism if a second instance lands is a scan test over `src/view/**/*.svelte` for
   `resolveGenerationId`, with a liveness assertion that it found files to scan.
 - `PokedexLoadState.admit()` is the one place the generation scope is applied to fetched
-  rows; `onRow`, `load()` and `retry()` all go through it. `getRowsForIds` adds regional-form
+  rows; the streamed rows, `load()` and `retry()` all go through it. `getRowsForIds` adds regional-form
   rows next to every base id, so `retry()` once merged a disabled generation's Alolan Rattata
   into the table. A new path that adds rows must cross `admit`. `retry()`'s recovered count
-  is ids (`attempted - failedIds.length`), not `result.rows.length`.
+  is ids (`attempted - failedIds.length`), not `result.rows.length`; `retry()` now returns that
+  as `{ attempted, recovered, stillFailing }` and `load()` returns `{ loaded, failed }` (null
+  when nothing failed), so `PokedexApp` only maps them through `loadNotices.ts`. The class owns
+  the streamed rows and calls `onUpdate(snapshot)` (a fresh `rows` array each time, which
+  `TableScreen`'s deriveds need) — not after `cancel()`.
 - Roman numerals come from `romanNumeral()` (`utils/romanNumeral.ts`) applied to
   `entry.generationId` — a generic algorithm, so it cannot drift the way the old
   hand-curated `ROMAN_NUMERALS` array did (it stopped at "VII" and rendered a blank `()`
@@ -78,6 +82,7 @@ before assuming a plugin bug.
 
 ## Live-verify recipes
 
+- A real-vault table load took over 90 s once (rows render from the first, but `.loading-more-banner` stays up), so a live check that sleeps a few seconds reads the failure banner and Notices as absent. Stub `repo.getTableRows`/`retryRows` for the load, banner and Notice paths and restore them in a `finally`; poll for the banner to clear only when the real load is the thing under test.
 - Focus first: `getLeavesOfType('pokedex-view')` + `setActiveLeaf(leaf, {focus:true})`. For
   a genuinely fresh Svelte mount, detach and reopen via
   `executeCommandById('obsidian-pokedex:open-pokedex')`.

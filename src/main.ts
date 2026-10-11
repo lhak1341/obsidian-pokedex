@@ -4,6 +4,7 @@ import { PokeApiClient } from "./data/PokeApiClient";
 import { PokedexRepository } from "./data/PokedexRepository";
 import type { PluginSettings } from "./data/types";
 import { DEFAULT_SETTINGS, PokedexSettingTab } from "./settings";
+import { hydrateSettings } from "./utils/settingsHydrate";
 import { PokedexView, VIEW_TYPE_POKEDEX } from "./view/PokedexView";
 
 export default class PokedexPlugin extends Plugin {
@@ -39,8 +40,7 @@ export default class PokedexPlugin extends Plugin {
 	}
 
 	async loadSettings(): Promise<void> {
-		const saved = (await this.loadData()) as Partial<PluginSettings> | null;
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
+		this.settings = hydrateSettings(await this.loadData(), DEFAULT_SETTINGS);
 	}
 
 	async saveSettings(): Promise<void> {

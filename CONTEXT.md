@@ -70,3 +70,10 @@ Not the same as Generation fallback: that rule picks a different generation's ta
 ## Quirk and Trait
 
 The two checkbox groups in FilterBar. Each option is one entry in `src/utils/quirksAndTraits.ts` (`QUIRKS`, `TRAITS`) carrying its key, label, icon and `matches(row, ctx)` predicate, so an option cannot exist without its predicate. `filterPokemon` only decides how a selection combines: **Quirks** are OR'd (a personal shortlist that can overlap on one Pokemon: "pickup OR holds an item"), **Traits** are AND'd (independent yes/no properties of the Pokemon: "Baby AND Fossil"). `ctx` carries Active Gen; `held-item` uses it (see Active Gen scoping), the rest ignore it. A selected key with no entry matches nothing. `quirksAndTraits.test.ts` fails if an entry has no fixture row that matches it.
+
+
+## Image set
+
+The up-to-four images a Pokemon (or a Mega/Gigantamax variety) can own: `sprite`, `artwork`, `shiny`, `shiny-artwork`. `IMAGE_SET` in `src/data/imageSet.ts` is the single table mapping each cache suffix to its `RawPokemon.sprites` field and its `ImageBundle` field; `ALL_IMAGE_SUFFIXES` is derived from it, so `clearRange`'s delete side cannot miss a suffix a fetch site writes. A `Record<ImageSuffix, …>`, so a new suffix without a row fails typecheck.
+
+`PokedexRepository.fetchImages` fetches a chosen subset, each image caught independently to `null`. The core sprite (`getEntryCore`, `getRowsForIds`) deliberately stays outside it: a failed core sprite must fail the whole id, the opposite policy. `ImageBundle` is the fetched shape; `PortraitImageSource` (`types.ts`) is the entry-side `*DataUri` shape and is intentionally separate.

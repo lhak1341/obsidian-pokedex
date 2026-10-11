@@ -17,6 +17,7 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `Cache`/`DiskCache`, `normalize.
   narrow `Pick<PokedexRepository, …>` plus `vi.fn()` stubs; reserve the heavier
   repository + `FakePokeApiClient` stack (`PokedexLoadState.test.ts`,
   `DetailLoadState.test.ts`) for classes that need real fetch/cache behavior.
+- `FakePokeApiClient` ids are not independent: every fake pokemon is the bulbasaur fixture, so each id's species fetch resolves to species id 1, and `failIds.add(1)` fails them all. Use ids ≥ 2 to fail one id (`PokedexLoadState.test.ts`, "retry() reports ids still failing").
 - Adding a genuinely new field to a raw PokeAPI response (e.g. `held_items` — as opposed to
   a trim-down of something already cached, like `moves`/`flavor_text_entries`) needs a
   matching `isStale` check on its `getOrFetch` call in `PokedexRepository.ts`. Otherwise an

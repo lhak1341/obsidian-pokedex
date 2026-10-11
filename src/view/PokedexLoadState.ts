@@ -1,11 +1,40 @@
-import type { PokedexRepository, TableLoadResult } from "../data/PokedexRepository";
+import type { PokedexRepository } from "../data/PokedexRepository";
 import type { PokedexTableRow } from "../data/types";
 import type { GenerationScope } from "../utils/generationScope";
 
+// Everything a view needs to render the browse table's load, copied out of the
+// class so a reactive owner can hold it in one `$state` (see onUpdate below).
+export interface LoadSnapshot {
+	rows: PokedexTableRow[];
+	failedIds: number[];
+	// False from the first admitted row on (the table can render while the rest
+	// streams in), or once the load ends, whichever comes first.
+	loading: boolean;
+	retrying: boolean;
+	progress: { loaded: number; total: number };
+}
+
+// Counts only — wording is loadNotices.ts's job and showing it is the caller's.
+export interface LoadOutcome {
+	loaded: number;
+	failed: number;
+}
+
+export interface RetryOutcome {
+	attempted: number;
+	recovered: number;
+	stillFailing: number;
+}
+
+export function emptyLoadSnapshot(): LoadSnapshot {
+	return { rows: [], failedIds: [], loading: true, retrying: false, progress: { loaded: 0, total: 0 } };
+}
+
 // Owns the fetch/retry lifecycle for the browse table: which rows are
-// loaded, which ids failed, and progress while fetching. Presentation
-// concerns (e.g. showing a Notice) are the caller's job — this class only
-// tracks state and talks to PokedexRepository.
+// loaded (including rows streaming in before the load ends), which ids
+// failed, progress, and the outcome counts a caller turns into a Notice.
+// Presentation concerns (showing the Notice) are the caller's job — this class
+// only tracks state and talks to PokedexRepository.
 export class PokedexLoadState {
 	rows: PokedexTableRow[] = [];
 	failedIds: number[] = [];
@@ -16,13 +45,35 @@ export class PokedexLoadState {
 	// in flight (e.g. a settings change triggers a remount mid-fetch). Without
 	// this, that stale load keeps running in the background — a brand new
 	// PokedexLoadState starts its own full fetch at the same time, and every
-	// id the old one hasn't reached yet gets fetched twice.
+	// id the old one hasn't reached yet gets fetched twice. It also silences
+	// onUpdate, so a destroyed view is never written to.
 	cancelled = false;
 
 	constructor(
 		private repository: PokedexRepository,
 		private scope: GenerationScope,
+		// PokedexLoadState is a plain class, not reactive: Svelte 5's `$state`
+		// only deep-proxies plain objects/arrays, not class instances, so
+		// mutating a field here is invisible to a Svelte view watching this
+		// instance. onUpdate hands the owner a fresh snapshot after every change
+		// (a new `rows` array each time, which TableScreen's deriveds need to
+		// re-run) for it to assign into its own `$state`.
+		private onUpdate: (snapshot: LoadSnapshot) => void = () => {},
 	) {}
+
+	snapshot(): LoadSnapshot {
+		return {
+			rows: [...this.rows],
+			failedIds: [...this.failedIds],
+			loading: this.loading,
+			retrying: this.retrying,
+			progress: { ...this.progress },
+		};
+	}
+
+	private emit(): void {
+		if (!this.cancelled) this.onUpdate(this.snapshot());
+	}
 
 	cancel(): void {
 		this.cancelled = true;
@@ -43,32 +94,31 @@ export class PokedexLoadState {
 		this.rows = [...byId.values()].sort((a, b) => a.id - b.id);
 	}
 
-	// onProgress is a second notification channel on top of `this.progress` —
-	// PokedexLoadState is a plain class, not reactive: Svelte 5's `$state`
-	// only deep-proxies plain objects/arrays, not class instances, so
-	// mutating `this.progress` here is invisible to a Svelte view watching
-	// this instance. The callback lets the caller mirror progress into its
-	// own `$state` variable instead.
+	// Streamed rows land in `rows` in the order they settle, each one filtered
+	// through `admit` first — out-of-scope rows (see resolveGenerationScope) get
+	// fetched but must never reach the caller, even transiently. The first one
+	// flips `loading` off so the table renders while the rest streams in; the
+	// final set replaces the streamed one (dex order) when the load ends.
 	//
-	// `onRow` fires per row as it settles, filtered through `admit` first —
-	// out-of-scope rows (see resolveGenerationScope) get fetched but must never
-	// reach the caller, even transiently.
-	async load(
-		onProgress?: (loaded: number, total: number) => void,
-		onRow?: (row: PokedexTableRow) => void,
-	): Promise<void> {
+	// Returns the outcome only when some ids failed (a clean load gets no
+	// Notice), and null when cancelled.
+	async load(): Promise<LoadOutcome | null> {
 		const result = await this.repository.getTableRows(
 			this.scope.fetchRange,
 			(loaded, total) => {
 				this.progress = { loaded, total };
-				onProgress?.(loaded, total);
+				this.emit();
 			},
 			() => this.cancelled,
 			(row) => {
-				for (const admitted of this.admit([row])) onRow?.(admitted);
+				const admitted = this.admit([row]);
+				if (admitted.length === 0) return;
+				this.rows.push(...admitted);
+				this.loading = false;
+				this.emit();
 			},
 		);
-		if (this.cancelled) return;
+		if (this.cancelled) return null;
 		this.rows = this.admit(result.rows);
 		// failedIds are bare ids (a row never got built, nothing to check
 		// generationId on) — a failure always happens on the *base* fetch id
@@ -77,30 +127,36 @@ export class PokedexLoadState {
 		// this stays the simple dex-range check.
 		this.failedIds = result.failedIds.filter((id) => this.scope.includesFailedId(id));
 		this.loading = false;
+		this.emit();
+		return this.failedIds.length > 0 ? { loaded: this.rows.length, failed: this.failedIds.length } : null;
 	}
 
-	// Returns null (a no-op) if there's nothing to retry or a retry is
-	// already in flight, mirroring the guard the caller previously had to
-	// check itself. Returns the retry result otherwise, with `rows` already
-	// scoped (so it matches what was merged into `this.rows`), since the
-	// caller needs both how many recovered and how many are still failing
-	// to compose its own outcome message.
-	async retry(onProgress?: (loaded: number, total: number) => void): Promise<TableLoadResult | null> {
+	// Returns null (a no-op) if there's nothing to retry, a retry is already in
+	// flight, or the load was cancelled meanwhile. `recovered` counts ids
+	// (`attempted - stillFailing`), not rows: a base id's regional-form rows
+	// come back with it, so a row count would overstate it.
+	async retry(): Promise<RetryOutcome | null> {
 		if (this.failedIds.length === 0 || this.retrying) return null;
+		const attempted = this.failedIds.length;
 		this.retrying = true;
+		this.emit();
 		const result = await this.repository.retryRows(
 			this.failedIds,
 			(loaded, total) => {
 				this.progress = { loaded, total };
-				onProgress?.(loaded, total);
+				this.emit();
 			},
 			() => this.cancelled,
 		);
 		this.retrying = false;
-		if (this.cancelled) return result;
-		const scoped = { ...result, rows: this.admit(result.rows) };
-		this.mergeRows(scoped.rows);
-		this.failedIds = scoped.failedIds;
-		return scoped;
+		if (this.cancelled) return null;
+		this.mergeRows(this.admit(result.rows));
+		this.failedIds = result.failedIds;
+		this.emit();
+		return {
+			attempted,
+			recovered: attempted - result.failedIds.length,
+			stillFailing: result.failedIds.length,
+		};
 	}
 }

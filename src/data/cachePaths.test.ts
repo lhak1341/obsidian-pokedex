@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ALL_IMAGE_SUFFIXES, imagePath, pokemonPath, speciesPath } from "./cachePaths";
+import { imagePath, pokemonPath, speciesPath } from "./cachePaths";
 
 describe("cachePaths", () => {
 	it("builds a pokemon path from a numeric id", () => {
@@ -23,9 +23,5 @@ describe("cachePaths", () => {
 
 	it("builds an image path from a variety name", () => {
 		expect(imagePath("charizard-mega-x", "artwork")).toBe("images/charizard-mega-x-artwork.png");
-	});
-
-	it("ALL_IMAGE_SUFFIXES covers exactly the four known suffixes", () => {
-		expect(ALL_IMAGE_SUFFIXES).toEqual(["sprite", "artwork", "shiny", "shiny-artwork"]);
 	});
 });

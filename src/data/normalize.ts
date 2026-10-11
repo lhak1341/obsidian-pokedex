@@ -12,6 +12,7 @@ import {
 	resolveGenerationId,
 	VERSION_TO_GENERATION,
 } from "./constants";
+import type { ImageBundle } from "./imageSet";
 import type {
 	EvolutionNode,
 	EvYieldEntry,
@@ -39,6 +40,13 @@ const STAT_KEY_MAP: Record<string, keyof StatBlock> = {
 	"special-defense": "specialDefense",
 	speed: "speed",
 };
+
+// PokeAPI's types/abilities arrive slot-keyed; callers want slot order. Returns
+// a copy: RawPokemon is the object held in PokedexRepository's pokemonMemCache,
+// and an in-place .sort would reorder that shared cached array.
+export function sortBySlot<T extends { slot: number }>(items: readonly T[]): T[] {
+	return [...items].sort((a, b) => a.slot - b.slot);
+}
 
 export function normalizeStats(rawStats: RawPokemon["stats"]): StatBlock {
 	const stats: StatBlock = {
@@ -880,12 +888,7 @@ export function deriveGigantamaxForms(pokemon: RawPokemon, species: RawSpecies):
 // stats/types/abilities (verified live comparing Gengar vs. gengar-gmax),
 // only the sprite/artwork, so there's nothing else to normalize here unlike
 // toMegaFormDetail.
-export function toGigantamaxFormDetail(images: {
-	sprite: string | null;
-	artwork: string | null;
-	shiny: string | null;
-	shinyArtwork: string | null;
-}): GigantamaxFormDetail {
+export function toGigantamaxFormDetail(images: ImageBundle): GigantamaxFormDetail {
 	return {
 		spriteDataUri: images.sprite,
 		artworkDataUri: images.artwork,
@@ -900,12 +903,11 @@ export function toGigantamaxFormDetail(images: {
 // own data, since Mega is a battle-only transform, not a distinct entry.
 export function toMegaFormDetail(
 	pokemon: RawPokemon,
-	images: { sprite: string | null; artwork: string | null; shiny: string | null; shinyArtwork: string | null },
+	images: ImageBundle,
 ): MegaFormDetail {
 	return {
-		types: pokemon.types.sort((a, b) => a.slot - b.slot).map((t) => t.type.name),
-		abilities: pokemon.abilities
-			.sort((a, b) => a.slot - b.slot)
+		types: sortBySlot(pokemon.types).map((t) => t.type.name),
+		abilities: sortBySlot(pokemon.abilities)
 			.map((a) => ({ name: a.ability.name, isHidden: a.is_hidden })),
 		stats: normalizeStats(pokemon.stats),
 		spriteDataUri: images.sprite,
@@ -934,10 +936,10 @@ export function toTableRow(
 		// display; see utils/pokemonDisplay.ts's formatPokemonDisplayName for
 		// how formLabel composes back in for the UI.
 		name: species.name,
-		types: pokemon.types.sort((a, b) => a.slot - b.slot).map((t) => t.type.name),
+		types: sortBySlot(pokemon.types).map((t) => t.type.name),
 		stats: normalizeStats(pokemon.stats),
 		evYield: normalizeEvYield(pokemon.stats),
-		abilityNames: pokemon.abilities.sort((a, b) => a.slot - b.slot).map((a) => a.ability.name),
+		abilityNames: sortBySlot(pokemon.abilities).map((a) => a.ability.name),
 		levelUpMoveNames: [...new Set(
 			normalizeMoves(pokemon.moves)
 				.filter((m) => m.learnMethod === "level-up")
@@ -968,12 +970,11 @@ export function toEntry(
 	pokemon: RawPokemon,
 	species: RawSpecies,
 	evolutionChain: EvolutionNode | null,
-	images: { sprite: string | null; artwork: string | null; shiny: string | null; shinyArtwork: string | null },
+	images: ImageBundle,
 ): PokedexEntry {
 	return {
 		...toTableRow(pokemon, species, images.sprite),
-		abilities: pokemon.abilities
-			.sort((a, b) => a.slot - b.slot)
+		abilities: sortBySlot(pokemon.abilities)
 			.map((a) => ({ name: a.ability.name, isHidden: a.is_hidden })),
 		artworkDataUri: images.artwork,
 		shinyDataUri: images.shiny,
