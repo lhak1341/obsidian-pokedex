@@ -172,13 +172,13 @@
 	.section-heading {
 		margin: 0 0 10px;
 		padding-left: 9px;
-		border-left: 3px solid var(--accent);
-		font-family: var(--pkx-fm);
+		border-left: 3px solid var(--pkdx-accent);
+		font-family: var(--lk-font-code);
 		font-size: 0.7rem;
 		font-weight: 600;
 		letter-spacing: 0.09em;
 		text-transform: uppercase;
-		color: var(--text-muted);
+		color: var(--lk-text-muted);
 		line-height: 1.3;
 	}
 	.moves-heading-row {
@@ -205,8 +205,8 @@
 		gap: 4px;
 		padding: 4px;
 		margin-bottom: 10px;
-		background: var(--background-primary-alt);
-		border: 1px solid var(--background-modifier-border);
+		background: var(--lk-surface-sunken);
+		border: 1px solid var(--lk-border);
 		border-radius: 10px;
 	}
 	/* Compact, content-width variant for the FRLG/RSE game toggle — sits in
@@ -230,15 +230,15 @@
 		cursor: pointer;
 		font-size: 0.85em;
 		font-weight: 500;
-		color: var(--text-normal);
+		color: var(--lk-text);
 		transition: background 100ms ease-out, color 100ms ease-out;
 	}
 	.move-tab:hover:not(.active) {
-		background: var(--background-modifier-hover);
+		background: var(--lk-surface-hover);
 	}
 	.move-tab.active {
-		background: var(--background-primary);
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+		background: var(--lk-surface);
+		box-shadow: var(--lk-shadow-s);
 	}
 	.move-table {
 		width: 100%;
@@ -262,7 +262,7 @@
 	divider row sits between real move rows and would otherwise count toward
 	the alternation, shifting every row after it out of sync. */
 	.row-shaded {
-		background: var(--background-primary);
+		background: var(--lk-surface);
 	}
 	/* The row/cell collapse to zero height — an absolutely positioned child
 	doesn't contribute to its container's auto height, so this adds no
@@ -293,7 +293,7 @@
 	is what makes this read as small rounded-rect dots rather than a plain
 	dashed line. */
 	.evolve-divider-line line {
-		stroke: var(--text-muted);
+		stroke: var(--lk-text-muted);
 		stroke-width: 3;
 		stroke-dasharray: 2 6;
 		stroke-linecap: round;

@@ -92,7 +92,7 @@
 		height: auto;
 		background: none;
 		border: none;
-		border-radius: var(--radius-m, 8px);
+		border-radius: var(--lk-radius-m);
 		cursor: pointer;
 		flex-shrink: 0;
 		/* Above the SVG connector lines EvolutionTree draws behind this whole
@@ -102,7 +102,7 @@
 		transition: background-color 100ms ease-out;
 	}
 	.evo-card:hover {
-		background: var(--background-modifier-hover);
+		background: var(--lk-surface-hover);
 	}
 	.evo-sprite {
 		width: 92px;
@@ -113,7 +113,7 @@
 		font-size: 0.84em;
 		font-weight: 700;
 		line-height: 1.15;
-		color: var(--text-muted);
+		color: var(--lk-text-muted);
 		text-transform: capitalize;
 		white-space: nowrap;
 	}

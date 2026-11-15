@@ -169,7 +169,7 @@
 	// text color — so it can't create a contrast problem in a theme it
 	// happens to clash with.
 	const accentColor = $derived(
-		TYPE_COLORS[(activeMegaData ?? entryLoad.entry)?.types[0] ?? ""] ?? "var(--interactive-accent)",
+		TYPE_COLORS[(activeMegaData ?? entryLoad.entry)?.types[0] ?? ""] ?? "var(--lk-accent)",
 	);
 
 	// Level(s) at which the CURRENTLY VIEWED entry itself next evolves — not
@@ -301,7 +301,7 @@
 			columns on a wide pane — identity | evolution/stats/abilities/breeding
 			| moves — collapsing to a single stacked column (same DOM order) on a
 			narrow one. -->
-			<div class="detail-grid" style:--accent={accentColor}>
+			<div class="detail-grid" style:--pkdx-accent={accentColor}>
 				<aside class="identity-col">
 				<PortraitPanel
 					{entry}
@@ -464,7 +464,7 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 12px;
-		margin-bottom: var(--size-4-2);
+		margin-bottom: var(--lk-space-2);
 	}
 	.dex-nav {
 		/* Grid (not a centered flex row) so the "|" divider sits at a fixed
@@ -489,7 +489,7 @@
 		justify-content: flex-start;
 	}
 	.dex-nav-divider {
-		color: var(--background-modifier-border);
+		color: var(--lk-border);
 	}
 	.dex-nav-button {
 		display: flex;
@@ -504,13 +504,13 @@
 		background: transparent;
 		border: none;
 		box-shadow: none;
-		border-radius: var(--radius-s, 6px);
-		color: var(--text-muted);
+		border-radius: var(--lk-radius-s);
+		color: var(--lk-text-muted);
 		cursor: pointer;
 	}
 	.dex-nav-button:hover {
-		color: var(--text-normal);
-		background: var(--background-modifier-hover);
+		color: var(--lk-text);
+		background: var(--lk-surface-hover);
 	}
 	.dex-nav-sprite {
 		width: 36px;
@@ -621,10 +621,10 @@
 		z-index: 50;
 		object-fit: contain;
 		image-rendering: pixelated;
-		background: var(--background-secondary);
-		border: 1px solid var(--background-modifier-border);
-		border-radius: var(--radius-l, 12px);
-		box-shadow: var(--shadow-s);
+		background: var(--lk-surface-chrome);
+		border: 1px solid var(--lk-border);
+		border-radius: var(--lk-radius-l);
+		box-shadow: var(--lk-shadow-s);
 		padding: 12px;
 		pointer-events: none;
 	}
@@ -637,12 +637,12 @@
 	}
 	.dex-eyebrow {
 		margin: 0;
-		font-family: var(--pkx-fm);
+		font-family: var(--lk-font-code);
 		font-size: 0.78rem;
 		font-weight: 600;
 		letter-spacing: 0.08em;
 		line-height: 1.2;
-		color: var(--accent);
+		color: var(--pkdx-accent);
 	}
 	.mon-name {
 		margin: 0;
@@ -650,7 +650,7 @@
 		line-height: 1.2;
 		font-weight: 700;
 		text-transform: capitalize;
-		color: var(--text-normal);
+		color: var(--lk-text);
 	}
 	.type-row {
 		/* A bit more separation than the number/name lines share (their 3px
@@ -675,31 +675,31 @@
 		font-size: 0.66rem;
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
-		color: var(--text-muted);
+		color: var(--lk-text-muted);
 	}
 	.physical-readout dd {
 		margin: 0;
-		font-family: var(--pkx-fm);
+		font-family: var(--lk-font-code);
 		font-size: 0.92rem;
-		color: var(--text-normal);
+		color: var(--lk-text);
 	}
 
 	.panel {
-		background: var(--background-secondary);
-		border: 1px solid var(--background-modifier-border);
-		border-radius: var(--radius-m, 8px);
+		background: var(--lk-surface-chrome);
+		border: 1px solid var(--lk-border);
+		border-radius: var(--lk-radius-m);
 		padding: 14px 16px;
 	}
 	.section-heading {
 		margin: 0 0 10px;
 		padding-left: 9px;
-		border-left: 3px solid var(--accent);
-		font-family: var(--pkx-fm);
+		border-left: 3px solid var(--pkdx-accent);
+		font-family: var(--lk-font-code);
 		font-size: 0.7rem;
 		font-weight: 600;
 		letter-spacing: 0.09em;
 		text-transform: uppercase;
-		color: var(--text-muted);
+		color: var(--lk-text-muted);
 		line-height: 1.3;
 	}
 
@@ -724,13 +724,13 @@
 		height: 8px;
 		border-radius: 4px;
 		overflow: hidden;
-		background: var(--background-modifier-border);
+		background: var(--lk-border);
 	}
 	.gender-fill-male {
-		background: #4a90d9;
+		background: var(--lk-blue);
 	}
 	.gender-fill-female {
-		background: #e0609e;
+		background: var(--lk-pink);
 	}
 	.gender-labels {
 		display: flex;
@@ -744,13 +744,13 @@
 		display: flex;
 		align-items: center;
 		gap: 3px;
-		font-family: var(--pkx-fm);
+		font-family: var(--lk-font-code);
 	}
 	.gender-male {
-		color: #4a90d9;
+		color: var(--lk-blue);
 	}
 	.gender-female {
-		color: #e0609e;
+		color: var(--lk-pink);
 	}
 	.breeding-bars {
 		display: grid;
@@ -762,6 +762,6 @@
 	}
 
 	.error {
-		color: var(--text-error);
+		color: var(--lk-danger);
 	}
 </style>

@@ -93,7 +93,7 @@
 		pointer-events: none;
 	}
 	.evo-lines line {
-		stroke: var(--text-muted);
+		stroke: var(--lk-text-muted);
 		stroke-width: 3;
 		stroke-dasharray: 2 6;
 		stroke-linecap: round;

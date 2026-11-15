@@ -12,7 +12,7 @@
 		compact?: boolean;
 	} = $props();
 
-	const color = $derived(TYPE_COLORS[type] ?? "#777");
+	const color = $derived(TYPE_COLORS[type] ?? "var(--lk-text-faint)");
 </script>
 
 {#if useIcon}
@@ -34,15 +34,15 @@
 		border-radius: 999px;
 		font-size: 0.8em;
 		font-weight: 600;
-		color: white;
+		color: var(--pkdx-type-text);
 		text-transform: capitalize;
-		text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+		text-shadow: var(--pkdx-type-text-shadow);
 		opacity: 0.85;
 		transition: opacity 100ms ease-out, box-shadow 100ms ease-out;
 	}
 	.type-badge.selected {
 		opacity: 1;
-		box-shadow: 0 0 0 2px var(--interactive-accent);
+		box-shadow: 0 0 0 2px var(--lk-accent);
 	}
 	.type-badge.compact {
 		padding: 2px 7px;
@@ -57,13 +57,13 @@
 		height: 27px;
 		margin-right: 4px;
 		border-radius: 50%;
-		color: white;
+		color: var(--pkdx-type-text);
 		opacity: 0.85;
 		transition: opacity 100ms ease-out, box-shadow 100ms ease-out;
 	}
 	.type-badge-icon.selected {
 		opacity: 1;
-		box-shadow: 0 0 0 2px var(--interactive-accent);
+		box-shadow: 0 0 0 2px var(--lk-accent);
 	}
 	.type-badge-icon.compact {
 		width: 16px;

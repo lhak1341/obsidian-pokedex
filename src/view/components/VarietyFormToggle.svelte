@@ -68,21 +68,21 @@
 		width: 26px;
 		height: 26px;
 		padding: 0;
-		background: var(--background-primary);
-		border: 1px solid var(--background-modifier-border);
-		border-radius: var(--radius-s, 6px);
-		color: var(--text-muted);
+		background: var(--lk-surface);
+		border: 1px solid var(--lk-border);
+		border-radius: var(--lk-radius-s);
+		color: var(--lk-text-muted);
 		cursor: pointer;
-		box-shadow: var(--shadow-s);
+		box-shadow: var(--lk-shadow-s);
 		font-size: 0.8em;
 		font-weight: 700;
 	}
 	.variety-badge:hover {
-		color: var(--text-normal);
-		background: var(--background-modifier-hover);
+		color: var(--lk-text);
+		background: var(--lk-surface-hover);
 	}
 	.variety-badge.active {
-		color: var(--interactive-accent);
-		border-color: var(--interactive-accent);
+		color: var(--lk-accent);
+		border-color: var(--lk-accent);
 	}
 </style>

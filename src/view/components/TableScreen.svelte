@@ -321,7 +321,7 @@
 									<td title={formatEvYield(row)}>
 										<div class="ev-cell">
 											{#each row.evYield as y (y.stat)}
-												<span class="ev-chip" style:--ev-color={STAT_COLORS[y.stat]}>
+												<span class="ev-chip" style:--pkdx-ev-colour={STAT_COLORS[y.stat]}>
 													{y.amount} {STAT_LABEL_BY_KEY.get(y.stat) ?? y.stat}
 												</span>
 											{:else}
@@ -367,13 +367,13 @@
 
 <style>
 	.result-count {
-		color: var(--text-muted);
+		color: var(--lk-text-muted);
 		font-size: 0.85em;
 		margin: 6px 0;
 	}
 	.column-toggle {
 		position: relative;
-		margin-bottom: var(--size-4-3);
+		margin-bottom: var(--lk-space-3);
 	}
 	.column-toggle summary {
 		display: inline-flex;
@@ -381,26 +381,26 @@
 		gap: 6px;
 		cursor: pointer;
 		padding: 5px 10px;
-		border: 1px solid var(--background-modifier-border);
+		border: 1px solid var(--lk-border);
 		border-radius: 6px;
 		list-style: none;
 		user-select: none;
-		color: var(--text-muted);
+		color: var(--lk-text-muted);
 		transition: background-color 100ms ease-out, color 100ms ease-out;
 	}
 	.column-toggle summary::-webkit-details-marker {
 		display: none;
 	}
 	.column-toggle summary:hover {
-		background: var(--background-modifier-hover);
-		color: var(--text-normal);
+		background: var(--lk-surface-hover);
+		color: var(--lk-text);
 	}
 	.column-toggle summary::after {
 		content: "";
 		width: 12px;
 		height: 12px;
 		margin-left: 2px;
-		background-color: var(--text-faint);
+		background-color: var(--lk-text-faint);
 		-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") center / contain no-repeat;
 		mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") center / contain no-repeat;
 		transition: transform 100ms ease-out;
@@ -409,9 +409,9 @@
 		transform: rotate(180deg);
 	}
 	.column-toggle[open] summary {
-		background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
-		color: var(--interactive-accent);
-		border-color: color-mix(in srgb, var(--interactive-accent) 40%, var(--background-modifier-border));
+		background: color-mix(in srgb, var(--lk-accent) 12%, transparent);
+		color: var(--lk-accent);
+		border-color: color-mix(in srgb, var(--lk-accent) 40%, var(--lk-border));
 	}
 	.column-checkbox-list {
 		position: absolute;
@@ -424,14 +424,14 @@
 		width: 320px;
 		max-width: 80vw;
 		padding: 10px;
-		background: var(--background-primary);
-		border: 1px solid var(--background-modifier-border);
+		background: var(--lk-surface);
+		border: 1px solid var(--lk-border);
 		border-radius: 4px;
-		box-shadow: var(--shadow-s);
+		box-shadow: var(--lk-shadow-s);
 	}
 	.column-section + .column-section {
 		padding-top: 10px;
-		border-top: 1px solid var(--background-modifier-border);
+		border-top: 1px solid var(--lk-border);
 	}
 	.column-section-label {
 		margin-bottom: 4px;
@@ -439,7 +439,7 @@
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
-		color: var(--text-faint);
+		color: var(--lk-text-faint);
 	}
 	.column-grid {
 		display: grid;
@@ -457,12 +457,12 @@
 		border-radius: 4px;
 		font-size: 0.85em;
 		cursor: pointer;
-		color: var(--text-muted);
+		color: var(--lk-text-muted);
 		transition: background-color 100ms ease-out, color 100ms ease-out;
 	}
 	.column-checkbox:hover {
-		background: var(--background-modifier-hover);
-		color: var(--text-normal);
+		background: var(--lk-surface-hover);
+		color: var(--lk-text);
 	}
 	.table-wrap {
 		overflow: auto;
@@ -479,20 +479,20 @@
 	th {
 		position: sticky;
 		top: 0;
-		background: var(--background-primary);
+		background: var(--lk-surface);
 		cursor: pointer;
 		text-align: left;
 		padding: 6px 8px;
 		white-space: nowrap;
-		border-bottom: 2px solid var(--background-modifier-border);
+		border-bottom: 2px solid var(--lk-border);
 	}
 	th:hover {
-		color: var(--interactive-accent);
+		color: var(--lk-accent);
 	}
 	td {
 		padding: 4px 8px;
 		white-space: nowrap;
-		border-top: 1px solid var(--background-modifier-border);
+		border-top: 1px solid var(--lk-border);
 	}
 	.center {
 		text-align: center;
@@ -501,13 +501,13 @@
 		text-align: right;
 	}
 	tbody tr:nth-child(even) {
-		background: var(--background-secondary);
+		background: var(--lk-surface-chrome);
 	}
 	tbody tr {
 		cursor: pointer;
 	}
 	tbody tr:hover {
-		background: var(--background-modifier-hover);
+		background: var(--lk-surface-hover);
 	}
 	.name-cell {
 		text-transform: capitalize;
@@ -517,7 +517,7 @@
 		display: inline-flex;
 		vertical-align: middle;
 		margin-left: 4px;
-		color: var(--interactive-accent);
+		color: var(--lk-accent);
 	}
 	.ev-cell {
 		display: flex;
@@ -528,7 +528,7 @@
 	but, like BarRow, that color stays an accent (dot + tinted background/
 	border via color-mix) rather than the text fill: several of these hues
 	(hp's lime, attack's yellow) read poorly as small text on a light theme's
-	near-white background, so the label itself stays var(--text-normal). */
+	near-white background, so the label itself stays var(--lk-text). */
 	.ev-chip {
 		display: inline-flex;
 		align-items: center;
@@ -538,9 +538,9 @@
 		font-size: 0.78em;
 		font-weight: 600;
 		white-space: nowrap;
-		color: var(--text-normal);
-		background: color-mix(in srgb, var(--ev-color) 14%, var(--background-primary));
-		border: 1px solid color-mix(in srgb, var(--ev-color) 45%, var(--background-modifier-border));
+		color: var(--lk-text);
+		background: color-mix(in srgb, var(--pkdx-ev-colour) 14%, var(--lk-surface));
+		border: 1px solid color-mix(in srgb, var(--pkdx-ev-colour) 45%, var(--lk-border));
 	}
 	.ev-chip::before {
 		content: "";
@@ -548,10 +548,10 @@
 		height: 7px;
 		flex-shrink: 0;
 		border-radius: 50%;
-		background: var(--ev-color);
+		background: var(--pkdx-ev-colour);
 	}
 	.ev-empty {
-		color: var(--text-faint);
+		color: var(--lk-text-faint);
 	}
 	.held-item-name {
 		cursor: help;
@@ -600,10 +600,10 @@
 		z-index: 50;
 		transform: translateY(-50%);
 		image-rendering: pixelated;
-		background: var(--background-primary);
-		border: 1px solid var(--background-modifier-border);
-		border-radius: var(--radius-m, 8px);
-		box-shadow: var(--shadow-s);
+		background: var(--lk-surface);
+		border: 1px solid var(--lk-border);
+		border-radius: var(--lk-radius-m);
+		box-shadow: var(--lk-shadow-s);
 		padding: 6px;
 		pointer-events: none;
 	}

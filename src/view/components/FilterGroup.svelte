@@ -34,7 +34,7 @@
 		position: relative;
 	}
 	.filter-group:not(:last-child) summary {
-		border-right: 1px solid var(--background-modifier-border);
+		border-right: 1px solid var(--lk-border);
 	}
 	.filter-group:first-child summary {
 		border-radius: 6px 0 0 6px;
@@ -50,22 +50,22 @@
 		padding: 5px 10px;
 		list-style: none;
 		user-select: none;
-		color: var(--text-muted);
+		color: var(--lk-text-muted);
 		transition: background-color 100ms ease-out, color 100ms ease-out;
 	}
 	.filter-group summary::-webkit-details-marker {
 		display: none;
 	}
 	.filter-group summary:hover {
-		background: var(--background-modifier-hover);
-		color: var(--text-normal);
+		background: var(--lk-surface-hover);
+		color: var(--lk-text);
 	}
 	.filter-group summary::after {
 		content: "";
 		width: 12px;
 		height: 12px;
 		margin-left: 2px;
-		background-color: var(--text-faint);
+		background-color: var(--lk-text-faint);
 		-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") center / contain no-repeat;
 		mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") center / contain no-repeat;
 		transition: transform 100ms ease-out;
@@ -74,8 +74,8 @@
 		transform: rotate(180deg);
 	}
 	.filter-group[open] summary {
-		background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
-		color: var(--interactive-accent);
+		background: color-mix(in srgb, var(--lk-accent) 12%, transparent);
+		color: var(--lk-accent);
 	}
 	.filter-count {
 		display: inline-flex;
@@ -85,8 +85,8 @@
 		height: 15px;
 		padding: 0 4px;
 		border-radius: 999px;
-		background: var(--interactive-accent);
-		color: var(--text-on-accent);
+		background: var(--lk-accent);
+		color: var(--lk-text-on-accent);
 		font-size: 0.7em;
 		font-weight: 600;
 		line-height: 1;

@@ -58,8 +58,8 @@
 		gap: 4px;
 		padding: 4px;
 		margin-top: 8px;
-		background: var(--background-primary-alt);
-		border: 1px solid var(--background-modifier-border);
+		background: var(--lk-surface-sunken);
+		border: 1px solid var(--lk-border);
 		border-radius: 10px;
 	}
 	.form-tab {
@@ -72,16 +72,16 @@
 		cursor: pointer;
 		font-size: 0.85em;
 		font-weight: 500;
-		color: var(--text-normal);
+		color: var(--lk-text);
 		text-transform: capitalize;
 		transition: background 100ms ease-out, color 100ms ease-out;
 	}
 	.form-tab:hover:not(.active) {
-		background: var(--background-modifier-hover);
+		background: var(--lk-surface-hover);
 	}
 	.form-tab.active {
-		background: var(--background-primary);
-		box-shadow: var(--shadow-s);
+		background: var(--lk-surface);
+		box-shadow: var(--lk-shadow-s);
 		cursor: default;
 	}
 </style>

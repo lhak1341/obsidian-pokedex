@@ -75,9 +75,9 @@
 	.flavor-text {
 		margin: 0;
 		padding-left: 10px;
-		border-left: 2px solid var(--background-modifier-border);
-		color: var(--text-muted);
-		font-family: var(--pkx-fb);
+		border-left: 2px solid var(--lk-border);
+		color: var(--lk-text-muted);
+		font-family: var(--lk-font-interface);
 		font-size: 0.82rem;
 		line-height: 1.45;
 	}
@@ -101,7 +101,7 @@
 		padding: 2px;
 		background: none;
 		border: none;
-		color: var(--text-muted);
+		color: var(--lk-text-muted);
 		cursor: pointer;
 		opacity: 0.7;
 		transition: opacity 100ms ease-out;
@@ -116,7 +116,7 @@
 		flex: 1;
 		text-align: center;
 		font-weight: 600;
-		color: var(--text-muted);
+		color: var(--lk-text-muted);
 		font-size: 0.85em;
 	}
 </style>

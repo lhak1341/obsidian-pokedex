@@ -38,13 +38,13 @@
 		justify-content: space-between;
 		margin-top: 4px;
 		padding-top: 6px;
-		border-top: 1px solid var(--background-modifier-border);
+		border-top: 1px solid var(--lk-border);
 		font-weight: 700;
 	}
 	.stat-total-label {
-		color: var(--text-normal);
+		color: var(--lk-text);
 	}
 	.stat-total-value {
-		font-family: var(--font-monospace);
+		font-family: var(--lk-font-code);
 	}
 </style>

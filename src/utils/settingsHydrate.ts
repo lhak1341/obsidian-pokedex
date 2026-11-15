@@ -1,6 +1,8 @@
+// The font-roles subpath, never `@lhak/style/obsidian-helpers`: that index loads
+// `obsidian`, which has no runtime module under vitest.
+import { parseFontRoleSettings } from "@lhak/style/obsidian-helpers/font-roles";
 import { GENERATIONS } from "../data/constants";
 import type { PluginSettings } from "../data/types";
-import { FONT_CHOICES } from "./fonts";
 
 // One Record per closed set, so a new union member without a row fails
 // typecheck here instead of being rejected as "unknown" at load.
@@ -13,10 +15,6 @@ function oneOf<T extends string>(value: unknown, allowed: readonly T[] | Record<
 	return typeof value === "string" && (list as readonly string[]).includes(value) ? (value as T) : fallback;
 }
 
-function str(value: unknown, fallback: string): string {
-	return typeof value === "string" ? value : fallback;
-}
-
 function numberArray(value: unknown, fallback: number[]): number[] {
 	return Array.isArray(value) ? value.filter((v): v is number => typeof v === "number") : [...fallback];
 }
@@ -25,8 +23,7 @@ function numberArray(value: unknown, fallback: number[]): number[] {
 // tracked, synced file and can be hand-edited, so loadSettings cannot assume
 // its shape: a shallow merge let an empty or all-unknown enabledGenerations
 // reach resolveGenerationScope (Math.min() of nothing = Infinity, so the table
-// silently loaded zero ids) and an unknown font choice throw in
-// resolveFontVar at mount.
+// silently loaded zero ids).
 //
 // Builds the result from the known fields only (unknown keys are dropped on the
 // next save), and gives it its own arrays so nothing aliases `defaults`.
@@ -36,6 +33,10 @@ function numberArray(value: unknown, fallback: number[]): number[] {
 //
 // The settings UI's resolveGenerationToggle enforces the same "at least one
 // generation" invariant against a user action; this repairs stored data.
+//
+// The six font keys go through the shared @lhak/style font-role helper, which
+// reads anything unknown as "default" (so not from `defaults`). That carries
+// over PKDX's old "pokedex" choice, which meant the same: follow the theme.
 export function hydrateSettings(saved: unknown, defaults: PluginSettings): PluginSettings {
 	const s = (typeof saved === "object" && saved !== null ? saved : {}) as Record<string, unknown>;
 	const knownGenerationIds: number[] = GENERATIONS.map((g) => g.id);
@@ -43,12 +44,7 @@ export function hydrateSettings(saved: unknown, defaults: PluginSettings): Plugi
 		.sort((a, b) => a - b);
 
 	return {
-		fontHeading: oneOf(s.fontHeading, FONT_CHOICES, defaults.fontHeading),
-		fontHeadingCustom: str(s.fontHeadingCustom, defaults.fontHeadingCustom),
-		fontBody: oneOf(s.fontBody, FONT_CHOICES, defaults.fontBody),
-		fontBodyCustom: str(s.fontBodyCustom, defaults.fontBodyCustom),
-		fontMono: oneOf(s.fontMono, FONT_CHOICES, defaults.fontMono),
-		fontMonoCustom: str(s.fontMonoCustom, defaults.fontMonoCustom),
+		...parseFontRoleSettings(s),
 		enabledGenerations: generations.length > 0 ? generations : [...defaults.enabledGenerations],
 		spriteStyle: oneOf(s.spriteStyle, SPRITE_STYLES, defaults.spriteStyle),
 		gridDensity: oneOf(s.gridDensity, GRID_DENSITIES, defaults.gridDensity),

@@ -26,6 +26,10 @@ jobs:
       # so eslint's own exit code is 0 regardless of how many it reports.
       - run: bun run lint:ratchet
 
+      # The @lhak/style adoption check (stylelint.config.mjs): no raw colours,
+      # px font sizes or retired prefixes in styles.src.css or any .svelte <style>.
+      - run: bun run lint:styles
+
       - run: bun run test
 
       # Catches Svelte compile errors, which nothing above sees.

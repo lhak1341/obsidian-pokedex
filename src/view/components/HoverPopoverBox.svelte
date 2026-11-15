@@ -32,14 +32,14 @@
 		position: absolute;
 		z-index: 50;
 		max-width: 260px;
-		background: var(--background-primary);
-		border: 1px solid var(--background-modifier-border);
-		border-radius: var(--radius-m, 8px);
-		box-shadow: var(--shadow-s);
+		background: var(--lk-surface);
+		border: 1px solid var(--lk-border);
+		border-radius: var(--lk-radius-m);
+		box-shadow: var(--lk-shadow-s);
 		padding: 8px 10px;
-		font-family: var(--pkx-fh);
+		font-family: var(--lk-font-label);
 		font-size: 0.85em;
-		color: var(--text-normal);
+		color: var(--lk-text);
 		pointer-events: none;
 	}
 	.hover-popover-box.flip-above {

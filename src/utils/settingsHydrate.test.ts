@@ -1,15 +1,11 @@
+import { DEFAULT_FONT_ROLE_SETTINGS } from "@lhak/style/obsidian-helpers/font-roles";
 import { describe, expect, it } from "vitest";
 import { GENERATIONS } from "../data/constants";
 import type { PluginSettings } from "../data/types";
 import { hydrateSettings } from "./settingsHydrate";
 
 const DEFAULTS: PluginSettings = {
-	fontHeading: "pokedex",
-	fontHeadingCustom: "",
-	fontBody: "pokedex",
-	fontBodyCustom: "",
-	fontMono: "pokedex",
-	fontMonoCustom: "",
+	...DEFAULT_FONT_ROLE_SETTINGS,
 	enabledGenerations: GENERATIONS.map((g) => g.id),
 	spriteStyle: "official-artwork",
 	gridDensity: "comfortable",
@@ -43,6 +39,24 @@ describe("hydrateSettings", () => {
 
 	it.each([null, undefined, "x", 5, []])("returns the defaults for non-object saved %j", (saved) => {
 		expect(hydrateSettings(saved, DEFAULTS)).toEqual(DEFAULTS);
+	});
+
+	// The shared @lhak/style font-role helper reads the font keys (lhak-style-adoption 07).
+	it("keeps every saved font choice and custom family", () => {
+		const fonts = {
+			fontHeading: "obsidian-interface",
+			fontHeadingCustom: "",
+			fontBody: "custom",
+			fontBodyCustom: "Iowan Old Style",
+			fontMono: "obsidian-monospace",
+			fontMonoCustom: "JetBrains Mono",
+		} as const;
+		expect(hydrateSettings(fonts, DEFAULTS)).toEqual({ ...DEFAULTS, ...fonts });
+	});
+
+	it("reads the old \"pokedex\" font choice as the shared \"default\" (both follow the theme)", () => {
+		const out = hydrateSettings({ fontHeading: "pokedex", fontBody: "pokedex", fontMono: "pokedex" }, DEFAULTS);
+		expect([out.fontHeading, out.fontBody, out.fontMono]).toEqual(["default", "default", "default"]);
 	});
 
 	it("fills fields missing from an older data.json with defaults", () => {

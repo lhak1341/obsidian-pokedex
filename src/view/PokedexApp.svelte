@@ -201,17 +201,17 @@
 		max-width: 360px;
 		margin: 15vh auto 0;
 		text-align: center;
-		color: var(--text-muted);
+		color: var(--lk-text-muted);
 	}
 	.loading-track {
 		height: 6px;
 		border-radius: 3px;
-		background: var(--background-modifier-border);
+		background: var(--lk-border);
 		overflow: hidden;
 	}
 	.loading-fill {
 		height: 100%;
-		background: var(--interactive-accent);
+		background: var(--lk-accent);
 		transition: width 120ms ease-out;
 	}
 	.hidden-screen {
@@ -219,8 +219,8 @@
 	}
 	.loading-more-banner {
 		padding: 4px 10px;
-		margin-bottom: var(--size-4-3);
-		color: var(--text-muted);
+		margin-bottom: var(--lk-space-3);
+		color: var(--lk-text-muted);
 		font-size: 0.85em;
 	}
 	.fetch-failure-banner {
@@ -228,9 +228,9 @@
 		align-items: center;
 		gap: 10px;
 		padding: 6px 10px;
-		margin-bottom: var(--size-4-3);
-		background: var(--background-modifier-error);
-		border: 1px solid var(--background-modifier-border);
+		margin-bottom: var(--lk-space-3);
+		background: var(--lk-danger-soft);
+		border: 1px solid var(--lk-border);
 		border-radius: 4px;
 		font-size: 0.85em;
 	}

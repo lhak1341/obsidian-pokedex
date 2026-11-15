@@ -140,17 +140,17 @@
 		max-height: 260px;
 		align-self: center;
 		background:
-			radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 70%),
-			var(--background-secondary);
-		border: 1px solid var(--background-modifier-border);
-		border-radius: var(--radius-l, 12px);
+			radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--pkdx-accent) 24%, transparent), transparent 70%),
+			var(--lk-surface-chrome);
+		border: 1px solid var(--lk-border);
+		border-radius: var(--lk-radius-l);
 	}
 	.portrait-image {
 		width: 76%;
 		height: 76%;
 		object-fit: contain;
 		image-rendering: pixelated;
-		filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.25));
+		filter: drop-shadow(0 6px 10px color-mix(in srgb, var(--lk-scrim) 60%, transparent));
 	}
 	.shiny-toggle {
 		position: absolute;
@@ -162,19 +162,22 @@
 		width: 26px;
 		height: auto;
 		padding: 5px;
-		background: var(--background-primary);
-		border: 1px solid var(--background-modifier-border);
-		border-radius: var(--radius-s, 6px);
-		color: var(--text-muted);
+		background: var(--lk-surface);
+		border: 1px solid var(--lk-border);
+		border-radius: var(--lk-radius-s);
+		color: var(--lk-text-muted);
 		cursor: pointer;
-		box-shadow: var(--shadow-s);
+		box-shadow: var(--lk-shadow-s);
 	}
 	.shiny-toggle:hover {
-		color: var(--text-normal);
-		background: var(--background-modifier-hover);
+		color: var(--lk-text);
+		background: var(--lk-surface-hover);
 	}
+	/* Shiny = gold, a domain cue: the one control coloured by a hue rather than
+	the accent (user decision, lhak-style-adoption 07; SPEC story 15 otherwise
+	keeps hues for categories). */
 	.shiny-toggle.active {
-		color: var(--color-yellow, gold);
-		border-color: var(--color-yellow, gold);
+		color: var(--lk-yellow);
+		border-color: var(--lk-yellow);
 	}
 </style>

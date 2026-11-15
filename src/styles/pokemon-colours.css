@@ -1,0 +1,41 @@
+/* Pokémon type and stat colours: canonical franchise data, not @lhak/style roles
+   (lhak-style-adoption SPEC stories 38-39). They keep their franchise values in every
+   theme, flavor and mode, and they are the only colour literals in PKDX's CSS:
+   stylelint.config.mjs turns the colour rules off for this one file, by name.
+   TypeScript reads them by name (TYPE_COLORS and STAT_COLORS in src/data/constants.ts);
+   src/styles.test.ts pins that the two lists match.
+   Declared on the view root (PokedexView's contentEl), which every component sits under. */
+
+.pokedex-outer {
+	/* Type badge fills, from the main-series games. */
+	--pkdx-type-normal: #A8A878;
+	--pkdx-type-fire: #F08030;
+	--pkdx-type-water: #6890F0;
+	--pkdx-type-electric: #F8D030;
+	--pkdx-type-grass: #78C850;
+	--pkdx-type-ice: #98D8D8;
+	--pkdx-type-fighting: #C03028;
+	--pkdx-type-poison: #A040A0;
+	--pkdx-type-ground: #E0C068;
+	--pkdx-type-flying: #A890F0;
+	--pkdx-type-psychic: #F85888;
+	--pkdx-type-bug: #A8B820;
+	--pkdx-type-rock: #B8A038;
+	--pkdx-type-ghost: #705898;
+	--pkdx-type-dragon: #7038F8;
+	--pkdx-type-dark: #705848;
+	--pkdx-type-steel: #B8B8D0;
+	--pkdx-type-fairy: #EE99AC;
+
+	/* Type badge text: white with a soft shadow on every type fill, as the games draw it. */
+	--pkdx-type-text: white;
+	--pkdx-type-text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+
+	/* Per-stat bar colours, matching Bulbapedia's own stat-bar convention. */
+	--pkdx-stat-hp: #69DC12;
+	--pkdx-stat-attack: #EFCC18;
+	--pkdx-stat-defense: #E86412;
+	--pkdx-stat-special-attack: #14C3F1;
+	--pkdx-stat-special-defense: #4A6ADF;
+	--pkdx-stat-speed: #D51DAD;
+}

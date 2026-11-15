@@ -1,0 +1,37 @@
+@import '@lhak/style/obsidian.css';
+@import '@lhak/style/patterns.css';
+@import './src/styles/pokemon-colours.css';
+
+/* Token layer: colours, fonts, spacing and radii come from the @lhak/style alias layer above,
+   which maps every --lk- role onto the active theme's variables under `.lk-root`. The view's
+   contentEl carries `.lk-root` and `.pokedex-outer` (PokedexView.mountApp): it survives every
+   remount, where the Svelte-mounted `.pokedex-view` child is torn down and rebuilt.
+   Font roles: heading = --lk-font-label, body = --lk-font-interface, mono = --lk-font-code, set
+   inline on that root from the font settings (applyFontRoles); the default leaves the alias
+   layer's theme fonts.
+   Component styles live in each .svelte file (injected by Svelte at mount, after this sheet).
+   PKDX's own values take the --pkdx- prefix: the type and stat colours
+   (src/styles/pokemon-colours.css) and the per-Pokemon accent and stat colour set inline. */
+
+.pokedex-view {
+	height: 100%;
+	overflow: auto;
+	scrollbar-gutter: stable;
+	padding: var(--lk-space-4);
+	font-family: var(--lk-font-label);
+}
+
+/* ── Filter chips (FilterBar.svelte) ─────────────────────────────────────────
+   The @lhak/style chip pattern, `lk-chip lk-chip--toggle filter-chip`, pressed while its filter
+   is on. Obsidian's `button:not(.clickable-icon)` (0,1,1) sets colour, background and shadow,
+   beating the pattern's single-class rest state. `button.filter-chip` ties that rule and, loaded
+   later, wins; the pattern's hover, pressed and disabled rules (0,2,0 and up) still beat it.
+   Obsidian's bare `button { height: var(--input-height) }` needs nothing here: the pattern sets
+   `height: auto` itself (@lhak/style 1.1.1). The alias layer has
+   no type steps, so the size the chips had (0.85em) is restated. */
+button.filter-chip {
+	background: var(--lk-surface-raised);
+	box-shadow: none;
+	color: var(--lk-text);
+	font-size: 0.85em;
+}

@@ -424,10 +424,14 @@ export const STAT_COLUMNS = [
 // the Columns dropdown.
 export const DEFAULT_VISIBLE_COLUMNS: string[] = STAT_COLUMNS.map((c) => c.key);
 
-// Per-stat bar colors, matching Bulbapedia's own stat-bar convention.
+// Per-stat bar colors, matching Bulbapedia's own stat-bar convention. The
+// values are canonical domain data declared in src/styles/pokemon-colours.css
+// (the one file exempt from the stylelint colour ban); this maps each stat key
+// to its variable there.
 export const STAT_COLORS: Record<string, string> = {
-	hp: "#69DC12", attack: "#EFCC18", defense: "#E86412",
-	specialAttack: "#14C3F1", specialDefense: "#4A6ADF", speed: "#D51DAD",
+	hp: "var(--pkdx-stat-hp)", attack: "var(--pkdx-stat-attack)", defense: "var(--pkdx-stat-defense)",
+	specialAttack: "var(--pkdx-stat-special-attack)", specialDefense: "var(--pkdx-stat-special-defense)",
+	speed: "var(--pkdx-stat-speed)",
 };
 
 // PokeAPI's /pokemon.stats only ever returns the CURRENT (latest-game) base
@@ -502,13 +506,11 @@ export const STAT_OVERRIDES: Record<number, { validThroughGen: number; deltas: P
 	// either way.
 };
 
-export const TYPE_COLORS: Record<string, string> = {
-	normal: "#A8A878", fire: "#F08030", water: "#6890F0", electric: "#F8D030",
-	grass: "#78C850", ice: "#98D8D8", fighting: "#C03028", poison: "#A040A0",
-	ground: "#E0C068", flying: "#A890F0", psychic: "#F85888", bug: "#A8B820",
-	rock: "#B8A038", ghost: "#705898", dragon: "#7038F8", dark: "#705848",
-	steel: "#B8B8D0", fairy: "#EE99AC",
-};
+// Type badge colors: canonical domain data declared in
+// src/styles/pokemon-colours.css (see STAT_COLORS), one variable per type name.
+export const TYPE_COLORS: Record<string, string> = Object.fromEntries(
+	TYPE_NAMES.map((type) => [type, `var(--pkdx-type-${type})`]),
+);
 
 // Lucide icon names, picked for a recognizable-at-a-glance match to each
 // type (verified against Obsidian's bundled icon set — not every Lucide

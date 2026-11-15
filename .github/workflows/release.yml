@@ -28,6 +28,10 @@ jobs:
 
       - run: bun run lint:ratchet
 
+      # The @lhak/style adoption check (stylelint.config.mjs): no raw colours,
+      # px font sizes or retired prefixes in styles.src.css or any .svelte <style>.
+      - run: bun run lint:styles
+
       - run: bun run test
 
       - name: Verify manifest and versions.json match the tag

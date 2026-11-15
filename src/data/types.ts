@@ -1,3 +1,5 @@
+import type { FontRoleSettings } from "@lhak/style/obsidian-helpers/font-roles";
+
 // --- Raw PokeAPI response shapes (subset of fields we actually use) ---
 
 export interface NamedApiResource {
@@ -450,15 +452,9 @@ export interface MegaFormDetail extends PortraitImageSource {
 	stats: StatBlock;
 }
 
-export type FontChoice = "pokedex" | "obsidian-interface" | "obsidian-text" | "obsidian-monospace" | "custom";
-
-export interface PluginSettings {
-	fontHeading: FontChoice;
-	fontHeadingCustom: string;
-	fontBody: FontChoice;
-	fontBodyCustom: string;
-	fontMono: FontChoice;
-	fontMonoCustom: string;
+// The six flat font keys (fontHeading, fontHeadingCustom, …) are the shared
+// @lhak/style font-role settings.
+export interface PluginSettings extends FontRoleSettings {
 	enabledGenerations: number[];
 	spriteStyle: "official-artwork" | "sprite";
 	gridDensity: "compact" | "comfortable";

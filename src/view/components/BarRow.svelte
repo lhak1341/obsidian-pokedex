@@ -1,5 +1,5 @@
 <script lang="ts">
-	let { label, value, max, color = "var(--interactive-accent)" }: {
+	let { label, value, max, color = "var(--lk-accent)" }: {
 		label: string;
 		value: number;
 		max: number;
@@ -21,16 +21,16 @@ row sized its own columns independently, "Hatch counter" and "Catch rate"
 <style>
 	.bar-label {
 		font-weight: 600;
-		color: var(--text-muted);
+		color: var(--lk-text-muted);
 		font-size: 0.85em;
 	}
 	.bar-value {
 		text-align: right;
-		font-family: var(--font-monospace);
+		font-family: var(--lk-font-code);
 		font-size: 0.85em;
 	}
 	.bar-track {
-		background: var(--background-modifier-border);
+		background: var(--lk-border);
 		border-radius: 4px;
 		height: 8px;
 		overflow: hidden;

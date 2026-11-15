@@ -14,8 +14,10 @@ const VAULT_DIR =
 const PLUGIN_DIR_NAME = 'pokedex';
 const TEST_VAULT_DIR_NAME = 'obsidian-pokedex';
 
-const REQUIRED = ['main.js', 'manifest.json'];
-const OPTIONAL = ['styles.css'];
+// styles.css is generated (styles.src.css) and carries the @lhak/style roles the
+// view reads, so a missing one must fail the deploy, not ship an unstyled view.
+const REQUIRED = ['main.js', 'manifest.json', 'styles.css'];
+const OPTIONAL = [];
 
 const targets = [
 	join('test-vault', '.obsidian', 'plugins', TEST_VAULT_DIR_NAME),

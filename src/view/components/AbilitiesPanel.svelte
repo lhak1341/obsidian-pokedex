@@ -66,14 +66,14 @@
 	.hidden-ability-block {
 		margin-top: 8px;
 		padding-top: 8px;
-		border-top: 1px solid var(--background-modifier-border);
+		border-top: 1px solid var(--lk-border);
 	}
 	.hidden-ability-label {
 		margin: 0 0 2px;
 		font-size: 0.66rem;
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
-		color: var(--text-muted);
+		color: var(--lk-text-muted);
 	}
 	.hidden-ability-name {
 		margin: 0;

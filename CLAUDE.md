@@ -31,6 +31,9 @@ them before publishing — a tag can be pushed from a commit CI never saw. Nothi
   `svelte-check` is not a dependency here.
 - TypeScript 6 does not auto-include `@types/*`, so `node:fs` in a test fails typecheck even with
   `@types/node` installed. Read source text with Vite's `?raw` (declared in `src/raw-imports.d.ts`).
+  A test that must run Node itself (esbuild, stylelint, a vendored file) adds
+  `/// <reference types="node" />` at its top (`src/styles.test.ts`); `.css?raw` comes back
+  empty under vitest, so read CSS from disk there.
 - `tsconfig.json` targets ES2020, so `Array.prototype.at()` (ES2022) fails typecheck with a
   misleading "change your target library?" error. Use `arr[arr.length - 1]`; do not bump
   the target (Obsidian runtime compat risk).
@@ -51,5 +54,25 @@ them before publishing — a tag can be pushed from a commit CI never saw. Nothi
   itself must be the bare version string (`0.1.1`), not `v`-prefixed — `verify-release.mjs`
   string-matches it exactly against `manifest.json`'s version, and nothing catches a wrong
   format until after that tag is already pushed.
+
+## Styles (@lhak/style)
+
+PKDX reads the `@lhak/style` contract (vendored at `vendor/lhak-style`; re-vendor with
+`node scripts/vendor.mjs ../obsidian-pokedex` from lhak-style-guide, then `bun install`).
+`styles.css` is generated from `styles.src.css` by esbuild (`scripts/styles.mjs`) and
+gitignored; edit the source. Component CSS stays in each `.svelte` `<style>` and reads `--lk-`
+roles, which resolve only under `.lk-root` (`PokedexView`'s `contentEl`).
+
+- `bun run lint:styles` (in `check`, CI and release) runs the shared stylelint config over
+  `styles.src.css`, `src/**/*.css` and every `.svelte` `<style>` (through `postcss-html`).
+- The Pokémon type and stat colours are domain data, the one colour-literal exemption:
+  `src/styles/pokemon-colours.css` (`--pkdx-type-*`, `--pkdx-stat-*`), named in
+  `stylelint.config.mjs`. `TYPE_COLORS`/`STAT_COLORS` hold `var()` names into it;
+  `src/styles.test.ts` pins that the two lists match. Any other colour takes a `--lk-` role.
+- PKDX's own variables take `--pkdx-`; `--pkx-` is retired and fails lint.
+- Svelte appends each component's `<style>` to the end of `<head>` at first mount, after the
+  plugin's `styles.css`, and its scoped selectors carry an extra class. So a scoped rule beats a
+  kit pattern rule of the same shape. Obsidian's `button` rules beat the chip pattern's rest
+  state; `button.filter-chip` in `styles.src.css` restates them.
 
 `temp/` is gitignored and already used for scratch output — prefer it over the OS tmp dir.

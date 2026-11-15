@@ -125,7 +125,9 @@
 			<div class="filter-chips type-chips">
 				{#each TYPE_NAMES as type (type)}
 					<button
+						type="button"
 						class="type-chip"
+						aria-pressed={filters.types.includes(type)}
 						onclick={() => (filters.types = toggle(filters.types, type))}
 					>
 						<TypeBadge
@@ -142,8 +144,9 @@
 			<div class="filter-chips">
 				{#each GENERATIONS as gen (gen.id)}
 					<button
-						class="chip"
-						class:active={filters.generations.includes(gen.id)}
+						type="button"
+						class="lk-chip lk-chip--toggle filter-chip"
+						aria-pressed={filters.generations.includes(gen.id)}
 						onclick={() => toggleGeneration(gen.id)}
 					>
 						{gen.name}
@@ -163,8 +166,9 @@
 				<div class="ability-chip-list">
 					{#each filteredAbilityOptions as ability (ability)}
 						<button
-							class="chip"
-							class:active={filters.abilities.includes(ability)}
+							type="button"
+							class="lk-chip lk-chip--toggle filter-chip"
+							aria-pressed={filters.abilities.includes(ability)}
 							onclick={() => (filters.abilities = toggle(filters.abilities, ability))}
 						>
 							{ability}
@@ -206,8 +210,9 @@
 			<div class="filter-chips">
 				{#each RARITIES as rarity (rarity.key)}
 					<button
-						class="chip"
-						class:active={filters.rarities.includes(rarity.key)}
+						type="button"
+						class="lk-chip lk-chip--toggle filter-chip"
+						aria-pressed={filters.rarities.includes(rarity.key)}
 						onclick={() => (filters.rarities = toggle(filters.rarities, rarity.key))}
 					>
 						{rarity.label}
@@ -220,11 +225,13 @@
 			<div class="filter-chips">
 				{#each STAT_COLUMNS as col (col.key)}
 					<button
-						class="stat-chip"
-						class:active={filters.evStats.includes(col.key)}
-						style:--ev-color={STAT_COLORS[col.key]}
+						type="button"
+						class="lk-chip lk-chip--toggle filter-chip"
+						aria-pressed={filters.evStats.includes(col.key)}
+						style:--pkdx-ev-colour={STAT_COLORS[col.key]}
 						onclick={() => (filters.evStats = toggle(filters.evStats, col.key))}
 					>
+						<span class="lk-chip__dot"></span>
 						{col.label}
 					</button>
 				{/each}
@@ -235,8 +242,9 @@
 			<div class="filter-chips">
 				{#each TRAITS as trait (trait.key)}
 					<button
-						class="chip quirk-chip"
-						class:active={filters.traits.includes(trait.key)}
+						type="button"
+						class="lk-chip lk-chip--toggle filter-chip quirk-chip"
+						aria-pressed={filters.traits.includes(trait.key)}
 						onclick={() => (filters.traits = toggle(filters.traits, trait.key))}
 					>
 						<Icon name={trait.icon} size={13} strokeWidth={2} />
@@ -250,8 +258,9 @@
 			<div class="filter-chips">
 				{#each QUIRKS as quirk (quirk.key)}
 					<button
-						class="chip quirk-chip"
-						class:active={filters.quirks.includes(quirk.key)}
+						type="button"
+						class="lk-chip lk-chip--toggle filter-chip quirk-chip"
+						aria-pressed={filters.quirks.includes(quirk.key)}
 						onclick={() => (filters.quirks = toggle(filters.quirks, quirk.key))}
 					>
 						<Icon name={quirk.icon} size={13} strokeWidth={2} />
@@ -274,7 +283,7 @@
 		flex-wrap: wrap;
 		align-items: flex-start;
 		gap: 8px;
-		margin-bottom: var(--size-4-3);
+		margin-bottom: var(--lk-space-3);
 	}
 	/* Named "filter-search-wrapper", not the more obvious "search-wrapper" —
 	that name collides with an unscoped global class Obsidian's own core
@@ -316,24 +325,24 @@
 		background: transparent;
 		border: none;
 		box-shadow: none;
-		color: var(--text-faint);
+		color: var(--lk-text-faint);
 		cursor: pointer;
 		transition: color 100ms ease-out;
 	}
 	.favorites-filter-toggle:hover {
-		color: var(--text-normal);
+		color: var(--lk-text);
 		background: transparent;
 		box-shadow: none;
 	}
 	.favorites-filter-toggle.active {
-		color: var(--interactive-accent);
+		color: var(--lk-accent);
 	}
 	.filter-rail {
 		display: inline-flex;
 		align-items: stretch;
-		border: 1px solid var(--background-modifier-border);
+		border: 1px solid var(--lk-border);
 		border-radius: 6px;
-		background: var(--background-primary);
+		background: var(--lk-surface);
 		overflow: visible;
 	}
 	/* .filter-group's own shell (details/summary/count-badge chrome) now
@@ -372,10 +381,10 @@
 		padding: 6px;
 		width: 320px;
 		max-width: 80vw;
-		background: var(--background-primary);
-		border: 1px solid var(--background-modifier-border);
+		background: var(--lk-surface);
+		border: 1px solid var(--lk-border);
 		border-radius: 4px;
-		box-shadow: var(--shadow-s);
+		box-shadow: var(--lk-shadow-s);
 	}
 	.type-chips {
 		width: 260px;
@@ -412,71 +421,25 @@
 		padding: 2px;
 	}
 	.ability-empty {
-		color: var(--text-faint);
+		color: var(--lk-text-faint);
 		font-size: 0.85em;
 		padding: 4px 0;
 	}
-	.chip {
-		background: transparent;
-		border: 1px solid var(--background-modifier-border);
-		border-radius: 4px;
-		padding: 2px 6px;
-		cursor: pointer;
+	/* Filter chips are the @lhak/style chip pattern (lk-chip lk-chip--toggle,
+	pressed = filter on); styles.src.css sizes them and restates what Obsidian's
+	global button rules would otherwise set. Only the per-chip additions stay here. */
+	.filter-chip {
 		text-transform: capitalize;
-		font-size: 0.85em;
-		opacity: 0.6;
-		transition: opacity 100ms ease-out, border-color 100ms ease-out;
-	}
-	.chip:hover {
-		opacity: 0.85;
-	}
-	.chip.active {
-		opacity: 1;
-		border-color: var(--interactive-accent);
-		box-shadow: 0 0 0 1px var(--interactive-accent);
 	}
 	/* Each quirk gets its own Lucide icon (per the user's request, "for the
-	sake of organization") ahead of its label — plain .chip is text-only, so
-	this just adds the icon+label flex layout on top of that shared look. */
+	sake of organization") ahead of its label. */
 	.quirk-chip {
-		display: inline-flex;
-		align-items: center;
-		gap: 5px;
 		text-transform: none;
 	}
-	/* Same --ev-color idiom as TableScreen's .ev-chip (dot + tint, not the
-	raw hue as text fill — see that file's comment on why some of these
-	stat colors read poorly as small text). Toggled/active state borrows
-	.chip.active's accent-outline treatment instead of inventing a new one. */
-	.stat-chip {
-		display: inline-flex;
-		align-items: center;
-		gap: 5px;
-		padding: 2px 8px 2px 6px;
-		border-radius: 999px;
-		font-size: 0.85em;
-		font-weight: 600;
-		cursor: pointer;
-		color: var(--text-normal);
-		background: color-mix(in srgb, var(--ev-color) 14%, var(--background-primary));
-		border: 1px solid color-mix(in srgb, var(--ev-color) 45%, var(--background-modifier-border));
-		opacity: 0.75;
-		transition: opacity 100ms ease-out, box-shadow 100ms ease-out;
-	}
-	.stat-chip::before {
-		content: "";
-		width: 7px;
-		height: 7px;
-		flex-shrink: 0;
-		border-radius: 50%;
-		background: var(--ev-color);
-	}
-	.stat-chip:hover {
-		opacity: 0.9;
-	}
-	.stat-chip.active {
-		opacity: 1;
-		box-shadow: 0 0 0 1px var(--interactive-accent);
+	/* EV chips: the pattern's category dot, in the stat's domain colour (the
+	same STAT_COLORS hue per stat as TableScreen's .ev-chip and StatBars). */
+	.filter-chip .lk-chip__dot {
+		background: var(--pkdx-ev-colour);
 	}
 	.stat-filters {
 		position: absolute;
@@ -487,10 +450,10 @@
 		flex-direction: column;
 		gap: 4px;
 		padding: 6px;
-		background: var(--background-primary);
-		border: 1px solid var(--background-modifier-border);
+		background: var(--lk-surface);
+		border: 1px solid var(--lk-border);
 		border-radius: 4px;
-		box-shadow: var(--shadow-s);
+		box-shadow: var(--lk-shadow-s);
 	}
 	.stat-filter-row {
 		display: grid;
@@ -508,13 +471,13 @@
 		border: none;
 		box-shadow: none;
 		padding: 5px 8px;
-		color: var(--text-faint);
+		color: var(--lk-text-faint);
 		font-size: 0.85em;
 		cursor: pointer;
 		transition: color 100ms ease-out;
 	}
 	.filter-reset:hover {
-		color: var(--text-normal);
+		color: var(--lk-text);
 		background: transparent;
 		box-shadow: none;
 	}
