@@ -7,6 +7,9 @@ facts are below; deeper domain rules live in `src/data/CLAUDE.md` (fetch/cache/n
 `src/view/CLAUDE.md` (UI/table/live-verify), and `docs/multi-gen-expansion-plan.md` (adding
 a generation).
 
+Issue tracker: GitHub issues; wayfinding operations (sub-issues, blocking, claims) are in
+`docs/agents/issue-tracker.md`.
+
 Deploys to the vault folder `pokedex` (intentionally ≠ manifest id `obsidian-pokedex`), and
 to `test-vault/`.
 

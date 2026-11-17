@@ -52,12 +52,16 @@ Adding a generation stales cached Moves/Flavor Text and needs a checklist walk â
 
 ## PokeAPI-driven rendering
 
-Official-artwork shiny PNGs crop up to 31% tighter than non-shiny for ~46 of 97 Mega
-species (classic Gen 6 megas on a 475x475 canvas); newer fan-added megas (534x534) are
-unaffected. `PortraitPanel.svelte`'s `portraitScale` (rule: `resolvePortraitScale` in `utils/portrait.ts`), via `imageBounds.ts`'s
-`contentScale`, decodes each render's alpha bbox and scales the outlier down, shrink-only.
-Treat "this sprite looks bigger/smaller" reports as a whole-variety-group bbox scan
-before assuming a plugin bug.
+PokeAPI images do not place or scale their content consistently inside the canvas, so any
+layout that frames an image tightly must size and centre it by its alpha bbox, not its canvas.
+- Official-artwork shiny PNGs crop up to 31% tighter than non-shiny for ~46 of 97 Mega
+  species (classic Gen 6 megas on a 475x475 canvas); newer fan-added megas (534x534) are
+  unaffected. `PortraitPanel.svelte`'s `portraitScale` (rule: `resolvePortraitScale` in `utils/portrait.ts`), via `imageBounds.ts`'s
+  `contentScale`, decodes each render's alpha bbox and scales the outlier down, shrink-only.
+  Treat "this sprite looks bigger/smaller" reports as a whole-variety-group bbox scan
+  before assuming a plugin bug.
+- 96px front sprites sit off-centre on their canvas: centring the canvas in an 85px Card view
+  tile clipped Venusaur/Charizard; centring the bbox fixed all but 5 of 40, which then need a downscale.
 
 ## Table layout
 
@@ -83,6 +87,7 @@ before assuming a plugin bug.
 ## Live-verify recipes
 
 - A real-vault table load took over 90 s once (rows render from the first, but `.loading-more-banner` stays up), so a live check that sleeps a few seconds reads the failure banner and Notices as absent. Stub `repo.getTableRows`/`retryRows` for the load, banner and Notice paths and restore them in a `finally`; poll for the banner to clear only when the real load is the thing under test.
+- Phone-width design needs no emulator: inject a throwaway overlay into the live `pokedex-view` leaf inside a 390px column, take row order/filter/sort from the table DOM and raw records from `plugin.repository.pokemonMemCache` (by id, all 6 stats) / `speciesMemCache` (`capture_rate`), then remove it.
 - Focus first: `getLeavesOfType('pokedex-view')` + `setActiveLeaf(leaf, {focus:true})`. For
   a genuinely fresh Svelte mount, detach and reopen via
   `executeCommandById('obsidian-pokedex:open-pokedex')`.

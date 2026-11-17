@@ -77,3 +77,11 @@ The two checkbox groups in FilterBar. Each option is one entry in `src/utils/qui
 The up-to-four images a Pokemon (or a Mega/Gigantamax variety) can own: `sprite`, `artwork`, `shiny`, `shiny-artwork`. `IMAGE_SET` in `src/data/imageSet.ts` is the single table mapping each cache suffix to its `RawPokemon.sprites` field and its `ImageBundle` field; `ALL_IMAGE_SUFFIXES` is derived from it, so `clearRange`'s delete side cannot miss a suffix a fetch site writes. A `Record<ImageSuffix, …>`, so a new suffix without a row fails typecheck.
 
 `PokedexRepository.fetchImages` fetches a chosen subset, each image caught independently to `null`. The core sprite (`getEntryCore`, `getRowsForIds`) deliberately stays outside it: a failed core sprite must fail the whole id, the opposite policy. `ImageBundle` is the fetched shape; `PortraitImageSource` (`types.ts`) is the entry-side `*DataUri` shape and is intentionally separate.
+
+## Card view
+
+The browse screen showing each Pokemon as a card instead of a table row. Same rows, filters, sort, favourites and Active Gen scoping as the table; only the presentation differs. The table is the other layout of the same browse screen, not a separate screen.
+
+## Fields
+
+The pieces of per-Pokemon data the user chooses to show on the browse screen (Total, EV yield, held items, catch rate, ...). A Field appears as a column in the table and as a line on a card in Card view. "Columns" is the table-only name for the same thing and is being retired as the user-facing term.
