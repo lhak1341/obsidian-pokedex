@@ -11,7 +11,8 @@ Issue tracker: GitHub issues; wayfinding operations (sub-issues, blocking, claim
 `docs/agents/issue-tracker.md`.
 
 Deploys to the vault folder `pokedex` (intentionally ≠ manifest id `obsidian-pokedex`), and
-to `test-vault/`.
+to `pokedex-test-vault/` (named so the Obsidian CLI's by-name `vault=` cannot hit a sibling
+repo's `test-vault`).
 
 Inline comments here are unusually thorough and load-bearing. Most "shallow module" or
 "duplicate logic" findings from automated architecture review turn out to be deliberate,

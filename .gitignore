@@ -8,7 +8,7 @@ styles.css
 node_modules/
 
 # Test vault
-test-vault/
+pokedex-test-vault/
 
 # OS
 .DS_Store

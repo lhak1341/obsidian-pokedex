@@ -20,7 +20,7 @@ const REQUIRED = ['main.js', 'manifest.json', 'styles.css'];
 const OPTIONAL = [];
 
 const targets = [
-	join('test-vault', '.obsidian', 'plugins', TEST_VAULT_DIR_NAME),
+	join('pokedex-test-vault', '.obsidian', 'plugins', TEST_VAULT_DIR_NAME),
 	join(VAULT_DIR, PLUGIN_DIR_NAME),
 ];
 

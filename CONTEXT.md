@@ -84,4 +84,12 @@ The browse screen showing each Pokemon as a card instead of a table row. Same ro
 
 ## Fields
 
-The pieces of per-Pokemon data the user chooses to show on the browse screen (Total, EV yield, held items, catch rate, ...). A Field appears as a column in the table and as a line on a card in Card view. "Columns" is the table-only name for the same thing and is being retired as the user-facing term.
+The pieces of per-Pokemon data the user chooses to show on the browse screen (Total, EV yield, held items, catch rate, ...). There is one selection, shared by both layouts: switching between the table and Card view changes how the chosen Fields are drawn, never which ones are shown. A chosen Field appears as a column in the table; in Card view it appears on the tile (stats, Total, EV yield) or in the tap panel (every chosen Field, with its exact value). An unchosen Field appears nowhere, and is not offered as a sort. "Columns" is the table-only name for the same thing and is being retired as the user-facing term.
+
+## Info popover
+
+The small box that explains a name: an ability, held item, move, or a type icon's type name. Hovering with a mouse previews it; a tap or click pins it open. A pinned one closes on a second tap of the same name, a tap anywhere else (which still does its own job), a scroll, or Esc; tapping another name moves it there. Distinct from a native `title` tooltip (encounters, EV yield), which stays as it is.
+
+## Art preview
+
+The enlarged image of a Pokemon: the table sprite's preview and the detail portrait's. With a mouse it appears on hover. On touch, the portrait's appears on press-and-hold, and the table sprite has none (tapping the row opens the detail screen). Different from an Info popover, which explains a name rather than showing art.
