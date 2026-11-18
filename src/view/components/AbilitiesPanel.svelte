@@ -11,7 +11,7 @@
 	// persists across Pokemon navigation — see DetailScreen, which doesn't
 	// remount this panel when `id` changes, only when entry itself becomes
 	// null) — abilities repeat heavily across species (e.g. "levitate"), so
-	// hovering one already seen on a previous Pokemon this session reuses
+	// opening one already seen on a previous Pokemon this session reuses
 	// the cached description instead of refetching (getDescription also
 	// caches on the repository side, but this avoids even the async
 	// round-trip). Positioned relative to .detail-screen (position: absolute,
@@ -22,24 +22,13 @@
 
 <ul class="ability-list">
 	{#each abilities.filter((a) => !a.isHidden) as ability (ability.name)}
-		<li
-			onmouseenter={(e) => popover.show(ability.name, e.currentTarget)}
-			onmouseleave={popover.hide}
-		>
-			{ability.name}
-		</li>
+		<li class="pkdx-info-target" {...popover.target(ability.name)}>{ability.name}</li>
 	{/each}
 </ul>
 {#each abilities.filter((a) => a.isHidden) as ability (ability.name)}
 	<div class="hidden-ability-block">
 		<p class="hidden-ability-label">Hidden Ability (G5+)</p>
-		<p
-			class="hidden-ability-name"
-			onmouseenter={(e) => popover.show(ability.name, e.currentTarget)}
-			onmouseleave={popover.hide}
-		>
-			{ability.name}
-		</p>
+		<p class="hidden-ability-name pkdx-info-target" {...popover.target(ability.name)}>{ability.name}</p>
 	</div>
 {/each}
 
@@ -56,8 +45,9 @@
 		keeps the bullet marker but tightens the indent to match. */
 		padding-left: 18px;
 	}
+	/* A block's box spans the panel; the target is the name's own width. */
 	.ability-list li {
-		cursor: help;
+		width: fit-content;
 	}
 	/* Same label/value pairing as DetailScreen's .physical-readout
 	HEIGHT/WEIGHT (small uppercase muted label over a value), not an inline
@@ -78,6 +68,6 @@
 	.hidden-ability-name {
 		margin: 0;
 		text-transform: capitalize;
-		cursor: help;
+		width: fit-content;
 	}
 </style>

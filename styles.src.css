@@ -9,7 +9,8 @@
    Font roles: heading = --lk-font-label, body = --lk-font-interface, mono = --lk-font-code, set
    inline on that root from the font settings (applyFontRoles); the default leaves the alias
    layer's theme fonts.
-   Component styles live in each .svelte file (injected by Svelte at mount, after this sheet).
+   Component styles live in each .svelte file (injected by Svelte at mount, after this sheet),
+   except rules several components share: the filter chips and the Info popover targets below.
    PKDX's own values take the --pkdx- prefix: the type and stat colours
    (src/styles/pokemon-colours.css) and the per-Pokemon accent and stat colour set inline. */
 
@@ -34,4 +35,30 @@ button.filter-chip {
 	box-shadow: none;
 	color: var(--lk-text);
 	font-size: 0.85em;
+}
+
+/* ── Info popover targets (view/hoverPopover.svelte.ts, `target()`) ───────────
+   Ability, held item, move and type names that open an Info popover on hover and pin it on a
+   tap. Here, not in each component, because four components draw them. A dotted underline
+   marks a text target (the type icon opts out in TableScreen). The ::before is the tap area: the
+   target's own width, extended up and down by --pkdx-tap-pad-y (default 0); it draws nothing.
+   TableScreen sets it past any row height on its target cells and clips it with the cell's
+   overflow, so a tap anywhere in the row's height lands. */
+.pkdx-info-target {
+	position: relative;
+	cursor: pointer;
+	text-decoration: underline dotted;
+	text-underline-offset: 0.2em;
+}
+
+.pkdx-info-target::before {
+	content: "";
+	position: absolute;
+	inset: calc(-1 * var(--pkdx-tap-pad-y, 0px)) 0;
+}
+
+.pkdx-info-target:focus-visible {
+	outline: 2px solid var(--lk-accent);
+	outline-offset: 1px;
+	border-radius: var(--lk-radius-s);
 }

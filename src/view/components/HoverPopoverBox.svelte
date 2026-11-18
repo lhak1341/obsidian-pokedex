@@ -3,6 +3,7 @@
 
 	interface HoverPopoverState {
 		hovered: string | null;
+		pinned: boolean;
 		pos: { top: number; left: number; placement: "below" | "above" } | null;
 	}
 
@@ -21,6 +22,7 @@
 	<div
 		class="hover-popover-box"
 		class:flip-above={hoverState.pos.placement === "above"}
+		class:pinned={hoverState.pinned}
 		style="top: {hoverState.pos.top}px; left: {hoverState.pos.left}px;"
 	>
 		{@render children()}
@@ -41,6 +43,13 @@
 		font-size: 0.85em;
 		color: var(--lk-text);
 		pointer-events: none;
+	}
+	/* A pinned box takes taps (a tap inside it does nothing, see
+	utils/infoPopoverPin.ts) so its text can be selected; a preview stays
+	click-through, so the mouse crossing it never counts as leaving. */
+	.hover-popover-box.pinned {
+		pointer-events: auto;
+		user-select: text;
 	}
 	.hover-popover-box.flip-above {
 		transform: translateY(-100%);

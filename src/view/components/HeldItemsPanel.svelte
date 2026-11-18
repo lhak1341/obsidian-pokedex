@@ -15,12 +15,7 @@
 </script>
 
 {#each heldItems as item (item.name)}
-	<span
-		class="held-item-entry"
-		role="note"
-		onmouseenter={(e) => popover.show(item.name, e.currentTarget)}
-		onmouseleave={popover.hide}
-	><span class="held-item-name">{formatItemName(item.name)}</span> ({item.rarities.join("/")}%)</span>
+	<span class="held-item-entry pkdx-info-target" {...popover.target(item.name)}><span class="held-item-name">{formatItemName(item.name)}</span> ({item.rarities.join("/")}%)</span>
 {/each}
 
 <HoverPopoverBox hoverState={popover}>
@@ -28,8 +23,9 @@
 </HoverPopoverBox>
 
 <style>
+	/* Only the name is underlined (below), not the rarity after it. */
 	.held-item-entry {
-		cursor: help;
+		text-decoration: none;
 	}
 	.held-item-entry:not(:last-child)::after {
 		content: ", ";

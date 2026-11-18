@@ -48,7 +48,7 @@
 	// column width — rarity moves into the tooltip instead. Rarity isn't
 	// keyed by item name like the description cache: the same item name can
 	// carry a different % on a different row, so this tracks whichever
-	// row/item is currently hovered directly, set alongside itemPopover.show.
+	// row/item's popover is open, set by that target's onOpen.
 	let hoveredItemRarities = $state<number[]>([]);
 
 	// TypeBadge's icon mode already carries a native `title` for the type
@@ -258,8 +258,12 @@
 						<td>{formatDexNumber(row.dexNumber)}</td>
 						<td
 							class="center sprite-cell"
-							onmouseenter={(e) => showPreview(row.id, e.currentTarget)}
-							onmouseleave={hidePreview}
+							onpointerenter={(e) => {
+								// The Art preview is a mouse-hover affordance; a tap on the
+								// sprite opens the detail screen and nothing else.
+								if (e.pointerType === "mouse") showPreview(row.id, e.currentTarget);
+							}}
+							onpointerleave={hidePreview}
 						>
 							{#if row.spriteDataUri}
 								<img src={row.spriteDataUri} alt={formatPokemonDisplayName(row)} class="sprite-thumb" />
@@ -271,15 +275,10 @@
 								onToggle={() => onToggleFavorite(row.id)}
 							/>
 						</td>
-						<td>
+						<td class="info-target-cell">
 							{#each row.types as type (type)}
 								{#if useTypeIcons}
-									<span
-										class="type-icon-hover-target"
-										role="note"
-										onmouseenter={(e) => typePopover.show(type, e.currentTarget)}
-										onmouseleave={typePopover.hide}
-									>
+									<span class="type-icon-hover-target pkdx-info-target" {...typePopover.target(type)}>
 										<TypeBadge {type} useIcon />
 									</span>
 								{:else}
@@ -291,19 +290,14 @@
 							{#if col.custom}
 								{#if col.custom === "heldItems"}
 									{@const genItems = filterHeldItemsForGen(row.heldItemsAllGens, activeGen)}
-									<td>
+									<td class="info-target-cell">
 										{#if genItems.length === 0}
 											-
 										{:else}
 											{#each genItems as item (item.name)}
 												<span
-													class="held-item-name"
-													role="note"
-													onmouseenter={(e) => {
-														itemPopover.show(item.name, e.currentTarget);
-														hoveredItemRarities = item.rarities;
-													}}
-													onmouseleave={itemPopover.hide}
+													class="held-item-name pkdx-info-target"
+													{...itemPopover.target(item.name, () => (hoveredItemRarities = item.rarities))}
 												>{formatItemName(item.name)}</span>
 											{/each}
 										{/if}
@@ -499,19 +493,30 @@
 		text-transform: capitalize;
 		font-weight: 600;
 	}
-	.held-item-name {
-		cursor: help;
-	}
+	/* inline-block so the target's dotted underline doesn't run under the
+	comma (decorations don't propagate into an atomic inline); pre keeps
+	its trailing space. */
 	.held-item-name:not(:last-child)::after {
 		content: ", ";
+		display: inline-block;
+		white-space: pre;
 		cursor: default;
+	}
+	/* An Info popover target's tap area (styles.src.css, .pkdx-info-target::before)
+	spans the row's full height: it reaches well past the cell, and the cell clips
+	it, so it ends at the row's edges whatever sets the row's height (the sprite)
+	and stays at the target's own width. */
+	td.info-target-cell {
+		--pkdx-tap-pad-y: 64px;
+		overflow: hidden;
 	}
 	.held-item-rarity {
 		font-weight: 600;
 	}
+	/* The icon is a target without the text targets' underline. */
 	.type-icon-hover-target {
 		display: inline-flex;
-		cursor: help;
+		text-decoration: none;
 	}
 	.type-tooltip-text {
 		text-transform: capitalize;

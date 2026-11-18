@@ -132,13 +132,7 @@
 						{@const move = row.move}
 						{@const detail = moveDetails[move.name]}
 						<tr class:row-shaded={row.moveIndex % 2 === 0}>
-							<td
-								class="move-name-cell"
-								onmouseenter={(e) => popover.show(move.name, e.currentTarget)}
-								onmouseleave={popover.hide}
-							>
-								{move.name}
-							</td>
+							<td class="move-name-cell"><span class="pkdx-info-target" {...popover.target(move.name)}>{move.name}</span></td>
 							{#if activeMoveMethod === "level-up"}<td class="col-right">{move.levelLearnedAt}</td>{/if}
 							<td class="col-center">
 								{#if detail}
@@ -249,8 +243,12 @@
 		padding: 2px 8px;
 		text-transform: capitalize;
 	}
+	/* The name is the Info popover target: its tap area (styles.src.css,
+	.pkdx-info-target::before) reaches past the row and the cell clips it, so
+	it spans the row's height at the name's own width, as in TableScreen. */
 	.move-name-cell {
-		cursor: help;
+		--pkdx-tap-pad-y: 64px;
+		overflow: hidden;
 	}
 	.move-table th.col-right, .move-table td.col-right {
 		text-align: right;
