@@ -13,7 +13,8 @@ A ticket's interface is shaped by the tickets that consume it: before settling a
 
 Deploys to the vault folder `pokedex` (intentionally ≠ manifest id `obsidian-pokedex`), and
 to `pokedex-test-vault/` (named so the Obsidian CLI's by-name `vault=` cannot hit a sibling
-repo's `test-vault`).
+repo's `test-vault`). `bun run deploy` writes both, so a test-vault-only live check copies the
+build instead (`docs/mobile-verification.md` step 1).
 
 Inline comments here are unusually thorough and load-bearing. Most "shallow module" or
 "duplicate logic" findings from automated architecture review turn out to be deliberate,

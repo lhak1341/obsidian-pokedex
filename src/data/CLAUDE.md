@@ -90,6 +90,7 @@ Inspect from eval via `app.plugins.plugins['obsidian-pokedex'].cache.name`. A mi
 deleted database is a cold cache: reads miss, writes are best-effort, the connection reopens.
 `legacyDiskCache.ts` deletes the old synced `{manifest.dir}/cache` folder on startup if it
 exists and shows a notice; nothing is imported.
+To prove a load is served by the store, not PokeAPI, run `new plugin.repository.constructor(countingClient, plugin.cache)` with a `Proxy` over `plugin.repository.client` that counts calls: the live repository's mem caches answer first, so `plugin.repository` can't show it.
 
 Regional forms have two distinct cache keys: the detail view fetches by numeric PokeAPI id
 (`pokemon/10229.json` for Hisuian Growlithe) while table load's
