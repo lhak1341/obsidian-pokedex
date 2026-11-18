@@ -91,8 +91,9 @@ layout that frames an image tightly must size and centre it by its alpha bbox, n
   `pokedex-test-vault`; `dev:mobile` is global, turn it off; CDP touch dispatch hangs).
 - Phone-width design needs no emulator: inject a throwaway overlay into the live `pokedex-view` leaf inside a fixed-width column (any width: `.pokedex-view{width:Npx}` also drives the detail screen's `@container detail` queries, at N − 46px since the pane pads 23px a side, so state which of the two widths a breakpoint means), take row order/filter/sort from the table DOM and raw records from `plugin.repository.pokemonMemCache` (by id, all 6 stats) / `speciesMemCache` (`capture_rate`), then remove it. If the leaf is on the detail screen the table measures 0px, so click `.detail-screen .back-button` first. To show motion, pause it at a set point with `animation-play-state: paused` plus a negative `animation-delay`, screenshot each frame (`dev:screenshot` takes seconds, too slow for a live animation), and combine frames with `ffmpeg` `hstack`/`vstack` (no PIL or `magick` here). The user may click the live overlay between shots, so return its state from each eval and check it before trusting a frame.
 - Focus first: `getLeavesOfType('pokedex-view')` + `setActiveLeaf(leaf, {focus:true})`. For
-  a genuinely fresh Svelte mount, detach and reopen via
-  `executeCommandById('obsidian-pokedex:open-pokedex')`.
+  a genuinely fresh Svelte mount, swap the same leaf's view: `setViewState({type:'empty'})`,
+  then `setViewState({type:'pokedex-view',active:true})`. Detaching breaks emulated mobile
+  (`docs/mobile-verification.md` step 5).
 - `.pokedex-view` — not `.workspace-leaf-content` or `.table-wrap`, both of which merely
   wrap it — is the actual `overflow-y: auto` scroll container for the table screen.
 - Current screen: `.pokedex-view > div`'s `className` contains `hidden-screen` when the
@@ -121,10 +122,11 @@ layout that frames an image tightly must size and centre it by its alpha bbox, n
 - `obsidian eval` cannot reach the `obsidian` module (`require('obsidian')` throws; there is
   no global `getIcon`/`setIcon`). To verify a Lucide name, render `<Icon name=… />` in a live
   component and check `el.querySelector('svg')?.innerHTML` is non-empty; an overlay takes icon
-  SVGs from rendered table headers or inlines them.
+  SVGs from rendered table headers, inlines them, or harvests them from a remount with the
+  setting flipped in memory only (`useTypeIcons` for type icons: badge mode renders none).
 - A `$state` field seeded once via `untrack(() => initialX)` (TableScreen.svelte's
   `visibleColumnKeys`, `sortColumn`, `favoriteIds`) never re-seeds when its prop changes —
   it owns the value locally and only pushes out via a callback. Verifying one live via eval
-  needs a real remount (force `saveSettings()`'s refresh, or leaf detach+reopen), not just
+  needs a real remount (force `saveSettings()`'s refresh, or the leaf swap above), not just
   mutating `plugin.settings.X` in place.
 - Hover popovers (`.hover-popover-box`): dispatch `new MouseEvent('mouseenter', {bubbles:false})` on the element carrying `onmouseenter`; the body fills after an async fetch, so wait ~2.5s, then read the box scoped to `.table-screen` or `.detail-screen`, then dispatch `mouseleave`. Read right after the event and the box is not rendered yet, so the Loading state is not observable this way.

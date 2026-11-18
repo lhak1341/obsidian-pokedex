@@ -15,6 +15,8 @@ also has a `test-vault`. Its cache starts empty, so the first open fetches from 
 2. Open the window if it is closed. `obsidian://open?path=…` does **not** register or open
    an unknown folder (it opened the other `test-vault`). From any open vault:
    `obsidian vault=lhakZettel eval code="require('electron').ipcRenderer.sendSync('vault-open', '<abs path>/pokedex-test-vault', false)"`
+   `Command "eval" not found` from `vault=pokedex-test-vault` means its window is closed, not
+   that a plugin is missing.
 3. `obsidian vault=pokedex-test-vault dev:mobile on` (reloads that window).
    **The flag is global** (unprefixed `localStorage.EmulateMobile`): any other vault window
    that reloads while it is on comes up in mobile mode too. Always end with step 7.
@@ -23,9 +25,16 @@ also has a `test-vault`. Its cache starts empty, so the first open fetches from 
    `is-tablet`). Tablet: resize to e.g. 820x1180.
 5. `eval code="app.commands.executeCommandById('obsidian-pokedex:open-pokedex')"`. Rows
    stream in; a cold cache shows `Loading more Pokemon… n/1025` for a while.
-6. Screenshot: `dev:screenshot path=<abs>/temp/mobile-loop/<name>.png`. The first shot
-   after opening the view returned a stale "New tab" frame while the DOM already held the
-   Pokédex at 390px: confirm via eval, then shoot again.
+   To remount the view (e.g. after changing `plugin.settings` in memory), do not detach the
+   leaf: detaching the only leaf in emulated mobile leaves no tab group, and the open command
+   then fails with `No tab group found` in `dev:errors`. Swap the view in place instead:
+   `const l=app.workspace.getLeavesOfType('pokedex-view')[0]; await l.setViewState({type:'empty'}); await l.setViewState({type:'pokedex-view',active:true})`.
+   If it is already detached, `app.workspace.createLeafInParent(app.workspace.rootSplit, 0)`
+   gives a leaf to call `setViewState` on.
+6. Screenshot: `dev:screenshot path=<abs>/temp/mobile-loop/<name>.png`. A background window
+   returns stale frames (a "New tab" shot while the DOM already held the Pokédex): before each
+   shot run `setBackgroundThrottling(false)`, `moveTop()` and `invalidate()` on
+   `require('electron').remote.getCurrentWindow()`, shoot twice and keep the second. A sideways `scrollLeft` never paints: fake it with `transform`.
 7. Clean up: `dev:mobile off`, then confirm `localStorage.getItem('EmulateMobile') === null`
    in both `pokedex-test-vault` and `lhakZettel`; close the test window
    (`eval code="setTimeout(()=>window.close(),200)"`).
