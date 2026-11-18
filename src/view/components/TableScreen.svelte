@@ -9,7 +9,7 @@
 	import { formatDexNumber, formatItemName, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { sortPokemon, type SortColumn, type SortDirection } from "../../utils/sortPokemon";
 	import { scopeRowsToGen } from "../../utils/stats";
-	import { FIELDS, formatEvYield, sortAfterFieldsChange, STAT_LABEL_BY_KEY } from "../../utils/fields";
+	import { FIELDS, formatEvYield, isStatField, sortAfterFieldsChange, STAT_LABEL_BY_KEY } from "../../utils/fields";
 	import { TABLE_COLUMNS } from "../../utils/tableColumns";
 	import { untrack } from "svelte";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
@@ -194,7 +194,7 @@
 			<div class="fields-section">
 				<div class="fields-section-label">Stats</div>
 				<div class="fields-grid fields-grid-stats">
-					{#each FIELDS.filter((f) => !f.icon) as field (field.key)}
+					{#each FIELDS.filter(isStatField) as field (field.key)}
 						<label class="fields-checkbox">
 							<input
 								type="checkbox"
@@ -209,7 +209,7 @@
 			<div class="fields-section">
 				<div class="fields-section-label">Other</div>
 				<div class="fields-grid fields-grid-other">
-					{#each FIELDS.filter((f) => f.icon) as field (field.key)}
+					{#each FIELDS.filter((f) => !isStatField(f)) as field (field.key)}
 						<label class="fields-checkbox">
 							<input
 								type="checkbox"

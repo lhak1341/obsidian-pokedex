@@ -42,8 +42,8 @@ interface FieldBase {
 	// The Lucide icon for the Field in the Fields menu and, in the table, the
 	// header (with `label` as a hover tooltip) instead of the full text label,
 	// to keep wide columns like "Catch rate"/"Hatch counter" from blowing out
-	// the table width. Stats have none: they are the menu's Stats section and
-	// keep their short text labels.
+	// the table width. Stats have none: they keep their short text labels.
+	// Which section a Field sits in is isStatField, not whether it has an icon.
 	icon?: string;
 	sortKey?: SortColumn;
 }
@@ -86,6 +86,14 @@ export const FIELDS: Field[] = [
 	{ key: "height", label: "Height", icon: "ruler", sortKey: "height", render: (row) => formatHeight(row.height) },
 	{ key: "weight", label: "Weight", icon: "weight", sortKey: "weight", render: (row) => formatWeight(row.weight) },
 ];
+
+// One of the six base stats: the Fields menu's Stats section, and in Card view
+// the tile's stat strip and the panel's stat columns. Total is not a stat
+// Field; each layout places it on its own (menu: Other; tile: a corner;
+// panel: a column after the stats).
+export function isStatField(field: Field): boolean {
+	return STAT_LABEL_BY_KEY.has(field.key as keyof StatBlock);
+}
 
 // The fresh-install selection: the six stats, Total and EV yield, so a default
 // Card view tile shows its Σ and EV corners. hydrateSettings keeps any saved

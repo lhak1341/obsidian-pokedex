@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PokedexTableRow } from "../data/types";
-import { DEFAULT_VISIBLE_FIELDS, FIELDS, formatEvYield, sortAfterFieldsChange } from "./fields";
+import { DEFAULT_VISIBLE_FIELDS, FIELDS, formatEvYield, isStatField, sortAfterFieldsChange } from "./fields";
 import { makeRow } from "../data/__fixtures__/rows";
 
 function renderOf(key: string, row: PokedexTableRow): string {
@@ -96,5 +96,16 @@ describe("sortAfterFieldsChange", () => {
 			column: "id",
 			direction: "desc",
 		});
+	});
+});
+
+describe("isStatField", () => {
+	// The Fields menu's Stats section, and Card view's stat strip and panel
+	// columns, are exactly the six base stats. Total is not one: the menu lists
+	// it under Other, and the tile and panel place it separately.
+	it("is true for the six base stats only", () => {
+		expect(FIELDS.filter(isStatField).map((f) => f.key)).toEqual([
+			"hp", "attack", "defense", "specialAttack", "specialDefense", "speed",
+		]);
 	});
 });

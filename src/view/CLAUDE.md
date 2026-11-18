@@ -88,7 +88,7 @@ layout that frames an image tightly must size and centre it by its alpha bbox, n
 
 ## Live-verify recipes
 
-- A real-vault table load took over 90 s once (rows render from the first, but `.loading-more-banner` stays up), so a live check that sleeps a few seconds reads the failure banner and Notices as absent. Stub `repo.getTableRows`/`retryRows` for the load, banner and Notice paths and restore them in a `finally`; poll for the banner to clear only when the real load is the thing under test.
+- A live check fakes the plugin's slow or persistent I/O on the live instance, restored in a `finally` by `delete`-ing the own property (the prototype method shows through): `repo.getTableRows`/`retryRows` for the load, banner and Notice paths, since a real-vault load once took over 90 s (rows render, `.loading-more-banner` stays up, so a few-second sleep reads the banner and Notices as absent); `plugin.loadData`/`saveData` for a settings path (return the old-shape data, capture writes, `await plugin.loadSettings()`, then the leaf swap below), so `data.json` is never written. Poll for the banner to clear only when the real load is the thing under test.
 - Emulated mobile and the iPhone loop: `docs/mobile-verification.md` (CLI targets
   `pokedex-test-vault`; a hidden window throttles timers, so evals stall and Notices never
   time out (clear `.notice` before checking one shows); `dev:mobile` is global, turn it off).
