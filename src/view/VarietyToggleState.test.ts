@@ -1,15 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { FakePokeApiClient, MemoryCacheStore } from "../data/__fixtures__/fakes";
+import { FakePokeApiClient, MemoryCacheStore, RecordingObjectUrls } from "../data/__fixtures__/fakes";
 import { PokedexRepository } from "../data/PokedexRepository";
 import type { RawPokemon } from "../data/types";
 import bulbasaur from "../data/__fixtures__/bulbasaur.json";
 import { VarietyToggleState } from "./VarietyToggleState";
 
-function makeState() {
+function makeState(imageBudgetBytes?: number) {
 	const client = new FakePokeApiClient();
 	const cache = new MemoryCacheStore();
-	const repository = new PokedexRepository(client, cache);
-	return { client, repository, toggle: new VarietyToggleState(repository) };
+	const objectUrls = new RecordingObjectUrls();
+	const repository = new PokedexRepository(client, cache, { objectUrls, imageBudgetBytes });
+	return { client, objectUrls, repository, toggle: new VarietyToggleState(repository) };
 }
 
 function tick(): Promise<void> {
@@ -50,18 +51,25 @@ describe("VarietyToggleState", () => {
 		expect(client.fetchPokemon).not.toHaveBeenCalled();
 	});
 
-	it("selecting a key already in the cache skips the repository call", async () => {
-		const { client, toggle } = makeState();
+	it("re-selecting a cached form refreshes it from the repository without refetching, so an image the LRU evicted meanwhile comes back live", async () => {
+		const { client, objectUrls, repository, toggle } = makeState(600);
+		client.imageSize = 100;
 		client.variantPokemon.set("charizard-mega-x", { ...(bulbasaur as unknown as RawPokemon) });
+		client.variantPokemon.set("charizard-gmax", { ...(bulbasaur as unknown as RawPokemon) });
 		toggle.selectMega("charizard-mega-x");
+		toggle.selectGigantamax("charizard-gmax");
 		await tick();
-		expect(client.fetchPokemon).toHaveBeenCalledTimes(1);
+		await repository.getEntryExtras(2);
+		await repository.getEntryExtras(3);
 
-		toggle.selectMega(null);
 		toggle.selectMega("charizard-mega-x");
+		toggle.selectGigantamax("charizard-gmax");
 		await tick();
 
-		expect(client.fetchPokemon).toHaveBeenCalledTimes(1);
+		expect(client.fetchPokemon).toHaveBeenCalledTimes(4);
+		for (const detail of [toggle.megaFormCache["charizard-mega-x"], toggle.gigantamaxFormCache["charizard-gmax"]]) {
+			expect(objectUrls.live.has(detail?.artworkDataUri ?? "")).toBe(true);
+		}
 	});
 
 	it("selecting a new key fetches, fills the cache, and fires onUpdate for the sync selection and the async cache-fill", async () => {

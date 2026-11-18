@@ -1,14 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
 import bulbasaur from "./__fixtures__/bulbasaur.json";
 import bulbasaurSpecies from "./__fixtures__/bulbasaur-species.json";
-import { FakePokeApiClient, MemoryCacheStore } from "./__fixtures__/fakes";
+import { FakePokeApiClient, MemoryCacheStore, RecordingObjectUrls } from "./__fixtures__/fakes";
 import { PokedexRepository } from "./PokedexRepository";
-import type { RawPokemon, RawSpecies } from "./types";
+import type { MegaFormDetail, RawPokemon, RawSpecies } from "./types";
 
-function makeRepository() {
+function makeRepository(imageBudgetBytes?: number) {
 	const client = new FakePokeApiClient();
 	const cache = new MemoryCacheStore();
-	return { client, cache, repository: new PokedexRepository(client, cache) };
+	const objectUrls = new RecordingObjectUrls();
+	return { client, cache, objectUrls, repository: new PokedexRepository(client, cache, { objectUrls, imageBudgetBytes }) };
+}
+
+async function blobBytes(blob: Blob | undefined): Promise<Uint8Array | null> {
+	return blob ? new Uint8Array(await blob.arrayBuffer()) : null;
 }
 
 describe("PokedexRepository", () => {
@@ -23,14 +28,17 @@ describe("PokedexRepository", () => {
 		expect(client.fetchImageBinary).toHaveBeenCalledTimes(1);
 	});
 
-	it("serves a cached image's stored bytes as a data URI, and writes a fetched image's bytes", async () => {
-		const { client, cache, repository } = makeRepository();
+	it("serves a cached image's stored bytes as a blob URL, and writes a fetched image's bytes", async () => {
+		const { client, cache, objectUrls, repository } = makeRepository();
 		await cache.writeBinary("images/1-sprite.png", new Uint8Array([1, 2, 3, 4]).buffer);
 
 		const { rows } = await repository.getTableRows({ start: 1, end: 2 });
 
 		// FakePokeApiClient's image is 4 zero bytes; id 1's sprite never hits it.
-		expect(rows.map((r) => r.spriteDataUri)).toEqual(["data:image/png;base64,AQIDBA==", "data:image/png;base64,AAAAAA=="]);
+		const [stored, fetched] = rows.map((r) => objectUrls.live.get(r.spriteDataUri ?? ""));
+		expect(await blobBytes(stored)).toEqual(new Uint8Array([1, 2, 3, 4]));
+		expect(await blobBytes(fetched)).toEqual(new Uint8Array(4));
+		expect(stored?.type).toBe("image/png");
 		expect(client.fetchImageBinary).toHaveBeenCalledTimes(1);
 		const written = await cache.readBinary("images/2-sprite.png");
 		expect(written && new Uint8Array(written)).toEqual(new Uint8Array(4));
@@ -585,18 +593,19 @@ describe("PokedexRepository", () => {
 	it("getMegaForm reads a disk-cached form without touching the client, and mem-caches it", async () => {
 		const { cache, client, repository } = makeRepository();
 		await cache.writeJson("mega-forms/charizard-mega-x.json", {
-			types: ["fire", "flying"],
-			abilities: [{ name: "blaze", isHidden: false }],
-			stats: { hp: 78, atk: 84, def: 78, spa: 109, spd: 85, spe: 100 },
-			spriteDataUri: null,
-			artworkDataUri: null,
-			shinyDataUri: null,
-			shinyArtworkDataUri: null,
+			types: [
+				{ slot: 1, type: { name: "fire", url: "" } },
+				{ slot: 2, type: { name: "flying", url: "" } },
+			],
+			abilities: [{ ability: { name: "blaze", url: "" }, is_hidden: false, slot: 1 }],
+			stats: (bulbasaur as unknown as RawPokemon).stats,
+			sprites: { front_default: null, front_shiny: null },
 		});
 
 		const first = await repository.getMegaForm("charizard-mega-x");
 		expect(client.fetchPokemon).not.toHaveBeenCalled();
 		expect(first.types).toEqual(["fire", "flying"]);
+		expect(first.abilities).toEqual([{ name: "blaze", isHidden: false }]);
 
 		const readJsonSpy = vi.spyOn(cache, "readJson");
 		await repository.getMegaForm("charizard-mega-x");
@@ -610,7 +619,11 @@ describe("PokedexRepository", () => {
 		const detail = await repository.getGigantamaxForm("charizard-gmax");
 
 		expect(client.fetchPokemon).toHaveBeenCalledTimes(1);
-		expect(await cache.readJson("gigantamax-forms/charizard-gmax.json")).toEqual(detail);
+		expect(detail.artworkDataUri).not.toBeNull();
+		// Stores the image sources, never the session's image URLs.
+		const stored = await cache.readJson("gigantamax-forms/charizard-gmax.json");
+		expect(stored).toMatchObject({ sprites: { front_default: (bulbasaur as unknown as RawPokemon).sprites.front_default } });
+		expect(JSON.stringify(stored)).not.toContain("blob:");
 	});
 
 	it("Mega and Gigantamax caches never collide, even fetched for the same species", async () => {
@@ -701,5 +714,163 @@ describe("PokedexRepository", () => {
 
 		expect(await cache.readJson("mega-forms/venusaur-mega.json")).not.toBeNull();
 		expect(await cache.readJson("gigantamax-forms/venusaur-gmax.json")).not.toBeNull();
+	});
+});
+
+// Images held in memory are blob URLs. Artwork, shiny and shiny artwork sit in
+// an LRU bounded in bytes; sprites stay resident, since table rows keep their
+// sprite URL for the whole view mount and a revoked URL never loads again.
+describe("PokedexRepository image memory", () => {
+	// getEntryExtras loads exactly the three budgeted images and no sprite.
+	function extrasUrls(extras: Awaited<ReturnType<PokedexRepository["getEntryExtras"]>>): string[] {
+		return [extras.artworkDataUri, extras.shinyDataUri, extras.shinyArtworkDataUri].filter((u): u is string => u !== null);
+	}
+
+	it("keeps the budgeted images' bytes within the budget, evicting the least recently used first and revoking each URL as it is evicted", async () => {
+		const { client, objectUrls, repository } = makeRepository(600);
+		client.imageSize = 100;
+
+		const two = extrasUrls(await repository.getEntryExtras(2));
+		const three = extrasUrls(await repository.getEntryExtras(3));
+		// A mem hit makes id 2's images the most recently used.
+		expect(extrasUrls(await repository.getEntryExtras(2))).toEqual(two);
+		const logBeforeFour = objectUrls.log.length;
+		const four = extrasUrls(await repository.getEntryExtras(4));
+
+		expect(objectUrls.peakLiveBytes).toBeLessThanOrEqual(600);
+		expect([...objectUrls.live.keys()].sort()).toEqual([...two, ...four].sort());
+		// Revoked while id 4 loaded, not left for a later clear.
+		const revokedDuringFour = objectUrls.log.slice(logBeforeFour).filter((e) => e.startsWith("revoke "));
+		expect(revokedDuringFour.map((e) => e.slice("revoke ".length)).sort()).toEqual([...three].sort());
+	});
+
+	it("serves an evicted image again from the store, under a new URL", async () => {
+		const { client, objectUrls, repository } = makeRepository(300);
+		client.imageSize = 100;
+
+		const first = await repository.getEntryExtras(2);
+		await repository.getEntryExtras(3);
+		const again = await repository.getEntryExtras(2);
+
+		expect(client.fetchImageBinary).toHaveBeenCalledTimes(6);
+		expect(again.artworkDataUri).not.toBe(first.artworkDataUri);
+		expect(objectUrls.live.has(again.artworkDataUri ?? "")).toBe(true);
+	});
+
+	it("never evicts a sprite to make room", async () => {
+		const { client, objectUrls, repository } = makeRepository(300);
+		client.imageSize = 100;
+		const { rows } = await repository.getTableRows({ start: 1, end: 5 });
+
+		for (const id of [2, 3, 4]) await repository.getEntryExtras(id);
+
+		for (const row of rows) expect(objectUrls.live.has(row.spriteDataUri ?? "")).toBe(true);
+	});
+
+	it("clearAll revokes every live URL, sprites included", async () => {
+		const { objectUrls, repository } = makeRepository();
+		await repository.getTableRows({ start: 1, end: 3 });
+		await repository.getEntryExtras(2);
+		expect(objectUrls.live.size).toBe(6);
+
+		await repository.clearAll();
+
+		expect(objectUrls.live.size).toBe(0);
+	});
+
+	it("clearRange revokes the URLs of the ids it clears and keeps the rest", async () => {
+		const { objectUrls, repository } = makeRepository();
+		const { rows } = await repository.getTableRows({ start: 1, end: 2 });
+		const two = extrasUrls(await repository.getEntryExtras(2));
+		const [one] = rows;
+
+		await repository.clearRange({ id: 1, name: "Test Gen", start: 2, end: 2 });
+
+		expect([...objectUrls.live.keys()]).toEqual([one?.spriteDataUri]);
+		for (const url of [rows[1]?.spriteDataUri, ...two]) expect(objectUrls.log).toContain(`revoke ${url}`);
+	});
+
+	// Mega/Gigantamax forms are cached as a whole record, unlike entries and
+	// rows, so the record must not carry a URL: one evicted (or from an
+	// earlier session) never loads again.
+	function megaUrls(detail: MegaFormDetail): string[] {
+		return [detail.spriteDataUri, detail.artworkDataUri, detail.shinyDataUri, detail.shinyArtworkDataUri].filter(
+			(u): u is string => u !== null,
+		);
+	}
+
+	it("serves a Mega form's images under live URLs after the LRU evicted them", async () => {
+		const { client, objectUrls, repository } = makeRepository(300);
+		client.imageSize = 100;
+		client.variantPokemon.set("venusaur-mega", { ...(bulbasaur as unknown as RawPokemon), name: "venusaur-mega" });
+		await repository.getMegaForm("venusaur-mega");
+		await repository.getEntryExtras(2);
+
+		const again = megaUrls(await repository.getMegaForm("venusaur-mega"));
+
+		expect(again).toHaveLength(4);
+		for (const url of again) expect(objectUrls.live.has(url)).toBe(true);
+	});
+
+	it("serves a Mega form cached in an earlier session under this session's URLs, without refetching it", async () => {
+		const { client, cache } = makeRepository();
+		client.variantPokemon.set("venusaur-mega", { ...(bulbasaur as unknown as RawPokemon), name: "venusaur-mega" });
+		await new PokedexRepository(client, cache, { objectUrls: new RecordingObjectUrls() }).getMegaForm("venusaur-mega");
+		client.fetchPokemon.mockClear();
+		const nextSession = new RecordingObjectUrls();
+
+		const detail = await new PokedexRepository(client, cache, { objectUrls: nextSession }).getMegaForm("venusaur-mega");
+
+		expect(client.fetchPokemon).not.toHaveBeenCalled();
+		expect(detail.types).toEqual(["grass", "poison"]);
+		for (const url of megaUrls(detail)) expect(nextSession.live.has(url)).toBe(true);
+	});
+
+	it("refetches a Mega form record cached with its image URIs inside, the shape before blob URLs", async () => {
+		const { client, cache, objectUrls, repository } = makeRepository();
+		client.variantPokemon.set("venusaur-mega", { ...(bulbasaur as unknown as RawPokemon), name: "venusaur-mega" });
+		await cache.writeJson("mega-forms/venusaur-mega.json", {
+			types: ["grass"],
+			abilities: [],
+			stats: {},
+			spriteDataUri: "data:image/png;base64,AAAA",
+			artworkDataUri: null,
+			shinyDataUri: null,
+			shinyArtworkDataUri: null,
+		});
+
+		const detail = await repository.getMegaForm("venusaur-mega");
+
+		expect(client.fetchPokemon).toHaveBeenCalledWith("venusaur-mega");
+		expect(megaUrls(detail)).toHaveLength(4);
+		for (const url of megaUrls(detail)) expect(objectUrls.live.has(url)).toBe(true);
+	});
+
+	it("cacheRange stores a generation's artwork and shiny images without holding them, so it leaves the open detail's URLs live", async () => {
+		const { client, cache, objectUrls, repository } = makeRepository(300);
+		client.imageSize = 100;
+		const open = extrasUrls(await repository.getEntryExtras(10));
+
+		await repository.cacheRange({ id: 1, name: "Test Gen", start: 1, end: 3 });
+
+		for (const url of open) expect(objectUrls.live.has(url)).toBe(true);
+		// Only the three table sprites were turned into URLs.
+		expect(objectUrls.create).toHaveBeenCalledTimes(open.length + 3);
+		for (const id of [1, 2, 3]) {
+			for (const suffix of ["artwork", "shiny", "shiny-artwork"]) {
+				expect(await cache.exists(`images/${id}-${suffix}.png`)).toBe(true);
+			}
+		}
+	});
+
+	it("maps a held URL back to its cache path, and forgets it once evicted", async () => {
+		const { client, repository } = makeRepository(300);
+		client.imageSize = 100;
+
+		const { artworkDataUri } = await repository.getEntryExtras(2);
+		expect(repository.imagePathOf(artworkDataUri ?? "")).toBe("images/2-artwork.png");
+
+		await repository.getEntryExtras(3);
+		expect(repository.imagePathOf(artworkDataUri ?? "")).toBeNull();
 	});
 });

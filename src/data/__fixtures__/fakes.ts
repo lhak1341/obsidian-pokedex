@@ -1,6 +1,7 @@
 import type { DataAdapter } from "obsidian";
 import { vi } from "vitest";
 import type { CacheStore } from "../CacheStore";
+import type { ObjectUrls } from "../ImageMemory";
 import { PokeApiClient } from "../PokeApiClient";
 import type { RawAbility, RawEvolutionChain, RawMove, RawPokemon, RawSpecies } from "../types";
 import bulbasaurChain from "./bulbasaur-evolution-chain.json";
@@ -119,9 +120,12 @@ export class FakePokeApiClient extends PokeApiClient {
 		return bulbasaurChain as unknown as RawEvolutionChain;
 	});
 
+	// Bytes per fetched image; the image-memory budget tests raise it.
+	imageSize = 4;
+
 	fetchImageBinary = vi.fn(async (): Promise<ArrayBuffer> => {
 		if (this.failImage) throw new Error("fake failure fetching image");
-		return new ArrayBuffer(4);
+		return new ArrayBuffer(this.imageSize);
 	});
 
 	fetchAbility = vi.fn(async (name: string): Promise<RawAbility> => {
@@ -151,4 +155,34 @@ export class FakePokeApiClient extends PokeApiClient {
 			],
 		};
 	});
+}
+
+// Stands in for URL.createObjectURL/revokeObjectURL. `log` records each call
+// as it happens, so a test can show an eviction revoked its URL at eviction
+// time rather than at a later clear; `live` is every URL not yet revoked, and
+// `peakLiveBytes` the most bytes they ever held at once.
+export class RecordingObjectUrls implements ObjectUrls {
+	log: string[] = [];
+	live = new Map<string, Blob>();
+	peakLiveBytes = 0;
+	private next = 0;
+
+	create = vi.fn((blob: Blob): string => {
+		const url = `blob:fake/${this.next++}`;
+		this.live.set(url, blob);
+		this.log.push(`create ${url}`);
+		this.peakLiveBytes = Math.max(this.peakLiveBytes, this.liveBytes());
+		return url;
+	});
+
+	revoke = vi.fn((url: string): void => {
+		this.live.delete(url);
+		this.log.push(`revoke ${url}`);
+	});
+
+	liveBytes(): number {
+		let total = 0;
+		for (const blob of this.live.values()) total += blob.size;
+		return total;
+	}
 }

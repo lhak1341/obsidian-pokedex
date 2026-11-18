@@ -1,6 +1,6 @@
 import { mapWithConcurrency } from "../utils/concurrency";
 import type { CacheStore } from "./CacheStore";
-import { dataUriFromBuffer } from "./dataUri";
+import { browserObjectUrls, IMAGE_MEMORY_BUDGET_BYTES, ImageMemory, type ObjectUrls } from "./ImageMemory";
 import {
 	gigantamaxFormPath,
 	imagePath,
@@ -9,7 +9,7 @@ import {
 	pokemonPath,
 	speciesPath,
 } from "./cachePaths";
-import { ALL_IMAGE_SUFFIXES, type ImageBundle, imageRequests } from "./imageSet";
+import { ALL_IMAGE_SUFFIXES, type ImageBundle, type ImageSources, imageRequests } from "./imageSet";
 import {
 	canonicalizeEvolutionChain,
 	deriveGigantamaxForms,
@@ -61,13 +61,39 @@ export interface TableLoadResult {
 	servedFromCache: boolean;
 }
 
+// What mega-forms/ and gigantamax-forms/ store for a variety: the parts of its
+// /pokemon/{key} response a detail is built from, with the PokeAPI image
+// source URLs (stable) in place of the images (see fetchVarietyForm).
+type VarietyFormSource = Pick<RawPokemon, "types" | "abilities" | "stats"> & {
+	sprites: ImageSources;
+};
+
+function toVarietyFormSource(pokemon: RawPokemon): VarietyFormSource {
+	const { front_default, front_shiny, other } = pokemon.sprites;
+	const artwork = other?.["official-artwork"];
+	return {
+		types: pokemon.types,
+		abilities: pokemon.abilities,
+		stats: pokemon.stats,
+		sprites: {
+			front_default,
+			front_shiny,
+			other: artwork ? { "official-artwork": artwork } : undefined,
+		},
+	};
+}
+
+function isVarietyFormSource(value: unknown): value is VarietyFormSource {
+	return typeof value === "object" && value !== null && "sprites" in value && "types" in value;
+}
+
 // Facade the UI talks to: "give me row/entry data for id X", never worrying
 // about whether that means a cache hit or a live PokeAPI call.
 export class PokedexRepository {
 	// Session-lifetime in-memory layer on top of the CacheStore. The table reload
 	// (settings change, tab close/reopen) is common — PokedexView remounts on
 	// every settings save — and without this, each of those re-reads and
-	// re-parses/re-base64-encodes the same ~400 files from disk even though
+	// re-parses the same ~400 files from disk even though
 	// nothing on disk changed since the last read a moment ago.
 	private pokemonMemCache = new Map<number, RawPokemon>();
 	// Regional-form varieties (e.g. "rattata-alola") are fetched by PokeAPI
@@ -77,7 +103,7 @@ export class PokedexRepository {
 	private pokemonVariantMemCache = new Map<string, RawPokemon>();
 	private speciesMemCache = new Map<number, RawSpecies>();
 	private evolutionChainMemCache = new Map<string, RawEvolutionChain>();
-	private imageMemCache = new Map<string, string>();
+	private imageMemCache: ImageMemory;
 	// Wrapped in the same { description } shape the disk cache stores (see
 	// getAbilityDescription) so getOrFetch's mem/disk/return type lines up as
 	// one T throughout — a bare `string | null` would make a cached null
@@ -86,8 +112,10 @@ export class PokedexRepository {
 	private abilityDescriptionMemCache = new Map<string, { description: string | null }>();
 	private itemDescriptionMemCache = new Map<string, { description: string | null }>();
 	private moveDetailMemCache = new Map<string, MoveDetail>();
-	private megaFormMemCache = new Map<string, MegaFormDetail>();
-	private gigantamaxFormMemCache = new Map<string, GigantamaxFormDetail>();
+	// Image-free records (see VarietyFormSource): the detail itself is rebuilt
+	// per call so its image URLs are always live ones.
+	private megaFormMemCache = new Map<string, VarietyFormSource>();
+	private gigantamaxFormMemCache = new Map<string, VarietyFormSource>();
 	// In-flight dedup for getOrFetch, keyed by disk cache path (globally
 	// unique across every entity type). Without this, two concurrent callers
 	// for the same not-yet-mem-cached key (e.g. two detail-screen loads in
@@ -98,20 +126,17 @@ export class PokedexRepository {
 	// its own comment), so it needs its own in-flight tracking keyed by
 	// relPath instead of cachePath.
 	private imageInFlight = new Map<string, Promise<string | null>>();
-	// Same dedup again for fetchVarietyForm below (also not built on
-	// getOrFetch — see its own comment), keyed by varietyKey. One shared map
-	// for both getMegaForm and getGigantamaxForm, not split per entity type
-	// like the mem caches are: the mem-cache split exists only because Mega
-	// and Gigantamax need two different result types, not because a
-	// varietyKey could collide between them (mega keys end in
-	// -mega/-mega-x/-mega-y, gigantamax keys end in -gmax — see
-	// getMegaForm's own comment on varietyKey uniqueness).
-	private varietyFormInFlight = new Map<string, Promise<unknown>>();
 
 	constructor(
 		private client: PokeApiClient,
 		private cache: CacheStore,
-	) {}
+		options: { objectUrls?: ObjectUrls; imageBudgetBytes?: number } = {},
+	) {
+		this.imageMemCache = new ImageMemory(
+			options.objectUrls ?? browserObjectUrls,
+			options.imageBudgetBytes ?? IMAGE_MEMORY_BUDGET_BYTES,
+		);
+	}
 
 	// Shared shape behind every getOrFetch* method below: check the
 	// session-lifetime mem cache, fall back to disk (running `migrate` on
@@ -271,8 +296,14 @@ export class PokedexRepository {
 		);
 	}
 
-	private async getOrFetchImage(url: string | null, relPath: string): Promise<string | null> {
+	// Sprites stay resident (see ImageMemory): table rows, the hover preview
+	// and dex nav keep a sprite's URL for the whole view mount. The other
+	// suffixes are only held by the detail screen showing them, and go in the
+	// byte-bounded LRU.
+	private async getOrFetchImage(url: string | null, key: number | string, suffix: ImageSuffix): Promise<string | null> {
 		if (!url) return null;
+		const relPath = imagePath(key, suffix);
+		const budgeted = suffix !== "sprite";
 		const mem = this.imageMemCache.get(relPath);
 		if (mem) return mem;
 		const pending = this.imageInFlight.get(relPath);
@@ -280,17 +311,11 @@ export class PokedexRepository {
 
 		const load = (async (): Promise<string | null> => {
 			const cached = await this.cache.readBinary(relPath);
-			if (cached) {
-				const cachedUri = dataUriFromBuffer(relPath, cached);
-				this.imageMemCache.set(relPath, cachedUri);
-				return cachedUri;
-			}
+			if (cached) return this.imageMemCache.put(relPath, cached, budgeted);
 			const buffer = await this.client.fetchImageBinary(url);
 			await this.cache.writeBinary(relPath, buffer);
-			// Encoded from the buffer in hand, not re-read from the store.
-			const dataUri = dataUriFromBuffer(relPath, buffer);
-			this.imageMemCache.set(relPath, dataUri);
-			return dataUri;
+			// Made from the buffer in hand, not re-read from the store.
+			return this.imageMemCache.put(relPath, buffer, budgeted);
 		})();
 
 		this.imageInFlight.set(relPath, load);
@@ -299,6 +324,14 @@ export class PokedexRepository {
 		} finally {
 			this.imageInFlight.delete(relPath);
 		}
+	}
+
+	// The cache path behind an image URL this repository handed out, or null
+	// once it has been evicted or cleared. imageBounds' contentScale memo keys
+	// on it: a blob URL is new each time an evicted image is read back, while
+	// its path is stable.
+	imagePathOf(url: string): string | null {
+		return this.imageMemCache.pathOf(url);
 	}
 
 	// Abilities repeat heavily across species (e.g. "levitate", "intimidate"),
@@ -386,49 +419,43 @@ export class PokedexRepository {
 	// single-value cache (see ADR-0002 for why this doesn't reuse getOrFetch
 	// itself) — but that combined shape IS identical between the two of them,
 	// differing only in which mem cache/disk-path prefix/normalize function
-	// each uses. `normalize` takes the raw pokemon even though
+	// each uses. `normalize` takes the source even though
 	// toGigantamaxFormDetail ignores it (Gigantamax changes no
 	// types/abilities/stats, verified live comparing Gengar vs. gengar-gmax)
 	// — one shared signature, not two.
 	//
-	// No isStale escape hatch, unlike getOrFetchPokemon's pokemonIsStale — if
-	// a field is ever added to MegaFormDetail/GigantamaxFormDetail, an
-	// existing user's cached json will silently stay undefined for that field
-	// forever instead of self-healing. Add one here when that happens (see
-	// getOrFetch's own isStale comment for the pattern); nothing today needs
-	// it, so it isn't speculatively built in.
+	// What is cached (mem and store) is the image-free VarietyFormSource, and
+	// the four images are resolved on every call: a cached image URL is a
+	// blob URL, dead once the LRU evicts it or the session ends. The images
+	// themselves are mem/store hits after the first call. A record in the
+	// pre-blob shape (image URIs inside, no `sprites`) is stale and refetched;
+	// a field added to VarietyFormSource later extends isVarietyFormSource.
 	private async fetchVarietyForm<T>(
 		varietyKey: string,
-		memCache: Map<string, T>,
+		memCache: Map<string, VarietyFormSource>,
 		cachePathFor: (varietyKey: string) => string,
-		normalize: (pokemon: RawPokemon, images: ImageBundle) => T,
+		normalize: (source: VarietyFormSource, images: ImageBundle) => T,
 	): Promise<T> {
-		const mem = memCache.get(varietyKey);
-		if (mem) return mem;
-		const pending = this.varietyFormInFlight.get(varietyKey) as Promise<T> | undefined;
-		if (pending) return pending;
+		const source = await this.getOrFetchVarietyFormSource(varietyKey, memCache, cachePathFor(varietyKey));
+		const images = await this.fetchImages(varietyKey, source.sprites, ALL_IMAGE_SUFFIXES);
+		return normalize(source, images);
+	}
 
-		const cachePath = cachePathFor(varietyKey);
-		const load = (async (): Promise<T> => {
-			const cached = await this.cache.readJson<T>(cachePath);
-			if (cached) {
-				memCache.set(varietyKey, cached);
-				return cached;
-			}
-			const pokemon = await this.client.fetchPokemon(varietyKey);
-			const images = await this.fetchImages(varietyKey, pokemon.sprites, ALL_IMAGE_SUFFIXES);
-			const detail = normalize(pokemon, images);
-			await this.cache.writeJson(cachePath, detail);
-			memCache.set(varietyKey, detail);
-			return detail;
-		})();
-
-		this.varietyFormInFlight.set(varietyKey, load);
-		try {
-			return await load;
-		} finally {
-			this.varietyFormInFlight.delete(varietyKey);
-		}
+	// A plain single-value cache once the images are split off, so it rides
+	// getOrFetch; the shape check is its isStale.
+	private async getOrFetchVarietyFormSource(
+		varietyKey: string,
+		memCache: Map<string, VarietyFormSource>,
+		cachePath: string,
+	): Promise<VarietyFormSource> {
+		return this.getOrFetch(
+			memCache,
+			varietyKey,
+			cachePath,
+			async () => toVarietyFormSource(await this.client.fetchPokemon(varietyKey)),
+			undefined,
+			(cached) => !isVarietyFormSource(cached),
+		);
 	}
 
 	// Mega forms are rare (<40 species out of 900+) and only ever needed when
@@ -596,13 +623,13 @@ export class PokedexRepository {
 	// getRowsForIds), the opposite policy. Suffixes not requested stay null.
 	private async fetchImages(
 		key: number | string,
-		sprites: RawPokemon["sprites"],
+		sprites: ImageSources,
 		suffixes: readonly ImageSuffix[],
 	): Promise<ImageBundle> {
 		const bundle: ImageBundle = { sprite: null, artwork: null, shiny: null, shinyArtwork: null };
 		await Promise.all(
-			imageRequests(key, sprites, suffixes).map(async ({ field, url, relPath }) => {
-				bundle[field] = await this.getOrFetchImage(url, relPath).catch(() => null);
+			imageRequests(key, sprites, suffixes).map(async ({ field, url, suffix }) => {
+				bundle[field] = await this.getOrFetchImage(url, key, suffix).catch(() => null);
 			}),
 		);
 		return bundle;
@@ -636,7 +663,6 @@ export class PokedexRepository {
 		this.gigantamaxFormMemCache.clear();
 		this.inFlight.clear();
 		this.imageInFlight.clear();
-		this.varietyFormInFlight.clear();
 		await this.cache.clear();
 	}
 
@@ -701,7 +727,7 @@ export class PokedexRepository {
 		await mapWithConcurrency(
 			result.rows.map((r) => r.id),
 			FETCH_CONCURRENCY,
-			(id) => this.getEntryExtras(id),
+			(id) => this.prefetchEntryExtras(id),
 			() => {
 				extrasLoaded++;
 				onProgress?.(extrasLoaded, extrasTotal);
@@ -762,16 +788,13 @@ export class PokedexRepository {
 		const fetchRow = async (id: number): Promise<PokedexTableRow[]> => {
 			const pokemon = await this.getOrFetchPokemon(id);
 			const species = await this.getOrFetchSpecies(this.speciesIdFromPokemon(pokemon));
-			const sprite = await this.getOrFetchImage(pokemon.sprites.front_default, imagePath(id, "sprite"));
+			const sprite = await this.getOrFetchImage(pokemon.sprites.front_default, id, "sprite");
 			const builtRows = [toTableRow(pokemon, species, sprite)];
 
 			for (const form of deriveRegionalForms(species)) {
 				try {
 					const formPokemon = await this.getOrFetchPokemonVariant(form.key);
-					const formSprite = await this.getOrFetchImage(
-						formPokemon.sprites.front_default,
-						imagePath(form.key, "sprite"),
-					);
+					const formSprite = await this.getOrFetchImage(formPokemon.sprites.front_default, form.key, "sprite");
 					builtRows.push(toTableRow(formPokemon, species, formSprite));
 				} catch {
 					// skip this one regional variant; the base row above is unaffected
@@ -844,7 +867,7 @@ export class PokedexRepository {
 	async getEntryCore(id: number): Promise<PokedexEntry> {
 		const pokemon = await this.getOrFetchPokemon(id);
 		const species = await this.getOrFetchSpecies(this.speciesIdFromPokemon(pokemon));
-		const sprite = await this.getOrFetchImage(pokemon.sprites.front_default, imagePath(id, "sprite"));
+		const sprite = await this.getOrFetchImage(pokemon.sprites.front_default, id, "sprite");
 		return toEntry(pokemon, species, null, { sprite, artwork: null, shiny: null, shinyArtwork: null });
 	}
 
@@ -876,6 +899,32 @@ export class PokedexRepository {
 		return { artworkDataUri, shinyDataUri, shinyArtworkDataUri, evolutionChain };
 	}
 
+	// cacheRange's extras phase: what getEntryExtras loads, written to the store
+	// only. Going through getEntryExtras would push a generation's ~450 artwork
+	// and shiny images through the image LRU (several times its budget),
+	// revoking the open detail screen's portrait URLs on the way and creating
+	// a blob URL per image that nothing shows. An image already in memory or
+	// the store is skipped, so this never re-downloads.
+	private async prefetchEntryExtras(id: number): Promise<void> {
+		const pokemon = await this.getOrFetchPokemon(id);
+		const species = await this.getOrFetchSpecies(this.speciesIdFromPokemon(pokemon));
+		try {
+			await this.getOrFetchEvolutionChain(species.evolution_chain.url);
+		} catch {
+			// same as getEntryExtras: a missing chain doesn't block the images
+		}
+		await Promise.all(
+			imageRequests(id, pokemon.sprites, ["artwork", "shiny", "shiny-artwork"]).map(({ url, relPath }) =>
+				this.storeImage(url, relPath).catch(() => undefined),
+			),
+		);
+	}
+
+	private async storeImage(url: string | null, relPath: string): Promise<void> {
+		if (!url || this.imageMemCache.has(relPath) || (await this.cache.exists(relPath))) return;
+		await this.cache.writeBinary(relPath, await this.client.fetchImageBinary(url));
+	}
+
 	// Sprite + types for evolution-chain partners shown alongside the
 	// currently viewed entry (see EvolutionTree/EvolutionChain). Every chain
 	// member was already fetched for the table load that got the user here,
@@ -896,10 +945,7 @@ export class PokedexRepository {
 			ids.map(async (id): Promise<readonly [number, EvolutionChainVisual]> => {
 				try {
 					const pokemon = await this.getOrFetchPokemon(id);
-					const sprite = await this.getOrFetchImage(
-						pokemon.sprites.front_default,
-						imagePath(id, "sprite"),
-					);
+					const sprite = await this.getOrFetchImage(pokemon.sprites.front_default, id, "sprite");
 					const types = sortBySlot(pokemon.types).map((t) => t.type.name);
 					return [id, { sprite, types }];
 				} catch {

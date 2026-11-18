@@ -1,6 +1,6 @@
 import type { App } from "obsidian";
 import type { CacheStore } from "./CacheStore";
-import { mimeOf } from "./dataUri";
+import { mimeOf } from "./mime";
 
 // The production CacheStore (ADR-0011): one IndexedDB database per vault per
 // device, so nothing reaches the synced vault and iCloud never makes conflict

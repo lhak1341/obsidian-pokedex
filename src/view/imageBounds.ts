@@ -1,3 +1,5 @@
+import { memoizeByCachePath } from "../utils/memoizeByCachePath";
+
 // Some official-artwork PNGs (PokeAPI's `other.official-artwork` sprites)
 // crop shinier and non-shiny renders of the same species differently — e.g.
 // Mega Houndoom's shiny artwork bounding-boxes to ~31% more area inside the
@@ -10,9 +12,7 @@
 // gives DetailScreen a per-image "how much of its own canvas does the
 // character actually fill" number so it can shrink the outlier back down to
 // match its non-shiny counterpart (see resolvePortraitScale in utils/portrait.ts).
-const cache = new Map<string, Promise<number>>();
-
-function decode(dataUri: string): Promise<number> {
+function decode(url: string): Promise<number> {
 	return new Promise((resolve, reject) => {
 		const img = new Image();
 		img.onload = () => {
@@ -50,18 +50,9 @@ function decode(dataUri: string): Promise<number> {
 			resolve(contentSize / canvasSize);
 		};
 		img.onerror = () => reject(new Error("image decode failed"));
-		img.src = dataUri;
+		img.src = url;
 	});
 }
 
-// Memoized per data URI (a session-stable string, same identity as the
-// mem/disk cache it came from) — avoids re-decoding the same PNG's pixels
-// every time a shiny toggle flips back and forth.
-export function contentScale(dataUri: string): Promise<number> {
-	let pending = cache.get(dataUri);
-	if (!pending) {
-		pending = decode(dataUri);
-		cache.set(dataUri, pending);
-	}
-	return pending;
-}
+// Memoized by image cache path, never by URL (see memoizeByCachePath).
+export const contentScale = memoizeByCachePath(decode);

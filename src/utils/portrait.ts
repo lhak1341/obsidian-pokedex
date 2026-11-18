@@ -35,7 +35,8 @@ export function resolvePortrait(
 // counterpart's on-screen size (see imageBounds.ts for why shiny artwork can
 // crop tighter). 1 whenever no correction applies; never above 1, so the
 // non-shiny baseline's own size never changes. `measure` is injected (the
-// view passes imageBounds.ts's contentScale, which needs a DOM canvas) so the
+// view passes imageBounds.ts's contentScale, keyed by the image's cache path,
+// and it needs a DOM canvas) so the
 // rule is testable without one. null means "no usable measurement, keep the
 // previous scale": the view must not overwrite it. A rejected `measure`
 // propagates to the caller.

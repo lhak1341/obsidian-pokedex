@@ -2,7 +2,8 @@ import type { PokedexRepository } from "../data/PokedexRepository";
 import type { GigantamaxFormDetail, MegaFormDetail } from "../data/types";
 
 // Owns which Mega/Gigantamax variety (if any) DetailScreen currently shows,
-// and the session-lifetime cache of forms already fetched. Plain,
+// and the session-lifetime cache of forms already fetched (refreshed on each
+// select, see selectMega). Plain,
 // non-reactive class (same shape as DetailLoadState/DetailNavigationState) —
 // DetailScreen mirrors these fields into its own $state after every
 // onUpdate, since Svelte 5's $state only deep-proxies plain objects/arrays,
@@ -50,11 +51,16 @@ export class VarietyToggleState {
 	// until a retry click succeeds, same as a dropped shiny/artwork fetch
 	// elsewhere in this view not taking down the rest of the entry — but
 	// swallowed explicitly now, rather than left as an unhandled rejection.
+	//
+	// A form already in the cache is still asked for again: its image URLs
+	// are blob URLs the repository's LRU may have evicted (and revoked) since,
+	// and a revoked URL never loads. The repository answers from memory, so
+	// this costs no fetch; the cached detail shows until the fresh one lands.
 	selectMega(key: string | null, onUpdate?: () => void): void {
 		this.activeMegaKey = key;
 		if (key) this.activeGigantamaxKey = null;
 		onUpdate?.();
-		if (key && !(key in this.megaFormCache)) {
+		if (key) {
 			this.repository
 				.getMegaForm(key)
 				.then((detail) => {
@@ -69,7 +75,7 @@ export class VarietyToggleState {
 		this.activeGigantamaxKey = key;
 		if (key) this.activeMegaKey = null;
 		onUpdate?.();
-		if (key && !(key in this.gigantamaxFormCache)) {
+		if (key) {
 			this.repository
 				.getGigantamaxForm(key)
 				.then((detail) => {

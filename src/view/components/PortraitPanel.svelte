@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { PluginSettings, PokedexEntry, PortraitImageSource } from "../../data/types";
-	import { contentScale } from "../imageBounds";
 	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { resolvePortrait, resolvePortraitScale } from "../../utils/portrait";
 	import Icon from "./Icon.svelte";
@@ -34,6 +33,7 @@
 		onSelectGigantamax,
 		onHoverPortrait,
 		onLeavePortrait,
+		measure,
 		portraitScale = $bindable(),
 	}: {
 		entry: PokedexEntry;
@@ -51,6 +51,10 @@
 		onSelectGigantamax: (key: string | null) => void;
 		onHoverPortrait: (target: EventTarget | null) => void;
 		onLeavePortrait: () => void;
+		// imageBounds.ts's contentScale, keyed by the image's cache path —
+		// DetailScreen builds it, since it holds the repository that maps a
+		// URL back to its path.
+		measure: (uri: string) => Promise<number>;
 		portraitScale: number;
 	} = $props();
 
@@ -74,7 +78,7 @@
 			style: spriteStyle,
 			baseUri: basePortraitUri,
 			currentUri: portraitUri,
-			measure: contentScale,
+			measure,
 		}).then((scale) => {
 			if (!cancelled && scale !== null) portraitScale = scale;
 		});

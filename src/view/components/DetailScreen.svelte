@@ -11,6 +11,7 @@
 	import { DetailLoadState, type DetailEntrySnapshot } from "../DetailLoadState";
 	import { isEditableTarget } from "../domTarget";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
+	import { contentScale } from "../imageBounds";
 	import EvolutionTree from "./EvolutionTree.svelte";
 	import FlavorTextPanel from "./FlavorTextPanel.svelte";
 	import HeldItemsPanel from "./HeldItemsPanel.svelte";
@@ -138,6 +139,11 @@
 		return source ? resolvePortrait(source, spriteStyle, showShiny) : null;
 	});
 	let portraitScale = $state(1);
+	// contentScale's memo is keyed by cache path, which only the repository
+	// can recover from a blob URL (see imageBounds.ts). An evicted URL has no
+	// path any more; keying it by itself is harmless, as its decode fails and
+	// is not memoized.
+	const measurePortrait = (uri: string) => contentScale(repository.imagePathOf(uri) ?? uri, uri);
 
 	// Hover-to-enlarge for the portrait, mirroring TableScreen's
 	// sprite-preview (same side-anchored-with-vertical-clamp shape, shared
@@ -316,6 +322,7 @@
 					onSelectGigantamax={selectGigantamaxForm}
 					onHoverPortrait={showPortraitPreview}
 					onLeavePortrait={hidePortraitPreview}
+					measure={measurePortrait}
 					bind:portraitScale
 				/>
 

@@ -16,7 +16,11 @@ export interface ImageBundle {
 // a row here fails typecheck; ALL_IMAGE_SUFFIXES is derived from it, so the
 // delete side (PokedexRepository.clearRange) cannot miss a suffix any fetch
 // site writes.
-const IMAGE_SET: Record<ImageSuffix, { field: keyof ImageBundle; url: (s: RawPokemon["sprites"]) => string | null }> = {
+// The RawPokemon.sprites fields IMAGE_SET reads — all a variety form's cached
+// record keeps (PokedexRepository's VarietyFormSource).
+export type ImageSources = Pick<RawPokemon["sprites"], "front_default" | "front_shiny" | "other">;
+
+const IMAGE_SET: Record<ImageSuffix, { field: keyof ImageBundle; url: (s: ImageSources) => string | null }> = {
 	sprite: { field: "sprite", url: (s) => s.front_default },
 	artwork: { field: "artwork", url: (s) => s.other?.["official-artwork"]?.front_default ?? null },
 	shiny: { field: "shiny", url: (s) => s.front_shiny },
@@ -37,7 +41,7 @@ export interface ImageRequest {
 // testable without a cache or client.
 export function imageRequests(
 	key: number | string,
-	sprites: RawPokemon["sprites"],
+	sprites: ImageSources,
 	suffixes: readonly ImageSuffix[] = ALL_IMAGE_SUFFIXES,
 ): ImageRequest[] {
 	return suffixes.map((suffix) => ({

@@ -10,8 +10,8 @@ export interface CacheStore {
 	// null for a missing or unreadable entry — a miss, never a throw.
 	readJson<T>(key: string): Promise<T | null>;
 	writeJson(key: string, data: unknown): Promise<void>;
-	// Raw bytes; null for a miss. Display encoding (data URI today) is the
-	// caller's, so a store never needs to know how an image is shown.
+	// Raw bytes; null for a miss. How an image is shown (a blob URL, made by
+	// the repository's ImageMemory) is the caller's business, not the store's.
 	readBinary(key: string): Promise<ArrayBuffer | null>;
 	writeBinary(key: string, buffer: ArrayBuffer): Promise<void>;
 	exists(key: string): Promise<boolean>;

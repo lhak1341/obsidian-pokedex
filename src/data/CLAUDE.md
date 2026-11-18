@@ -81,8 +81,20 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `CacheStore`/`IndexedDbCacheStor
 `IndexedDbCacheStore`; repository and load-state tests pass `MemoryCacheStore`
 (`__fixtures__/fakes.ts`). The IndexedDB store is untested by convention (no IndexedDB under
 vitest), so check it live. A new repository cache operation goes on the port and on both stores.
-Stores hold image bytes only; the repository encodes the data URI (`dataUri.ts`), so a
-store never learns how an image is displayed (#18's blob-URL LRU swaps that encoding).
+Stores hold image bytes only. The repository's `ImageMemory` turns them into blob URLs
+(`createObjectURL`/`revokeObjectURL` injected; tests pass `RecordingObjectUrls`). Artwork,
+shiny and shiny-artwork sit in an LRU bounded by `IMAGE_MEMORY_BUDGET_BYTES` and are revoked
+on eviction; sprites stay resident until `clearRange`/`clearAll`. A revoked blob URL never
+loads in a new `<img>` (probed in Obsidian), and table rows, the hover preview and dex nav
+keep their sprite URL for the whole view mount, so budgeting a URL a long-lived view holds
+breaks every `<img>` re-created from it (the hover preview makes one per hover; a filter
+change remounting rows is inferred, not probed). The `*DataUri` field names predate this and now hold blob
+URLs. `imagePathOf(url)` maps a held URL back to its cache path (`contentScale`'s memo key).
+Anything that keeps a detail across calls must re-ask the repository rather than reuse its
+URLs: `VarietyToggleState` re-requests a cached form on every select (a memory hit), and
+`mega-forms/`/`gigantamax-forms/` store an image-free `VarietyFormSource` (ADR-0002 addendum).
+`cacheRange` writes extras bytes to the store without creating URLs (`prefetchEntryExtras`),
+so a generation prefetch can't flush the LRU under an open detail screen.
 
 The cache is per device, in IndexedDB, never in the vault (ADR-0011). One database per vault
 per device: `pokedex-cache-<key>`, with `<key>` in `app.loadLocalStorage('pokedex-cache-key')`.

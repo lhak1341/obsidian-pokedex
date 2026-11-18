@@ -902,7 +902,7 @@ export function toGigantamaxFormDetail(images: ImageBundle): GigantamaxFormDetai
 // Mega (breeding, moves, evolution, flavor text) stays the base species'
 // own data, since Mega is a battle-only transform, not a distinct entry.
 export function toMegaFormDetail(
-	pokemon: RawPokemon,
+	pokemon: Pick<RawPokemon, "types" | "abilities" | "stats">,
 	images: ImageBundle,
 ): MegaFormDetail {
 	return {
