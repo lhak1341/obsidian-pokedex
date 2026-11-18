@@ -82,6 +82,10 @@ The up-to-four images a Pokemon (or a Mega/Gigantamax variety) can own: `sprite`
 
 The browse screen showing each Pokemon as a card instead of a table row. Same rows, filters, sort, favourites and Active Gen scoping as the table; only the presentation differs. The table is the other layout of the same browse screen, not a separate screen.
 
+## Narrow pane
+
+A Pokédex pane narrower than 600px, judged by the pane's own width, not the device (a phone, a split iPad pane, a thin desktop sidebar all count). Narrow and wide panes each remember their own choice of table or Card view; a narrow pane starts in Card view, a wide one in the table. Choosing a layout in one never changes the other, so picking cards on a phone leaves the desktop's table alone.
+
 ## Fields
 
 The pieces of per-Pokemon data the user chooses to show on the browse screen (Total, EV yield, held items, catch rate, ...). There is one selection, shared by both layouts: switching between the table and Card view changes how the chosen Fields are drawn, never which ones are shown. A chosen Field appears as a column in the table; in Card view it appears on the tile (stats, Total, EV yield) or in the tap panel (every chosen Field, with its exact value). An unchosen Field appears nowhere, and is not offered as a sort. "Columns" is the table-only name for the same thing and is being retired as the user-facing term.

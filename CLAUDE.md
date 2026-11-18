@@ -73,6 +73,7 @@ roles, which resolve only under `.lk-root` (`PokedexView`'s `contentEl`).
   `src/styles/pokemon-colours.css` (`--pkdx-type-*`, `--pkdx-stat-*`), named in
   `stylelint.config.mjs`. `TYPE_COLORS`/`STAT_COLORS` hold `var()` names into it;
   `src/styles.test.ts` pins that the two lists match. Any other colour takes a `--lk-` role.
+- Under Obsidian, `--lk-surface-raised` is `--lk-surface` (both `--background-primary`) and `--lk-surface-sunken` differs by ~2%, so a panel filled with either vanishes against the view: separate it with `--lk-border-strong` or a `color-mix` tint of `--lk-text`.
 - PKDX's own variables take `--pkdx-`; `--pkx-` is retired and fails lint.
 - Svelte appends each component's `<style>` to the end of `<head>` at first mount, after the
   plugin's `styles.css`, and its scoped selectors carry an extra class. So a scoped rule beats a
