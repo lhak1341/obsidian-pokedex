@@ -982,14 +982,11 @@ describe("toTableRow", () => {
 });
 
 describe("toEntry", () => {
+	const noImages = { sprite: null, artwork: null, shiny: null, shinyArtwork: null };
+
 	it("merges pokemon, species, and evolution chain into one record", () => {
 		const node = normalizeEvolutionChain(chain.chain);
-		const entry = toEntry(pokemon, species, node, {
-			sprite: null,
-			artwork: null,
-			shiny: null,
-			shinyArtwork: null,
-		});
+		const entry = toEntry(pokemon, species, node, noImages);
 		expect(entry.eggGroups).toEqual(["monster", "plant"]);
 		expect(entry.hatchCounter).toBe(20);
 		expect(entry.catchRate).toBe(45);
@@ -1001,6 +998,26 @@ describe("toEntry", () => {
 		// Bulbasaur is the FIRST of its 3 stages, not the last — unlike
 		// evolutionStages (a whole-family value), isFinalStage is per-species.
 		expect(entry.isFinalStage).toBe(false);
+	});
+
+	it("carries a single-stat EV yield (Bulbasaur: 1 Sp. Atk)", () => {
+		const entry = toEntry(pokemon, species, null, noImages);
+		expect(entry.evYield).toEqual([{ stat: "specialAttack", amount: 1 }]);
+	});
+
+	it("carries a three-stat EV yield in stat order (Infernape: 1 Atk, 1 Sp. Atk, 1 Speed)", () => {
+		// Infernape's real effort values, on the Bulbasaur fixture's stat list.
+		const effort: Record<string, number> = { attack: 1, "special-attack": 1, speed: 1 };
+		const infernape: RawPokemon = {
+			...pokemon,
+			stats: pokemon.stats.map((s) => ({ ...s, effort: effort[s.stat.name] ?? 0 })),
+		};
+		const entry = toEntry(infernape, species, null, noImages);
+		expect(entry.evYield).toEqual([
+			{ stat: "attack", amount: 1 },
+			{ stat: "specialAttack", amount: 1 },
+			{ stat: "speed", amount: 1 },
+		]);
 	});
 });
 

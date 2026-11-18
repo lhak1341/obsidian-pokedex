@@ -69,9 +69,9 @@ export default class PokedexPlugin extends Plugin {
 	}
 
 	// Same "persist without forcing every open tab to remount" reasoning as
-	// setVisibleFields above — the table already updates its own favorite
-	// marker/right-click state locally the instant a row is toggled, so a
-	// full saveSettings()-triggered refresh would just be a redundant (and
+	// setVisibleFields above — PokedexApp owns the favourite set and updates
+	// the table and detail screen the instant one is toggled, so a full
+	// saveSettings()-triggered refresh would just be a redundant (and
 	// disruptive: it'd reset scroll/sort/filter state) re-render of what's
 	// already on screen.
 	async setFavorites(ids: number[]): Promise<void> {

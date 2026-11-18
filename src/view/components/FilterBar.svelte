@@ -437,7 +437,7 @@
 		text-transform: none;
 	}
 	/* EV chips: the pattern's category dot, in the stat's domain colour (the
-	same STAT_COLORS hue per stat as TableScreen's .ev-chip and StatBars). */
+	same STAT_COLORS hue per stat as EvChips.svelte's .ev-chip and StatBars). */
 	.filter-chip .lk-chip__dot {
 		background: var(--pkdx-ev-colour);
 	}

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Notice } from "obsidian";
-	import { onDestroy, onMount, tick } from "svelte";
+	import { onDestroy, onMount, tick, untrack } from "svelte";
 	import type { PokedexRepository } from "../data/PokedexRepository";
 	import type { PluginSettings } from "../data/types";
 	import { resolveGenerationScope } from "../utils/generationScope";
@@ -17,6 +17,21 @@
 		onFieldsChange: (fields: string[]) => void;
 		onFavoritesChange: (ids: number[]) => void;
 	} = $props();
+
+	// Favourites are owned here, above both screens, so the table, the detail
+	// screen (and later Card view) read one set and a toggle on either shows on
+	// the other at once. Seeded once from settings and never re-seeded: saves go
+	// out through onFavoritesChange (PokedexPlugin.setFavorites), which does not
+	// remount the view.
+	let favoriteIds = $state<ReadonlySet<number>>(new Set(untrack(() => settings.favoritePokemonIds)));
+
+	function toggleFavorite(id: number) {
+		const next = new Set(favoriteIds);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		favoriteIds = next;
+		onFavoritesChange([...next]);
+	}
 
 	let screen = $state<"table" | "detail">("table");
 	let selectedId = $state<number | null>(null);
@@ -175,9 +190,9 @@
 				useTypeIcons={settings.useTypeIcons}
 				{repository}
 				activeGen={settings.activeGen}
-				initialFavoriteIds={settings.favoritePokemonIds}
+				{favoriteIds}
 				{onFieldsChange}
-				{onFavoritesChange}
+				onToggleFavorite={toggleFavorite}
 				onSelect={openDetail}
 			/>
 		</div>
@@ -189,6 +204,8 @@
 				spriteStyle={settings.spriteStyle}
 				useTypeIcons={settings.useTypeIcons}
 				activeGen={settings.activeGen}
+				isFavorite={favoriteIds.has(selectedId)}
+				onToggleFavorite={toggleFavorite}
 				onBack={backToTable}
 				onSelect={openDetail}
 			/>

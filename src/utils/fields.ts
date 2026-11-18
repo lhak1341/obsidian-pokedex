@@ -10,13 +10,13 @@ import { totalStat } from "./stats";
 // FieldKey), and Card view will draw it on the tile and in the tap panel.
 // Order is menu order: stats in stat order, then the Other Fields.
 
-// Exported for the EV yield cell, which renders coloured chips (see
-// STAT_COLORS) rather than a plain-text join, but still needs the same
-// stat-key-to-abbreviation lookup.
+// Exported for EvChips.svelte (the table's EV cell and the detail screen),
+// which renders coloured chips (see STAT_COLORS) rather than a plain-text
+// join, but still needs the same stat-key-to-abbreviation lookup.
 export const STAT_LABEL_BY_KEY = new Map(STAT_COLUMNS.map((c) => [c.key, c.label]));
 
 // The EV yield as one string — the chip cell's hover tooltip. The cell body
-// itself is drawn by TableScreen, so this is not a `render`.
+// itself is drawn by EvChips.svelte, so this is not a `render`.
 export function formatEvYield(row: PokedexTableRow): string {
 	return row.evYield.length === 0
 		? "-"

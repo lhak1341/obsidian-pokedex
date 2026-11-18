@@ -8,6 +8,8 @@
 	import type { MoveDetail, PokedexTableRow, PluginSettings } from "../../data/types";
 	import AbilitiesPanel from "./AbilitiesPanel.svelte";
 	import BarRow from "./BarRow.svelte";
+	import EvChips from "./EvChips.svelte";
+	import FavoriteToggle from "./FavoriteToggle.svelte";
 	import { DetailLoadState, type DetailEntrySnapshot } from "../DetailLoadState";
 	import { isEditableTarget } from "../domTarget";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
@@ -38,13 +40,17 @@
 	const MAX_CATCH_RATE = 255;
 	const MAX_HATCH_COUNTER = 120;
 
-	let { repository, id, rows, spriteStyle, useTypeIcons, activeGen, onBack, onSelect }: {
+	let {
+		repository, id, rows, spriteStyle, useTypeIcons, activeGen, isFavorite, onToggleFavorite, onBack, onSelect,
+	}: {
 		repository: PokedexRepository;
 		id: number;
 		rows: PokedexTableRow[];
 		spriteStyle: PluginSettings["spriteStyle"];
 		useTypeIcons: boolean;
 		activeGen: number;
+		isFavorite: boolean;
+		onToggleFavorite: (id: number) => void;
 		onBack: () => void;
 		onSelect: (id: number) => void;
 	} = $props();
@@ -328,7 +334,10 @@
 
 				<div class="name-block">
 					<p class="dex-eyebrow">No. {formatDexNumber(entry.dexNumber)} ({romanNumeral(entry.generationId)})</p>
-					<p class="mon-name" role="heading" aria-level="2">{formatPokemonDisplayName(entry)}</p>
+					<div class="name-line">
+						<p class="mon-name" role="heading" aria-level="2">{formatPokemonDisplayName(entry)}</p>
+						<FavoriteToggle active={isFavorite} onToggle={() => onToggleFavorite(entry.id)} size={18} />
+					</div>
 					<div class="type-row">
 						{#each (activeMegaData ?? entry).types as type (type)}
 							<TypeBadge {type} useIcon={useTypeIcons} />
@@ -344,6 +353,10 @@
 					<div>
 						<dt>Weight</dt>
 						<dd>{formatWeight(entry.weight)}</dd>
+					</div>
+					<div class="ev-readout">
+						<dt>EV yield</dt>
+						<dd><EvChips evYield={entry.evYield} /></dd>
 					</div>
 				</dl>
 				<FlavorTextPanel flavorTexts={entry.flavorTexts} {activeGen} />
@@ -651,6 +664,12 @@
 		line-height: 1.2;
 		color: var(--pkdx-accent);
 	}
+	.name-line {
+		/* No gap: FavoriteToggle carries its own spacing after the name, the
+		same in the table's name cell. */
+		display: flex;
+		align-items: center;
+	}
 	.mon-name {
 		margin: 0;
 		font-size: 1.5rem;
@@ -666,11 +685,12 @@
 		margin-top: 5px;
 	}
 	.physical-readout {
-		/* Two equal columns (not flex + gap) so Weight's box always starts
-		exactly at the column's halfway point, independent of how wide
-		Height's own value happens to render. */
+		/* Height and Weight size to their short values; EV yield takes the rest
+		of the row, its chips wrapping inside it (a three-stat yield needs more
+		than a third of the 240px identity rail). */
 		display: grid;
-		grid-template-columns: 1fr 1fr;
+		grid-template-columns: auto auto 1fr;
+		column-gap: 16px;
 		margin: 0;
 	}
 	.physical-readout div {

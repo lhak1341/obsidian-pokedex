@@ -36,11 +36,15 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   Quirks filter in one session. `filterPokemon`'s `FilterContext.activeGen` is required for the
   same reason (no silent any-generation fallback).
 - Stats in the browse table are Active Gen scoped by `scopeRowsToGen` (`utils/stats.ts`), applied once as `TableScreen`'s `scopedRows`; filter, sort and `col.render` take those rows. A new table reader must be fed `scopedRows`, not the raw `rows` prop, or it shows latest-game stats (`row.stats` itself is unscoped).
+- Favourites are owned by `PokedexApp.svelte` (`favoriteIds` + `toggleFavorite`), above both
+  screens; the table takes the set, the detail screen takes its one `isFavorite`, both take
+  `onToggleFavorite` and draw `FavoriteToggle.svelte`, so a toggle on one shows on the other with no reload. A new layout
+  (Card view) reads the same props; it must not keep its own copy.
 - Fields (`utils/fields.ts`, `FIELDS`) are `{ render }` text Fields or `{ custom: CustomCell }`
   Fields the layout draws itself; the table's width/floor/alignment per Field is
   `TABLE_GEOMETRY` in `utils/tableColumns.ts` (keyed by `FieldKey`), joined as `TABLE_COLUMNS`. TableScreen
-  draws custom cells itself (`heldItems`, `encounterLocation`: they need the Active Gen; `ev`: it draws chips,
-  its tooltip text is `formatEvYield`). A custom Field has no `render`; do not add a text
+  draws custom cells itself (`heldItems`, `encounterLocation`: they need the Active Gen; `ev`: chips via `EvChips.svelte`,
+  shared with the detail screen; its tooltip text is `formatEvYield`). A custom Field has no `render`; do not add a text
   fallback (for the Active Gen Fields it can only show every generation's data). A new custom
   Field needs its own `col.custom === …` branch in `TableScreen.svelte`; there is no default
   (an unhandled value renders an empty `<td>`, and `tsc` cannot check the template), so
@@ -129,7 +133,7 @@ layout that frames an image tightly must size and centre it by its alpha bbox, n
   SVGs from rendered table headers, inlines them, or harvests them from a remount with the
   setting flipped in memory only (`useTypeIcons` for type icons: badge mode renders none).
 - A `$state` field seeded once via `untrack(() => initialX)` (TableScreen.svelte's
-  `visibleFieldKeys`, `sortColumn`, `favoriteIds`) never re-seeds when its prop changes —
+  `visibleFieldKeys`, `sortColumn`; PokedexApp.svelte's `favoriteIds`) never re-seeds when its prop changes —
   it owns the value locally and only pushes out via a callback. Verifying one live via eval
   needs a real remount (force `saveSettings()`'s refresh, or the leaf swap above), not just
   mutating `plugin.settings.X` in place.

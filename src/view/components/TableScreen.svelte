@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Menu } from "obsidian";
-	import { STAT_COLORS } from "../../data/constants";
 	import type { PokedexRepository } from "../../data/PokedexRepository";
 	import type { PokedexTableRow } from "../../data/types";
 	import { EMPTY_FILTERS, filterPokemon } from "../../utils/filterPokemon";
@@ -9,12 +8,14 @@
 	import { formatDexNumber, formatItemName, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { sortPokemon, type SortColumn, type SortDirection } from "../../utils/sortPokemon";
 	import { scopeRowsToGen } from "../../utils/stats";
-	import { FIELDS, formatEvYield, isStatField, sortAfterFieldsChange, STAT_LABEL_BY_KEY } from "../../utils/fields";
+	import { FIELDS, formatEvYield, isStatField, sortAfterFieldsChange } from "../../utils/fields";
 	import { TABLE_COLUMNS } from "../../utils/tableColumns";
 	import { untrack } from "svelte";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
 	import { createHoverDescription } from "../hoverDescription.svelte";
 	import { createHoverPopover } from "../hoverPopover.svelte";
+	import EvChips from "./EvChips.svelte";
+	import FavoriteToggle from "./FavoriteToggle.svelte";
 	import FilterBar from "./FilterBar.svelte";
 	import HoverPopoverBox from "./HoverPopoverBox.svelte";
 	import Icon from "./Icon.svelte";
@@ -22,7 +23,7 @@
 
 	let {
 		rows, density, defaultSortColumn, initialVisibleFields, useTypeIcons, repository, activeGen,
-		initialFavoriteIds, onFieldsChange, onFavoritesChange, onSelect,
+		favoriteIds, onFieldsChange, onToggleFavorite, onSelect,
 	}: {
 		rows: PokedexTableRow[];
 		density: "compact" | "comfortable";
@@ -31,9 +32,9 @@
 		useTypeIcons: boolean;
 		repository: PokedexRepository;
 		activeGen: number;
-		initialFavoriteIds: number[];
+		favoriteIds: ReadonlySet<number>;
 		onFieldsChange: (fields: string[]) => void;
-		onFavoritesChange: (ids: number[]) => void;
+		onToggleFavorite: (id: number) => void;
 		onSelect: (id: number) => void;
 	} = $props();
 
@@ -99,9 +100,6 @@
 	// the user's in-table sort choice shouldn't get clobbered if it changes.
 	let sortColumn = $state<SortColumn>(untrack(() => defaultSortColumn));
 	let sortDirection = $state<SortDirection>("asc");
-	// Same "seed once, own it locally, push changes up via callback" shape as
-	// visibleFieldKeys/toggleField below.
-	let favoriteIds = $state(new Set(untrack(() => initialFavoriteIds)));
 
 	const abilityOptions = $derived(
 		[...new Set(rows.flatMap((r) => r.abilityNames))].sort(),
@@ -160,14 +158,6 @@
 		onFieldsChange([...next]);
 	}
 
-	function toggleFavorite(id: number) {
-		const next = new Set(favoriteIds);
-		if (next.has(id)) next.delete(id);
-		else next.add(id);
-		favoriteIds = next;
-		onFavoritesChange([...next]);
-	}
-
 	function showRowMenu(e: MouseEvent, row: PokedexTableRow) {
 		e.preventDefault();
 		const isFavorite = favoriteIds.has(row.id);
@@ -176,7 +166,7 @@
 			item
 				.setTitle(isFavorite ? "Remove from favorites" : "Add to favorites")
 				.setIcon("asterisk")
-				.onClick(() => toggleFavorite(row.id))
+				.onClick(() => onToggleFavorite(row.id))
 		);
 		menu.showAtMouseEvent(e);
 	}
@@ -276,13 +266,11 @@
 							{/if}
 						</td>
 						<td class="name-cell">
-						{formatPokemonDisplayName(row)}
-						{#if favoriteIds.has(row.id)}
-							<span class="favorite-mark" title="Favorited">
-								<Icon name="asterisk" size={13} strokeWidth={2.5} />
-							</span>
-						{/if}
-					</td>
+							{formatPokemonDisplayName(row)}<FavoriteToggle
+								active={favoriteIds.has(row.id)}
+								onToggle={() => onToggleFavorite(row.id)}
+							/>
+						</td>
 						<td>
 							{#each row.types as type (type)}
 								{#if useTypeIcons}
@@ -325,15 +313,7 @@
 									<td title={encounters.tooltip}>{encounters.isEmpty ? "-" : encounters.summary}</td>
 								{:else if col.custom === "ev"}
 									<td title={formatEvYield(row)}>
-										<div class="ev-cell">
-											{#each row.evYield as y (y.stat)}
-												<span class="ev-chip" style:--pkdx-ev-colour={STAT_COLORS[y.stat]}>
-													{y.amount} {STAT_LABEL_BY_KEY.get(y.stat) ?? y.stat}
-												</span>
-											{:else}
-												<span class="ev-empty">-</span>
-											{/each}
-										</div>
+										<EvChips evYield={row.evYield} />
 									</td>
 								{:else}
 									<!-- A CustomCell with no branch above: keep the row aligned (tsc skips .svelte). -->
@@ -518,46 +498,6 @@
 	.name-cell {
 		text-transform: capitalize;
 		font-weight: 600;
-	}
-	.favorite-mark {
-		display: inline-flex;
-		vertical-align: middle;
-		margin-left: 4px;
-		color: var(--lk-accent);
-	}
-	.ev-cell {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 4px;
-	}
-	/* Same STAT_COLORS hue per stat as the detail screen's StatBars/BarRow —
-	but, like BarRow, that color stays an accent (dot + tinted background/
-	border via color-mix) rather than the text fill: several of these hues
-	(hp's lime, attack's yellow) read poorly as small text on a light theme's
-	near-white background, so the label itself stays var(--lk-text). */
-	.ev-chip {
-		display: inline-flex;
-		align-items: center;
-		gap: 5px;
-		padding: 2px 8px 2px 6px;
-		border-radius: 999px;
-		font-size: 0.78em;
-		font-weight: 600;
-		white-space: nowrap;
-		color: var(--lk-text);
-		background: color-mix(in srgb, var(--pkdx-ev-colour) 14%, var(--lk-surface));
-		border: 1px solid color-mix(in srgb, var(--pkdx-ev-colour) 45%, var(--lk-border));
-	}
-	.ev-chip::before {
-		content: "";
-		width: 7px;
-		height: 7px;
-		flex-shrink: 0;
-		border-radius: 50%;
-		background: var(--pkdx-ev-colour);
-	}
-	.ev-empty {
-		color: var(--lk-text-faint);
 	}
 	.held-item-name {
 		cursor: help;
