@@ -18,8 +18,8 @@ also has a `test-vault`. Its cache starts empty, so the first open fetches from 
    `Command "eval" not found` from `vault=pokedex-test-vault` means its window is closed, not
    that a plugin is missing. A freshly opened window is hidden (`document.visibilityState`),
    which throttles it: an async eval hung past 120 s and screenshots go stale. Run
-   `const w=require('electron').remote.getCurrentWindow(); w.setBackgroundThrottling(false); w.focus()`
-   and confirm `"visible"` (`moveTop()` alone left it hidden).
+   `const w=require('electron').remote.getCurrentWindow(); w.setBackgroundThrottling(false); w.show(); w.focus()`
+   and confirm `"visible"` (`moveTop()` or `focus()` without `show()` left it hidden).
 3. `obsidian vault=pokedex-test-vault dev:mobile on` (reloads that window).
    **The flag is global** (unprefixed `localStorage.EmulateMobile`): any other vault window
    that reloads while it is on comes up in mobile mode too. Always end with step 7.

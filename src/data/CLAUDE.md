@@ -17,7 +17,7 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `CacheStore`/`IndexedDbCacheStor
   narrow `Pick<PokedexRepository, …>` plus `vi.fn()` stubs; reserve the heavier
   repository + `FakePokeApiClient` stack (`PokedexLoadState.test.ts`,
   `DetailLoadState.test.ts`) for classes that need real fetch/cache behavior.
-- `FakePokeApiClient` ids are not independent: every fake pokemon is the bulbasaur fixture, so each id's species fetch resolves to species id 1, and `failIds.add(1)` fails them all. Use ids ≥ 2 to fail one id (`PokedexLoadState.test.ts`, "retry() reports ids still failing").
+- `FakePokeApiClient` ids share one species: every fake pokemon is the bulbasaur fixture, whose species is id 1, so anything keyed by species id sees only species 1. `failIds.add(1)` fails every id (use ids ≥ 2 to fail one: `PokedexLoadState.test.ts`, "retry() reports ids still failing"), and `getCacheStatus` counts only id 1 as cached, since `species/N.json` is never written for N ≥ 2.
 - Adding a genuinely new field to a raw PokeAPI response (e.g. `held_items` — as opposed to
   a trim-down of something already cached, like `moves`/`flavor_text_entries`) needs a
   matching `isStale` check on its `getOrFetch` call in `PokedexRepository.ts`. Otherwise an
@@ -81,20 +81,18 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `CacheStore`/`IndexedDbCacheStor
 `IndexedDbCacheStore`; repository and load-state tests pass `MemoryCacheStore`
 (`__fixtures__/fakes.ts`). The IndexedDB store is untested by convention (no IndexedDB under
 vitest), so check it live. A new repository cache operation goes on the port and on both stores.
-Stores hold image bytes only. The repository's `ImageMemory` turns them into blob URLs
-(`createObjectURL`/`revokeObjectURL` injected; tests pass `RecordingObjectUrls`). Artwork,
-shiny and shiny-artwork sit in an LRU bounded by `IMAGE_MEMORY_BUDGET_BYTES` and are revoked
-on eviction; sprites stay resident until `clearRange`/`clearAll`. A revoked blob URL never
-loads in a new `<img>` (probed in Obsidian), and table rows, the hover preview and dex nav
-keep their sprite URL for the whole view mount, so budgeting a URL a long-lived view holds
-breaks every `<img>` re-created from it (the hover preview makes one per hover; a filter
-change remounting rows is inferred, not probed). The `*DataUri` field names predate this and now hold blob
-URLs. `imagePathOf(url)` maps a held URL back to its cache path (`contentScale`'s memo key).
-Anything that keeps a detail across calls must re-ask the repository rather than reuse its
-URLs: `VarietyToggleState` re-requests a cached form on every select (a memory hit), and
-`mega-forms/`/`gigantamax-forms/` store an image-free `VarietyFormSource` (ADR-0002 addendum).
-`cacheRange` writes extras bytes to the store without creating URLs (`prefetchEntryExtras`),
-so a generation prefetch can't flush the LRU under an open detail screen.
+Stores hold image bytes only; the repository's `ImageMemory` makes blob URLs
+(`createObjectURL`/`revokeObjectURL` injected, `RecordingObjectUrls` in tests). Artwork, shiny
+and shiny-artwork sit in an LRU bounded by `IMAGE_MEMORY_BUDGET_BYTES`, revoked on eviction;
+sprites (Mega/G-Max ones too, a few hundred KB at most) stay resident until
+`clearRange`/`clearAll`, because a revoked blob URL never loads in a new `<img>` (probed) and
+table rows, the hover preview and dex nav keep sprite URLs for the whole view mount. So nothing
+may keep a detail's URLs across calls: `VarietyToggleState` re-asks on every select,
+`mega-forms/`/`gigantamax-forms/` store an image-free `VarietyFormSource` (ADR-0002 addendum),
+and `cacheRange` stores extras bytes without making URLs. `*DataUri` fields now hold blob URLs;
+`imagePathOf(url)` gives the cache path (`contentScale`'s memo key). A budget test's budget must
+fit every image its assertion needs live at once: one `getEntryExtras` or form load is 3
+budgeted images in parallel, so a smaller budget evicts inside the call.
 
 The cache is per device, in IndexedDB, never in the vault (ADR-0011). One database per vault
 per device: `pokedex-cache-<key>`, with `<key>` in `app.loadLocalStorage('pokedex-cache-key')`.

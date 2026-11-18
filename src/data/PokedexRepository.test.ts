@@ -863,6 +863,54 @@ describe("PokedexRepository image memory", () => {
 		}
 	});
 
+	// The one exception to "never exceed the budget": the caller is about to
+	// show the image, and an untracked URL could never be revoked.
+	it("holds a single image larger than the whole budget on its own", async () => {
+		const { client, objectUrls, repository } = makeRepository(50);
+		client.imageSize = 100;
+
+		const urls = extrasUrls(await repository.getEntryExtras(2));
+
+		expect(urls).toHaveLength(3);
+		expect(objectUrls.live.size).toBe(1);
+		expect(urls).toContain([...objectUrls.live.keys()][0]);
+	});
+
+	it("leaves no URL behind when an image load spans clearAll and a second load of the same image", async () => {
+		const { client, objectUrls, repository } = makeRepository();
+		let release = (): void => undefined;
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		client.fetchImageBinary.mockImplementation(async () => {
+			await gate;
+			return new ArrayBuffer(4);
+		});
+
+		const first = repository.getEntryExtras(2);
+		await vi.waitFor(() => expect(client.fetchImageBinary).toHaveBeenCalledTimes(3));
+		await repository.clearAll();
+		const second = repository.getEntryExtras(2);
+		// Both loads are now fetching the same three images, undeduplicated.
+		await vi.waitFor(() => expect(client.fetchImageBinary).toHaveBeenCalledTimes(6));
+		release();
+		await Promise.all([first, second]);
+		await repository.clearAll();
+
+		expect(objectUrls.live.size).toBe(0);
+	});
+
+	it("cacheRange over an already-cached generation downloads no image", async () => {
+		const { client, repository } = makeRepository();
+		const gen = { id: 1, name: "Test Gen", start: 1, end: 2 };
+		await repository.cacheRange(gen);
+		client.fetchImageBinary.mockClear();
+
+		await repository.cacheRange(gen);
+
+		expect(client.fetchImageBinary).not.toHaveBeenCalled();
+	});
+
 	it("maps a held URL back to its cache path, and forgets it once evicted", async () => {
 		const { client, repository } = makeRepository(300);
 		client.imageSize = 100;

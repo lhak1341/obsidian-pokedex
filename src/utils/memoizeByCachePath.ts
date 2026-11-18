@@ -5,6 +5,10 @@
 // revoked before it loaded) is dropped, so the next URL for that path is
 // tried. `compute` is injected so the rule is testable without a DOM
 // (imageBounds.ts's contentScale passes its canvas decode).
+//
+// Known gap: nothing clears this on clearRange/clearAll, so an image a
+// Refresh re-downloads to the same path keeps its old result until restart.
+// Only wrong if PokeAPI replaced that artwork; left as is (#21 grilling).
 export function memoizeByCachePath<T>(
 	compute: (url: string) => Promise<T>,
 ): (cachePath: string, url: string) => Promise<T> {
