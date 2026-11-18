@@ -1,5 +1,6 @@
-import { Plugin } from "obsidian";
-import { DiskCache } from "./data/Cache";
+import { Notice, Plugin } from "obsidian";
+import { IndexedDbCacheStore } from "./data/IndexedDbCacheStore";
+import { deleteLegacyDiskCache, LEGACY_CACHE_NOTICE, legacyDiskCacheDirs } from "./data/legacyDiskCache";
 import { PokeApiClient } from "./data/PokeApiClient";
 import { PokedexRepository } from "./data/PokedexRepository";
 import type { PluginSettings } from "./data/types";
@@ -9,14 +10,17 @@ import { PokedexView, VIEW_TYPE_POKEDEX } from "./view/PokedexView";
 
 export default class PokedexPlugin extends Plugin {
 	settings: PluginSettings = DEFAULT_SETTINGS;
-	cache!: DiskCache;
+	cache!: IndexedDbCacheStore;
 	repository!: PokedexRepository;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
 
-		this.cache = await DiskCache.forPlugin(this.app, this.manifest);
+		this.cache = IndexedDbCacheStore.forVault(this.app);
 		this.repository = new PokedexRepository(new PokeApiClient(), this.cache);
+
+		// After layout, so deleting a large synced folder never delays startup.
+		this.app.workspace.onLayoutReady(() => void this.removeSyncedCache());
 
 		this.registerView(
 			VIEW_TYPE_POKEDEX,
@@ -37,6 +41,11 @@ export default class PokedexPlugin extends Plugin {
 		});
 
 		this.addSettingTab(new PokedexSettingTab(this.app, this));
+	}
+
+	private async removeSyncedCache(): Promise<void> {
+		const dirs = legacyDiskCacheDirs(this.app.vault.configDir, this.manifest);
+		if (await deleteLegacyDiskCache(this.app.vault.adapter, dirs)) new Notice(LEGACY_CACHE_NOTICE);
 	}
 
 	async loadSettings(): Promise<void> {

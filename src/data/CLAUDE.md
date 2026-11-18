@@ -1,6 +1,6 @@
 # src/data (and the utils/view code that touches its cache)
 
-Scoped to `PokeApiClient`, `PokedexRepository`, `CacheStore`/`DiskCache`, `normalize.ts`,
+Scoped to `PokeApiClient`, `PokedexRepository`, `CacheStore`/`IndexedDbCacheStore`, `normalize.ts`,
 `constants.ts` — fetch, cache, and normalization rules for raw PokeAPI data.
 
 ## Data layer
@@ -21,7 +21,7 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `CacheStore`/`DiskCache`, `norma
 - Adding a genuinely new field to a raw PokeAPI response (e.g. `held_items` — as opposed to
   a trim-down of something already cached, like `moves`/`flavor_text_entries`) needs a
   matching `isStale` check on its `getOrFetch` call in `PokedexRepository.ts`. Otherwise an
-  existing user's disk cache has the field `undefined` and crashes instead of self-healing.
+  existing user's cache has the field `undefined` and crashes instead of self-healing.
 - For a per-row derived value needing more than the already-fetched pokemon+species
   response and stable until the next generation ships (e.g. evolution-family depth), do not
   add a runtime fetch. Generate a static lookup table via `scripts/generate-*.ts`, reusing
@@ -77,18 +77,19 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `CacheStore`/`DiskCache`, `norma
 
 ## Cache
 
-`PokedexRepository` depends on the `CacheStore` port (`CacheStore.ts`), not `DiskCache`.
-`main.ts` passes a `DiskCache`; repository and load-state tests pass `MemoryCacheStore`
-(`__fixtures__/fakes.ts`). Only `Cache.test.ts` drives `DiskCache` over `createFakeDataAdapter`.
-A new repository cache operation goes on the port and on both stores.
+`PokedexRepository` depends on the `CacheStore` port (`CacheStore.ts`). `main.ts` passes an
+`IndexedDbCacheStore`; repository and load-state tests pass `MemoryCacheStore`
+(`__fixtures__/fakes.ts`). The IndexedDB store is untested by convention (no IndexedDB under
+vitest), so check it live. A new repository cache operation goes on the port and on both stores.
 Stores hold image bytes only; the repository encodes the data URI (`dataUri.ts`), so a
 store never learns how an image is displayed (#18's blob-URL LRU swaps that encoding).
 
-Disk cache lives at `{manifest.dir}/cache` — the vault's deployed folder, not the manifest
-id. `DiskCache.forPlugin` derives it from `manifest.dir` specifically because keying off
-`manifest.id` used to orphan the cache in a sibling folder; `Cache.ts` holds one-time
-migration logic. Inspect from eval via
-`app.plugins.plugins['obsidian-pokedex'].manifest.dir + '/cache'`.
+The cache is per device, in IndexedDB, never in the vault (ADR-0011). One database per vault
+per device: `pokedex-cache-<key>`, with `<key>` in `app.loadLocalStorage('pokedex-cache-key')`.
+Inspect from eval via `app.plugins.plugins['obsidian-pokedex'].cache.name`. A missing or
+deleted database is a cold cache: reads miss, writes are best-effort, the connection reopens.
+`legacyDiskCache.ts` deletes the old synced `{manifest.dir}/cache` folder on startup if it
+exists and shows a notice; nothing is imported.
 
 Regional forms have two distinct cache keys: the detail view fetches by numeric PokeAPI id
 (`pokemon/10229.json` for Hisuian Growlithe) while table load's
@@ -109,7 +110,7 @@ derived from the cached species/pokemon JSON, so that read must happen before th
 are removed. `abilities/`, `items/`, `moves/` and `evolution-chain/` are shared across
 species and only the global clear removes them. That global clear is
 `PokedexRepository.clearAll()`, never `CacheStore.clear()` alone: `isIdCached`/`isExtrasCached`
-count a mem hit as cached, so a disk-only clear leaves the counters at "N/N cached" and the
+count a mem hit as cached, so a store-only clear leaves the counters at "N/N cached" and the
 files are never written again this session. A fetch already in flight is not cancelled by
 either clear and can still write afterwards.
 

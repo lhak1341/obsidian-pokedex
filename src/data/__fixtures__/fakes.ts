@@ -7,56 +7,19 @@ import bulbasaurChain from "./bulbasaur-evolution-chain.json";
 import bulbasaurSpecies from "./bulbasaur-species.json";
 import bulbasaur from "./bulbasaur.json";
 
-// In-memory DataAdapter covering only the methods DiskCache actually calls
-// (exists/read/write/readBinary/writeBinary/mkdir/rmdir/list/stat/remove/
-// rename). Typed as Partial<DataAdapter> and cast, rather than implementing
-// Obsidian's full ~15-method adapter interface for methods nothing here ever
-// touches.
+// In-memory DataAdapter for code that touches vault files directly (today
+// only legacyDiskCache.ts's one-time delete of the old cache folder, whose
+// test seeds it with mkdir/write). Typed as Partial<DataAdapter> and cast,
+// rather than implementing Obsidian's full adapter interface.
 export function createFakeDataAdapter(): DataAdapter {
-	const files = new Map<string, string | ArrayBuffer>();
+	const files = new Map<string, string>();
 	const folders = new Set<string>();
-
-	const isDirectChild = (path: string, prefix: string): boolean =>
-		path.startsWith(prefix) && !path.slice(prefix.length).includes("/");
 
 	const adapter: Partial<DataAdapter> = {
 		async exists(path) {
 			return files.has(path) || folders.has(path);
 		},
-		async stat(path) {
-			if (files.has(path)) {
-				const content = files.get(path);
-				const size = typeof content === "string" ? content.length : (content?.byteLength ?? 0);
-				return { type: "file", ctime: 0, mtime: 0, size };
-			}
-			if (folders.has(path)) return { type: "folder", ctime: 0, mtime: 0, size: 0 };
-			return null;
-		},
-		async list(path) {
-			const prefix = `${path}/`;
-			return {
-				files: [...files.keys()].filter((p) => isDirectChild(p, prefix)),
-				folders: [...folders].filter((p) => isDirectChild(p, prefix)),
-			};
-		},
-		// Real Obsidian (Node fs under the hood) rejects read/readBinary for a
-		// missing path rather than returning empty content — matched here so
-		// DiskCache's try/catch-based "missing file" handling is exercised the
-		// same way tests run as it will against the real adapter.
-		async read(path) {
-			const content = files.get(path);
-			if (typeof content !== "string") throw new Error(`ENOENT: ${path}`);
-			return content;
-		},
-		async readBinary(path) {
-			const content = files.get(path);
-			if (!(content instanceof ArrayBuffer)) throw new Error(`ENOENT: ${path}`);
-			return content;
-		},
 		async write(path, data) {
-			files.set(path, data);
-		},
-		async writeBinary(path, data) {
 			files.set(path, data);
 		},
 		async mkdir(path) {
@@ -64,35 +27,10 @@ export function createFakeDataAdapter(): DataAdapter {
 		},
 		async rmdir(path, recursive) {
 			folders.delete(path);
-			files.delete(path);
 			if (recursive) {
 				const prefix = `${path}/`;
 				for (const p of [...files.keys()]) if (p.startsWith(prefix)) files.delete(p);
-				for (const p of folders) if (p.startsWith(prefix)) folders.delete(p);
-			}
-		},
-		async remove(path) {
-			files.delete(path);
-		},
-		async rename(path, newPath) {
-			const prefix = `${path}/`;
-			for (const [p, content] of [...files.entries()]) {
-				if (p === path) {
-					files.delete(p);
-					files.set(newPath, content);
-				} else if (p.startsWith(prefix)) {
-					files.delete(p);
-					files.set(`${newPath}/${p.slice(prefix.length)}`, content);
-				}
-			}
-			for (const p of [...folders]) {
-				if (p === path) {
-					folders.delete(p);
-					folders.add(newPath);
-				} else if (p.startsWith(prefix)) {
-					folders.delete(p);
-					folders.add(`${newPath}/${p.slice(prefix.length)}`);
-				}
+				for (const p of [...folders]) if (p.startsWith(prefix)) folders.delete(p);
 			}
 		},
 	};
@@ -100,10 +38,8 @@ export function createFakeDataAdapter(): DataAdapter {
 	return adapter as DataAdapter;
 }
 
-// The test CacheStore: repository and load-state tests run against this
-// rather than DiskCache over a fake adapter, so they exercise the port the
-// repository actually depends on. DiskCache's own adapter behaviour stays
-// covered by Cache.test.ts.
+// The test CacheStore: repository and load-state tests run against this,
+// since the production IndexedDbCacheStore has no IndexedDB under vitest.
 export class MemoryCacheStore implements CacheStore {
 	private entries = new Map<string, string | ArrayBuffer>();
 
@@ -112,8 +48,8 @@ export class MemoryCacheStore implements CacheStore {
 		return typeof content === "string" ? (JSON.parse(content) as T) : null;
 	}
 
-	// Stored serialized, like DiskCache, so a caller mutating what it wrote or
-	// read can never alias the stored entry.
+	// Stored serialized (IndexedDB structured-clones), so a caller mutating
+	// what it wrote or read can never alias the stored entry.
 	async writeJson(key: string, data: unknown): Promise<void> {
 		this.entries.set(key, JSON.stringify(data));
 	}

@@ -241,8 +241,8 @@ export class PokedexSettingTab extends PluginSettingTab {
 			.setName("Cached data")
 			.setDesc("Loading...");
 		void this.plugin.cache.getSizeBytes().then((bytes) => {
-			cacheSizeSetting.setDesc(`${formatBytes(bytes)} of PokeAPI JSON and images cached on disk.`);
-		});
+			cacheSizeSetting.setDesc(`${formatBytes(bytes)} of PokeAPI JSON and images cached on this device.`);
+		}, () => cacheSizeSetting.setDesc("Couldn't read the cache size."));
 
 		new Setting(cacheItems)
 			.setName("Clear cache")

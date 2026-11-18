@@ -5,8 +5,10 @@ const MIME_BY_EXT: Record<string, string> = {
 	gif: "image/gif",
 };
 
-function extOf(path: string): string {
-	return path.split(".").pop()?.toLowerCase() ?? "png";
+// A cached image's MIME type from its key's extension. Shared by the data
+// URI below and IndexedDbCacheStore's stored type (and #21's Blob type).
+export function mimeOf(path: string): string {
+	return MIME_BY_EXT[path.split(".").pop()?.toLowerCase() ?? ""] ?? "image/png";
 }
 
 // 0x8000 bytes/call comfortably avoids blowing the engine's call-stack limit
@@ -30,6 +32,5 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 // from the bytes a CacheStore returns, not by the store, so a store deals
 // only in bytes (see CacheStore.ts).
 export function dataUriFromBuffer(relPath: string, buffer: ArrayBuffer): string {
-	const mime = MIME_BY_EXT[extOf(relPath)] ?? "image/png";
-	return `data:${mime};base64,${arrayBufferToBase64(buffer)}`;
+	return `data:${mimeOf(relPath)};base64,${arrayBufferToBase64(buffer)}`;
 }

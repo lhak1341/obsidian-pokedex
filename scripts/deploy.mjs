@@ -2,8 +2,7 @@
 // Override the plugins directory with OBSIDIAN_VAULT_DIR.
 //
 // The two targets use different folder names on purpose: the real vault deploys to
-// `pokedex`, and the plugin's disk cache is derived from `manifest.dir`, so renaming
-// either one strands an existing cache (see Cache.ts's migration logic).
+// `pokedex` (≠ manifest id), which keeps legacyDiskCache.ts's two-folder case exercised.
 import { access, copyFile, mkdir } from 'fs/promises';
 import { basename, join } from 'path';
 
