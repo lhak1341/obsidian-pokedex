@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { MOVE_VERSION_TABS_BY_GEN } from "../../data/constants";
 	import type { MoveDetail, MoveEntry } from "../../data/types";
-	import { createHoverPopover } from "../hoverPopover.svelte";
+	import { createInfoPopover } from "../infoPopover.svelte";
 	import { resolveTabsForGen } from "../../utils/generationFallback";
 	import { buildMoveRows, type MoveRow } from "../../utils/moveRows";
-	import HoverPopoverBox from "./HoverPopoverBox.svelte";
+	import InfoPopoverBox from "./InfoPopoverBox.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 
 	let { moves, moveDetails, useTypeIcons, evolvesAtLevels, activeGen }: {
@@ -22,7 +22,7 @@
 	// DetailLoadState.load() already prefetches the whole movepool up front,
 	// so moveDetails[name].description (or its absence) is already known by
 	// the time a row can be hovered.
-	const popover = createHoverPopover(".detail-screen");
+	const popover = createInfoPopover(".detail-screen");
 
 	const MOVE_METHOD_TABS = [
 		{ key: "level-up", label: "Level-Up" },
@@ -152,11 +152,11 @@
 	{/if}
 {/if}
 
-<HoverPopoverBox hoverState={popover}>
-	{#if popover.hovered}
-		{moveDetails[popover.hovered]?.description ?? "No description available."}
+<InfoPopoverBox popover={popover}>
+	{#if popover.open}
+		{moveDetails[popover.open]?.description ?? "No description available."}
 	{/if}
-</HoverPopoverBox>
+</InfoPopoverBox>
 
 <style>
 	/* Duplicated from DetailScreen's own .section-heading rule — Svelte

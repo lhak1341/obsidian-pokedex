@@ -5,7 +5,7 @@
 	// Shared by FilterBar's 7 filter groups: the <details>/<summary> shell
 	// (icon, label, live count badge, the chevron/open-state chrome), leaving
 	// the flyout content to the caller via `children` — same chrome-vs-content
-	// split as HoverPopoverBox.svelte, since the content genuinely varies per
+	// split as InfoPopoverBox.svelte, since the content genuinely varies per
 	// group (Stats isn't even a .filter-chips, see FilterBar.svelte's own
 	// comment on .stat-filters). `ontoggle` stays a caller-supplied callback
 	// rather than owned here, since closing sibling groups needs FilterBar's

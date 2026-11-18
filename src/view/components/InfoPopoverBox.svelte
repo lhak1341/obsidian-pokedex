@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
 
-	interface HoverPopoverState {
-		hovered: string | null;
+	interface InfoPopoverState {
+		open: string | null;
 		pinned: boolean;
 		pos: { top: number; left: number; placement: "below" | "above" } | null;
 	}
@@ -12,25 +12,25 @@
 	// the caller via `children` — the three panels' content differs (a
 	// fetch-driven loading/error/text status vs. a plain prefetched
 	// description), only the box around it was ever identical. Because this
-	// is a real component (not hoverPopover.svelte.ts's bare runes module),
+	// is a real component (not infoPopover.svelte.ts's bare runes module),
 	// it can own its own scoped styles for markup it renders itself — the
 	// above/below position rule no longer needs a per-caller copy.
-	let { hoverState, children }: { hoverState: HoverPopoverState; children: Snippet } = $props();
+	let { popover, children }: { popover: InfoPopoverState; children: Snippet } = $props();
 </script>
 
-{#if hoverState.hovered && hoverState.pos}
+{#if popover.open && popover.pos}
 	<div
-		class="hover-popover-box"
-		class:flip-above={hoverState.pos.placement === "above"}
-		class:pinned={hoverState.pinned}
-		style="top: {hoverState.pos.top}px; left: {hoverState.pos.left}px;"
+		class="info-popover-box"
+		class:flip-above={popover.pos.placement === "above"}
+		class:pinned={popover.pinned}
+		style="top: {popover.pos.top}px; left: {popover.pos.left}px;"
 	>
 		{@render children()}
 	</div>
 {/if}
 
 <style>
-	.hover-popover-box {
+	.info-popover-box {
 		position: absolute;
 		z-index: 50;
 		max-width: 260px;
@@ -47,11 +47,11 @@
 	/* A pinned box takes taps (a tap inside it does nothing, see
 	utils/infoPopoverPin.ts) so its text can be selected; a preview stays
 	click-through, so the mouse crossing it never counts as leaving. */
-	.hover-popover-box.pinned {
+	.info-popover-box.pinned {
 		pointer-events: auto;
 		user-select: text;
 	}
-	.hover-popover-box.flip-above {
+	.info-popover-box.flip-above {
 		transform: translateY(-100%);
 	}
 </style>

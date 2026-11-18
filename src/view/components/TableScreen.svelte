@@ -12,12 +12,12 @@
 	import { TABLE_COLUMNS } from "../../utils/tableColumns";
 	import { untrack } from "svelte";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
-	import { createHoverDescription } from "../hoverDescription.svelte";
-	import { createHoverPopover } from "../hoverPopover.svelte";
+	import { createInfoDescription } from "../infoDescription.svelte";
+	import { createInfoPopover } from "../infoPopover.svelte";
 	import EvChips from "./EvChips.svelte";
 	import FavoriteToggle from "./FavoriteToggle.svelte";
 	import FilterBar from "./FilterBar.svelte";
-	import HoverPopoverBox from "./HoverPopoverBox.svelte";
+	import InfoPopoverBox from "./InfoPopoverBox.svelte";
 	import Icon from "./Icon.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 
@@ -39,17 +39,17 @@
 	} = $props();
 
 	// Same fetch-once-and-cache-per-name hook as DetailScreen's HeldItemsPanel
-	// (see hoverDescription.svelte.ts) — shared across every row/cell instead
+	// (see infoDescription.svelte.ts) — shared across every row/cell instead
 	// of a per-cell instance, so hovering "oran-berry" on row 4 doesn't
 	// re-fetch it after already hovering it on row 1.
-	const itemPopover = createHoverDescription(".table-screen", (name) => repository.getItemDescription(name));
+	const itemPopover = createInfoDescription(".table-screen", (name) => repository.getItemDescription(name));
 	// Unlike HeldItemsPanel (which prints "Name (X%)" inline and keeps the
 	// tooltip to description-only), the table cell shows bare names to save
 	// column width — rarity moves into the tooltip instead. Rarity isn't
 	// keyed by item name like the description cache: the same item name can
 	// carry a different % on a different row, so this tracks whichever
 	// row/item's popover is open, set by that target's onOpen.
-	let hoveredItemRarities = $state<number[]>([]);
+	let openItemRarities = $state<number[]>([]);
 
 	// TypeBadge's icon mode already carries a native `title` for the type
 	// name, but a native title tooltip is unverifiable through this repo's
@@ -59,7 +59,7 @@
 	// hover in the table. This custom popover is a guaranteed-visible
 	// fallback, same mechanism as the held-item tooltip above — only wired
 	// up in icon mode, since text mode already shows the type name directly.
-	const typePopover = createHoverPopover(".table-screen");
+	const typePopover = createInfoPopover(".table-screen");
 
 	let hoveredSpriteId = $state<number | null>(null);
 	let previewPos = $state<{ top: number; left: number } | null>(null);
@@ -76,7 +76,7 @@
 		// fixed — see its CSS comment for why), not the raw viewport rect.
 		// A row near the top or bottom edge of the visible viewport would
 		// otherwise center the preview off-screen (same class of bug
-		// hoverPopover.svelte.ts's MIN_SPACE_BELOW flip already prevents for
+		// infoPopover.svelte.ts's MIN_SPACE_BELOW flip already prevents for
 		// AbilitiesPanel/MoveBrowser/HeldItemsPanel — this is a different
 		// placement shape though, a side-anchored vertical center rather
 		// than a below/above corner flip, so it gets its own clamp instead
@@ -278,7 +278,7 @@
 						<td class="info-target-cell">
 							{#each row.types as type (type)}
 								{#if useTypeIcons}
-									<span class="type-icon-hover-target pkdx-info-target" {...typePopover.target(type)}>
+									<span class="type-icon-target pkdx-info-target" {...typePopover.target(type)}>
 										<TypeBadge {type} useIcon />
 									</span>
 								{:else}
@@ -297,7 +297,7 @@
 											{#each genItems as item (item.name)}
 												<span
 													class="held-item-name pkdx-info-target"
-													{...itemPopover.target(item.name, () => (hoveredItemRarities = item.rarities))}
+													{...itemPopover.target(item.name, () => (openItemRarities = item.rarities))}
 												>{formatItemName(item.name)}</span>
 											{/each}
 										{/if}
@@ -335,14 +335,14 @@
 		{/if}
 	{/if}
 
-	<HoverPopoverBox hoverState={itemPopover}>
-		<span class="held-item-rarity">({hoveredItemRarities.join("/")}%)</span>
+	<InfoPopoverBox popover={itemPopover}>
+		<span class="held-item-rarity">({openItemRarities.join("/")}%)</span>
 		{itemPopover.body}
-	</HoverPopoverBox>
+	</InfoPopoverBox>
 
-	<HoverPopoverBox hoverState={typePopover}>
-		<span class="type-tooltip-text">{typePopover.hovered}</span>
-	</HoverPopoverBox>
+	<InfoPopoverBox popover={typePopover}>
+		<span class="type-tooltip-text">{typePopover.open}</span>
+	</InfoPopoverBox>
 </div>
 
 <style>
@@ -514,7 +514,7 @@
 		font-weight: 600;
 	}
 	/* The icon is a target without the text targets' underline. */
-	.type-icon-hover-target {
+	.type-icon-target {
 		display: inline-flex;
 		text-decoration: none;
 	}

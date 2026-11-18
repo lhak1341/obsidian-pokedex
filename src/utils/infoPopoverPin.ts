@@ -1,6 +1,6 @@
 // Pin state for the Info popover (the ability, held item, move and type-name
 // explanations): which target's popover is open, and whether it is pinned.
-// DOM-free so the rules are table-tested here; view/hoverPopover.svelte.ts is
+// DOM-free so the rules are table-tested here; view/infoPopover.svelte.ts is
 // the thin binding that turns DOM events into PinEvents and positions the box.
 //
 // Touch vs mouse is decided per event from the event's own pointerType, never

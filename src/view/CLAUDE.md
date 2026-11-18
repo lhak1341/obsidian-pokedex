@@ -51,7 +51,7 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   `tableColumns.test.ts` scans the template for one branch per `custom` value in
   `FIELDS` (imports the template with `?raw`, see root CLAUDE.md).
 - `tsc` (`bun run typecheck`) skips `.svelte` files and the build only catches compile errors, so after renaming or removing a field/export, grep `src/**/*.svelte` for the old name by hand. A stale use builds clean and reads `undefined` live.
-- `vitest.config.ts` has no Svelte plugin or jsdom, so a `.svelte.ts` rune module (`hoverPopover.svelte.ts`, `quickJumpDropdown.svelte.ts`) can't be tested (the Info popover's pin rules are therefore `utils/infoPopoverPin.ts`, tested there). Put the branching in `utils/` and inject the DOM-bound piece: `resolvePortraitScale(…, measure)` takes a `measure` (DetailScreen's `measurePortrait`, over `contentScale`), and `contentScale`'s memo is `memoizeByCachePath(decode)`. ADR-0003 covers adding jsdom itself.
+- `vitest.config.ts` has no Svelte plugin or jsdom, so a `.svelte.ts` rune module (`infoPopover.svelte.ts`, `quickJumpDropdown.svelte.ts`) can't be tested (the Info popover's pin rules are therefore `utils/infoPopoverPin.ts`, tested there). Put the branching in `utils/` and inject the DOM-bound piece: `resolvePortraitScale(…, measure)` takes a `measure` (DetailScreen's `measurePortrait`, over `contentScale`), and `contentScale`'s memo is `memoizeByCachePath(decode)`. ADR-0003 covers adding jsdom itself.
 
 Adding a generation stales cached Moves/Flavor Text and needs a checklist walk — see
 `docs/multi-gen-expansion-plan.md`'s Recipe section, not a bespoke fix here.
@@ -76,9 +76,10 @@ layout that frames an image tightly must size and centre it by its alpha bbox, n
   ignores `max()`/`calc()` on `<col>` width (falling back to equal splits). Use
   `table-layout: auto` with a plain `width: N%` on `<col>` for the extra-space share and a
   real `min-width` on the `<th>` as the floor — auto layout's never-shrink-below-content
-  guarantee does the rest. Do **not** add `overflow: hidden; text-overflow: ellipsis` as a
-  safety net: ellipsis collapses intrinsic min-content width to ~1 character and defeats
-  that guarantee. Working pattern: `TableScreen.svelte`'s column widths.
+  guarantee does the rest. Do **not** add `text-overflow: ellipsis` as a safety net: it
+  collapses intrinsic min-content width to ~1 character and defeats that guarantee.
+  `overflow: hidden` alone does not (the Info popover target cells clip their tap area with
+  it; column widths measured identical). Working pattern: `TableScreen.svelte`'s column widths.
 - `tr:nth-child(odd)` striping breaks once a row can be conditionally inserted (a divider
   shifts parity for everything after it). Track alternation with an explicit index computed
   over real data rows only, applied as a class.
@@ -92,7 +93,7 @@ layout that frames an image tightly must size and centre it by its alpha bbox, n
 
 ## Live-verify recipes
 
-- A live check fakes the plugin's slow or persistent I/O on the live instance, restored in a `finally` by `delete`-ing the own property (the prototype method shows through): `repo.getTableRows`/`retryRows` for the load, banner and Notice paths, since a real-vault load once took over 90 s (rows render, `.loading-more-banner` stays up, so a few-second sleep reads the banner and Notices as absent); `plugin.loadData`/`saveData` for a settings path (return the old-shape data, capture writes, `await plugin.loadSettings()`, then the leaf swap below), so `data.json` is never written. Poll for the banner to clear only when the real load is the thing under test.
+- A live check fakes the plugin's slow or persistent I/O on the live instance, restored in a `finally` by `delete`-ing the own property (the prototype method shows through): `repo.getTableRows`/`retryRows` for the load, banner and Notice paths, since a real-vault load once took over 90 s (rows render, `.loading-more-banner` stays up, so a few-second sleep reads the banner and Notices as absent); `plugin.loadData`/`saveData` for a settings path or any control that persists (a favourite asterisk tap saves settings) (return the old-shape data, capture writes, `await plugin.loadSettings()`, then the leaf swap below), so `data.json` is never written. Poll for the banner to clear only when the real load is the thing under test.
 - Emulated mobile and the iPhone loop: `docs/mobile-verification.md` (CLI targets
   `pokedex-test-vault`; a hidden window throttles timers, so evals stall and Notices never
   time out (clear `.notice` before checking one shows); `dev:mobile` is global, turn it off).
@@ -106,10 +107,13 @@ layout that frames an image tightly must size and centre it by its alpha bbox, n
   wrap it — is the actual `overflow-y: auto` scroll container for the table screen.
 - Current screen: `.pokedex-view > div`'s `className` contains `hidden-screen` when the
   table is hidden (i.e. viewing detail); `.dex-eyebrow`'s `textContent` (`"No. 004"`) says
-  which Pokemon. Both screens' DOM stay mounted regardless — a class name reused across a
-  table cell and a detail-page component (e.g. `.held-item-name` in both `TableScreen.svelte`
-  and `HeldItemsPanel.svelte`) can match the wrong (hidden) screen's element unless the
-  selector is scoped to `.table-screen`/`.detail-screen` first.
+  which Pokemon. Both screens' DOM stay mounted regardless, so whatever is tied to one screen
+  still acts while it is hidden: a class name reused across a table cell and a detail-page
+  component (e.g. `.held-item-name` in both `TableScreen.svelte` and `HeldItemsPanel.svelte`)
+  matches the wrong (hidden) screen's element unless the selector is scoped to
+  `.table-screen`/`.detail-screen` first, and state held outside a screen outlives it (a pin
+  on the hidden table suppressed every hover preview until `infoPopover.svelte.ts` began
+  dropping a pin whose target has no client rects).
 - FilterBar's Type/Gen/Ability/Stats/Rarity/EV/Quirks dropdowns are native
   `<details>`/`<summary>`, not JS popovers — click the `<summary>` (match trimmed text with
   `startsWith`; some carry a live count badge like "Gen 1").
@@ -137,4 +141,4 @@ layout that frames an image tightly must size and centre it by its alpha bbox, n
   it owns the value locally and only pushes out via a callback. Verifying one live via eval
   needs a real remount (force `saveSettings()`'s refresh, or the leaf swap above), not just
   mutating `plugin.settings.X` in place.
-- Info popovers (`.hover-popover-box`, `.pinned` when pinned): targets are `.pkdx-info-target`. Preview with `new PointerEvent('pointerenter', {pointerType:'mouse'})` on the target (a `MouseEvent('mouseenter')` no longer opens it, and `pointerType:'touch'` must not); pin with `el.click()`; close with a `keydown` `Escape` on `document.body`. The body fills after an async fetch, so wait ~2s, then read the box scoped to `.table-screen` or `.detail-screen`. Only one box is open across every instance (the pin state is module-level in `hoverPopover.svelte.ts`). Scroll the target into view before `focus()` + Enter: with an off-screen target, Enter's pin read as closed (inferred: `focus()` scrolled it into view and that scroll closed the pin; in view, 0 scrolls fired and it pinned).
+- Info popovers (`.info-popover-box`, `.pinned` when pinned): targets are `.pkdx-info-target`. Preview with `new PointerEvent('pointerenter', {pointerType:'mouse'})` on the target (a `MouseEvent('mouseenter')` no longer opens it, and `pointerType:'touch'` must not); pin with `el.click()`; close with a `keydown` `Escape` on `document.body`. The body fills after an async fetch, so wait ~2s, then read the box scoped to `.table-screen` or `.detail-screen`. Only one box is open across every instance (the pin state is module-level in `infoPopover.svelte.ts`). Scroll the target into view before `focus()` + Enter: with an off-screen target, Enter's pin read as closed (inferred: `focus()` scrolled it into view and that scroll closed the pin; in view, 0 scrolls fired and it pinned).

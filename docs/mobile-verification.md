@@ -36,9 +36,10 @@ also has a `test-vault`. Its cache starts empty, so the first open fetches from 
    gives a leaf to call `setViewState` on.
 6. Screenshot: `dev:screenshot path=<abs>/temp/mobile-loop/<name>.png`. A background window
    returns stale frames (a "New tab" shot while the DOM already held the Pokédex): after
-   step 2's visibility fix, run `invalidate()` on the window before each shot, shoot twice
+   step 2's visibility fix, run `require('electron').remote.getCurrentWindow().webContents.invalidate()`
+   before each shot (the BrowserWindow itself has no `invalidate`), shoot twice
    and keep the second. A sideways `scrollLeft` never paints: fake it with `transform`.
-7. Clean up: `dev:mobile off`, then confirm `localStorage.getItem('EmulateMobile') === null`
+7. Clean up: `dev:mobile off`, resize back (`window.resizeTo(1440, 900)`: the size persists, and a later desktop check found the window still 390x844), then confirm `localStorage.getItem('EmulateMobile') === null`
    in both `pokedex-test-vault` and `lhakZettel`; close the test window
    (`eval code="setTimeout(()=>window.close(),200)"`).
 

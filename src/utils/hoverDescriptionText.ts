@@ -1,6 +1,6 @@
 import { formatPokedollarSigns } from "./pokedollar";
 
-// What createHoverDescription knows about the hovered name's description:
+// What createInfoDescription knows about the open name's description:
 // undefined = not requested yet, "error" = the fetch failed, otherwise the
 // fetched text (null when PokeAPI has none).
 export type HoverDescriptionStatus = undefined | "error" | { text: string | null };

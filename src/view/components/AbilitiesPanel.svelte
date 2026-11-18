@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { createHoverDescription } from "../hoverDescription.svelte";
-	import HoverPopoverBox from "./HoverPopoverBox.svelte";
+	import { createInfoDescription } from "../infoDescription.svelte";
+	import InfoPopoverBox from "./InfoPopoverBox.svelte";
 
 	let { abilities, getDescription }: {
 		abilities: { name: string; isHidden: boolean }[];
@@ -17,7 +17,7 @@
 	// round-trip). Positioned relative to .detail-screen (position: absolute,
 	// not fixed — see DetailScreen's .detail-screen CSS comment for why), not
 	// the raw viewport rect.
-	const popover = createHoverDescription(".detail-screen", (name) => getDescription(name));
+	const popover = createInfoDescription(".detail-screen", (name) => getDescription(name));
 </script>
 
 <ul class="ability-list">
@@ -32,9 +32,9 @@
 	</div>
 {/each}
 
-<HoverPopoverBox hoverState={popover}>
+<InfoPopoverBox popover={popover}>
 	{popover.body}
-</HoverPopoverBox>
+</InfoPopoverBox>
 
 <style>
 	.ability-list {

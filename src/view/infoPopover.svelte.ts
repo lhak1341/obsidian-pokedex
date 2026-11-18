@@ -21,11 +21,11 @@ type Pos = { top: number; left: number; placement: Placement };
 // position: fixed doesn't work here: Obsidian's .workspace-leaf has
 // contain: strict).
 //
-// One pin state for the whole module, not one per createHoverPopover call:
+// One pin state for the whole module, not one per createInfoPopover call:
 // the table's item and type popovers, and the detail screen's three panels,
 // are separate instances, but only one Info popover is ever open. So tapping
 // a type icon moves a pinned item popover there, and a pin anywhere suppresses
-// hover previews everywhere. Each instance reads `hovered`/`pos` only while it
+// hover previews everywhere. Each instance reads `open`/`pos` only while it
 // owns the open target.
 let pin = $state.raw<PinState<HTMLElement>>(CLOSED);
 let openOwner = $state.raw<object | null>(null);
@@ -53,7 +53,7 @@ function place(targetEl: HTMLElement, anchorSelector: string, offsetY: number): 
 		// Anchored to the target's own top edge, not a computed
 		// "top - popover height" — the popover's height isn't known here
 		// (only after it renders), so it grows upward from this point via
-		// `transform: translateY(-100%)` in HoverPopoverBox's CSS instead.
+		// `transform: translateY(-100%)` in InfoPopoverBox's CSS instead.
 		: { top: r.top - offsetY, left: r.left, placement };
 }
 
@@ -102,11 +102,18 @@ function syncDocListeners() {
 			if (!openEl || !t) return;
 			// The open target's own click handler decides (close, or pin a preview).
 			if (openEl.contains(t)) return;
-			dispatch({ kind: t.closest?.(".hover-popover-box") ? "tap-inside" : "tap-outside" });
+			dispatch({ kind: t.closest?.(".info-popover-box") ? "tap-inside" : "tap-outside" });
 		};
 		// A right-click or long-press is a tap elsewhere too (the row's menu).
 		const onContextmenu = onClick;
-		const onScroll = () => dispatch({ kind: "scroll" });
+		// Only a scroll that moves the target closes it: the pane (.pokedex-view),
+		// the table's sideways scroller (.table-wrap) or the document. Another
+		// pane, a filter list or the box's own content scrolling leaves it open.
+		const onScroll = (e: Event) => {
+			const openEl = pin.open;
+			const scrolled = e.target as Node | null;
+			if (openEl && scrolled?.contains?.(openEl)) dispatch({ kind: "scroll" });
+		};
 		const onKeydown = (e: KeyboardEvent) => {
 			if (e.key === "Escape") dispatch({ kind: "escape" });
 		};
@@ -126,7 +133,7 @@ function syncDocListeners() {
 	}
 }
 
-export function createHoverPopover(anchorSelector: string, offsetY = 6) {
+export function createInfoPopover(anchorSelector: string, offsetY = 6) {
 	const owner = {};
 
 	// A component that unmounts with its popover open takes the popover (and
@@ -163,7 +170,7 @@ export function createHoverPopover(anchorSelector: string, offsetY = 6) {
 	}
 
 	return {
-		get hovered() {
+		get open() {
 			return openOwner === owner ? openName : null;
 		},
 		get pos() {

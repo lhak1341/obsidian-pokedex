@@ -1,5 +1,5 @@
 import { describeHoverStatus, type HoverDescriptionStatus } from "../utils/hoverDescriptionText";
-import { createHoverPopover } from "./hoverPopover.svelte";
+import { createInfoPopover } from "./infoPopover.svelte";
 
 // Shared by TableScreen, AbilitiesPanel and HeldItemsPanel: an Info popover
 // whose text is fetched once per name, the first time its popover opens, and
@@ -10,12 +10,12 @@ import { createHoverPopover } from "./hoverPopover.svelte";
 // exactly. `body` is the popover's text for the open name (loading, error,
 // description or "none available"), see describeHoverStatus — callers render
 // it as is.
-export function createHoverDescription(
+export function createInfoDescription(
 	anchorSelector: string,
 	getDescription: (name: string) => Promise<string | null>,
 	offsetY = 6,
 ) {
-	const popover = createHoverPopover(anchorSelector, offsetY);
+	const popover = createInfoPopover(anchorSelector, offsetY);
 	let descriptions = $state<Record<string, { text: string | null } | { error: true }>>({});
 
 	function fetchOnce(name: string) {
@@ -30,8 +30,8 @@ export function createHoverDescription(
 	}
 
 	return {
-		get hovered() {
-			return popover.hovered;
+		get open() {
+			return popover.open;
 		},
 		get pos() {
 			return popover.pos;
@@ -40,8 +40,8 @@ export function createHoverDescription(
 			return popover.pinned;
 		},
 		get body(): string {
-			const hovered = popover.hovered;
-			const state = hovered === null ? undefined : descriptions[hovered];
+			const open = popover.open;
+			const state = open === null ? undefined : descriptions[open];
 			const status: HoverDescriptionStatus = !state ? undefined : "error" in state ? "error" : state;
 			return describeHoverStatus(status);
 		},
