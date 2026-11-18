@@ -28,7 +28,7 @@ export default class PokedexPlugin extends Plugin {
 				leaf,
 				this.repository,
 				() => this.settings,
-				(columns) => void this.setVisibleColumns(columns),
+				(fields) => void this.setVisibleFields(fields),
 				(ids) => void this.setFavorites(ids),
 			),
 		);
@@ -59,17 +59,17 @@ export default class PokedexPlugin extends Plugin {
 		}
 	}
 
-	// Column visibility is pure display state, not a "reload the dex range"
+	// Field visibility is pure display state, not a "reload the dex range"
 	// change — persist it without forcing every open Pokedex tab to remount
 	// (which `saveSettings` does, since dex-range/sprite-style changes do
 	// need a fresh reload).
-	async setVisibleColumns(columns: string[]): Promise<void> {
-		this.settings.visibleColumns = columns;
+	async setVisibleFields(fields: string[]): Promise<void> {
+		this.settings.visibleFields = fields;
 		await this.saveData(this.settings);
 	}
 
 	// Same "persist without forcing every open tab to remount" reasoning as
-	// setVisibleColumns above — the table already updates its own favorite
+	// setVisibleFields above — the table already updates its own favorite
 	// marker/right-click state locally the instant a row is toggled, so a
 	// full saveSettings()-triggered refresh would just be a redundant (and
 	// disruptive: it'd reset scroll/sort/filter state) re-render of what's

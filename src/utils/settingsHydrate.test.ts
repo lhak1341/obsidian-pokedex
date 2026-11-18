@@ -10,7 +10,7 @@ const DEFAULTS: PluginSettings = {
 	spriteStyle: "official-artwork",
 	gridDensity: "comfortable",
 	defaultSortColumn: "id",
-	visibleColumns: ["hp", "attack"],
+	visibleFields: ["hp", "attack"],
 	useTypeIcons: false,
 	activeGen: 9,
 	favoritePokemonIds: [],
@@ -29,7 +29,7 @@ describe("hydrateSettings", () => {
 			spriteStyle: "sprite",
 			gridDensity: "compact",
 			defaultSortColumn: "name",
-			visibleColumns: ["hp"],
+			visibleFields: ["hp"],
 			useTypeIcons: true,
 			activeGen: 3,
 			favoritePokemonIds: [25, 6],
@@ -90,11 +90,37 @@ describe("hydrateSettings", () => {
 		expect(hydrateSettings({ enabledGenerations: [3, 99, 1, 3] }, DEFAULTS).enabledGenerations).toEqual([1, 3]);
 	});
 
-	it("falls back when visibleColumns / favoritePokemonIds are not arrays, without checking their contents", () => {
-		const out = hydrateSettings({ visibleColumns: "hp", favoritePokemonIds: 5 }, DEFAULTS);
-		expect(out.visibleColumns).toEqual(DEFAULTS.visibleColumns);
+	it("falls back when visibleFields / favoritePokemonIds are not arrays, without checking their contents", () => {
+		const out = hydrateSettings({ visibleFields: "hp", favoritePokemonIds: 5 }, DEFAULTS);
+		expect(out.visibleFields).toEqual(DEFAULTS.visibleFields);
 		expect(out.favoritePokemonIds).toEqual([]);
-		expect(hydrateSettings({ visibleColumns: ["nonsense"] }, DEFAULTS).visibleColumns).toEqual(["nonsense"]);
+		expect(hydrateSettings({ visibleFields: ["nonsense"] }, DEFAULTS).visibleFields).toEqual(["nonsense"]);
+	});
+
+	// #22: the setting was renamed visibleColumns → visibleFields. One-way:
+	// the old key is read only when the new one is absent, and the result
+	// carries only the new key, so the next save drops the old one.
+	describe("visibleColumns → visibleFields migration", () => {
+		it("migrates an old visibleColumns selection when visibleFields is absent", () => {
+			const out = hydrateSettings({ visibleColumns: ["speed", "catchRate"] }, DEFAULTS);
+			expect(out.visibleFields).toEqual(["speed", "catchRate"]);
+			expect(Object.keys(out)).not.toContain("visibleColumns");
+		});
+
+		it("prefers visibleFields when both keys are present", () => {
+			const out = hydrateSettings({ visibleColumns: ["speed"], visibleFields: ["weight"] }, DEFAULTS);
+			expect(out.visibleFields).toEqual(["weight"]);
+		});
+
+		it("gives a fresh install the default Fields", () => {
+			expect(hydrateSettings({}, DEFAULTS).visibleFields).toEqual(["hp", "attack"]);
+		});
+
+		it("does not widen a saved selection to the new default", () => {
+			// An empty selection is a real choice ("show no Fields"), not "unset".
+			expect(hydrateSettings({ visibleColumns: [] }, DEFAULTS).visibleFields).toEqual([]);
+			expect(hydrateSettings({ visibleFields: ["hp"] }, DEFAULTS).visibleFields).toEqual(["hp"]);
+		});
 	});
 
 	it("drops unknown keys", () => {
@@ -104,10 +130,10 @@ describe("hydrateSettings", () => {
 	it("never aliases the defaults' arrays", () => {
 		const out = hydrateSettings(null, DEFAULTS);
 		out.enabledGenerations.push(42);
-		out.visibleColumns.push("x");
+		out.visibleFields.push("x");
 		out.favoritePokemonIds.push(1);
 		expect(DEFAULTS.enabledGenerations).not.toContain(42);
-		expect(DEFAULTS.visibleColumns).toEqual(["hp", "attack"]);
+		expect(DEFAULTS.visibleFields).toEqual(["hp", "attack"]);
 		expect(DEFAULTS.favoritePokemonIds).toEqual([]);
 	});
 });

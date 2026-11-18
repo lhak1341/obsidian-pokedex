@@ -459,7 +459,9 @@ export interface PluginSettings extends FontRoleSettings {
 	spriteStyle: "official-artwork" | "sprite";
 	gridDensity: "compact" | "comfortable";
 	defaultSortColumn: "id" | "name";
-	visibleColumns: string[];
+	// Field keys (src/utils/fields.ts) the user has chosen to show. Was
+	// `visibleColumns` before #22; hydrateSettings migrates the old key.
+	visibleFields: string[];
 	useTypeIcons: boolean;
 	// Which generation's stats/moves/flavor text to prioritize for display,
 	// independent of enabledGenerations (which only controls which dex rows
@@ -472,6 +474,6 @@ export interface PluginSettings extends FontRoleSettings {
 	// own row can be favorited independent of its base species) a user has
 	// starred via the table's right-click menu. Saved through
 	// PokedexPlugin.setFavorites, not the general saveSettings path — see
-	// its own comment for why (same reasoning as visibleColumns).
+	// its own comment for why (same reasoning as visibleFields).
 	favoritePokemonIds: number[];
 }

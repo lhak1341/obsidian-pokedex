@@ -1,5 +1,6 @@
 import { Notice, PluginSettingTab, Setting, type ButtonComponent, type SettingDefinitionItem } from "obsidian";
-import { DEFAULT_ENABLED_GENERATIONS, DEFAULT_VISIBLE_COLUMNS, GENERATIONS } from "./data/constants";
+import { DEFAULT_ENABLED_GENERATIONS, GENERATIONS } from "./data/constants";
+import { DEFAULT_VISIBLE_FIELDS } from "./utils/fields";
 import { addFontRoleSetting, DEFAULT_FONT_ROLE_SETTINGS, type FontRole } from "@lhak/style/obsidian-helpers";
 import type { PluginSettings } from "./data/types";
 import type PokedexPlugin from "./main";
@@ -14,7 +15,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	spriteStyle: "official-artwork",
 	gridDensity: "comfortable",
 	defaultSortColumn: "id",
-	visibleColumns: DEFAULT_VISIBLE_COLUMNS,
+	visibleFields: DEFAULT_VISIBLE_FIELDS,
 	useTypeIcons: false,
 	// Latest supported generation by default, so a fresh install (or anyone
 	// who never touches the Active Gen selector) sees exactly the same

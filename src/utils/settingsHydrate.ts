@@ -19,6 +19,10 @@ function numberArray(value: unknown, fallback: number[]): number[] {
 	return Array.isArray(value) ? value.filter((v): v is number => typeof v === "number") : [...fallback];
 }
 
+function stringArray(value: unknown): string[] | undefined {
+	return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : undefined;
+}
+
 // Turns whatever data.json held into a valid PluginSettings. data.json is a
 // tracked, synced file and can be hand-edited, so loadSettings cannot assume
 // its shape: a shallow merge let an empty or all-unknown enabledGenerations
@@ -28,8 +32,13 @@ function numberArray(value: unknown, fallback: number[]): number[] {
 // Builds the result from the known fields only (unknown keys are dropped on the
 // next save), and gives it its own arrays so nothing aliases `defaults`.
 // Corrections are in-memory; the next saveSettings persists them. Contents of
-// visibleColumns / favoritePokemonIds are not checked, only that they are
+// visibleFields / favoritePokemonIds are not checked, only that they are
 // arrays: stale entries there are harmless (ADR-0007).
+//
+// visibleFields was `visibleColumns` before #22. The old key is read only when
+// the new one is absent (not an array), and since unknown keys are dropped the
+// next save writes only the new one: a one-way migration. A saved selection,
+// even an empty one, is kept as it is; only a fresh install gets the default.
 //
 // The settings UI's resolveGenerationToggle enforces the same "at least one
 // generation" invariant against a user action; this repairs stored data.
@@ -49,9 +58,7 @@ export function hydrateSettings(saved: unknown, defaults: PluginSettings): Plugi
 		spriteStyle: oneOf(s.spriteStyle, SPRITE_STYLES, defaults.spriteStyle),
 		gridDensity: oneOf(s.gridDensity, GRID_DENSITIES, defaults.gridDensity),
 		defaultSortColumn: oneOf(s.defaultSortColumn, SORT_COLUMNS, defaults.defaultSortColumn),
-		visibleColumns: Array.isArray(s.visibleColumns)
-			? s.visibleColumns.filter((v): v is string => typeof v === "string")
-			: [...defaults.visibleColumns],
+		visibleFields: stringArray(s.visibleFields) ?? stringArray(s.visibleColumns) ?? [...defaults.visibleFields],
 		useTypeIcons: typeof s.useTypeIcons === "boolean" ? s.useTypeIcons : defaults.useTypeIcons,
 		activeGen:
 			typeof s.activeGen === "number" && knownGenerationIds.includes(s.activeGen) ? s.activeGen : defaults.activeGen,

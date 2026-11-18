@@ -9,7 +9,8 @@
 	import { formatDexNumber, formatItemName, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { sortPokemon, type SortColumn, type SortDirection } from "../../utils/sortPokemon";
 	import { scopeRowsToGen } from "../../utils/stats";
-	import { formatEvYield, STAT_LABEL_BY_KEY, TOGGLEABLE_COLUMNS } from "../../utils/tableColumns";
+	import { FIELDS, formatEvYield, sortAfterFieldsChange, STAT_LABEL_BY_KEY } from "../../utils/fields";
+	import { TABLE_COLUMNS } from "../../utils/tableColumns";
 	import { untrack } from "svelte";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
 	import { createHoverDescription } from "../hoverDescription.svelte";
@@ -20,18 +21,18 @@
 	import TypeBadge from "./TypeBadge.svelte";
 
 	let {
-		rows, density, defaultSortColumn, initialVisibleColumns, useTypeIcons, repository, activeGen,
-		initialFavoriteIds, onColumnsChange, onFavoritesChange, onSelect,
+		rows, density, defaultSortColumn, initialVisibleFields, useTypeIcons, repository, activeGen,
+		initialFavoriteIds, onFieldsChange, onFavoritesChange, onSelect,
 	}: {
 		rows: PokedexTableRow[];
 		density: "compact" | "comfortable";
 		defaultSortColumn: "id" | "name";
-		initialVisibleColumns: string[];
+		initialVisibleFields: string[];
 		useTypeIcons: boolean;
 		repository: PokedexRepository;
 		activeGen: number;
 		initialFavoriteIds: number[];
-		onColumnsChange: (columns: string[]) => void;
+		onFieldsChange: (fields: string[]) => void;
 		onFavoritesChange: (ids: number[]) => void;
 		onSelect: (id: number) => void;
 	} = $props();
@@ -92,14 +93,14 @@
 	let filters = $state({ ...EMPTY_FILTERS, statRanges: {} });
 	// Only the initial value seeds local state — same reasoning as
 	// defaultSortColumn below, this shouldn't get clobbered by prop identity
-	// changes once the user starts toggling columns.
-	let visibleColumnKeys = $state(new Set(untrack(() => initialVisibleColumns)));
+	// changes once the user starts toggling Fields.
+	let visibleFieldKeys = $state(new Set(untrack(() => initialVisibleFields)));
 	// Only the initial value of defaultSortColumn seeds local sort state —
 	// the user's in-table sort choice shouldn't get clobbered if it changes.
 	let sortColumn = $state<SortColumn>(untrack(() => defaultSortColumn));
 	let sortDirection = $state<SortDirection>("asc");
 	// Same "seed once, own it locally, push changes up via callback" shape as
-	// visibleColumnKeys/toggleColumn below.
+	// visibleFieldKeys/toggleField below.
 	let favoriteIds = $state(new Set(untrack(() => initialFavoriteIds)));
 
 	const abilityOptions = $derived(
@@ -113,12 +114,12 @@
 		sortPokemon(filterPokemon(scopedRows, filters, { favoriteIds, activeGen }), sortColumn, sortDirection),
 	);
 	const activeColumns = $derived(
-		TOGGLEABLE_COLUMNS.filter((col) => visibleColumnKeys.has(col.key)),
+		TABLE_COLUMNS.filter((col) => visibleFieldKeys.has(col.key)),
 	);
 	// No. is a dex number (up to 4 digits) vs a stat's 3; sprite/type widths
 	// swing with density and the icon-vs-text type display respectively —
 	// everything else has one fixed min regardless of row content (see each
-	// ColumnDef's own `widthPercent`/`minWidth` in tableColumns.ts). The table
+	// Field's TABLE_GEOMETRY `widthPercent`/`minWidth` in tableColumns.ts). The table
 	// deliberately stays table-layout: auto (not fixed) — fixed's column
 	// sizing pass ignores min-width/max-width entirely by design (that's the
 	// point of "fixed"), which silently broke every column's floor. Under
@@ -146,12 +147,17 @@
 		return sortDirection === "asc" ? " ^" : " v";
 	}
 
-	function toggleColumn(key: string) {
-		const next = new Set(visibleColumnKeys);
+	function toggleField(key: string) {
+		const next = new Set(visibleFieldKeys);
 		if (next.has(key)) next.delete(key);
 		else next.add(key);
-		visibleColumnKeys = next;
-		onColumnsChange([...next]);
+		visibleFieldKeys = next;
+		// Never leave the list sorted by a Field that is no longer shown.
+		({ column: sortColumn, direction: sortDirection } = sortAfterFieldsChange(
+			{ column: sortColumn, direction: sortDirection },
+			next,
+		));
+		onFieldsChange([...next]);
 	}
 
 	function toggleFavorite(id: number) {
@@ -179,39 +185,39 @@
 <div class="table-screen">
 	<FilterBar bind:filters {abilityOptions} {useTypeIcons} {rows} onQuickSelect={onSelect} />
 
-	<details class="column-toggle">
+	<details class="fields-menu">
 		<summary>
-			<Icon name="columns-3" size={14} strokeWidth={2} />
-			<span>Columns</span>
+			<Icon name="list-checks" size={14} strokeWidth={2} />
+			<span>Fields</span>
 		</summary>
-		<div class="column-checkbox-list">
-			<div class="column-section">
-				<div class="column-section-label">Stats</div>
-				<div class="column-grid column-grid-stats">
-					{#each TOGGLEABLE_COLUMNS.filter((c) => !c.headerIcon) as col (col.key)}
-						<label class="column-checkbox">
+		<div class="fields-list">
+			<div class="fields-section">
+				<div class="fields-section-label">Stats</div>
+				<div class="fields-grid fields-grid-stats">
+					{#each FIELDS.filter((f) => !f.icon) as field (field.key)}
+						<label class="fields-checkbox">
 							<input
 								type="checkbox"
-								checked={visibleColumnKeys.has(col.key)}
-								onchange={() => toggleColumn(col.key)}
+								checked={visibleFieldKeys.has(field.key)}
+								onchange={() => toggleField(field.key)}
 							/>
-							{col.label}
+							{field.label}
 						</label>
 					{/each}
 				</div>
 			</div>
-			<div class="column-section">
-				<div class="column-section-label">Other</div>
-				<div class="column-grid column-grid-other">
-					{#each TOGGLEABLE_COLUMNS.filter((c) => c.headerIcon) as col (col.key)}
-						<label class="column-checkbox">
+			<div class="fields-section">
+				<div class="fields-section-label">Other</div>
+				<div class="fields-grid fields-grid-other">
+					{#each FIELDS.filter((f) => f.icon) as field (field.key)}
+						<label class="fields-checkbox">
 							<input
 								type="checkbox"
-								checked={visibleColumnKeys.has(col.key)}
-								onchange={() => toggleColumn(col.key)}
+								checked={visibleFieldKeys.has(field.key)}
+								onchange={() => toggleField(field.key)}
 							/>
-							<Icon name={col.headerIcon ?? "circle"} size={13} strokeWidth={2} />
-							{col.label}
+							<Icon name={field.icon ?? "circle"} size={13} strokeWidth={2} />
+							{field.label}
 						</label>
 					{/each}
 				</div>
@@ -240,14 +246,14 @@
 					<th style:min-width={typeColWidth.min}>Type</th>
 					{#each activeColumns as col (col.key)}
 						<th
-							class:center={!!col.headerIcon}
+							class:center={!!col.icon}
 							class:right={col.align === "right"}
 							style:min-width={col.minWidth}
 							onclick={() => col.sortKey && setSort(col.sortKey)}
 							title={col.label}
 						>
-							{#if col.headerIcon}
-								<Icon name={col.headerIcon} />
+							{#if col.icon}
+								<Icon name={col.icon} />
 							{:else}
 								{col.label}
 							{/if}
@@ -371,11 +377,11 @@
 		font-size: 0.85em;
 		margin: 6px 0;
 	}
-	.column-toggle {
+	.fields-menu {
 		position: relative;
 		margin-bottom: var(--lk-space-3);
 	}
-	.column-toggle summary {
+	.fields-menu summary {
 		display: inline-flex;
 		align-items: center;
 		gap: 6px;
@@ -388,14 +394,14 @@
 		color: var(--lk-text-muted);
 		transition: background-color 100ms ease-out, color 100ms ease-out;
 	}
-	.column-toggle summary::-webkit-details-marker {
+	.fields-menu summary::-webkit-details-marker {
 		display: none;
 	}
-	.column-toggle summary:hover {
+	.fields-menu summary:hover {
 		background: var(--lk-surface-hover);
 		color: var(--lk-text);
 	}
-	.column-toggle summary::after {
+	.fields-menu summary::after {
 		content: "";
 		width: 12px;
 		height: 12px;
@@ -405,15 +411,15 @@
 		mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") center / contain no-repeat;
 		transition: transform 100ms ease-out;
 	}
-	.column-toggle[open] summary::after {
+	.fields-menu[open] summary::after {
 		transform: rotate(180deg);
 	}
-	.column-toggle[open] summary {
+	.fields-menu[open] summary {
 		background: color-mix(in srgb, var(--lk-accent) 12%, transparent);
 		color: var(--lk-accent);
 		border-color: color-mix(in srgb, var(--lk-accent) 40%, var(--lk-border));
 	}
-	.column-checkbox-list {
+	.fields-list {
 		position: absolute;
 		top: calc(100% + 4px);
 		left: 0;
@@ -429,11 +435,11 @@
 		border-radius: 4px;
 		box-shadow: var(--lk-shadow-s);
 	}
-	.column-section + .column-section {
+	.fields-section + .fields-section {
 		padding-top: 10px;
 		border-top: 1px solid var(--lk-border);
 	}
-	.column-section-label {
+	.fields-section-label {
 		margin-bottom: 4px;
 		font-size: 0.7em;
 		font-weight: 600;
@@ -441,15 +447,15 @@
 		letter-spacing: 0.04em;
 		color: var(--lk-text-faint);
 	}
-	.column-grid {
+	.fields-grid {
 		display: grid;
 		grid-template-columns: repeat(3, 1fr);
 		gap: 2px 8px;
 	}
-	.column-grid-other {
+	.fields-grid-other {
 		grid-template-columns: repeat(2, 1fr);
 	}
-	.column-checkbox {
+	.fields-checkbox {
 		display: flex;
 		align-items: center;
 		gap: 6px;
@@ -460,7 +466,7 @@
 		color: var(--lk-text-muted);
 		transition: background-color 100ms ease-out, color 100ms ease-out;
 	}
-	.column-checkbox:hover {
+	.fields-checkbox:hover {
 		background: var(--lk-surface-hover);
 		color: var(--lk-text);
 	}

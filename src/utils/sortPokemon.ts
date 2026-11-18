@@ -12,6 +12,11 @@ export type SortColumn =
 	| keyof StatBlock;
 export type SortDirection = "asc" | "desc";
 
+export interface SortState {
+	column: SortColumn;
+	direction: SortDirection;
+}
+
 function valueOf(row: PokedexTableRow, column: SortColumn): number | string {
 	switch (column) {
 		case "id": return row.dexNumber;

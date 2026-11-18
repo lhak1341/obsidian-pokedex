@@ -90,7 +90,7 @@ A Pokédex pane narrower than 600px, judged by the pane's own width, not the dev
 
 ## Fields
 
-The pieces of per-Pokemon data the user chooses to show on the browse screen (Total, EV yield, held items, catch rate, ...). There is one selection, shared by both layouts: switching between the table and Card view changes how the chosen Fields are drawn, never which ones are shown. A chosen Field appears as a column in the table; in Card view it appears on the tile (stats, Total, EV yield) or in the tap panel (every chosen Field, with its exact value). An unchosen Field appears nowhere, and is not offered as a sort. "Columns" is the table-only name for the same thing and is being retired as the user-facing term.
+The pieces of per-Pokemon data the user chooses to show on the browse screen (Total, EV yield, held items, catch rate, ...). There is one selection, shared by both layouts: switching between the table and Card view changes how the chosen Fields are drawn, never which ones are shown. A chosen Field appears as a column in the table; in Card view it appears on the tile (stats, Total, EV yield) or in the tap panel (every chosen Field, with its exact value). An unchosen Field appears nowhere, and is not offered as a sort. "Columns" was the table-only name for the same thing and is retired as the user-facing term; the menu is "Fields". In code, `FIELDS` (`src/utils/fields.ts`) is the one list every layout reads, and the setting is `visibleFields`. Unchoosing the Field the list is sorted on resets the sort to No. ascending (`sortAfterFieldsChange`).
 
 ## Info popover
 

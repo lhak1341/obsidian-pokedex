@@ -1,5 +1,7 @@
 # Favorites and visibleColumns keep their callback plumbing instead of a preferences store
 
+> Renamed in #22: `visibleColumns` → `visibleFields`, `setVisibleColumns` → `setVisibleFields`, `visibleColumnKeys` → `visibleFieldKeys`, and `TOGGLEABLE_COLUMNS` split into `FIELDS` (`src/utils/fields.ts`) plus `TABLE_COLUMNS` (`src/utils/tableColumns.ts`). The decision is unchanged.
+
 An architecture review flagged the persistence path for the two values the table owns locally, `favoritePokemonIds` and `visibleColumns`, as a shallow five-hop callback chain: `TableScreen` calls `onFavoritesChange` / `onColumnsChange`, `PokedexApp.svelte` forwards it, `PokedexView`'s constructor forwards it again, and the lambdas in `main.ts` reach `PokedexPlugin.setFavorites` / `setVisibleColumns`, which assign onto `this.settings` and call `saveData`. The review proposed a local-preferences store (`get` / `set`, optionally `subscribe`) so a new locally-owned preference would need no new props through three layers.
 
 On inspection the chain is plumbing, not a place a bug can hide, and a store would not be deeper than what it replaces:

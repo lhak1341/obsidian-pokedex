@@ -14,7 +14,7 @@ export class PokedexView extends ItemView {
 		leaf: WorkspaceLeaf,
 		private repository: PokedexRepository,
 		private getSettings: () => PluginSettings,
-		private onColumnsChange: (columns: string[]) => void,
+		private onFieldsChange: (fields: string[]) => void,
 		private onFavoritesChange: (ids: number[]) => void,
 	) {
 		super(leaf);
@@ -84,7 +84,7 @@ export class PokedexView extends ItemView {
 			props: {
 				repository: this.repository,
 				settings: this.getSettings(),
-				onColumnsChange: this.onColumnsChange,
+				onFieldsChange: this.onFieldsChange,
 				onFavoritesChange: this.onFavoritesChange,
 			},
 		});

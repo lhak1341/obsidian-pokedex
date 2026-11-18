@@ -420,10 +420,6 @@ export const STAT_COLUMNS = [
 	{ key: "speed", label: "Spe" },
 ] as const;
 
-// Browse-table columns shown by default before the user customizes them via
-// the Columns dropdown.
-export const DEFAULT_VISIBLE_COLUMNS: string[] = STAT_COLUMNS.map((c) => c.key);
-
 // Per-stat bar colors, matching Bulbapedia's own stat-bar convention. The
 // values are canonical domain data declared in src/styles/pokemon-colours.css
 // (the one file exempt from the stylelint colour ban); this maps each stat key

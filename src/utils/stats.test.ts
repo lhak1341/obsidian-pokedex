@@ -3,7 +3,7 @@ import type { PokedexTableRow } from "../data/types";
 import { makeRow } from "../data/__fixtures__/rows";
 import { filterPokemon, EMPTY_FILTERS } from "./filterPokemon";
 import { sortPokemon } from "./sortPokemon";
-import { TOGGLEABLE_COLUMNS } from "./tableColumns";
+import { FIELDS } from "./fields";
 import { resolveStatsForGen, scopeRowsToGen, totalStat } from "./stats";
 
 describe("totalStat", () => {
@@ -68,9 +68,9 @@ describe("scopeRowsToGen", () => {
 	it("feeds the table's columns, Total, sort and stat-range filter the same scoped stats", () => {
 		const scoped = scopeRowsToGen(rows, 3);
 		const renderOf = (key: string, row: PokedexTableRow): string => {
-			const column = TOGGLEABLE_COLUMNS.find((c) => c.key === key);
-			if (!column || column.custom) throw new Error(`no text column "${key}"`);
-			return column.render(row);
+			const field = FIELDS.find((f) => f.key === key);
+			if (!field || field.custom) throw new Error(`no text Field "${key}"`);
+			return field.render(row);
 		};
 		expect(renderOf("defense", scoped[0])).toBe("30");
 		expect(renderOf("total", scoped[0])).toBe("300");
