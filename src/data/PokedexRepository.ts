@@ -1,5 +1,6 @@
 import { mapWithConcurrency } from "../utils/concurrency";
-import { DiskCache } from "./Cache";
+import type { CacheStore } from "./CacheStore";
+import { dataUriFromBuffer } from "./dataUri";
 import {
 	gigantamaxFormPath,
 	imagePath,
@@ -63,7 +64,7 @@ export interface TableLoadResult {
 // Facade the UI talks to: "give me row/entry data for id X", never worrying
 // about whether that means a cache hit or a live PokeAPI call.
 export class PokedexRepository {
-	// Session-lifetime in-memory layer on top of DiskCache. The table reload
+	// Session-lifetime in-memory layer on top of the CacheStore. The table reload
 	// (settings change, tab close/reopen) is common — PokedexView remounts on
 	// every settings save — and without this, each of those re-reads and
 	// re-parses/re-base64-encodes the same ~400 files from disk even though
@@ -109,7 +110,7 @@ export class PokedexRepository {
 
 	constructor(
 		private client: PokeApiClient,
-		private cache: DiskCache,
+		private cache: CacheStore,
 	) {}
 
 	// Shared shape behind every getOrFetch* method below: check the
@@ -278,15 +279,16 @@ export class PokedexRepository {
 		if (pending) return pending;
 
 		const load = (async (): Promise<string | null> => {
-			const cached = await this.cache.readImageDataUri(relPath);
+			const cached = await this.cache.readBinary(relPath);
 			if (cached) {
-				this.imageMemCache.set(relPath, cached);
-				return cached;
+				const cachedUri = dataUriFromBuffer(relPath, cached);
+				this.imageMemCache.set(relPath, cachedUri);
+				return cachedUri;
 			}
 			const buffer = await this.client.fetchImageBinary(url);
-			// writeImageBinary hands back the data URI for the buffer it just
-			// wrote — no separate readImageDataUri re-read needed.
-			const dataUri = await this.cache.writeImageBinary(relPath, buffer);
+			await this.cache.writeBinary(relPath, buffer);
+			// Encoded from the buffer in hand, not re-read from the store.
+			const dataUri = dataUriFromBuffer(relPath, buffer);
 			this.imageMemCache.set(relPath, dataUri);
 			return dataUri;
 		})();
@@ -639,10 +641,9 @@ export class PokedexRepository {
 	}
 
 	// Every cached species id, discovered by listing the flat species/
-	// subdirectory directly (DiskCache.listFilesIn) rather than a full
-	// listFiles() tree walk — species/ never nests further (see
-	// cachePaths.ts's speciesPath()), so a single non-recursive list() call
-	// covers it without also walking every cached image file. DiskCache
+	// subdirectory (CacheStore.listFilesIn) — species/ never nests further
+	// (see cachePaths.ts's speciesPath()), so one non-recursive listing
+	// covers it without touching any image entry. The store
 	// itself stays agnostic of this naming convention (see cachePaths.ts's
 	// own header comment) — the id-parsing lives here, next to the other
 	// callers of speciesPath()/pokemonPath().

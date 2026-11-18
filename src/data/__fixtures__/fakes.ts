@@ -1,5 +1,6 @@
 import type { DataAdapter } from "obsidian";
 import { vi } from "vitest";
+import type { CacheStore } from "../CacheStore";
 import { PokeApiClient } from "../PokeApiClient";
 import type { RawAbility, RawEvolutionChain, RawMove, RawPokemon, RawSpecies } from "../types";
 import bulbasaurChain from "./bulbasaur-evolution-chain.json";
@@ -97,6 +98,51 @@ export function createFakeDataAdapter(): DataAdapter {
 	};
 
 	return adapter as DataAdapter;
+}
+
+// The test CacheStore: repository and load-state tests run against this
+// rather than DiskCache over a fake adapter, so they exercise the port the
+// repository actually depends on. DiskCache's own adapter behaviour stays
+// covered by Cache.test.ts.
+export class MemoryCacheStore implements CacheStore {
+	private entries = new Map<string, string | ArrayBuffer>();
+
+	async readJson<T>(key: string): Promise<T | null> {
+		const content = this.entries.get(key);
+		return typeof content === "string" ? (JSON.parse(content) as T) : null;
+	}
+
+	// Stored serialized, like DiskCache, so a caller mutating what it wrote or
+	// read can never alias the stored entry.
+	async writeJson(key: string, data: unknown): Promise<void> {
+		this.entries.set(key, JSON.stringify(data));
+	}
+
+	async readBinary(key: string): Promise<ArrayBuffer | null> {
+		const content = this.entries.get(key);
+		return content instanceof ArrayBuffer ? content : null;
+	}
+
+	async writeBinary(key: string, buffer: ArrayBuffer): Promise<void> {
+		this.entries.set(key, buffer);
+	}
+
+	async exists(key: string): Promise<boolean> {
+		return this.entries.has(key);
+	}
+
+	async remove(key: string): Promise<void> {
+		this.entries.delete(key);
+	}
+
+	async listFilesIn(dir: string): Promise<string[]> {
+		const prefix = `${dir}/`;
+		return [...this.entries.keys()].filter((k) => k.startsWith(prefix) && !k.slice(prefix.length).includes("/"));
+	}
+
+	async clear(): Promise<void> {
+		this.entries.clear();
+	}
 }
 
 // Subclasses PokeApiClient (rather than a standalone object) so it satisfies

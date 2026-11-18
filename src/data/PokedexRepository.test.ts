@@ -1,14 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import bulbasaur from "./__fixtures__/bulbasaur.json";
 import bulbasaurSpecies from "./__fixtures__/bulbasaur-species.json";
-import { createFakeDataAdapter, FakePokeApiClient } from "./__fixtures__/fakes";
-import { DiskCache } from "./Cache";
+import { FakePokeApiClient, MemoryCacheStore } from "./__fixtures__/fakes";
 import { PokedexRepository } from "./PokedexRepository";
 import type { RawPokemon, RawSpecies } from "./types";
 
 function makeRepository() {
 	const client = new FakePokeApiClient();
-	const cache = DiskCache.forTest(createFakeDataAdapter(), "cache");
+	const cache = new MemoryCacheStore();
 	return { client, cache, repository: new PokedexRepository(client, cache) };
 }
 
@@ -22,6 +21,19 @@ describe("PokedexRepository", () => {
 		expect(client.fetchPokemon).toHaveBeenCalledTimes(1);
 		expect(client.fetchSpecies).toHaveBeenCalledTimes(1);
 		expect(client.fetchImageBinary).toHaveBeenCalledTimes(1);
+	});
+
+	it("serves a cached image's stored bytes as a data URI, and writes a fetched image's bytes", async () => {
+		const { client, cache, repository } = makeRepository();
+		await cache.writeBinary("images/1-sprite.png", new Uint8Array([1, 2, 3, 4]).buffer);
+
+		const { rows } = await repository.getTableRows({ start: 1, end: 2 });
+
+		// FakePokeApiClient's image is 4 zero bytes; id 1's sprite never hits it.
+		expect(rows.map((r) => r.spriteDataUri)).toEqual(["data:image/png;base64,AQIDBA==", "data:image/png;base64,AAAAAA=="]);
+		expect(client.fetchImageBinary).toHaveBeenCalledTimes(1);
+		const written = await cache.readBinary("images/2-sprite.png");
+		expect(written && new Uint8Array(written)).toEqual(new Uint8Array(4));
 	});
 
 	it("serves a repeat call from the in-memory layer without touching disk", async () => {
@@ -186,7 +198,7 @@ describe("PokedexRepository", () => {
 	// dex #19 rattata/rattata-alola setup as the two tests above.
 	function setUpRattataWithAlolanForm(
 		client: FakePokeApiClient,
-		cache: DiskCache,
+		cache: MemoryCacheStore,
 	): Promise<void> {
 		const rattataSpecies: RawSpecies = {
 			...bulbasaurSpecies,
@@ -642,7 +654,7 @@ describe("PokedexRepository", () => {
 
 	// A species with a Mega and a Gigantamax variety, cached the way a detail-
 	// screen visit leaves it. "venusaur-mega" must be in MEGA_VARIETY_KEYS.
-	async function setUpVenusaurWithVarietyForms(client: FakePokeApiClient, cache: DiskCache, repository: PokedexRepository) {
+	async function setUpVenusaurWithVarietyForms(client: FakePokeApiClient, cache: MemoryCacheStore, repository: PokedexRepository) {
 		const venusaurSpecies: RawSpecies = {
 			...bulbasaurSpecies,
 			id: 3,

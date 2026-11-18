@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createFakeDataAdapter, FakePokeApiClient } from "../data/__fixtures__/fakes";
+import { FakePokeApiClient, MemoryCacheStore } from "../data/__fixtures__/fakes";
 import { makeRegionalFormRow } from "../data/__fixtures__/rows";
-import { DiskCache } from "../data/Cache";
 import { PokedexRepository } from "../data/PokedexRepository";
 import type { PokedexTableRow } from "../data/types";
 import type { GenerationScope } from "../utils/generationScope";
@@ -17,7 +16,7 @@ function makeLoadState(
 ) {
 	const updates: LoadSnapshot[] = [];
 	const client = new FakePokeApiClient();
-	const cache = DiskCache.forTest(createFakeDataAdapter(), "cache");
+	const cache = new MemoryCacheStore();
 	const repository = new PokedexRepository(client, cache);
 	const scope: GenerationScope = { fetchRange: range, includes, includesFailedId };
 	return { client, updates, loadState: new PokedexLoadState(repository, scope, (s) => updates.push(s)) };

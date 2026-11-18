@@ -1,37 +1,10 @@
 import type { App, DataAdapter, PluginManifest } from "obsidian";
-
-const MIME_BY_EXT: Record<string, string> = {
-	png: "image/png",
-	jpg: "image/jpeg",
-	jpeg: "image/jpeg",
-	gif: "image/gif",
-};
-
-function extOf(path: string): string {
-	return path.split(".").pop()?.toLowerCase() ?? "png";
-}
-
-// 0x8000 bytes/call comfortably avoids blowing the engine's call-stack limit
-// on String.fromCharCode's spread args (unlike a single call over the whole
-// buffer), while still converting in large chunks instead of one
-// function-call-plus-concat per byte — most noticeable on the official
-// artwork/shiny images (detail view), which run tens of KB versus a sprite's
-// few KB.
-const BASE64_CHUNK_SIZE = 0x8000;
-
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-	const bytes = new Uint8Array(buffer);
-	let binary = "";
-	for (let i = 0; i < bytes.length; i += BASE64_CHUNK_SIZE) {
-		binary += String.fromCharCode(...bytes.subarray(i, i + BASE64_CHUNK_SIZE));
-	}
-	return btoa(binary);
-}
+import type { CacheStore } from "./CacheStore";
 
 // Persists PokeAPI JSON + images under the plugin's own actual deployed
 // folder (manifest.dir) inside .obsidian/plugins/<folder>/cache/ — hidden
 // from the vault's note explorer and never written as vault files/notes.
-export class DiskCache {
+export class DiskCache implements CacheStore {
 	private constructor(private adapter: DataAdapter, private cacheDir: string) {}
 
 	// manifest.dir (not manifest.id) is load-bearing: a vault can deploy a
@@ -107,30 +80,19 @@ export class DiskCache {
 		await this.adapter.write(path, JSON.stringify(data));
 	}
 
-	private dataUriFromBuffer(relPath: string, buffer: ArrayBuffer): string {
-		const mime = MIME_BY_EXT[extOf(relPath)] ?? "image/png";
-		return `data:${mime};base64,${arrayBufferToBase64(buffer)}`;
-	}
-
-	async readImageDataUri(relPath: string): Promise<string | null> {
-		const path = this.resolve(relPath);
+	// Same read-and-treat-a-rejection-as-a-miss shape as readJson.
+	async readBinary(relPath: string): Promise<ArrayBuffer | null> {
 		try {
-			const buffer = await this.adapter.readBinary(path);
-			return this.dataUriFromBuffer(relPath, buffer);
+			return await this.adapter.readBinary(this.resolve(relPath));
 		} catch {
 			return null;
 		}
 	}
 
-	// Returns the data URI for the buffer just written, encoded directly from
-	// the in-memory buffer — avoids a redundant readBinary+base64 round-trip
-	// against the file it just wrote (every caller needs the data URI right
-	// after writing).
-	async writeImageBinary(relPath: string, buffer: ArrayBuffer): Promise<string> {
+	async writeBinary(relPath: string, buffer: ArrayBuffer): Promise<void> {
 		const path = this.resolve(relPath);
 		await this.ensureParentDir(path);
 		await this.adapter.writeBinary(path, buffer);
-		return this.dataUriFromBuffer(relPath, buffer);
 	}
 
 	async clear(): Promise<void> {

@@ -1,6 +1,6 @@
 # src/data (and the utils/view code that touches its cache)
 
-Scoped to `PokeApiClient`, `PokedexRepository`, `Cache`/`DiskCache`, `normalize.ts`,
+Scoped to `PokeApiClient`, `PokedexRepository`, `CacheStore`/`DiskCache`, `normalize.ts`,
 `constants.ts` — fetch, cache, and normalization rules for raw PokeAPI data.
 
 ## Data layer
@@ -77,6 +77,13 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `Cache`/`DiskCache`, `normalize.
 
 ## Cache
 
+`PokedexRepository` depends on the `CacheStore` port (`CacheStore.ts`), not `DiskCache`.
+`main.ts` passes a `DiskCache`; repository and load-state tests pass `MemoryCacheStore`
+(`__fixtures__/fakes.ts`). Only `Cache.test.ts` drives `DiskCache` over `createFakeDataAdapter`.
+A new repository cache operation goes on the port and on both stores.
+Stores hold image bytes only; the repository encodes the data URI (`dataUri.ts`), so a
+store never learns how an image is displayed (#18's blob-URL LRU swaps that encoding).
+
 Disk cache lives at `{manifest.dir}/cache` — the vault's deployed folder, not the manifest
 id. `DiskCache.forPlugin` derives it from `manifest.dir` specifically because keying off
 `manifest.id` used to orphan the cache in a sibling folder; `Cache.ts` holds one-time
@@ -91,7 +98,7 @@ Regional forms have two distinct cache keys: the detail view fetches by numeric 
 `REGIONAL_FORMS[suffix].generationId` matches the generation being cleared — not its base
 dex number's range, since those diverge (Alolan Rattata is dex #19 but `generationId: 7`).
 Discovery is independent of the range being cleared too — `listCachedSpeciesIds()` lists
-every cached species id via `DiskCache.listFilesIn("species")`, so a variant survives only
+every cached species id via `CacheStore.listFilesIn("species")`, so a variant survives only
 if its own generation truly doesn't match, never because its base id sits outside this
 range (see ADR-0006).
 
@@ -101,7 +108,7 @@ They belong to the base species' dex range, not their own generation, and their 
 derived from the cached species/pokemon JSON, so that read must happen before the base files
 are removed. `abilities/`, `items/`, `moves/` and `evolution-chain/` are shared across
 species and only the global clear removes them. That global clear is
-`PokedexRepository.clearAll()`, never `DiskCache.clear()` alone: `isIdCached`/`isExtrasCached`
+`PokedexRepository.clearAll()`, never `CacheStore.clear()` alone: `isIdCached`/`isExtrasCached`
 count a mem hit as cached, so a disk-only clear leaves the counters at "N/N cached" and the
 files are never written again this session. A fetch already in flight is not cancelled by
 either clear and can still write afterwards.

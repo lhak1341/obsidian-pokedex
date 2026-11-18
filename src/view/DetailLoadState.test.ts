@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createFakeDataAdapter, FakePokeApiClient } from "../data/__fixtures__/fakes";
-import { DiskCache } from "../data/Cache";
+import { FakePokeApiClient, MemoryCacheStore } from "../data/__fixtures__/fakes";
 import { PokedexRepository } from "../data/PokedexRepository";
 import type { RawPokemon } from "../data/types";
 import bulbasaur from "../data/__fixtures__/bulbasaur.json";
@@ -8,7 +7,7 @@ import { DetailLoadState } from "./DetailLoadState";
 
 function makeLoadState() {
 	const client = new FakePokeApiClient();
-	const cache = DiskCache.forTest(createFakeDataAdapter(), "cache");
+	const cache = new MemoryCacheStore();
 	const repository = new PokedexRepository(client, cache);
 	return { client, repository, loadState: new DetailLoadState(repository) };
 }
