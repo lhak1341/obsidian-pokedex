@@ -5,17 +5,20 @@
 	import type { PluginSettings } from "../data/types";
 	import { resolveGenerationScope } from "../utils/generationScope";
 	import { describePartialLoadOutcome, describeRetryOutcome } from "../utils/loadNotices";
-	import { DetailNavigationState, type ScrollInstruction } from "./DetailNavigationState";
+	import type { DetailNavigationState, NavRecord, ScrollInstruction } from "./DetailNavigationState";
 	import { isEditableTarget } from "./domTarget";
 	import DetailScreen from "./components/DetailScreen.svelte";
 	import { emptyLoadSnapshot, type LoadSnapshot, PokedexLoadState } from "./PokedexLoadState";
 	import TableScreen from "./components/TableScreen.svelte";
 
-	let { repository, settings, onFieldsChange, onFavoritesChange }: {
+	let { repository, settings, onFieldsChange, onFavoritesChange, navState, onNavigate, onStepHistory }: {
 		repository: PokedexRepository;
 		settings: PluginSettings;
 		onFieldsChange: (fields: string[]) => void;
 		onFavoritesChange: (ids: number[]) => void;
+		navState: DetailNavigationState;
+		onNavigate: (record: NavRecord) => void;
+		onStepHistory: (direction: "back" | "forward") => void;
 	} = $props();
 
 	// Favourites are owned here, above both screens, so the table, the detail
@@ -33,18 +36,15 @@
 		onFavoritesChange([...next]);
 	}
 
-	let screen = $state<"table" | "detail">("table");
-	let selectedId = $state<number | null>(null);
-
-	// Browser-style back/forward through previously-viewed Pokemon (see
-	// openDetail/goBack/goForward below), bound to plain "[" / "]" — no
-	// modifier is free of conflict with any existing hotkey (unlike Cmd+L
-	// and Cmd+[/Cmd+], which collide with Obsidian's/Electron's own bindings;
-	// see QuickSearch.svelte's comment for that whole saga). DetailNavigationState
-	// is a plain, non-reactive class (same reason as PokedexLoadState below) —
-	// screen/selectedId above are the reactive mirror, re-assigned after every
-	// call instead of read directly off the instance.
-	const navState = new DetailNavigationState();
+	// View history is the tab's own Obsidian navigation history (CONTEXT.md).
+	// PokedexView owns navState and the leaf: a new screen goes out through
+	// onNavigate, and every entry (new, back/forward, restart) comes back in
+	// through show() below. navState is a plain, non-reactive class (same
+	// reason as PokedexLoadState below), so screen/selectedId are the reactive
+	// mirror, re-assigned after every call. Seeded from it, so a settings
+	// refresh remount keeps the screen.
+	let screen = $state<"table" | "detail">(untrack(() => navState.screen));
+	let selectedId = $state<number | null>(untrack(() => navState.selectedId));
 
 	// PokedexLoadState is a plain, non-reactive class (tested with plain
 	// vitest, see PokedexLoadState.test.ts) — Svelte 5's $state only
@@ -116,31 +116,34 @@
 		}
 	}
 
+	// Called by PokedexView.setState for every history entry; its return
+	// tells the view whether the record changed anything (an entry or not).
+	export function show(record: NavRecord): ScrollInstruction {
+		const instruction = navState.setState(record, rootEl?.scrollTop ?? 0);
+		void applyNavigation(instruction);
+		return instruction;
+	}
+
 	function openDetail(id: number) {
-		void applyNavigation(navState.openDetail(id, rootEl?.scrollTop ?? 0));
+		onNavigate({ screen: "detail", pokemonId: id });
 	}
 
-	function goBack() {
-		void applyNavigation(navState.goBack());
-	}
-
-	function goForward() {
-		void applyNavigation(navState.goForward());
-	}
-
-	// Verified against both Obsidian's HotkeyManager and Electron's native
-	// app menu (app.hotkeyManager.bakedHotkeys / Menu.getApplicationMenu())
-	// that plain "[" and "]" have zero existing bindings, so this needs
-	// neither the capture-phase trick nor stopPropagation that Mod+Shift+L
-	// required.
+	// "[" / "]" step the tab's own history, the same one as the tab header
+	// arrows and the mobile navigation bar. No modifier is free of conflict
+	// (Cmd+[/Cmd+] collide with Obsidian's/Electron's own bindings; see
+	// QuickSearch.svelte's comment). Verified against both Obsidian's
+	// HotkeyManager and Electron's native app menu
+	// (app.hotkeyManager.bakedHotkeys / Menu.getApplicationMenu()) that plain
+	// "[" and "]" have zero existing bindings, so this needs neither the
+	// capture-phase trick nor stopPropagation that Mod+Shift+L required.
 	function onGlobalKeydown(e: KeyboardEvent) {
 		if (isEditableTarget(e.target)) return;
 		if (e.key === "[") {
 			e.preventDefault();
-			goBack();
+			onStepHistory("back");
 		} else if (e.key === "]") {
 			e.preventDefault();
-			goForward();
+			onStepHistory("forward");
 		}
 	}
 
@@ -148,7 +151,7 @@
 	onDestroy(() => window.removeEventListener("keydown", onGlobalKeydown));
 
 	function backToTable() {
-		void applyNavigation(navState.backToTable());
+		onNavigate(navState.backToTable());
 	}
 </script>
 
