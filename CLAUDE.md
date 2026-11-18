@@ -9,6 +9,7 @@ a generation).
 
 Issue tracker: GitHub issues; wayfinding operations (sub-issues, blocking, claims) are in
 `docs/agents/issue-tracker.md`.
+A ticket's interface is shaped by the tickets that consume it: before settling a signature, read the parent spec's sections for those later tickets (#19's cache port first returned data URIs; #21's blob-URL LRU needs bytes).
 
 Deploys to the vault folder `pokedex` (intentionally ≠ manifest id `obsidian-pokedex`), and
 to `pokedex-test-vault/` (named so the Obsidian CLI's by-name `vault=` cannot hit a sibling

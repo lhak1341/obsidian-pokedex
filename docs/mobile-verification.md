@@ -16,7 +16,10 @@ also has a `test-vault`. Its cache starts empty, so the first open fetches from 
    an unknown folder (it opened the other `test-vault`). From any open vault:
    `obsidian vault=lhakZettel eval code="require('electron').ipcRenderer.sendSync('vault-open', '<abs path>/pokedex-test-vault', false)"`
    `Command "eval" not found` from `vault=pokedex-test-vault` means its window is closed, not
-   that a plugin is missing.
+   that a plugin is missing. A freshly opened window is hidden (`document.visibilityState`),
+   which throttles it: an async eval hung past 120 s and screenshots go stale. Run
+   `const w=require('electron').remote.getCurrentWindow(); w.setBackgroundThrottling(false); w.focus()`
+   and confirm `"visible"` (`moveTop()` alone left it hidden).
 3. `obsidian vault=pokedex-test-vault dev:mobile on` (reloads that window).
    **The flag is global** (unprefixed `localStorage.EmulateMobile`): any other vault window
    that reloads while it is on comes up in mobile mode too. Always end with step 7.
@@ -32,9 +35,9 @@ also has a `test-vault`. Its cache starts empty, so the first open fetches from 
    If it is already detached, `app.workspace.createLeafInParent(app.workspace.rootSplit, 0)`
    gives a leaf to call `setViewState` on.
 6. Screenshot: `dev:screenshot path=<abs>/temp/mobile-loop/<name>.png`. A background window
-   returns stale frames (a "New tab" shot while the DOM already held the Pokédex): before each
-   shot run `setBackgroundThrottling(false)`, `moveTop()` and `invalidate()` on
-   `require('electron').remote.getCurrentWindow()`, shoot twice and keep the second. A sideways `scrollLeft` never paints: fake it with `transform`.
+   returns stale frames (a "New tab" shot while the DOM already held the Pokédex): after
+   step 2's visibility fix, run `invalidate()` on the window before each shot, shoot twice
+   and keep the second. A sideways `scrollLeft` never paints: fake it with `transform`.
 7. Clean up: `dev:mobile off`, then confirm `localStorage.getItem('EmulateMobile') === null`
    in both `pokedex-test-vault` and `lhakZettel`; close the test window
    (`eval code="setTimeout(()=>window.close(),200)"`).
@@ -44,7 +47,8 @@ Touch in emulation:
 - No touch events fire; mouse hover still works, so hover-only UI looks fine here.
 - CDP `Input.dispatchTouchEvent` (via `dev:cdp`, with `dev:debug on` and
   `Emulation.setTouchEmulationEnabled`) **hangs** until killed (tried 3 times, 45 s each;
-  the window reports `visibilityState: "hidden"` even after `Page.bringToFront`).
+  the window reports `visibilityState: "hidden"` even after `Page.bringToFront`; untested
+  whether step 2's `focus()` fix cures it — inferred same cause).
   `Input.dispatchMouseEvent` works (about 7 s per call).
 - So emulation can test the plugin's `pointerType` branching only with JS-synthesized
   `new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true })`. That does not
