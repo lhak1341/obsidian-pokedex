@@ -104,7 +104,7 @@
 		color: var(--lk-text-muted);
 		cursor: pointer;
 		opacity: 0.7;
-		transition: opacity 100ms ease-out;
+		transition: opacity var(--lk-duration-fast) ease-out;
 	}
 	.flavor-version-arrow:hover:not(:disabled) {
 		opacity: 1;

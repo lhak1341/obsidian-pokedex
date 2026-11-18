@@ -38,7 +38,7 @@
 		text-transform: capitalize;
 		text-shadow: var(--pkdx-type-text-shadow);
 		opacity: 0.85;
-		transition: opacity 100ms ease-out, box-shadow 100ms ease-out;
+		transition: opacity var(--lk-duration-fast) ease-out, box-shadow var(--lk-duration-fast) ease-out;
 	}
 	.type-badge.selected {
 		opacity: 1;
@@ -59,7 +59,7 @@
 		border-radius: 50%;
 		color: var(--pkdx-type-text);
 		opacity: 0.85;
-		transition: opacity 100ms ease-out, box-shadow 100ms ease-out;
+		transition: opacity var(--lk-duration-fast) ease-out, box-shadow var(--lk-duration-fast) ease-out;
 	}
 	.type-badge-icon.selected {
 		opacity: 1;

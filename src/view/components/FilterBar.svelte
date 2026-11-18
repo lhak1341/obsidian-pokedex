@@ -327,7 +327,7 @@
 		box-shadow: none;
 		color: var(--lk-text-faint);
 		cursor: pointer;
-		transition: color 100ms ease-out;
+		transition: color var(--lk-duration-fast) ease-out;
 	}
 	.favorites-filter-toggle:hover {
 		color: var(--lk-text);
@@ -474,7 +474,7 @@
 		color: var(--lk-text-faint);
 		font-size: 0.85em;
 		cursor: pointer;
-		transition: color 100ms ease-out;
+		transition: color var(--lk-duration-fast) ease-out;
 	}
 	.filter-reset:hover {
 		color: var(--lk-text);

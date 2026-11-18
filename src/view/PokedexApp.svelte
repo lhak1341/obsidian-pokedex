@@ -232,7 +232,7 @@
 	.loading-fill {
 		height: 100%;
 		background: var(--lk-accent);
-		transition: width 120ms ease-out;
+		transition: width var(--lk-duration-fast) ease-out;
 	}
 	.hidden-screen {
 		display: none;

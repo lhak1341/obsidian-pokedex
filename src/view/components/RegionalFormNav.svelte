@@ -74,7 +74,7 @@
 		font-weight: 500;
 		color: var(--lk-text);
 		text-transform: capitalize;
-		transition: background 100ms ease-out, color 100ms ease-out;
+		transition: background var(--lk-duration-fast) ease-out, color var(--lk-duration-fast) ease-out;
 	}
 	.form-tab:hover:not(.active) {
 		background: var(--lk-surface-hover);

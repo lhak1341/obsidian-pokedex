@@ -476,4 +476,8 @@ export interface PluginSettings extends FontRoleSettings {
 	// PokedexPlugin.setFavorites, not the general saveSettings path — see
 	// its own comment for why (same reasoning as visibleFields).
 	favoritePokemonIds: number[];
+	// Makes every plugin transition instant (#26). styles.src.css does the same
+	// for the OS's prefers-reduced-motion (stricter than the kit, which keeps
+	// colour fades there), so this is for someone who wants it in Pokedex only.
+	reduceMotion: boolean;
 }

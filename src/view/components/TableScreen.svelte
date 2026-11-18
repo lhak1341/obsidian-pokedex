@@ -366,7 +366,7 @@
 		list-style: none;
 		user-select: none;
 		color: var(--lk-text-muted);
-		transition: background-color 100ms ease-out, color 100ms ease-out;
+		transition: background-color var(--lk-duration-fast) ease-out, color var(--lk-duration-fast) ease-out;
 	}
 	.fields-menu summary::-webkit-details-marker {
 		display: none;
@@ -383,7 +383,7 @@
 		background-color: var(--lk-text-faint);
 		-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") center / contain no-repeat;
 		mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") center / contain no-repeat;
-		transition: transform 100ms ease-out;
+		transition: transform var(--lk-duration-fast) ease-out;
 	}
 	.fields-menu[open] summary::after {
 		transform: rotate(180deg);
@@ -438,7 +438,7 @@
 		font-size: 0.85em;
 		cursor: pointer;
 		color: var(--lk-text-muted);
-		transition: background-color 100ms ease-out, color 100ms ease-out;
+		transition: background-color var(--lk-duration-fast) ease-out, color var(--lk-duration-fast) ease-out;
 	}
 	.fields-checkbox:hover {
 		background: var(--lk-surface-hover);

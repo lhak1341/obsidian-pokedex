@@ -143,6 +143,8 @@ export class PokedexView extends ItemView {
 		// lk-root: the @lhak/style alias layer defines the --lk- roles under it.
 		this.contentEl.addClasses(["lk-root", "pokedex-outer"]);
 		applyFontRoles(this.contentEl, this.getSettings());
+		// Zeroes the transition durations (styles.src.css, "Reduce motion").
+		this.contentEl.toggleClass("pkdx-reduce-motion", this.getSettings().reduceMotion);
 		this.appInstance = mount(PokedexApp, {
 			target: this.contentEl,
 			props: {

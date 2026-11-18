@@ -44,7 +44,7 @@
 		color: var(--lk-text-faint);
 		opacity: 0.55;
 		cursor: pointer;
-		transition: color 100ms ease-out, opacity 100ms ease-out;
+		transition: color var(--lk-duration-fast) ease-out, opacity var(--lk-duration-fast) ease-out;
 	}
 	button.favorite-toggle:hover {
 		opacity: 1;

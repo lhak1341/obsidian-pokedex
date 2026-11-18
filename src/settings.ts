@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	// stats/moves/flavor text as before this setting existed.
 	activeGen: Math.max(...GENERATIONS.map((g) => g.id)),
 	favoritePokemonIds: [],
+	reduceMotion: false,
 };
 
 export class PokedexSettingTab extends PluginSettingTab {
@@ -234,6 +235,18 @@ export class PokedexSettingTab extends PluginSettingTab {
 		fontRow("heading", "Heading font", "Font for the table, section headers, and hover-popover text.");
 		fontRow("body", "Body font", "Font for the detail screen's flavor text.");
 		fontRow("mono", "Monospace font", "Font for stats and other numeric/data-style text.");
+
+		new Setting(appearanceItems)
+			.setName("Reduce motion")
+			.setDesc("Make hover fades and other transitions instant. Your system's reduce-motion setting does this too.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.reduceMotion)
+					.onChange(async (value) => {
+						this.plugin.settings.reduceMotion = value;
+						await this.plugin.saveSettings();
+					})
+			);
 
 		new Setting(containerEl).setName("Cache").setHeading();
 		const cacheItems = containerEl.createDiv("setting-group").createDiv("setting-items");

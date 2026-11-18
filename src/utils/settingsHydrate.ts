@@ -63,5 +63,6 @@ export function hydrateSettings(saved: unknown, defaults: PluginSettings): Plugi
 		activeGen:
 			typeof s.activeGen === "number" && knownGenerationIds.includes(s.activeGen) ? s.activeGen : defaults.activeGen,
 		favoritePokemonIds: numberArray(s.favoritePokemonIds, defaults.favoritePokemonIds),
+		reduceMotion: typeof s.reduceMotion === "boolean" ? s.reduceMotion : defaults.reduceMotion,
 	};
 }

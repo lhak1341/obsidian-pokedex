@@ -99,7 +99,7 @@
 		layout, and above its own background on hover. */
 		position: relative;
 		z-index: 1;
-		transition: background-color 100ms ease-out;
+		transition: background-color var(--lk-duration-fast) ease-out;
 	}
 	.evo-card:hover {
 		background: var(--lk-surface-hover);

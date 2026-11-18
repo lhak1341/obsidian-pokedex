@@ -14,6 +14,7 @@ const DEFAULTS: PluginSettings = {
 	useTypeIcons: false,
 	activeGen: 9,
 	favoritePokemonIds: [],
+	reduceMotion: false,
 };
 
 describe("hydrateSettings", () => {
@@ -33,6 +34,7 @@ describe("hydrateSettings", () => {
 			useTypeIcons: true,
 			activeGen: 3,
 			favoritePokemonIds: [25, 6],
+			reduceMotion: true,
 		};
 		expect(hydrateSettings(saved, DEFAULTS)).toEqual(saved);
 	});
@@ -72,6 +74,8 @@ describe("hydrateSettings", () => {
 		["gridDensity", "huge"],
 		["defaultSortColumn", "weight"],
 		["useTypeIcons", "yes"],
+		["reduceMotion", "on"],
+		["reduceMotion", 1],
 		["activeGen", 99],
 		["activeGen", "9"],
 		["fontHeadingCustom", 5],
@@ -121,6 +125,14 @@ describe("hydrateSettings", () => {
 			expect(hydrateSettings({ visibleColumns: [] }, DEFAULTS).visibleFields).toEqual([]);
 			expect(hydrateSettings({ visibleFields: ["hp"] }, DEFAULTS).visibleFields).toEqual(["hp"]);
 		});
+	});
+
+	// #26: an older data.json has no reduceMotion; it reads as off.
+	it("reads a missing reduceMotion as off and round-trips a saved one", () => {
+		expect(hydrateSettings({}, DEFAULTS).reduceMotion).toBe(false);
+		expect(hydrateSettings({ reduceMotion: true }, DEFAULTS).reduceMotion).toBe(true);
+		const once = hydrateSettings({ reduceMotion: true }, DEFAULTS);
+		expect(hydrateSettings(JSON.parse(JSON.stringify(once)), DEFAULTS)).toEqual(once);
 	});
 
 	it("drops unknown keys", () => {

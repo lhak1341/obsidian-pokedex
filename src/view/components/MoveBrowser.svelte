@@ -225,7 +225,7 @@
 		font-size: 0.85em;
 		font-weight: 500;
 		color: var(--lk-text);
-		transition: background 100ms ease-out, color 100ms ease-out;
+		transition: background var(--lk-duration-fast) ease-out, color var(--lk-duration-fast) ease-out;
 	}
 	.move-tab:hover:not(.active) {
 		background: var(--lk-surface-hover);

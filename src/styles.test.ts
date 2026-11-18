@@ -2,7 +2,7 @@
 // @types on its own; this test reads the vendored package and runs esbuild and
 // stylelint, so it alone needs Node's types. Source text comes in through `?raw`.
 /// <reference types="node" />
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -50,6 +50,32 @@ function value(body: string, property: string): string | undefined {
 /** `--pkdx-…` names declared in the domain colour file, with their values. */
 function domainColours(): Map<string, string> {
 	return new Map([...pokemonColoursCss.matchAll(/(--pkdx-[a-z-]+):\s*([^;]+);/g)].map(([, n, v]) => [n, v.trim()]));
+}
+
+/** The squashed bodies of every `@media <query>` block, joined (the kit has several of its own). */
+function mediaBody(css: string, query: string): string {
+	const flat = squash(css);
+	const head = `@media ${query} {`;
+	const bodies: string[] = [];
+	for (let start = flat.indexOf(head); start >= 0; start = flat.indexOf(head, start + 1)) {
+		const open = start + head.length - 1;
+		let depth = 0;
+		for (let i = open; i < flat.length; i++) {
+			if (flat[i] === "{") depth++;
+			else if (flat[i] === "}" && --depth === 0) {
+				bodies.push(flat.slice(open + 1, i).trim());
+				break;
+			}
+		}
+	}
+	return bodies.join(" ");
+}
+
+/** Every `.svelte` file under src, read from disk. */
+function svelteSources(): { path: string; text: string }[] {
+	return readdirSync(join(root, "src"), { recursive: true, encoding: "utf8" })
+		.filter((f) => f.endsWith(".svelte"))
+		.map((f) => ({ path: f, text: readFileSync(join(root, "src", f), "utf8") }));
 }
 
 const varName = (css: string) => /^var\((--[a-z-]+)\)$/.exec(css)?.[1];
@@ -100,6 +126,46 @@ describe("the view root", () => {
 	it("carries lk-root, where the alias layer defines the --lk- roles, and the font roles", () => {
 		expect(pokedexViewSource).toMatch(/this\.contentEl\.addClasses\(\["lk-root", "pokedex-outer"\]\)/);
 		expect(pokedexViewSource).toMatch(/applyFontRoles\(this\.contentEl, this\.getSettings\(\)\)/);
+	});
+
+	it("carries pkdx-reduce-motion exactly while the Reduce motion setting is on", () => {
+		expect(pokedexViewSource).toMatch(
+			/this\.contentEl\.toggleClass\("pkdx-reduce-motion", this\.getSettings\(\)\.reduceMotion\)/,
+		);
+	});
+});
+
+// #26: the setting, or the OS's Reduce Motion, makes every plugin transition
+// instant. The kit's transitions read --lk-duration-*, which the alias layer
+// defines on `.lk-root` (0,1,0); both overrides are (0,2,0), so they win
+// wherever the bundle puts them.
+describe("reduce motion", () => {
+	const zeroed = ["--lk-duration-fast", "--lk-duration-base", "--lk-duration-slow"];
+
+	it("zeroes the kit durations under the setting's class", async () => {
+		const body = ruleBody(await buildStyles(), ".lk-root.pkdx-reduce-motion");
+		for (const name of zeroed) expect(value(body, name), name).toBe("0s");
+	});
+
+	it("zeroes them under the OS preference too", async () => {
+		const media = mediaBody(await buildStyles(), "(prefers-reduced-motion: reduce)");
+		const body = ruleBody(media, ".lk-root.pokedex-outer");
+		for (const name of zeroed) expect(value(body, name), name).toBe("0s");
+	});
+
+	// A literal time would ignore both overrides. Durations read a token instead.
+	it("leaves no literal transition or animation time in any PKDX style", () => {
+		const sources = [{ path: "styles.src.css", text: readFileSync(join(root, "styles.src.css"), "utf8") }];
+		for (const { path, text } of svelteSources()) {
+			for (const [, style] of text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) sources.push({ path, text: style });
+		}
+		expect(sources.length).toBeGreaterThan(20);
+		const literal = sources.flatMap(({ path, text }) =>
+			[...text.matchAll(/(?:transition|animation)[a-z-]*\s*:\s*([^;]+);/g)]
+				.filter(([, v]) => /(?:^|[\s,(])[\d.]+m?s\b/.test(v))
+				.map(([decl]) => `${path}: ${squash(decl)}`),
+		);
+		expect(literal).toEqual([]);
 	});
 });
 

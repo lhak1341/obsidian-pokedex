@@ -22,6 +22,27 @@
 	font-family: var(--lk-font-label);
 }
 
+/* ── Reduce motion (#26) ─────────────────────────────────────────────────────
+   The Reduce motion setting (PokedexView puts `.pkdx-reduce-motion` on the root) or the OS's
+   Reduce Motion makes every plugin transition instant. The kit's transitions and PKDX's own read
+   --lk-duration-*, so zeroing those here covers both; no component may write a literal time
+   (src/styles.test.ts). The alias layer defines them on `.lk-root` (0,1,0); these are (0,2,0),
+   so they win wherever the bundle puts them. `0s`, not a bare 0: a unitless zero is not a valid
+   <time>, so it would void every transition that reads it. */
+.lk-root.pkdx-reduce-motion {
+	--lk-duration-fast: 0s;
+	--lk-duration-base: 0s;
+	--lk-duration-slow: 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.lk-root.pokedex-outer {
+		--lk-duration-fast: 0s;
+		--lk-duration-base: 0s;
+		--lk-duration-slow: 0s;
+	}
+}
+
 /* ── Filter chips (FilterBar.svelte) ─────────────────────────────────────────
    The @lhak/style chip pattern, `lk-chip lk-chip--toggle filter-chip`, pressed while its filter
    is on. Obsidian's `button:not(.clickable-icon)` (0,1,1) sets colour, background and shadow,
