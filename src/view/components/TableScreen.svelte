@@ -10,7 +10,7 @@
 	import { nextSort, sortPokemon, type SortColumn, type SortState } from "../../utils/sortPokemon";
 	import { scopeRowsToGen } from "../../utils/stats";
 	import { FIELDS, formatEvYield, isStatField, sortAfterFieldsChange } from "../../utils/fields";
-	import { TABLE_COLUMNS } from "../../utils/tableColumns";
+	import { TABLE_COLUMNS, columnWidth, tableFrame } from "../../utils/tableColumns";
 	import { untrack } from "svelte";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
 	import { createInfoDescription } from "../infoDescription.svelte";
@@ -140,22 +140,22 @@
 	const activeColumns = $derived(
 		TABLE_COLUMNS.filter((col) => visibleFieldKeys.has(col.key)),
 	);
-	// No. is a dex number (up to 4 digits) vs a stat's 3; sprite/type widths
-	// swing with density and the icon-vs-text type display respectively —
-	// everything else has one fixed min regardless of row content (see each
-	// Field's TABLE_GEOMETRY `widthPercent`/`minWidth` in tableColumns.ts). The table
+	// The No./sprite/Name/Type widths (tableFrame) swing with density, the
+	// icon-vs-text type display and the Narrow pane; everything else has one
+	// fixed min regardless of row content (see each Field's TABLE_GEOMETRY
+	// `widthPercent`/`minWidth` in tableColumns.ts). The table
 	// deliberately stays table-layout: auto (not fixed) — fixed's column
 	// sizing pass ignores min-width/max-width entirely by design (that's the
 	// point of "fixed"), which silently broke every column's floor. Under
 	// auto, `min` is a real min-width on each <th> (a designed buffer, e.g.
-	// EV's 3-chip case, or ch for Name's ~20-letter one) and `pct` is the
-	// <col>'s width — Name's larger share means it still absorbs most of any
-	// extra space on a wide pane, just no longer *all* of it. Cells must NOT
+	// EV's 3-chip case, or ch for Name's ~20-letter one) and `width` is the
+	// <col>'s width (px on a Narrow pane: see columnWidth) — Name's larger
+	// share means it still absorbs most of any extra space on a wide pane,
+	// just no longer *all* of it. Cells must NOT
 	// get overflow/text-overflow: ellipsis (see td/th CSS) — that collapses
 	// a cell's intrinsic min-content width down to ~1 char, which defeats
 	// auto layout's real safety net: never shrinking below actual content.
-	const spriteColWidth = $derived(density === "compact" ? { pct: "3%", min: "40px" } : { pct: "4%", min: "48px" });
-	const typeColWidth = $derived(useTypeIcons ? { pct: "6%", min: "76px" } : { pct: "10%", min: "168px" });
+	const frame = $derived(tableFrame({ narrow, density, useTypeIcons }));
 
 	function setSort(column: SortColumn) {
 		sort = nextSort(sort, column);
@@ -270,22 +270,32 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 		/>
 	{:else}
 		<div class="table-wrap">
-			<table class:compact={density === "compact"}>
+			<!-- A Narrow pane's table scrolls sideways under the pinned No.,
+			sprite and Name (.pin, CSS below). Each pinned column's left offset
+			is the widths before it, taken from the frame so the CSS never
+			restates them (only read on a Narrow pane, where they are px). -->
+			<table
+				class:compact={frame.compact}
+				class:narrow
+				style:--pkdx-pin-sprite-left={frame.number.width}
+				style:--pkdx-pin-name-left="calc({frame.number.width} + {frame.sprite.width})"
+			>
 				<colgroup>
-					<col style:width="4%" />
-					<col style:width={spriteColWidth.pct} />
-					<col style:width="25%" />
-					<col style:width={typeColWidth.pct} />
+					<col style:width={frame.number.width} />
+					<col style:width={frame.sprite.width} />
+					<col style:width={frame.name.width} />
+					<col style:width={frame.type.width} />
 					{#each activeColumns as col (col.key)}
-						<col style:width={col.widthPercent} />
+						<col style:width={columnWidth(col, narrow)} />
 					{/each}
 				</colgroup>
 				<thead>
 					<tr>
-						<th style:min-width="60px" onclick={() => setSort("id")}>No.{sortIndicator("id")}</th>
-						<th class="center" style:min-width={spriteColWidth.min}>Sprite</th>
-						<th style:min-width="20ch" onclick={() => setSort("name")}>Name{sortIndicator("name")}</th>
-						<th style:min-width={typeColWidth.min}>Type</th>
+						<th class="pin pin-number" style:min-width={frame.number.min} onclick={() => setSort("id")}>No.{sortIndicator("id")}</th>
+						<!-- "Sprite" does not fit the Narrow pane's 36px column. -->
+						<th class="center pin pin-sprite" style:min-width={frame.sprite.min} aria-label="Sprite">{narrow ? "" : "Sprite"}</th>
+						<th class="pin pin-name" style:min-width={frame.name.min} onclick={() => setSort("name")}>Name{sortIndicator("name")}</th>
+						<th style:min-width={frame.type.min}>Type</th>
 						{#each activeColumns as col (col.key)}
 							<th
 								class:center={!!col.icon}
@@ -307,9 +317,9 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 				<tbody>
 					{#each visibleRows as row (row.id)}
 						<tr onclick={() => onSelect(row.id)} oncontextmenu={(e) => showRowMenu(e, row)}>
-							<td>{formatDexNumber(row.dexNumber)}</td>
+							<td class="pin pin-number">{formatDexNumber(row.dexNumber)}</td>
 							<td
-								class="center sprite-cell"
+								class="center sprite-cell pin pin-sprite"
 								onpointerenter={(e) => {
 									// The Art preview is a mouse-hover affordance; a tap on the
 									// sprite opens the detail screen and nothing else.
@@ -321,17 +331,29 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 									<img src={row.spriteDataUri} alt={formatPokemonDisplayName(row)} class="sprite-thumb" />
 								{/if}
 							</td>
-							<td class="name-cell">
-								{formatPokemonDisplayName(row)}<FavoriteToggle
-									active={favoriteIds.has(row.id)}
-									onToggle={() => onToggleFavorite(row.id)}
-								/>
+							<td class="name-cell pin pin-name">
+								{#if narrow}
+									<!-- The base name over an 11px regional-form line, so the
+									108px column keeps the base name whole. The asterisk follows
+									the name, and drops under it only where both don't fit in
+									one line (Sandy Shocks is 98px of the 98 available). -->
+									<span class="base-name"><span class="base-name-text">{row.name}</span><FavoriteToggle
+										active={favoriteIds.has(row.id)}
+										onToggle={() => onToggleFavorite(row.id)}
+									/></span>
+									{#if row.formLabel}<span class="form-line">{row.formLabel}</span>{/if}
+								{:else}
+									{formatPokemonDisplayName(row)}<FavoriteToggle
+										active={favoriteIds.has(row.id)}
+										onToggle={() => onToggleFavorite(row.id)}
+									/>
+								{/if}
 							</td>
-							<td class="info-target-cell">
+							<td class="info-target-cell type-cell">
 								{#each row.types as type (type)}
-									{#if useTypeIcons}
+									{#if frame.typeIcons}
 										<span class="type-icon-target pkdx-info-target" {...typePopover.target(type)}>
-											<TypeBadge {type} useIcon />
+											<TypeBadge {type} useIcon small={narrow} />
 										</span>
 									{:else}
 										<TypeBadge {type} />
@@ -584,14 +606,19 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 	.right {
 		text-align: right;
 	}
-	tbody tr:nth-child(even) {
-		background: var(--lk-surface-chrome);
-	}
+	/* The row's stripe or hover colour is set once as --pkdx-row-bg, read by
+	the row and again by a Narrow pane's pinned cells (below), which must
+	paint it themselves to stay opaque. */
 	tbody tr {
+		--pkdx-row-bg: transparent;
+		background: var(--pkdx-row-bg);
 		cursor: pointer;
 	}
+	tbody tr:nth-child(even) {
+		--pkdx-row-bg: var(--lk-surface-chrome);
+	}
 	tbody tr:hover {
-		background: var(--lk-surface-hover);
+		--pkdx-row-bg: var(--lk-surface-hover);
 	}
 	.name-cell {
 		text-transform: capitalize;
@@ -664,6 +691,88 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 	}
 	table.compact td, table.compact th {
 		padding: 2px 6px;
+	}
+	/* Narrow pane: the table scrolls sideways inside .table-wrap with No.,
+	sprite and Name pinned. Their left offsets (--pkdx-pin-*-left, set on the
+	table from tableFrame) add up the columns before them, so those columns'
+	content must fit their px widths exactly. A pinned cell is opaque (the
+	view's surface under the row's --pkdx-row-bg), or the stats would show
+	through it as they scroll under. The divider is an inset shadow: under
+	border-collapse a border belongs to the table, not the cell, and stays
+	behind when the cell sticks. */
+	/* 6px a side: at 8px a sorted stat header (icon and arrow) measured 53px,
+	past the 52px a stat column keeps. */
+	table.narrow th {
+		padding-inline: 6px;
+	}
+	table.narrow .pin {
+		position: sticky;
+		z-index: 1;
+		background: linear-gradient(var(--pkdx-row-bg), var(--pkdx-row-bg)), var(--lk-surface);
+	}
+	table.narrow th.pin {
+		z-index: 2;
+		background: var(--lk-surface);
+	}
+	/* No horizontal padding: a 4-digit dex number at 12px tabular figures is
+	30.2px, and 2px a side made the column 34.2px, so the sprite (pinned at
+	32px) slid 2px over it once scrolled. Centred, a 3-digit one sits in the middle. */
+	table.narrow .pin-number {
+		left: 0;
+		padding-inline: 0;
+		text-align: center;
+		font-size: 0.75rem;
+		font-variant-numeric: tabular-nums;
+		color: var(--lk-text-muted);
+	}
+	/* "No." and its sort arrow wrap onto two lines rather than widen 32px. */
+	table.narrow th.pin-number {
+		white-space: normal;
+	}
+	table.narrow .pin-sprite {
+		left: var(--pkdx-pin-sprite-left);
+		padding-inline: 2px;
+	}
+	/* 5px a side: the longest base name (Sandy Shocks) is 98px. */
+	table.narrow .pin-name {
+		left: var(--pkdx-pin-name-left);
+		padding-inline: 5px;
+		box-shadow: inset -1px 0 var(--lk-border-strong);
+	}
+	/* The name never breaks; the line may break between it and the asterisk,
+	so Name's min-content is the name alone. */
+	table.narrow .base-name {
+		display: block;
+		font-size: 0.875rem;
+		font-weight: 600;
+		line-height: 1.25;
+		white-space: normal;
+	}
+	table.narrow .base-name-text {
+		white-space: nowrap;
+	}
+	/* width: 0 + min-width: 100% keeps the form line out of the cell's
+	min-content width, so the base name alone sizes Name and a long label
+	(Paldean (Combat Breed)) ellipsizes instead of widening the column. */
+	table.narrow .form-line {
+		display: block;
+		width: 0;
+		min-width: 100%;
+		overflow: hidden;
+		font-size: 0.69rem;
+		font-weight: 400;
+		line-height: 1.2;
+		text-overflow: ellipsis;
+		color: var(--lk-text-muted);
+	}
+	/* Two 22px icons and a 3px gap in 58px. font-size: 0 drops the
+	whitespace between the targets, which would add to the gap. */
+	table.narrow td.type-cell {
+		padding-inline: 5px;
+		font-size: 0;
+	}
+	table.narrow .type-icon-target + .type-icon-target {
+		margin-left: 3px;
 	}
 	table.compact .sprite-thumb {
 		width: 24px;
