@@ -17,14 +17,13 @@
 	import type { FavoriteMenu } from "../favoriteMenu";
 	import type { InfoTargetProps } from "../infoPopover.svelte";
 	import CardPanel from "./CardPanel.svelte";
-	import FavoriteMark from "./FavoriteMark.svelte";
 
 	// Card view (CONTEXT.md): the browse screen's rows drawn as a grid of tiles.
 	// It owns its drawing and which tap panel is open, nothing else: rows (already filtered, sorted and Active
 	// Gen scoped), the Fields selection, the sort and favourites all come from
 	// TableScreen, the browse screen's owner, so a switch to or from the table
-	// keeps them. The tile's favourite dot is a marker only (no accidental toggles
-	// while scrolling); a tile favourites through TableScreen's favourites menu
+	// keeps them. A favourite's tile is outlined in the accent, a marker only
+	// (no accidental toggles while scrolling): a tile favourites through TableScreen's favourites menu
 	// (right-click or press and hold, as a table row does), and the tap panel
 	// keeps its asterisk toggle. A tile tap opens the tap panel; the panel's
 	// "Open ›" opens the detail screen (onSelect).
@@ -148,7 +147,7 @@
 			class="card-tile"
 			role="button"
 			tabindex="0"
-			aria-label={formatPokemonDisplayName(row)}
+			aria-label="{formatPokemonDisplayName(row)}{favoriteIds.has(row.id) ? ', favorite' : ''}"
 			aria-expanded={openId === row.id}
 			aria-controls={openId === row.id ? panelId : undefined}
 			onclick={(e) => void toggle(row.id, e.currentTarget)}
@@ -157,6 +156,7 @@
 		>
 			<div
 				class="sprite-well"
+				class:favorite={favoriteIds.has(row.id)}
 				style:height="{grid.tileWidth}px"
 				style:--pkdx-wash-a={TYPE_COLORS[typeA]}
 				style:--pkdx-wash-b={TYPE_COLORS[typeB]}
@@ -176,9 +176,6 @@
 					/>
 				{/if}
 				<span class="corner corner-tl tile-chip">{formatDexNumber(row.dexNumber)}</span>
-				{#if favoriteIds.has(row.id)}
-					<span class="corner corner-tr favorite-corner"><FavoriteMark /></span>
-				{/if}
 				{#if corners.ev && row.evYield.length > 0}
 					<span class="corner corner-bl ev-dots" title={formatEvYield(row)}>
 						{#each evDots(row) as colour, i (i)}
@@ -279,6 +276,19 @@
 		);
 		transition: filter var(--lk-duration-fast) ease-out;
 	}
+	/* A favourite: a 1px accent outline round the well (#35; a corner dot read
+	as one of the EV dots). An overlay rather than the well's own inset shadow,
+	so a sprite that reaches the well's edge (Venusaur) can't cover it. The
+	keyboard focus ring stays distinct: grey, and outside the well. */
+	.sprite-well.favorite::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		z-index: 2;
+		border-radius: inherit;
+		box-shadow: inset 0 0 0 1px var(--lk-accent);
+		pointer-events: none;
+	}
 	.card-tile:hover .sprite-well {
 		filter: brightness(0.97);
 	}
@@ -311,10 +321,6 @@
 		top: 4px;
 		left: 4px;
 	}
-	.corner-tr {
-		top: 3px;
-		right: 5px;
-	}
 	.corner-bl {
 		bottom: 5px;
 		left: 5px;
@@ -334,12 +340,6 @@
 	.total-chip {
 		color: var(--lk-text);
 		font-weight: 600;
-	}
-	/* The favourite dot takes the EV dots' ring, so the accent stays visible on
-	a wash of the same hue (Psychic, Ghost, Dragon). */
-	.favorite-corner {
-		border-radius: 50%;
-		box-shadow: 0 0 0 1px var(--lk-surface);
 	}
 	.ev-dots {
 		gap: 2px;

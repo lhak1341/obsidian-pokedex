@@ -1,10 +1,9 @@
 <script lang="ts">
-	// A list's favourite marker (table rows, Card view tiles): a 5px accent
-	// dot, drawn only on a favourite and never a tap target, so a tap on it
-	// does what the row or tile does. Lists toggle through the favourites menu
-	// (view/favoriteMenu.ts); the single-Pokémon views keep FavoriteToggle
-	// (#35). Where it sits is the list's call: after the name in the table, a
-	// corner on a tile.
+	// The table's favourite marker: a 5px accent dot after the name, drawn only
+	// on a favourite and never a tap target, so a tap on it does what the row
+	// does. Card view outlines a favourite's tile instead (a dot there read as
+	// an EV dot). Lists toggle through the favourites menu (view/favoriteMenu.ts);
+	// the single-Pokémon views keep FavoriteToggle (#35).
 </script>
 
 <span class="favorite-mark" role="img" aria-label="Favorite"></span>
