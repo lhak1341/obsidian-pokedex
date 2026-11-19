@@ -65,11 +65,7 @@ Touch in emulation:
 Vault: lhakZettel over iCloud. The phone receives the whole plugin cache (845 MB at last
 count, 428 MB of it iCloud conflict copies), so the first sync is slow.
 
-1. Deploy, then flip the flag in the **deployed** manifest only (the repo stays `true`
-   until the map closes):
-   `bun run deploy` then
-   `sed -i '' 's/"isDesktopOnly": true/"isDesktopOnly": false/' "$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/lhakZettel/.obsidian/plugins/pokedex/manifest.json"`
-   Every later `bun run deploy` rewrites it back to `true`: re-run the `sed` after each one.
+1. `bun run deploy` (the manifest ships `isDesktopOnly: false`).
 2. Wait for iCloud to deliver `.obsidian/plugins/pokedex/` to the phone (Files app →
    iCloud Drive → Obsidian → lhakZettel; the folder is hidden, so check the plugin appears
    under Settings → Community plugins instead). `obsidian-pokedex` is already in the synced
@@ -95,5 +91,3 @@ count, 428 MB of it iCloud conflict copies), so the first sync is slow.
    3. Row-height tap areas on held items and type icons are comfortable to hit.
    4. Portrait press-and-hold at tablet width: needs an iPad, which is not available. Left
       open.
-6. Restore: `bun run deploy` (puts `isDesktopOnly: true` back) when the session ends, or
-   leave it flipped if the next mobile ticket needs the phone again.

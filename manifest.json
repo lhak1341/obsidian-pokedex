@@ -5,5 +5,5 @@
 	"minAppVersion": "1.13.0",
 	"description": "Browse, search, and inspect Pokemon (Gen 1-9) via PokeAPI, right inside Obsidian.",
 	"author": "lhak1341",
-	"isDesktopOnly": true
+	"isDesktopOnly": false
 }

@@ -58,11 +58,16 @@ export default defineConfig([
 	// under test and asserts the paths built from it; prefer-window-timers
 	// fires on tests that run under vitest's node environment, where there
 	// is no `window` at all (see the comment on `timers` in utils/retry.ts).
+	// no-nodejs-modules arms itself once manifest.json says
+	// isDesktopOnly: false, and fires on the tests that import Node
+	// built-ins (styles.test.ts, paneBreakpoint.test.ts); vitest runs those
+	// under Node, never on a phone. Runtime code keeps the rule.
 	{
 		files: ["src/**/*.test.ts"],
 		rules: {
 			"obsidianmd/hardcoded-config-path": "off",
 			"obsidianmd/prefer-window-timers": "off",
+			"obsidianmd/no-nodejs-modules": "off",
 		},
 	},
 ]);
