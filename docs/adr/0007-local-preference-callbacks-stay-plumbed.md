@@ -1,8 +1,12 @@
 # Favorites and visibleColumns keep their callback plumbing instead of a preferences store
 
+> **Superseded by [ADR-0012](0012-local-preferences-shared-by-every-leaf.md)** (#27 follow-up): with two Pokédex leaves open, per-leaf copies lost each other's favourites and Fields, which is this ADR's own reopen condition.
+
 > Renamed in #22: `visibleColumns` → `visibleFields`, `setVisibleColumns` → `setVisibleFields`, `visibleColumnKeys` → `visibleFieldKeys`, and `TOGGLEABLE_COLUMNS` split into `FIELDS` (`src/utils/fields.ts`) plus `TABLE_COLUMNS` (`src/utils/tableColumns.ts`). The decision is unchanged.
 
 > Moved in #23: `favoriteIds` is now seeded and owned by `PokedexApp.svelte`, above the table and the detail screen, which both take it as a prop and toggle through `onToggleFavorite`; `TableScreen` keeps only `visibleFieldKeys`. The chain is one hop shorter for favourites, `PokedexApp` re-seeds from `settings` on every remount just as `TableScreen` did, and the decision is unchanged.
+
+> Trigger reached in #27, decision kept: `layoutByWidthClass` (the browse layout per pane-width class) is the third locally-owned persisted preference, with its own hop in `main.ts` (`setLayoutByWidthClass`), `PokedexView` (`onLayoutChange`) and `PokedexApp.svelte`, which owns it. Kept because the chain still carries no logic (the deletion test above still holds: a bundling object would only change which prop carries each callback), and the spec plans no fourth one (Reduce motion saves through `saveSettings`, which remounts). The trigger moves on: reopen at a **fourth** such preference or a real persistence bug.
 
 An architecture review flagged the persistence path for the two values the table owns locally, `favoritePokemonIds` and `visibleColumns`, as a shallow five-hop callback chain: `TableScreen` calls `onFavoritesChange` / `onColumnsChange`, `PokedexApp.svelte` forwards it, `PokedexView`'s constructor forwards it again, and the lambdas in `main.ts` reach `PokedexPlugin.setFavorites` / `setVisibleColumns`, which assign onto `this.settings` and call `saveData`. The review proposed a local-preferences store (`get` / `set`, optionally `subscribe`) so a new locally-owned preference would need no new props through three layers.
 

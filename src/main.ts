@@ -5,7 +5,7 @@ import { PokeApiClient } from "./data/PokeApiClient";
 import { PokedexRepository } from "./data/PokedexRepository";
 import type { PluginSettings } from "./data/types";
 import { DEFAULT_SETTINGS, PokedexSettingTab } from "./settings";
-import type { LayoutByWidthClass } from "./utils/browseLayout";
+import { LocalPreferences } from "./utils/localPreferences";
 import { hydrateSettings } from "./utils/settingsHydrate";
 import { PokedexView, VIEW_TYPE_POKEDEX } from "./view/PokedexView";
 
@@ -13,6 +13,9 @@ export default class PokedexPlugin extends Plugin {
 	settings: PluginSettings = DEFAULT_SETTINGS;
 	cache!: IndexedDbCacheStore;
 	repository!: PokedexRepository;
+	// Favourites, Fields and the layout per width class: saved without a
+	// remount, shared live by every open Pokedex leaf (ADR-0012).
+	preferences = new LocalPreferences(() => this.settings, () => this.saveData(this.settings));
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -29,9 +32,7 @@ export default class PokedexPlugin extends Plugin {
 				leaf,
 				this.repository,
 				() => this.settings,
-				(fields) => void this.setVisibleFields(fields),
-				(ids) => void this.setFavorites(ids),
-				(layouts) => void this.setLayoutByWidthClass(layouts),
+				this.preferences,
 			),
 		);
 
@@ -59,34 +60,6 @@ export default class PokedexPlugin extends Plugin {
 		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_POKEDEX)) {
 			if (leaf.view instanceof PokedexView) leaf.view.refresh();
 		}
-	}
-
-	// Field visibility is pure display state, not a "reload the dex range"
-	// change — persist it without forcing every open Pokedex tab to remount
-	// (which `saveSettings` does, since dex-range/sprite-style changes do
-	// need a fresh reload).
-	async setVisibleFields(fields: string[]): Promise<void> {
-		this.settings.visibleFields = fields;
-		await this.saveData(this.settings);
-	}
-
-	// Same "persist without forcing every open tab to remount" reasoning as
-	// setVisibleFields above — PokedexApp owns the favourite set and updates
-	// the table and detail screen the instant one is toggled, so a full
-	// saveSettings()-triggered refresh would just be a redundant (and
-	// disruptive: it'd reset scroll/sort/filter state) re-render of what's
-	// already on screen.
-	async setFavorites(ids: number[]): Promise<void> {
-		this.settings.favoritePokemonIds = ids;
-		await this.saveData(this.settings);
-	}
-
-	// Same "persist without remounting" reasoning as setVisibleFields: the
-	// open view already shows the new layout. A new object, so another open
-	// Pokedex leaf re-reading it on a width-class change sees the new choice.
-	async setLayoutByWidthClass(layouts: LayoutByWidthClass): Promise<void> {
-		this.settings.layoutByWidthClass = { ...layouts };
-		await this.saveData(this.settings);
 	}
 
 	async activateView(): Promise<void> {

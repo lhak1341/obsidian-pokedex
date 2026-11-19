@@ -36,14 +36,16 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   Quirks filter in one session. `filterPokemon`'s `FilterContext.activeGen` is required for the
   same reason (no silent any-generation fallback).
 - Stats in the browse table are Active Gen scoped by `scopeRowsToGen` (`utils/stats.ts`), applied once as `TableScreen`'s `scopedRows`; filter, sort and `col.render` take those rows. A new table reader must be fed `scopedRows`, not the raw `rows` prop, or it shows latest-game stats (`row.stats` itself is unscoped).
-- Favourites are owned by `PokedexApp.svelte` (`favoriteIds` + `toggleFavorite`), above both
-  screens; the table takes the set, the detail screen takes its one `isFavorite`, both take
-  `onToggleFavorite` and draw `FavoriteToggle.svelte`, so a toggle on one shows on the other with no reload. A new layout
-  (Card view) reads the same props; it must not keep its own copy.
-- The browse screen is one list drawn two ways. `TableScreen.svelte` owns filters (search included), the Fields
-  selection and one `SortState`, and renders either the `<table>` or `CardGrid.svelte` from the same `visibleRows`,
-  so a layout switch keeps all of them; both sort through `nextSort` and reset through `sortAfterFieldsChange`.
-  `PokedexApp` owns the layout per width class (`utils/browseLayout.ts`), fed by a `ResizeObserver` on the leaf
+- Favourites, the Fields selection and the layout per width class live in `PokedexPlugin.preferences` (`utils/localPreferences.ts`,
+  ADR-0012), one holder shared by every open Pokédex leaf. `PokedexApp` mirrors it (`prefs`, refreshed by `subscribe`) and
+  writes through it. The table, Card view and the detail screen take `favoriteIds`/`onToggleFavorite` from there and draw
+  `FavoriteToggle.svelte`. A new layout or panel reads the same props; it must not keep its own copy (two leaves then save
+  over each other: reproduced before ADR-0012).
+- The browse screen is one list drawn two ways. `TableScreen.svelte` owns filters (search included) and one `SortState`,
+  takes the Fields as a live prop, and renders either the `<table>` or `CardGrid.svelte` from the same `visibleRows`,
+  so a layout switch keeps all of them; both sort through `nextSort`, and an effect resets the sort through
+  `sortAfterFieldsChange` whichever leaf unchose the Field. `PokedexApp` picks the layout for the leaf's width class
+  (`utils/browseLayout.ts`), fed by a `ResizeObserver` on the leaf
   (`PokedexView` passes `containerEl`). Card view's derivations (corners, stat strip, sort chips, grid columns,
   sprite fit) are pure in `utils/cardView.ts`; `CardGrid` keeps only drawing glue (an EV yield as one dot per point, and
   the canvas-centred placement of a sprite whose bounds are not decoded yet).
@@ -101,12 +103,13 @@ layout that frames an image tightly must size and centre it by its alpha bbox, n
 ## Live-verify recipes
 
 - A live check fakes the plugin's slow or persistent I/O on the live instance, restored in a `finally` by `delete`-ing the own property (the prototype method shows through): `repo.getTableRows`/`retryRows` for the load, banner and Notice paths, since a real-vault load once took over 90 s (rows render, `.loading-more-banner` stays up, so a few-second sleep reads the banner and Notices as absent); `plugin.loadData`/`saveData` for a settings path or any control that persists (a favourite asterisk tap saves settings) (return the old-shape data, capture writes, `await plugin.loadSettings()`, then the leaf swap below), so `data.json` is never written. Poll for the banner to clear only when the real load is the thing under test.
-- View history: read `leaf.history.backHistory`/`forwardHistory` (each entry's `state.state` is a `NavRecord`) and `leaf.view.getState()`. Step with the header arrows (`leaf.containerEl` `.view-header-nav-buttons button`), a `keydown` `[`/`]` on `document.body` (focused Pokédex tab only), or, in emulated mobile, `app.mobileNavbar.backButtonEl`/`forwardButtonEl`.click(): a `document.querySelector('[aria-label="Navigate back"]')` finds the tab header's arrow first, and the bar's `.mobile-navbar-action-back` wrapper ignores a click. The bar's dimming is its buttons' `aria-disabled`. Emulated mobile restores from its own layout file, so the screen restored on desktop is not the one the mobile window opens on.
+- View history: read `leaf.history.backHistory`/`forwardHistory` (each entry's `state.state` is a `NavRecord`) and `leaf.view.getState()`. Step with the header arrows (`leaf.containerEl` `.view-header-nav-buttons button`), a `keydown` `[`/`]` on `document.body` (focused Pokédex tab only), or, in emulated mobile, `app.mobileNavbar.backButtonEl`/`forwardButtonEl`.click(): a `document.querySelector('[aria-label="Navigate back"]')` finds the tab header's arrow first, and the bar's `.mobile-navbar-action-back` wrapper ignores a click. The bar's dimming is its buttons' `aria-disabled`.
 - Emulated mobile and the iPhone loop: `docs/mobile-verification.md` (CLI targets
   `pokedex-test-vault`; a hidden window throttles timers, so evals stall and Notices never
   time out (clear `.notice` before checking one shows); `dev:mobile` is global, turn it off).
 - A "no visible change" refactor is proved by A/B against HEAD, not by eye: `git archive HEAD | tar -x -C <scratch>`, symlink `node_modules`, `bun run build`; copy each build into `pokedex-test-vault`, `plugin:reload`, and compare a hash of `JSON.stringify((await plugin.repository.getTableRows({start:1,end:1025})).rows)` with each `spriteDataUri` replaced by `plugin.repository.imagePathOf(it)` (blob URLs differ per load; a warm cache keeps it offline).
 - Phone-width design needs no emulator: inject a throwaway overlay into the live `pokedex-view` leaf inside a fixed-width column (any width: `.pokedex-view{width:Npx}` also drives the detail screen's `@container detail` queries, at N − 46px since the pane pads 23px a side, so state which of the two widths a breakpoint means), take row order/filter/sort from the table DOM and raw records from `plugin.repository.pokemonMemCache` (by id, all 6 stats) / `speciesMemCache` (`capture_rate`), then remove it. If the leaf is on the detail screen the table measures 0px, so click `.detail-screen .back-button` first. To show motion, pause it at a set point with `animation-play-state: paused` plus a negative `animation-delay`, screenshot each frame (`dev:screenshot` takes seconds, too slow for a live animation), and combine frames with `ffmpeg` `hstack`/`vstack` (no PIL or `magick` here). The user may click the live overlay between shots, so return its state from each eval and check it before trusting a frame.
+- Narrow-pane width budget: a 390px leaf leaves the browse content 319px (12px `.view-content` + 16px `.pokedex-view` padding a side, and a 15px scrollbar gutter that `dev:mobile` keeps). A real Narrow pane needs no emulation: `await app.workspace.getRightLeaf(false).setViewState({type:'pokedex-view'})`, then `rightSplit.expand()` and `revealLeaf` it, gives a ~300px leaf beside the wide one (detach it after). Unrevealed it measures 0 and shows the wide layout, and JS clicks still land in it, so a check against it silently tests the wrong width class.
 - Focus first: `getLeavesOfType('pokedex-view')` + `setActiveLeaf(leaf, {focus:true})`. For
   a genuinely fresh Svelte mount, swap the same leaf's view: `setViewState({type:'empty'})`,
   then `setViewState({type:'pokedex-view',active:true})`. Detaching breaks emulated mobile
@@ -125,9 +128,9 @@ layout that frames an image tightly must size and centre it by its alpha bbox, n
 - FilterBar's Type/Gen/Ability/Stats/Rarity/EV/Quirks dropdowns are native
   `<details>`/`<summary>`, not JS popovers — click the `<summary>` (match trimmed text with
   `startsWith`; some carry a live count badge like "Gen 1").
-- Truncation/wrapping across the whole table:
+- Truncation, wrapping or touching text across every row or tile:
   `[...containerEl.querySelectorAll('.name-cell')].filter(c => c.scrollWidth > c.clientWidth)`,
-  and compare `getBoundingClientRect().top` across a flex-wrap container's children. A
+  compare `getBoundingClientRect().top` across a flex-wrap container's children, and for neighbours running together compare each text's `Range.getBoundingClientRect()` with the previous one (Card view's `.strip-col b`). A
   screenshot only covers visible rows.
 - Fixtures: Venusaur has both Mega (single "M" badge) and Gigantamax ("G"); Charizard's Mega
   splits into X/Y badges and is the `portraitScale` fixture (shiny crops ~9% tighter);
@@ -144,9 +147,9 @@ layout that frames an image tightly must size and centre it by its alpha bbox, n
   component and check `el.querySelector('svg')?.innerHTML` is non-empty; an overlay takes icon
   SVGs from rendered table headers, inlines them, or harvests them from a remount with the
   setting flipped in memory only (`useTypeIcons` for type icons: badge mode renders none).
-- A `$state` field seeded once via `untrack(() => initialX)` (TableScreen.svelte's
-  `visibleFieldKeys`, `sort`; PokedexApp.svelte's `favoriteIds`, `layouts`) never re-seeds when its prop changes —
-  it owns the value locally and only pushes out via a callback. Verifying one live via eval
+- A `$state` field seeded once via `untrack(() => initialX)` (TableScreen.svelte's `sort`) never re-seeds when its
+  prop changes — it owns the value locally. Anything saved must not be such a copy: two Pokédex leaves then save over
+  each other's change (reproduced for favourites and Fields; ADR-0012's holder fixed it). Verifying one live via eval
   needs a real remount (force `saveSettings()`'s refresh, or the leaf swap above), not just
   mutating `plugin.settings.X` in place.
 - Info popovers (`.info-popover-box`, `.pinned` when pinned): targets are `.pkdx-info-target`. Preview with `new PointerEvent('pointerenter', {pointerType:'mouse'})` on the target (a `MouseEvent('mouseenter')` no longer opens it, and `pointerType:'touch'` must not); pin with `el.click()`; close with a `keydown` `Escape` on `document.body`. The body fills after an async fetch, so wait ~2s, then read the box scoped to `.table-screen` or `.detail-screen`. Only one box is open across every instance (the pin state is module-level in `infoPopover.svelte.ts`). Scroll the target into view before `focus()` + Enter: with an off-screen target, Enter's pin read as closed (inferred: `focus()` scrolled it into view and that scroll closed the pin; in view, 0 scrolls fired and it pinned).

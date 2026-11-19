@@ -18,14 +18,15 @@ also has a `test-vault`. Its cache starts empty, so the first open fetches from 
    `Command "eval" not found` from `vault=pokedex-test-vault` means its window is closed, not
    that a plugin is missing. A freshly opened window is hidden (`document.visibilityState`),
    which throttles it: an async eval hung past 120 s and screenshots go stale. Run
-   `const w=require('electron').remote.getCurrentWindow(); w.setBackgroundThrottling(false); w.show(); w.focus()`
-   and confirm `"visible"` (`moveTop()` or `focus()` without `show()` left it hidden).
-3. `obsidian vault=pokedex-test-vault dev:mobile on` (reloads that window).
+   `const w=require('electron').remote.getCurrentWindow(); w.setBackgroundThrottling(false); w.restore(); w.show(); w.moveTop(); w.focus()`
+   and confirm `"visible"` (`moveTop()` or `focus()` without `show()` left it hidden; after a window reload, `show()` + `focus()` without `restore()` did too).
+3. `obsidian vault=pokedex-test-vault dev:mobile on` (reloads that window; for ~10 s after any reload `eval` answers `Command "eval" not found`, so wait before reading that as a closed window).
    **The flag is global** (unprefixed `localStorage.EmulateMobile`): any other vault window
    that reloads while it is on comes up in mobile mode too. Always end with step 7.
 4. Phone size: `eval code="window.resizeTo(390, 844)"`, then confirm
    `document.body.classList.contains('is-phone')` (below 600x600 gives `is-phone`, else
    `is-tablet`). Tablet: resize to e.g. 820x1180.
+   `is-phone` is computed at load: if it reads false after the resize, reload (`setTimeout(()=>location.reload(),200)`) and re-check.
 5. `eval code="app.commands.executeCommandById('obsidian-pokedex:open-pokedex')"`. Rows
    stream in; a cold cache shows `Loading more Pokemon… n/1025` for a while.
    To remount the view (e.g. after changing `plugin.settings` in memory), do not detach the
@@ -34,6 +35,7 @@ also has a `test-vault`. Its cache starts empty, so the first open fetches from 
    `const l=app.workspace.getLeavesOfType('pokedex-view')[0]; await l.setViewState({type:'empty'}); await l.setViewState({type:'pokedex-view',active:true})`.
    If it is already detached, `app.workspace.createLeafInParent(app.workspace.rootSplit, 0)`
    gives a leaf to call `setViewState` on.
+   The mobile window restores its own saved layout, not the desktop one, so a leaf opens on whatever it last showed in emulation.
 6. Screenshot: `dev:screenshot path=<abs>/temp/mobile-loop/<name>.png`. A background window
    returns stale frames (a "New tab" shot while the DOM already held the Pokédex): after
    step 2's visibility fix, run `require('electron').remote.getCurrentWindow().webContents.invalidate()`

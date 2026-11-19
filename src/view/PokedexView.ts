@@ -3,7 +3,7 @@ import { type Events, ItemView, type ViewStateResult, type WorkspaceLeaf } from 
 import { mount, unmount } from "svelte";
 import type { PokedexRepository } from "../data/PokedexRepository";
 import type { PluginSettings } from "../data/types";
-import type { LayoutByWidthClass } from "../utils/browseLayout";
+import type { LocalPreferences } from "../utils/localPreferences";
 import { DetailNavigationState, type NavRecord, parseNavRecord, type ScrollInstruction } from "./DetailNavigationState";
 import PokedexApp from "./PokedexApp.svelte";
 
@@ -39,9 +39,7 @@ export class PokedexView extends ItemView {
 		leaf: WorkspaceLeaf,
 		private repository: PokedexRepository,
 		private getSettings: () => PluginSettings,
-		private onFieldsChange: (fields: string[]) => void,
-		private onFavoritesChange: (ids: number[]) => void,
-		private onLayoutChange: (layouts: LayoutByWidthClass) => void,
+		private preferences: LocalPreferences,
 	) {
 		super(leaf);
 		// The leaf fires history-change on every entry and step; its typed
@@ -155,9 +153,7 @@ export class PokedexView extends ItemView {
 				// The leaf's own element, not contentEl: the width class is the
 				// pane's width, padding included.
 				leafEl: this.containerEl,
-				onFieldsChange: this.onFieldsChange,
-				onFavoritesChange: this.onFavoritesChange,
-				onLayoutChange: this.onLayoutChange,
+				preferences: this.preferences,
 				navState: this.nav,
 				onNavigate: (record: NavRecord) => this.navigate(record),
 				onStepHistory: (direction: "back" | "forward") => this.stepHistory(direction),

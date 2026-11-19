@@ -3,9 +3,8 @@
 	import { onDestroy, onMount, tick, untrack } from "svelte";
 	import type { PokedexRepository } from "../data/PokedexRepository";
 	import type { PluginSettings } from "../data/types";
-	import {
-		type BrowseLayout, chooseLayout, type LayoutByWidthClass, widthClass, type WidthClass,
-	} from "../utils/browseLayout";
+	import { type BrowseLayout, widthClass, type WidthClass } from "../utils/browseLayout";
+	import type { LocalPreferences, LocalPreferenceValues } from "../utils/localPreferences";
 	import { resolveGenerationScope } from "../utils/generationScope";
 	import { describePartialLoadOutcome, describeRetryOutcome } from "../utils/loadNotices";
 	import type { DetailNavigationState, NavRecord, ScrollInstruction } from "./DetailNavigationState";
@@ -15,45 +14,36 @@
 	import TableScreen from "./components/TableScreen.svelte";
 
 	let {
-		repository, settings, leafEl, onFieldsChange, onFavoritesChange, onLayoutChange, navState, onNavigate,
-		onStepHistory,
+		repository, settings, leafEl, preferences, navState, onNavigate, onStepHistory,
 	}: {
 		repository: PokedexRepository;
 		settings: PluginSettings;
 		// The Pokedex leaf, whose width decides the width class.
 		leafEl: HTMLElement;
-		onFieldsChange: (fields: string[]) => void;
-		onLayoutChange: (layouts: LayoutByWidthClass) => void;
-		onFavoritesChange: (ids: number[]) => void;
+		preferences: LocalPreferences;
 		navState: DetailNavigationState;
 		onNavigate: (record: NavRecord) => void;
 		onStepHistory: (direction: "back" | "forward") => void;
 	} = $props();
 
-	// Favourites are owned here, above both screens, so the table, the detail
-	// screen (and later Card view) read one set and a toggle on either shows on
-	// the other at once. Seeded once from settings and never re-seeded: saves go
-	// out through onFavoritesChange (PokedexPlugin.setFavorites), which does not
-	// remount the view.
-	let favoriteIds = $state<ReadonlySet<number>>(new Set(untrack(() => settings.favoritePokemonIds)));
+	// Favourites, Fields and the layout per width class live in the plugin's
+	// one LocalPreferences (ADR-0012), shared by every open Pokedex leaf. This
+	// is the reactive mirror: it writes through the holder and re-reads on
+	// every change from any leaf, so a favourite toggled in a sidebar leaf
+	// shows in the main pane at once, and neither saves over the other.
+	// $state.raw: only ever reassigned, and its arrays are the plugin's own.
+	let prefs = $state.raw<LocalPreferenceValues>(untrack(() => preferences.get()));
+	onMount(() => preferences.subscribe((values) => (prefs = values)));
 
-	function toggleFavorite(id: number) {
-		const next = new Set(favoriteIds);
-		if (next.has(id)) next.delete(id);
-		else next.add(id);
-		favoriteIds = next;
-		onFavoritesChange([...next]);
-	}
+	// Favourites sit above both screens: the table, Card view and the detail
+	// screen read one set.
+	const favoriteIds = $derived<ReadonlySet<number>>(new Set(prefs.favoritePokemonIds));
+	const toggleFavorite = (id: number) => preferences.toggleFavorite(id);
 
 	// The browse layout follows the Pokedex leaf's width, not the device's: a
 	// ResizeObserver on the leaf feeds widthClass, and each width class shows
 	// its own saved choice, so resizing across 600px switches to that class's
-	// layout. The toggle writes only the current class (chooseLayout). Saved
-	// through onLayoutChange (PokedexPlugin.setLayoutByWidthClass), which does
-	// not remount. settings is the plugin's live object, so a toggle builds
-	// from it and a class change re-reads it: with two Pokedex leaves open, one
-	// never saves a stale copy over the other's choice for the other class.
-	let layouts = $state<LayoutByWidthClass>(untrack(() => settings.layoutByWidthClass));
+	// layout. The toggle writes only the current class.
 	// Measured at mount, so a Narrow pane never draws the table first. A hidden
 	// leaf (a background tab) measures 0 and starts wide until it has a width.
 	let paneClass = $state<WidthClass>(
@@ -62,11 +52,10 @@
 			return width > 0 ? widthClass(width) : "wide";
 		}),
 	);
-	const layout = $derived(layouts[paneClass]);
+	const layout = $derived(prefs.layoutByWidthClass[paneClass]);
 
 	function setLayout(next: BrowseLayout) {
-		layouts = chooseLayout(settings.layoutByWidthClass, paneClass, next);
-		onLayoutChange(layouts);
+		preferences.setLayout(paneClass, next);
 	}
 
 	function onLeafResize(width: number) {
@@ -74,9 +63,7 @@
 		// has a real width.
 		if (width <= 0) return;
 		const next = widthClass(width);
-		if (next === paneClass) return;
-		layouts = settings.layoutByWidthClass;
-		paneClass = next;
+		if (next !== paneClass) paneClass = next;
 	}
 
 	onMount(() => {
@@ -241,14 +228,14 @@
 				rows={view.rows}
 				density={settings.gridDensity}
 				defaultSortColumn={settings.defaultSortColumn}
-				initialVisibleFields={settings.visibleFields}
+				visibleFields={prefs.visibleFields}
 				useTypeIcons={settings.useTypeIcons}
 				{repository}
 				activeGen={settings.activeGen}
 				{favoriteIds}
 				{layout}
 				onLayoutChange={setLayout}
-				{onFieldsChange}
+				onToggleField={(key) => preferences.toggleField(key)}
 				onToggleFavorite={toggleFavorite}
 				onSelect={openDetail}
 			/>

@@ -24,13 +24,15 @@
 	import TypeBadge from "./TypeBadge.svelte";
 
 	let {
-		rows, density, defaultSortColumn, initialVisibleFields, useTypeIcons, repository, activeGen,
-		favoriteIds, layout, onLayoutChange, onFieldsChange, onToggleFavorite, onSelect,
+		rows, density, defaultSortColumn, visibleFields, useTypeIcons, repository, activeGen,
+		favoriteIds, layout, onLayoutChange, onToggleField, onToggleFavorite, onSelect,
 	}: {
 		rows: PokedexTableRow[];
 		density: "compact" | "comfortable";
 		defaultSortColumn: "id" | "name";
-		initialVisibleFields: string[];
+		// The chosen Fields, live from the plugin's LocalPreferences: a change in
+		// another Pokedex leaf arrives here too.
+		visibleFields: string[];
 		useTypeIcons: boolean;
 		repository: PokedexRepository;
 		activeGen: number;
@@ -39,7 +41,7 @@
 		// choice per width class; the toggle below only asks for a change).
 		layout: BrowseLayout;
 		onLayoutChange: (layout: BrowseLayout) => void;
-		onFieldsChange: (fields: string[]) => void;
+		onToggleField: (key: string) => void;
 		onToggleFavorite: (id: number) => void;
 		onSelect: (id: number) => void;
 	} = $props();
@@ -97,19 +99,25 @@
 		previewPos = null;
 	}
 
-	// This component is the browse screen's owner: filters (search included),
-	// the Fields selection and the sort live here, and both layouts read them,
-	// so switching between the table and Card view never re-sorts or clears a
-	// filter (#22's review). It is one list drawn two ways.
+	// This component is the browse screen's owner: filters (search included)
+	// and the sort live here, and both layouts read them with the Fields
+	// selection, so switching between the table and Card view never re-sorts or
+	// clears a filter (#22's review). It is one list drawn two ways. The Fields
+	// selection itself is the plugin's (ADR-0012), shared by every leaf.
 	let filters = $state({ ...EMPTY_FILTERS, statRanges: {} });
-	// Only the initial value seeds local state — same reasoning as
-	// defaultSortColumn below, this shouldn't get clobbered by prop identity
-	// changes once the user starts toggling Fields.
-	let visibleFieldKeys = $state(new Set(untrack(() => initialVisibleFields)));
+	const visibleFieldKeys = $derived<ReadonlySet<string>>(new Set(visibleFields));
 	// Only the initial value of defaultSortColumn seeds local sort state —
 	// the user's in-table sort choice shouldn't get clobbered if it changes.
 	// Table headers and Card view's sort chips both go through nextSort.
 	let sort = $state<SortState>({ column: untrack(() => defaultSortColumn), direction: "asc" });
+	// Never leave the list sorted by a Field that is no longer shown, in either
+	// layout, whichever leaf unchose it. sortAfterFieldsChange hands back the
+	// same object when nothing changes, so this writes only on a reset.
+	$effect.pre(() => {
+		const current = untrack(() => sort);
+		const next = sortAfterFieldsChange(current, visibleFieldKeys);
+		if (next !== current) sort = next;
+	});
 
 	const abilityOptions = $derived(
 		[...new Set(rows.flatMap((r) => r.abilityNames))].sort(),
@@ -150,17 +158,6 @@
 		return sort.direction === "asc" ? " ^" : " v";
 	}
 
-	function toggleField(key: string) {
-		const next = new Set(visibleFieldKeys);
-		if (next.has(key)) next.delete(key);
-		else next.add(key);
-		visibleFieldKeys = next;
-		// Never leave the list sorted by a Field that is no longer shown, in
-		// either layout.
-		sort = sortAfterFieldsChange(sort, next);
-		onFieldsChange([...next]);
-	}
-
 	function showRowMenu(e: MouseEvent, row: PokedexTableRow) {
 		e.preventDefault();
 		const isFavorite = favoriteIds.has(row.id);
@@ -193,7 +190,7 @@
 								<input
 									type="checkbox"
 									checked={visibleFieldKeys.has(field.key)}
-									onchange={() => toggleField(field.key)}
+									onchange={() => onToggleField(field.key)}
 								/>
 								{field.label}
 							</label>
@@ -208,7 +205,7 @@
 								<input
 									type="checkbox"
 									checked={visibleFieldKeys.has(field.key)}
-									onchange={() => toggleField(field.key)}
+									onchange={() => onToggleField(field.key)}
 								/>
 								<Icon name={field.icon ?? "circle"} size={13} strokeWidth={2} />
 								{field.label}

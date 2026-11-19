@@ -473,16 +473,15 @@ export interface PluginSettings extends FontRoleSettings {
 	activeGen: number;
 	// Table-row ids (PokedexTableRow.id, not dexNumber — a regional form's
 	// own row can be favorited independent of its base species) a user has
-	// starred via the table's right-click menu. Saved through
-	// PokedexPlugin.setFavorites, not the general saveSettings path — see
-	// its own comment for why (same reasoning as visibleFields).
+	// starred. Saved through PokedexPlugin.preferences (ADR-0012), not the
+	// saveSettings path, which remounts the view; so are visibleFields and
+	// layoutByWidthClass.
 	favoritePokemonIds: number[];
 	// Makes every plugin transition instant (#26). styles.src.css does the same
 	// for the OS's prefers-reduced-motion (stricter than the kit, which keeps
 	// colour fades there), so this is for someone who wants it in Pokedex only.
 	reduceMotion: boolean;
 	// The browse layout (table or Card view) each pane-width class last chose
-	// (#27, utils/browseLayout.ts). Saved through PokedexPlugin.setLayoutByWidthClass,
-	// which does not remount the view (same reasoning as visibleFields).
+	// (#27, utils/browseLayout.ts). Saved through PokedexPlugin.preferences.
 	layoutByWidthClass: LayoutByWidthClass;
 }
