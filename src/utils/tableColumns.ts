@@ -81,7 +81,7 @@ export function tableFrame({ narrow, density, useTypeIcons }: {
 		return {
 			number: { width: "32px", min: "32px" },
 			sprite: { width: "36px", min: "36px" },
-			name: { width: undefined, min: "108px" },
+			name: { width: undefined, min: "112px" },
 			type: { width: "58px", min: "58px" },
 			typeIcons: true,
 			compact: false,

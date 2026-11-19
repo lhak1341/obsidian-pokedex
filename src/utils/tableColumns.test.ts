@@ -35,15 +35,17 @@ describe("custom cells", () => {
 });
 
 describe("tableFrame", () => {
-	// Spec #18, Narrow pane: No. 32px, sprite 36px, name 108px, Type 58px of
-	// 22px icons whatever the type-icons setting says.
+	// Spec #18, Narrow pane: No. 32px, sprite 36px, name 112px, Type 58px of
+	// 22px icons whatever the type-icons setting says. Name was 108px, the
+	// longest base name (Sandy Shocks, 98px) plus padding; #35 added 4px so a
+	// favourite's dot fits after it, clear of the name and the column line.
 	it("gives a Narrow pane compact pinned columns and always draws type icons", () => {
 		for (const useTypeIcons of [true, false]) {
 			for (const density of ["compact", "comfortable"] as const) {
 				expect(tableFrame({ narrow: true, density, useTypeIcons })).toEqual({
 					number: { width: "32px", min: "32px" },
 					sprite: { width: "36px", min: "36px" },
-					name: { width: undefined, min: "108px" },
+					name: { width: undefined, min: "112px" },
 					type: { width: "58px", min: "58px" },
 					typeIcons: true,
 					// The 32px sprite is the spec's, whatever the density.

@@ -167,13 +167,19 @@
 	}
 
 	// Favouriting from a list is a menu (right-click or press and hold), on
-	// table rows and Card view tiles alike: their asterisk is a marker only
+	// table rows and Card view tiles alike: their favourite dot is a marker only
 	// (#35). Reads favoriteIds when it opens, so it never shows a stale title.
 	const favoriteMenu = createFavoriteMenu({
 		isFavorite: (id) => favoriteIds.has(id),
 		onToggle: (id) => onToggleFavorite(id),
 	});
 </script>
+
+<!-- A name with a favourite's dot just past its end (#35): placed absolutely,
+so the dot never widens Name or moves the name. -->
+{#snippet markedName(name: string, favorite: boolean)}
+	<span class="marked-name">{name}{#if favorite}<span class="name-dot"><FavoriteMark /></span>{/if}</span>
+{/snippet}
 
 <!-- The Fields menu and the layout toggle: in this screen's own toolbar on a
 wide pane, at the right of FilterBar's second row on a Narrow pane. -->
@@ -313,12 +319,7 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 				<tbody>
 					{#each visibleRows as row (row.id)}
 						<tr onclick={() => onSelect(row.id)} {...favoriteMenu.target(row.id)}>
-							<td class="pin pin-number">
-								{formatDexNumber(row.dexNumber)}
-								<!-- Narrow: the marker sits under the number, so the 108px
-								Name column holds the base name alone (#35). -->
-								{#if narrow && favoriteIds.has(row.id)}<span class="number-mark"><FavoriteMark size={11} /></span>{/if}
-							</td>
+							<td class="pin pin-number">{formatDexNumber(row.dexNumber)}</td>
 							<td
 								class="center sprite-cell pin pin-sprite"
 								onpointerenter={(e) => {
@@ -335,12 +336,12 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 							<td class="name-cell pin pin-name">
 								{#if narrow}
 									<!-- The base name over an 11px regional-form line, so the
-									108px column keeps the base name whole (Sandy Shocks is 98px
-									of the 98 available); a favourite's marker is in No. -->
-									<span class="base-name">{row.name}</span>
+									112px column keeps the base name whole (Sandy Shocks is 98px)
+									with room for a favourite's dot after it. -->
+									<span class="base-name">{@render markedName(row.name, favoriteIds.has(row.id))}</span>
 									{#if row.formLabel}<span class="form-line">{row.formLabel}</span>{/if}
 								{:else}
-									{formatPokemonDisplayName(row)}{#if favoriteIds.has(row.id)}<span class="name-mark"><FavoriteMark /></span>{/if}
+									{@render markedName(formatPokemonDisplayName(row), favoriteIds.has(row.id))}
 								{/if}
 							</td>
 							<td class="info-target-cell type-cell">
@@ -622,9 +623,17 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 		text-transform: capitalize;
 		font-weight: 600;
 	}
-	/* 6px after the name, as FavoriteToggle sits in the single-Pokémon views (4px margin, 2px padding). */
-	.name-mark {
-		margin-left: 6px;
+	/* A favourite's dot: 1px past the name, a little below the top of its
+	line (0.125em is 1.75px at the narrow table's 14px). Past the last letter,
+	not over it, so no letter's height can touch it. */
+	.marked-name {
+		position: relative;
+		display: inline-block;
+	}
+	.name-dot {
+		position: absolute;
+		top: 0.125em;
+		left: calc(100% + 1px);
 	}
 	/* inline-block so the target's dotted underline doesn't run under the
 	comma (decorations don't propagate into an atomic inline); pre keeps
@@ -727,12 +736,6 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 		font-variant-numeric: tabular-nums;
 		color: var(--lk-text-muted);
 	}
-	/* A favourite's marker, centred under the number. */
-	table.narrow .number-mark {
-		display: flex;
-		justify-content: center;
-		margin-top: 1px;
-	}
 	/* "No." and its sort arrow wrap onto two lines rather than widen 32px. */
 	table.narrow th.pin-number {
 		white-space: normal;
@@ -741,7 +744,8 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 		left: var(--pkdx-pin-sprite-left);
 		padding-inline: 2px;
 	}
-	/* 5px a side: the longest base name (Sandy Shocks) is 98px. */
+	/* 5px a side: the longest base name (Sandy Shocks) is 98px, and 112px
+	leaves it room for a favourite's dot (6px) 2px clear of the divider. */
 	table.narrow .pin-name {
 		left: var(--pkdx-pin-name-left);
 		padding-inline: 5px;

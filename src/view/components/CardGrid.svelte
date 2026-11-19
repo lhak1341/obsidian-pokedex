@@ -23,7 +23,7 @@
 	// It owns its drawing and which tap panel is open, nothing else: rows (already filtered, sorted and Active
 	// Gen scoped), the Fields selection, the sort and favourites all come from
 	// TableScreen, the browse screen's owner, so a switch to or from the table
-	// keeps them. The tile's asterisk is a marker only (no accidental toggles
+	// keeps them. The tile's favourite dot is a marker only (no accidental toggles
 	// while scrolling); a tile favourites through TableScreen's favourites menu
 	// (right-click or press and hold, as a table row does), and the tap panel
 	// keeps its asterisk toggle. A tile tap opens the tap panel; the panel's
@@ -177,7 +177,7 @@
 				{/if}
 				<span class="corner corner-tl tile-chip">{formatDexNumber(row.dexNumber)}</span>
 				{#if favoriteIds.has(row.id)}
-					<span class="corner corner-tr"><FavoriteMark size={12} /></span>
+					<span class="corner corner-tr favorite-corner"><FavoriteMark /></span>
 				{/if}
 				{#if corners.ev && row.evYield.length > 0}
 					<span class="corner corner-bl ev-dots" title={formatEvYield(row)}>
@@ -334,6 +334,12 @@
 	.total-chip {
 		color: var(--lk-text);
 		font-weight: 600;
+	}
+	/* The favourite dot takes the EV dots' ring, so the accent stays visible on
+	a wash of the same hue (Psychic, Ghost, Dragon). */
+	.favorite-corner {
+		border-radius: 50%;
+		box-shadow: 0 0 0 1px var(--lk-surface);
 	}
 	.ev-dots {
 		gap: 2px;
