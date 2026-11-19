@@ -21,6 +21,14 @@ describe("custom cells", () => {
 	// <td></td>` alignment fallback and renders blank. The expected values come
 	// from FIELDS itself, so a new custom Field is covered the moment it is
 	// added.
+	// A plain Field's cell scopes by Active Gen only if the template passes it:
+	// `col.render(row)` compiles (tsc skips .svelte) and Capture would show "-"
+	// in every row.
+	it("passes the Active Gen to a plain Field's render and title", () => {
+		expect(template).toContain("col.render(row, activeGen)");
+		expect(template).toContain("col.title?.(row, activeGen)");
+	});
+
 	it("has a TableScreen template branch for every custom Field", () => {
 		const customValues = [...new Set(FIELDS.flatMap((f) => (f.custom ? [f.custom] : [])))];
 		// Liveness: an empty list or an empty template would pass vacuously.

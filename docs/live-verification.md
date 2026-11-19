@@ -90,9 +90,10 @@ time out (clear `.notice` before checking one shows); `dev:mobile` is global, tu
 - Venusaur has both Mega (single "M" badge) and Gigantamax ("G"). Charizard's Mega splits into X/Y badges and is the
   `portraitScale` fixture: Mega X + shiny reads `scale(0.907)` on `.portrait-image` and `.portrait-preview` (shiny
   crops ~9% tighter).
-- Gen 9 data is missing whole categories: no held items (probed ids 1–200) and no tutor moves (ids 1–160). A
-  held-item or Tutor-list check sets Active Gen ≤ 7 in memory first (Butterfree: Silver Powder; Infernape: 2 tutor
-  moves). Farfetch'd always holds an item (Stick, 5%).
+- Gen 9 data is missing whole categories, so an empty Gen 9 read proves nothing: no held items (probed ids 1–200), no
+  tutor moves (ids 1–160), no encounters (`encounterLocations.json` covers Gen 3–8, so every Capture cell is `-`). Set
+  Active Gen in memory first: ≤ 7 for held items or tutors (Butterfree: Silver Powder; Infernape: 2 tutor moves), 3–8
+  for Capture (Gen 4 Pikachu: "Wild, Trade"). Farfetch'd always holds an item (Stick, 5%).
 
 ## Proving and showing
 

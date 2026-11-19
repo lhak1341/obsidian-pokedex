@@ -70,7 +70,7 @@ describe("scopeRowsToGen", () => {
 		const renderOf = (key: string, row: PokedexTableRow): string => {
 			const field = FIELDS.find((f) => f.key === key);
 			if (!field || field.custom) throw new Error(`no text Field "${key}"`);
-			return field.render(row);
+			return field.render(row, 3);
 		};
 		expect(renderOf("defense", scoped[0])).toBe("30");
 		expect(renderOf("total", scoped[0])).toBe("300");

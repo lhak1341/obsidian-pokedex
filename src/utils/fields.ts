@@ -1,6 +1,7 @@
 import { STAT_COLUMNS } from "../data/constants";
 import type { PokedexTableRow, StatBlock } from "../data/types";
 import type { SortColumn, SortState } from "./sortPokemon";
+import { describeEncounters } from "./encounters";
 import { formatHeight, formatWeight } from "./pokemonDisplay";
 import { totalStat } from "./stats";
 
@@ -49,21 +50,30 @@ interface FieldBase {
 	sortKey?: SortColumn;
 }
 
-// A plain-text Field: the table's generic cell is `render(row)`. A `custom`
-// Field has no `render` at all — the layout draws its cell itself because the
-// cell needs more than a string (item tooltips) or the user's Active Gen
-// (Capture), which render(row) cannot receive. The type makes "render exists
-// but production never calls it" unrepresentable; those two Fields used to
-// carry such a function, and tests pinned behavior the app never ran. EV yield
-// is custom for the same reason: it draws chips, so a `render` string would be
-// a second, unused cell body. `custom` names which cell TableScreen and
-// CardPanel draw; both templates branch on each value with no default (tsc
-// skips .svelte, so a new value needs its own branch in each by hand; the
-// tableColumns and cardView tests scan for them).
-export type CustomCell = "heldItems" | "encounters" | "ev";
+// A plain-text Field: both layouts' generic cell is `render(row, activeGen)`,
+// with `title(row, activeGen)` as its hover text when the Field has one. Every
+// layout passes the user's Active Gen, so a Field whose data is stored for
+// every generation (Capture, CONTEXT.md "Active Gen scoping") scopes it here,
+// once, where the tests can reach it; the stat-backed Fields ignore it (their
+// rows arrive already scoped by scopeRowsToGen). tsc skips .svelte, so the
+// tableColumns and cardView tests scan both templates for that call.
+//
+// A `custom` Field has no `render` at all — the layout draws its cell itself
+// because the cell is more than a string: held items are Info popover
+// targets, EV yield is coloured chips. The type makes "render exists but
+// production never calls it" unrepresentable; Fields used to carry such a
+// function, and tests pinned behavior the app never ran. `custom` names which
+// cell TableScreen and CardPanel draw; both templates branch on each value
+// with no default (a new value needs its own branch in each by hand; the same
+// two tests scan for them).
+export type CustomCell = "heldItems" | "ev";
 
 export type Field =
-	| (FieldBase & { render: (row: PokedexTableRow) => string; custom?: undefined })
+	| (FieldBase & {
+			render: (row: PokedexTableRow, activeGen: number) => string;
+			title?: (row: PokedexTableRow, activeGen: number) => string;
+			custom?: undefined;
+	  })
 	| (FieldBase & { custom: CustomCell });
 
 export const FIELDS: Field[] = [
@@ -76,7 +86,18 @@ export const FIELDS: Field[] = [
 	{ key: "total", label: "Total", icon: "sigma", sortKey: "total", render: (row) => String(totalStat(row.stats)) },
 	{ key: "ev", label: "EV yield", icon: "dumbbell", custom: "ev" },
 	{ key: "heldItems", label: "Held item", icon: "gift", custom: "heldItems" },
-	{ key: "encounterLocation", label: "Capture", icon: "map-pin", custom: "encounters" },
+	{
+		key: "encounterLocation",
+		label: "Capture",
+		icon: "map-pin",
+		// How it is obtained at the Active Gen ("Wild, Trade"), with every
+		// location as the hover text: one describeEncounters result for both.
+		render: (row, activeGen) => {
+			const encounters = describeEncounters(row.encounterLocationsAllGens, activeGen);
+			return encounters.isEmpty ? "-" : encounters.summary;
+		},
+		title: (row, activeGen) => describeEncounters(row.encounterLocationsAllGens, activeGen).tooltip,
+	},
 	{ key: "catchRate", label: "Catch rate", icon: "target", sortKey: "catchRate", render: (row) => String(row.catchRate) },
 	{
 		key: "hatchCounter",

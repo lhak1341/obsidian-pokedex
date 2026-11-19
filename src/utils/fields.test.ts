@@ -2,12 +2,17 @@ import { describe, expect, it } from "vitest";
 import type { PokedexTableRow } from "../data/types";
 import { DEFAULT_VISIBLE_FIELDS, FIELDS, formatEvYield, isStatField, sortAfterFieldsChange } from "./fields";
 import { makeRow } from "../data/__fixtures__/rows";
+import { describeEncounters } from "./encounters";
 
-function renderOf(key: string, row: PokedexTableRow): string {
+function textField(key: string) {
 	const field = FIELDS.find((f) => f.key === key);
 	if (!field) throw new Error(`no Field registered for key "${key}"`);
 	if (field.custom) throw new Error(`Field "${key}" is custom-rendered, not render()`);
-	return field.render(row);
+	return field;
+}
+
+function renderOf(key: string, row: PokedexTableRow, activeGen = 9): string {
+	return textField(key).render(row, activeGen);
 }
 
 describe("FIELDS", () => {
@@ -17,6 +22,28 @@ describe("FIELDS", () => {
 
 	it("renders total as the sum of all stats", () => {
 		expect(renderOf("total", makeRow())).toBe("318"); // 45+49+49+65+65+45
+	});
+
+	// Capture's locations are stored for every generation; the Field shows the
+	// Active Gen's only, in both layouts (they call render/title, nothing else).
+	describe("Capture", () => {
+		const row = makeRow({
+			encounterLocationsAllGens: [
+				{ name: "route-29-area", generationId: 2, region: "johto", method: null, tradeFor: null },
+			],
+		});
+
+		it("shows '-' and no title at an Active Gen with no locations", () => {
+			expect(renderOf("encounterLocation", row, 1)).toBe("-");
+			expect(textField("encounterLocation").title?.(row, 1)).toBe("");
+		});
+
+		it("shows the Active Gen's summary, with its locations as the title", () => {
+			const encounters = describeEncounters(row.encounterLocationsAllGens, 2);
+			expect(encounters.isEmpty).toBe(false);
+			expect(renderOf("encounterLocation", row, 2)).toBe(encounters.summary);
+			expect(textField("encounterLocation").title?.(row, 2)).toBe(encounters.tooltip);
+		});
 	});
 
 	it("renders '-' for empty EV yield", () => {
@@ -44,13 +71,13 @@ describe("FIELDS", () => {
 });
 
 describe("custom Fields", () => {
-	it("leaves held items, capture and EV yield to TableScreen, which draws their cells", () => {
-		// These have no render(): production never called one (held items and
-		// capture need the Active Gen, so a text fallback could only show every
-		// generation's data; EV yield draws chips).
-		// The discriminant is what TableScreen's template branches on, with no
-		// default, so pin each column's exact value.
-		const expected = { heldItems: "heldItems", encounterLocation: "encounters", ev: "ev" } as const;
+	it("leaves held items and EV yield to the layouts, which draw their cells", () => {
+		// These have no render(): their cells are more than a string (held
+		// items are Info popover targets, EV yield draws chips). Capture is a
+		// text Field since render takes the Active Gen.
+		// The discriminant is what both templates branch on, with no default,
+		// so pin each Field's exact value.
+		const expected = { heldItems: "heldItems", ev: "ev" } as const;
 		for (const [key, cell] of Object.entries(expected)) {
 			const field = FIELDS.find((f) => f.key === key);
 			expect(field?.custom).toBe(cell);

@@ -2,7 +2,6 @@
 	import { STAT_COLORS, TYPE_COLORS } from "../../data/constants";
 	import type { PokedexTableRow, StatBlock } from "../../data/types";
 	import type { PanelStats } from "../../utils/cardView";
-	import { describeEncounters } from "../../utils/encounters";
 	import { type Field, formatEvYield, STAT_LABEL_BY_KEY } from "../../utils/fields";
 	import { filterHeldItemsForGen, type HeldItemForGen } from "../../utils/heldItemGen";
 	import { formatItemName, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
@@ -81,11 +80,8 @@
 									{:else}
 										<span class="chip-empty">None</span>
 									{/each}
-								{:else if field.custom === "encounters"}
-									{@const encounters = describeEncounters(row.encounterLocationsAllGens, activeGen)}
-									<span class="chip-value" title={encounters.tooltip}>{encounters.isEmpty ? "-" : encounters.summary}</span>
 								{:else if field.custom === undefined}
-									<span class="chip-value">{field.render(row)}</span>
+									<span class="chip-value" title={field.title?.(row, activeGen)}>{field.render(row, activeGen)}</span>
 								{/if}
 							</span>
 						{/each}

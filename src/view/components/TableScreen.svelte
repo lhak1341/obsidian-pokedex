@@ -2,7 +2,6 @@
 	import type { PokedexRepository } from "../../data/PokedexRepository";
 	import type { PokedexTableRow } from "../../data/types";
 	import { EMPTY_FILTERS, filterPokemon } from "../../utils/filterPokemon";
-	import { describeEncounters } from "../../utils/encounters";
 	import { filterHeldItemsForGen, type HeldItemForGen } from "../../utils/heldItemGen";
 	import { formatDexNumber, formatItemName, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import type { BrowseLayout } from "../../utils/browseLayout";
@@ -371,9 +370,6 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 												{/each}
 											{/if}
 										</td>
-									{:else if col.custom === "encounters"}
-										{@const encounters = describeEncounters(row.encounterLocationsAllGens, activeGen)}
-										<td title={encounters.tooltip}>{encounters.isEmpty ? "-" : encounters.summary}</td>
 									{:else if col.custom === "ev"}
 										<td title={formatEvYield(row)}>
 											<EvChips evYield={row.evYield} />
@@ -383,7 +379,7 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 										<td></td>
 									{/if}
 								{:else}
-									<td class:right={col.align === "right"}>{col.render(row)}</td>
+									<td class:right={col.align === "right"} title={col.title?.(row, activeGen)}>{col.render(row, activeGen)}</td>
 								{/if}
 							{/each}
 						</tr>

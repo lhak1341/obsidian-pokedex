@@ -17,8 +17,8 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   latest-game). Held items and encounters: `heldItemsAllGens`/`encounterLocationsAllGens` carry every generation, the
   "AllGens" name being the guard, scoped by `filterHeldItemsForGen` (`utils/heldItemGen.ts`) or `describeEncounters`
   (`utils/encounters.ts`); missed independently for the table cell, its tooltip, the detail page and the Quirks filter
-  in one session. `filterPokemon`'s `FilterContext.activeGen` is required (no any-generation fallback), and a custom
-  Field gets no text `render` (it could only show every generation's data).
+  in one session. `filterPokemon`'s `FilterContext.activeGen` is required (no any-generation fallback), and a Field's
+  `render(row, activeGen)`/`title` take it too, so the Capture Field scopes its locations in `fields.ts` for both layouts.
 - Saved preferences are never a local copy. Favourites, the Fields selection and the layout per width class live in
   `PokedexPlugin.preferences` (`utils/localPreferences.ts`, ADR-0012), one holder shared by every open Pokédex leaf;
   `PokedexApp` mirrors it (`prefs`, refreshed by `subscribe`) and writes through it, and every layout or panel takes
@@ -44,11 +44,13 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   tap opens `CardPanel.svelte` (open id held in `CardGrid`), whose held item uses TableScreen's `itemPopover`.
 - `tsc` (`bun run typecheck`) skips `.svelte` and the build only catches compile errors, so a stale field or export
   builds clean and reads `undefined` live: after renaming or removing one, grep `src/**/*.svelte` by hand.
-- Fields (`utils/fields.ts`, `FIELDS`) are `{ render }` text Fields or `{ custom: CustomCell }` Fields the layout draws
-  itself; the table's geometry per Field is `TABLE_GEOMETRY` (`utils/tableColumns.ts`). A new custom Field needs a
-  `col.custom === …` branch in `TableScreen.svelte` and a `field.custom === …` branch in `CardPanel.svelte`; neither
-  has a default (an empty `<td>`, a bare icon chip), so `tableColumns.test.ts` and `cardView.test.ts` scan the
-  templates (imported with `?raw`) for one branch per `custom` value.
+- Fields (`utils/fields.ts`, `FIELDS`) are `{ render, title? }` text Fields, both called with the Active Gen, or
+  `{ custom: CustomCell }` Fields the layout draws itself (held items, EV yield: more than a string). A value that only
+  needs Active Gen scoping is a text Field, not a custom one. The table's geometry per Field is `TABLE_GEOMETRY`
+  (`utils/tableColumns.ts`). A new custom Field needs a `col.custom === …` branch in `TableScreen.svelte` and a
+  `field.custom === …` branch in `CardPanel.svelte`; neither has a default (an empty `<td>`, a bare icon chip), so
+  `tableColumns.test.ts` and `cardView.test.ts` scan the templates (imported with `?raw`) for one branch per `custom`
+  value, and for the `render(row, activeGen)`/`title?.(row, activeGen)` calls.
 - `vitest.config.ts` has no Svelte plugin or jsdom, so a `.svelte.ts` rune module (`infoPopover.svelte.ts`,
   `quickJumpDropdown.svelte.ts`) can't be tested (the Info popover's pin rules are therefore `utils/infoPopoverPin.ts`;
   press and hold's are `utils/pressHold.ts`, bound by `view/favoriteMenu.ts` and the portrait's `view/portraitPress.ts`, which share the timer and scroll watch in
