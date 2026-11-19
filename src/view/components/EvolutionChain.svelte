@@ -5,7 +5,7 @@
 	import EvolutionChain from "./EvolutionChain.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 
-	let { node, onSelect, sprites, types, useTypeIcons, evolveLabel }: {
+	let { node, onSelect, sprites, types, useTypeIcons, evolveLabel, compact = false }: {
 		node: EvolutionNode;
 		onSelect: (id: number) => void;
 		// Keyed by dex id. Evolution partners are always within the same
@@ -24,11 +24,14 @@
 		// child's own data, since the child has no way to know how it got
 		// here. Undefined for the chain's root.
 		evolveLabel?: string;
+		// The phone layout's 72px cards with 10px gaps (#32), so a
+		// three-stage chain fits one row of a 390px pane.
+		compact?: boolean;
 	} = $props();
 
 </script>
 
-<div class="evo-node">
+<div class="evo-node" class:compact>
 	<!-- data-evo-id: the connecting lines are drawn by EvolutionTree (the
 	wrapper that mounts this component), which measures card centers by this
 	attribute rather than this component tracking its own position — it has
@@ -63,6 +66,7 @@
 						{types}
 						{useTypeIcons}
 						evolveLabel={describeEvolutionRequirement(child)}
+						{compact}
 					/>
 				</div>
 			{/each}
@@ -140,5 +144,27 @@
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
+	}
+	/* Phone (#32): 72px cards, 10px gaps. The method and "#006 Charizard"
+	lines wrap inside the card instead of widening it. Top-aligned: two type
+	badges wrap to a second row at 72px, so a one-type card (Chimchar) is
+	shorter, and centring dropped its sprite below its evolutions'. */
+	.compact {
+		gap: 10px;
+		align-items: flex-start;
+	}
+	.compact > .evo-card {
+		width: 72px;
+		padding: 2px;
+	}
+	.compact .evo-sprite {
+		width: 64px;
+		height: 64px;
+	}
+	.compact .evo-method,
+	.compact .evo-label {
+		white-space: normal;
+		text-align: center;
+		overflow-wrap: anywhere;
 	}
 </style>

@@ -21,6 +21,7 @@
 	import MoveBrowser from "./MoveBrowser.svelte";
 	import PortraitPanel from "./PortraitPanel.svelte";
 	import QuickSearch from "./QuickSearch.svelte";
+	import Ring from "./Ring.svelte";
 	import RegionalFormNav from "./RegionalFormNav.svelte";
 	import StatBars from "./StatBars.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
@@ -41,7 +42,7 @@
 	const MAX_HATCH_COUNTER = 120;
 
 	let {
-		repository, id, rows, spriteStyle, useTypeIcons, activeGen, isFavorite, onToggleFavorite, onBack, onSelect,
+		repository, id, rows, spriteStyle, useTypeIcons, activeGen, narrow, isFavorite, onToggleFavorite, onBack, onSelect,
 	}: {
 		repository: PokedexRepository;
 		id: number;
@@ -49,6 +50,9 @@
 		spriteStyle: PluginSettings["spriteStyle"];
 		useTypeIcons: boolean;
 		activeGen: number;
+		// A Narrow pane (PokedexApp's leaf ResizeObserver, the same 600px the
+		// `pane` container queries read): the phone tabs (#32).
+		narrow: boolean;
 		isFavorite: boolean;
 		onToggleFavorite: (id: number) => void;
 		onBack: () => void;
@@ -85,6 +89,17 @@
 	function mirror() {
 		entryLoad = loadState.snapshot();
 	}
+
+	// The phone layout's tabs (#32). Not reset in startLoad, so prev/next
+	// keeps the tab (compare Stats down the dex); leaving for the list
+	// unmounts this screen, so a fresh visit opens on About.
+	const PHONE_TABS = [
+		{ key: "about", label: "About" },
+		{ key: "evolution", label: "Evolution" },
+		{ key: "stats", label: "Stats" },
+		{ key: "moves", label: "Moves" },
+	] as const;
+	let phoneTab = $state<(typeof PHONE_TABS)[number]["key"]>("about");
 
 	// Reset per-entry (see startLoad below) so switching Pokemon never
 	// leaves a previous one's shiny toggle silently applied.
@@ -313,50 +328,48 @@
 			{@const entry = entryLoad.entry}
 			{@const activeHeldItems = filterHeldItemsForGen(entry.heldItemsAllGens, activeGen)}
 			{@const encounters = describeEncounters(entry.encounterLocationsAllGens, activeGen)}
-			<!-- container-type (not a viewport media query) because this is an
-			Obsidian pane: it can be a narrow sidebar in a wide window or fill a
-			whole ultrawide window, independent of the window's own size. Three
-			columns on a wide pane — identity | evolution/stats/abilities/breeding
-			| moves — collapsing to a single stacked column (same DOM order) on a
-			narrow one. -->
-			<div class="detail-grid" style:--pkdx-accent={accentColor}>
-				<aside class="identity-col">
+			<!-- Each group is a snippet, so the phone tabs (#32) and the wide
+			grid lay out the same panels without a second copy of any. -->
+			{#snippet hero()}
 				<!-- The phone hero (#31): below 600px the number, name, asterisk
 				and types sit over the portrait's bottom edge. From 600px .hero is
 				display: contents, so the column lays out as before. -->
 				<div class="hero" class:art-preview={artPreview}>
-				<PortraitPanel
-					{entry}
-					portraitSource={activeMegaData ?? activeGigantamaxData ?? entry}
-					{portraitUri}
-					{spriteStyle}
-					{showShiny}
-					onToggleShiny={() => (showShiny = !showShiny)}
-					activeMegaKey={varietySnapshot.activeMegaKey}
-					onSelectMega={selectMegaForm}
-					activeGigantamaxKey={varietySnapshot.activeGigantamaxKey}
-					onSelectGigantamax={selectGigantamaxForm}
-					onHoverPortrait={showPortraitPreview}
-					onLeavePortrait={hidePortraitPreview}
-					measure={measurePortrait}
-					bind:portraitScale
-					bind:artPreview
-				/>
+					<PortraitPanel
+						{entry}
+						portraitSource={activeMegaData ?? activeGigantamaxData ?? entry}
+						{portraitUri}
+						{spriteStyle}
+						{showShiny}
+						onToggleShiny={() => (showShiny = !showShiny)}
+						activeMegaKey={varietySnapshot.activeMegaKey}
+						onSelectMega={selectMegaForm}
+						activeGigantamaxKey={varietySnapshot.activeGigantamaxKey}
+						onSelectGigantamax={selectGigantamaxForm}
+						onHoverPortrait={showPortraitPreview}
+						onLeavePortrait={hidePortraitPreview}
+						measure={measurePortrait}
+						bind:portraitScale
+						bind:artPreview
+					/>
 
-				<div class="name-block">
-					<p class="dex-eyebrow">No. {formatDexNumber(entry.dexNumber)} ({romanNumeral(entry.generationId)})</p>
-					<div class="name-line">
-						<p class="mon-name" role="heading" aria-level="2">{formatPokemonDisplayName(entry)}</p>
-						<FavoriteToggle active={isFavorite} onToggle={() => onToggleFavorite(entry.id)} size={18} />
+					<div class="name-block">
+						<p class="dex-eyebrow">No. {formatDexNumber(entry.dexNumber)} ({romanNumeral(entry.generationId)})</p>
+						<div class="name-line">
+							<p class="mon-name" role="heading" aria-level="2">{formatPokemonDisplayName(entry)}</p>
+							<FavoriteToggle active={isFavorite} onToggle={() => onToggleFavorite(entry.id)} size={18} />
+						</div>
+						<div class="type-row">
+							{#each (activeMegaData ?? entry).types as type (type)}
+								<TypeBadge {type} useIcon={useTypeIcons} />
+							{/each}
+						</div>
+						<RegionalFormNav {rows} currentId={entry.id} dexNumber={entry.dexNumber} {onSelect} />
 					</div>
-					<div class="type-row">
-						{#each (activeMegaData ?? entry).types as type (type)}
-							<TypeBadge {type} useIcon={useTypeIcons} />
-						{/each}
-					</div>
-					<RegionalFormNav {rows} currentId={entry.id} dexNumber={entry.dexNumber} {onSelect} />
 				</div>
-				</div>
+			{/snippet}
+
+			{#snippet facts()}
 				<dl class="physical-readout">
 					<div>
 						<dt>Height</dt>
@@ -371,44 +384,53 @@
 						<dd><EvChips evYield={entry.evYield} /></dd>
 					</div>
 				</dl>
-				<FlavorTextPanel flavorTexts={entry.flavorTexts} {activeGen} />
-			</aside>
+			{/snippet}
 
-			<div class="core-col">
+			{#snippet flavor()}
+				<FlavorTextPanel flavorTexts={entry.flavorTexts} {activeGen} />
+			{/snippet}
+
+			{#snippet evolution(compact: boolean)}
 				{#if entry.evolutionChain}
 					<section class="panel">
 						<h3 class="section-heading">Evolution</h3>
 						<EvolutionTree
-						chain={entry.evolutionChain}
-						{onSelect}
-						sprites={entryLoad.evolutionSprites}
-						types={entryLoad.evolutionTypes}
-						{useTypeIcons}
-					/>
-					</section>
-				{/if}
-
-				<div class="stats-abilities-row">
-					<section class="panel stats-panel">
-						<h3 class="section-heading">Base stats</h3>
-						<!-- Mega stats are PokeAPI's current value for that variety
-						already — no historical divergence is possible (Mega Evolution
-						has only ever existed since its Gen 6 introduction), so unlike
-						the base species this skips resolveStatsForGen's Active Gen
-						override lookup entirely. -->
-						<StatBars stats={activeMegaData ? activeMegaData.stats : resolveStatsForGen(entry.stats, entry.id, activeGen)} />
-					</section>
-
-					<section class="panel abilities-panel">
-						<h3 class="section-heading">Abilities</h3>
-						<AbilitiesPanel
-							abilities={activeMegaData ? activeMegaData.abilities : entry.abilities}
-							getDescription={(name) => repository.getAbilityDescription(name)}
+							chain={entry.evolutionChain}
+							{onSelect}
+							sprites={entryLoad.evolutionSprites}
+							types={entryLoad.evolutionTypes}
+							{useTypeIcons}
+							{compact}
 						/>
 					</section>
-				</div>
+				{/if}
+			{/snippet}
 
-				<section class="panel">
+			{#snippet baseStats()}
+				<section class="panel stats-panel">
+					<h3 class="section-heading">Base stats</h3>
+					<!-- Mega stats are PokeAPI's current value for that variety
+					already — no historical divergence is possible (Mega Evolution
+					has only ever existed since its Gen 6 introduction), so unlike
+					the base species this skips resolveStatsForGen's Active Gen
+					override lookup entirely. -->
+					<StatBars stats={activeMegaData ? activeMegaData.stats : resolveStatsForGen(entry.stats, entry.id, activeGen)} />
+				</section>
+			{/snippet}
+
+			{#snippet abilities()}
+				<section class="panel abilities-panel">
+					<h3 class="section-heading">Abilities</h3>
+					<AbilitiesPanel
+						abilities={activeMegaData ? activeMegaData.abilities : entry.abilities}
+						getDescription={(name) => repository.getAbilityDescription(name)}
+					/>
+				</section>
+			{/snippet}
+
+			<!-- Rings on the phone layout (#32), bars in the three columns. -->
+			{#snippet capture(rings: boolean)}
+				<section class="panel capture-panel">
 					<h3 class="section-heading">Capture & Breeding</h3>
 					{#if !encounters.isEmpty}
 						{#if encounters.groups.length > 1}
@@ -448,20 +470,99 @@
 							</span>
 						</div>
 					{/if}
-					<div class="breeding-bars">
-						<BarRow label="Catch rate" value={entry.catchRate} max={MAX_CATCH_RATE} />
-						<BarRow label="Hatch counter" value={entry.hatchCounter} max={MAX_HATCH_COUNTER} />
-					</div>
+					{#if rings}
+						<div class="breeding-rings">
+							<Ring label="Catch rate" value={entry.catchRate} max={MAX_CATCH_RATE} />
+							<Ring label="Hatch counter" value={entry.hatchCounter} max={MAX_HATCH_COUNTER} />
+						</div>
+					{:else}
+						<div class="breeding-bars">
+							<BarRow label="Catch rate" value={entry.catchRate} max={MAX_CATCH_RATE} />
+							<BarRow label="Hatch counter" value={entry.hatchCounter} max={MAX_HATCH_COUNTER} />
+						</div>
+					{/if}
 					<p class="breeding-line">Egg groups: {entry.eggGroups.join(", ") || "None"}</p>
 				</section>
-			</div>
+			{/snippet}
 
-			<div class="moves-col">
-				<section class="panel">
+			{#snippet moves()}
+				<section class="panel moves-panel">
 					<MoveBrowser moves={entry.moves} {moveDetails} {useTypeIcons} {evolvesAtLevels} {activeGen} />
 				</section>
-			</div>
-		</div>
+			{/snippet}
+
+			{#if narrow}
+				<!-- Phone layout (#32), in a Narrow pane: the hero, then one group
+				at a time under a sticky segmented control. -->
+				<div class="detail-phone" style:--pkdx-accent={accentColor}>
+					{@render hero()}
+					<div class="phone-tabs-bar">
+						<!-- A button group, like MoveBrowser's method tabs, not an ARIA
+						tablist: that promises arrow keys between tabs, and ←/→ already
+						step to the previous/next Pokemon window-wide (onKeydown). -->
+						<div class="phone-tabs" role="group" aria-label="Detail sections">
+							{#each PHONE_TABS as tab (tab.key)}
+								<button
+									type="button"
+									class="phone-tab"
+									class:active={phoneTab === tab.key}
+									aria-pressed={phoneTab === tab.key}
+									onclick={() => (phoneTab = tab.key)}
+								>{tab.label}</button>
+							{/each}
+						</div>
+					</div>
+					<div class="phone-tab-body">
+						{#if phoneTab === "about"}
+							{@render flavor()}
+							{@render facts()}
+							{@render abilities()}
+						{:else if phoneTab === "evolution"}
+							{#if entry.evolutionChain}
+								{@render evolution(true)}
+							{:else}
+								<p class="phone-empty">Doesn't evolve.</p>
+							{/if}
+						{:else if phoneTab === "stats"}
+							<div class="phone-stats">
+								{@render baseStats()}
+								{@render capture(true)}
+							</div>
+						{:else if phoneTab === "moves"}
+							{@render moves()}
+						{/if}
+					</div>
+				</div>
+			{:else}
+				<!-- container-type (not a viewport media query) because this is an
+				Obsidian pane: it can be a sidebar in a wide window or fill a whole
+				ultrawide window, independent of the window's own size. Three columns
+				from a 920px `detail` container — identity | evolution/stats/abilities/
+				breeding | moves — and one stacked column (same DOM order) below it,
+				down to the 600px pane where the phone tabs above take over. -->
+				<div class="detail-grid" style:--pkdx-accent={accentColor}>
+					<aside class="identity-col">
+						{@render hero()}
+						{@render facts()}
+						{@render flavor()}
+					</aside>
+
+					<div class="core-col">
+						{@render evolution(false)}
+
+						<div class="stats-abilities-row">
+							{@render baseStats()}
+							{@render abilities()}
+						</div>
+
+						{@render capture(false)}
+					</div>
+
+					<div class="moves-col">
+						{@render moves()}
+					</div>
+				</div>
+			{/if}
 
 		{#if portraitPreviewPos && portraitUri}
 			<img
@@ -927,5 +1028,111 @@
 
 	.error {
 		color: var(--lk-danger);
+	}
+
+	/* Phone layout (#32). Rendered only in a Narrow pane (the `narrow` prop),
+	so these need no container query. */
+	.detail-phone {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+	/* Opaque, so the panels scroll under it; the segmented pill matches
+	MoveBrowser's method tabs. A sticky top of 0 sits inside the scroller's
+	(.pokedex-view) --lk-space-4 padding, and rows showed through that band
+	above it: the bar sticks at the scroller's edge instead and fills the
+	band itself, and the negative margin keeps its resting place unchanged. */
+	.phone-tabs-bar {
+		position: sticky;
+		top: calc(-1 * var(--lk-space-4));
+		z-index: 5;
+		margin-top: calc(-1 * var(--lk-space-4));
+		padding: calc(var(--lk-space-4) + 6px) 0 6px;
+		background: var(--lk-surface);
+	}
+	.phone-tabs {
+		display: flex;
+		gap: 4px;
+		padding: 4px;
+		background: var(--lk-surface-sunken);
+		border: 1px solid var(--lk-border);
+		border-radius: 10px;
+	}
+	.phone-tab {
+		flex: 1;
+		min-width: 0;
+		height: auto;
+		padding: 6px 2px;
+		background: transparent;
+		border: none;
+		box-shadow: none;
+		border-radius: 7px;
+		cursor: pointer;
+		font-size: 0.85em;
+		font-weight: 500;
+		color: var(--lk-text);
+		transition: background var(--lk-duration-fast) ease-out;
+	}
+	.phone-tab:hover:not(.active) {
+		background: var(--lk-surface-hover);
+	}
+	.phone-tab.active {
+		background: var(--lk-surface);
+		box-shadow: var(--lk-shadow-s);
+		font-weight: 600;
+	}
+	.phone-tab-body {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+	.phone-empty {
+		margin: 0;
+		color: var(--lk-text-muted);
+	}
+	.detail-phone .panel {
+		padding: 12px;
+	}
+	/* About's fact line: Height, Weight and EV yield on one row, spread edge
+	to edge. A pane too narrow for it moves EV yield to its own row whole,
+	never splitting the chips. A three-stat yield (Infernape) fits a 390px
+	pane's 319px only with the chips' padding trimmed: measured 312px, against
+	332px at the table's chip size. */
+	.detail-phone .physical-readout {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		column-gap: 8px;
+		row-gap: 8px;
+	}
+	.detail-phone .ev-readout :global(.ev-chips) {
+		flex-wrap: nowrap;
+	}
+	.detail-phone .ev-readout :global(.ev-chip) {
+		gap: 4px;
+		padding: 2px 6px 2px 5px;
+	}
+	/* A 360px pane's Stats column leaves the two percentages touching. */
+	.detail-phone .gender-labels {
+		gap: 6px;
+	}
+	.phone-stats {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		gap: 8px;
+		align-items: start;
+	}
+	.breeding-rings {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-around;
+		gap: 8px 2px;
+		margin: 10px 0 8px;
+	}
+	/* A move table wider than the phone scrolls inside its panel, never the
+	page. The Info popover is positioned from .detail-screen, outside this
+	scroller, so it is not clipped. */
+	.detail-phone .moves-panel {
+		overflow-x: auto;
 	}
 </style>

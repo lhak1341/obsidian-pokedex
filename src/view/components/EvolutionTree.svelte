@@ -3,12 +3,13 @@
 	import type { EvolutionNode } from "../../data/types";
 	import EvolutionChain from "./EvolutionChain.svelte";
 
-	let { chain, onSelect, sprites, types, useTypeIcons }: {
+	let { chain, onSelect, sprites, types, useTypeIcons, compact = false }: {
 		chain: EvolutionNode;
 		onSelect: (id: number) => void;
 		sprites: Record<number, string | null>;
 		types: Record<number, string[]>;
 		useTypeIcons: boolean;
+		compact?: boolean;
 	} = $props();
 
 	let containerEl: HTMLDivElement | undefined;
@@ -77,7 +78,7 @@
 			<line x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} />
 		{/each}
 	</svg>
-	<EvolutionChain node={chain} {onSelect} {sprites} {types} {useTypeIcons} />
+	<EvolutionChain node={chain} {onSelect} {sprites} {types} {useTypeIcons} {compact} />
 </div>
 
 <style>

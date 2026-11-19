@@ -32,7 +32,10 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   through `nextSort`, and an effect resets the sort through `sortAfterFieldsChange` whichever leaf unchose the Field.
   `PokedexApp` picks the layout per width class (`utils/browseLayout.ts`) from a `ResizeObserver` on the leaf; CSS reads
   the same leaf as the `pane` container, so a Narrow pane query is `@container pane (width < 600px)`, never a width
-  converted to an inner container (`paneBreakpoint.test.ts`). Card
+  converted to an inner container (`paneBreakpoint.test.ts`). The detail screen's phone tabs (#32) are a JS branch on
+  that same width class (`DetailScreen`'s `narrow` prop), since a tab shows one group at a time; each group is a
+  `{#snippet}` that the phone branch and the wide grid both render, so a panel is never written twice. The hero's
+  overlay stays a `pane` container query. Card
   view's derivations (tile, grid, the tap panel's placement, columns and chips) are pure in `utils/cardView.ts`; a tile
   tap opens `CardPanel.svelte` (open id held in `CardGrid`), whose held item uses TableScreen's `itemPopover`.
 - `tsc` (`bun run typecheck`) skips `.svelte` and the build only catches compile errors, so a stale field or export

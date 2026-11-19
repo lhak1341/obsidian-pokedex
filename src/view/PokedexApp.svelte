@@ -249,6 +249,7 @@
 				spriteStyle={settings.spriteStyle}
 				useTypeIcons={settings.useTypeIcons}
 				activeGen={settings.activeGen}
+				narrow={paneClass === "narrow"}
 				isFavorite={favoriteIds.has(selectedId)}
 				onToggleFavorite={toggleFavorite}
 				onBack={backToTable}
