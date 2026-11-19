@@ -21,7 +21,7 @@
 	// every normal desktop-width pane. DetailScreen derives portraitSource
 	// and portraitUri itself (it owns every input) and hands them down;
 	// portraitScale is async, so it is surfaced back via $bindable; onHoverPortrait/onLeavePortrait
-	// forward the raw hover events up for the same reason. showArt (a touch
+	// forward the raw hover events up for the same reason. artPreview (a touch
 	// held on the portrait, #31) is bound back up too: below 600px the
 	// identity overlay DetailScreen draws over this box fades with it.
 	let {
@@ -39,7 +39,7 @@
 		onLeavePortrait,
 		measure,
 		portraitScale = $bindable(),
-		showArt = $bindable(false),
+		artPreview = $bindable(false),
 	}: {
 		entry: PokedexEntry;
 		// Which image set renders: the active Mega/Gigantamax form, else the
@@ -61,14 +61,14 @@
 		// URL back to its path.
 		measure: (uri: string) => Promise<number>;
 		portraitScale: number;
-		showArt?: boolean;
+		artPreview?: boolean;
 	} = $props();
 
 	const hasShiny = $derived(Boolean(portraitSource?.shinyDataUri || portraitSource?.shinyArtworkDataUri));
 
 	// Press and hold to see the art alone, any width, touch only (rules:
 	// stepPortraitPress in utils/pressHold.ts).
-	const press = createPortraitPress((show) => (showArt = show));
+	const press = createPortraitPress((show) => (artPreview = show));
 	onDestroy(() => press.destroy());
 
 	// Always the non-shiny render — resolvePortrait(..., false) is the same
@@ -105,7 +105,7 @@
 that would otherwise open it, and touch has the hold instead. -->
 <div
 	class="portrait-panel"
-	class:show-art={showArt}
+	class:art-preview={artPreview}
 	class:has-shiny={hasShiny}
 	role="note"
 	onpointerenter={(e) => {
@@ -192,21 +192,21 @@ that would otherwise open it, and touch has the hold instead. -->
 		transition: opacity var(--lk-duration-base) var(--lk-ease-standard);
 	}
 	/* The art alone: toggles out, art grown to fill the box. */
-	.show-art .portrait-image {
+	.art-preview .portrait-image {
 		width: 92%;
 		height: 92%;
 	}
-	.show-art .shiny-toggle,
-	.show-art :global(.variety-form-toggle) {
+	.art-preview .shiny-toggle,
+	.art-preview :global(.variety-form-toggle) {
 		opacity: 0;
 		pointer-events: none;
 	}
 
-	/* Phone hero (#31), below a 600px pane (the pane pads 23px a side): full
+	/* Phone hero (#31), in a Narrow pane (the `pane` container, the leaf): full
 	width, 250px tall, the art in its upper part above DetailScreen's identity
 	overlay, which sits on a fade into the panel colour. Mega X/Y move to the
 	top-left; Gigantamax sits beside the shiny toggle top-right. */
-	@container detail (width < 554px) {
+	@container pane (width < 600px) {
 		.portrait-panel {
 			align-items: flex-start;
 			max-width: none;
@@ -220,7 +220,7 @@ that would otherwise open it, and touch has the hold instead. -->
 			height: 168px;
 			margin-top: 10px;
 		}
-		.show-art .portrait-image {
+		.art-preview .portrait-image {
 			width: 100%;
 			height: 230px;
 		}
@@ -233,7 +233,7 @@ that would otherwise open it, and touch has the hold instead. -->
 			pointer-events: none;
 			transition: opacity var(--lk-duration-base) var(--lk-ease-standard);
 		}
-		.show-art .portrait-fade {
+		.art-preview .portrait-fade {
 			opacity: 0;
 		}
 		.portrait-panel :global(.variety-form-toggle) {

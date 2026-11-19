@@ -126,12 +126,12 @@ export type PortraitPressEvent = Exclude<PressEvent, DownEvent> | (DownEvent & {
 export interface PortraitPressStep {
 	state: PressState;
 	// The overlay and toggles are hidden and the art fills the box.
-	showArt: boolean;
+	artPreview: boolean;
 	swallowed: boolean;
 }
 
 export function stepPortraitPress(state: PressState, event: PortraitPressEvent): PortraitPressStep {
 	const ignored = event.kind === "down" && event.isPrimary && (event.pointerType !== "touch" || event.onToggle);
 	const step = ignored ? { state: IDLE, swallowed: false } : stepPress(state, event, PORTRAIT_PRESS);
-	return { state: step.state, showArt: step.state.phase === "held", swallowed: step.swallowed };
+	return { state: step.state, artPreview: step.state.phase === "held", swallowed: step.swallowed };
 }

@@ -1,9 +1,11 @@
 import { IDLE, PORTRAIT_PRESS, stepPortraitPress, type PortraitPressEvent, type PressState } from "../utils/pressHold";
+import { createPressWatch } from "./pressWatch";
 
 // The portrait's art preview (#31): a touch held on the portrait hides the
 // identity overlay and the toggles and grows the art until the finger lifts.
 // The rules are utils/pressHold.ts's stepPortraitPress; this is the thin
-// binding that turns DOM events into its events and runs the timer. DOM-bound,
+// binding that turns DOM events into its events and runs the timer
+// (pressWatch.ts, shared with favoriteMenu.ts). DOM-bound,
 // so untested here (no jsdom in vitest.config.ts), the same split as
 // favoriteMenu.ts.
 
@@ -24,29 +26,21 @@ export interface PortraitPress {
 	destroy(): void;
 }
 
-export function createPortraitPress(onShowArt: (show: boolean) => void): PortraitPress {
+export function createPortraitPress(onArtPreview: (show: boolean) => void): PortraitPress {
 	let state: PressState = IDLE;
-	let timer: { win: Window; handle: number } | null = null;
-	let detachScroll: (() => void) | null = null;
-
-	function stopWatching() {
-		if (timer) timer.win.clearTimeout(timer.handle);
-		timer = null;
-		detachScroll?.();
-		detachScroll = null;
-	}
+	const watch = createPressWatch();
 
 	function dispatch(event: PortraitPressEvent) {
 		const step = stepPortraitPress(state, event);
 		state = step.state;
 		// A hold keeps watching for a scroll, which ends it as a lift would.
-		if (state.phase === "idle") stopWatching();
-		onShowArt(step.showArt);
+		if (state.phase === "idle") watch.stop();
+		onArtPreview(step.artPreview);
 		return step;
 	}
 
 	function onDown(e: PointerEvent) {
-		stopWatching();
+		watch.stop();
 		const target = e.target instanceof Element ? e.target : null;
 		dispatch({
 			kind: "down",
@@ -58,13 +52,10 @@ export function createPortraitPress(onShowArt: (show: boolean) => void): Portrai
 			onToggle: target?.closest("button") != null,
 		});
 		if (state.phase !== "pressing") return;
-		const doc = (e.currentTarget as HTMLElement).ownerDocument;
-		const win = doc.defaultView ?? activeWindow;
-		// The event's timeStamp and performance.now() share a clock.
-		timer = { win, handle: win.setTimeout(() => dispatch({ kind: "timer", t: win.performance.now() }), PORTRAIT_PRESS.holdMs) };
-		const onScroll = () => dispatch({ kind: "scroll" });
-		doc.addEventListener("scroll", onScroll, true);
-		detachScroll = () => doc.removeEventListener("scroll", onScroll, true);
+		watch.start(e, PORTRAIT_PRESS.holdMs, {
+			onTimer: (t) => dispatch({ kind: "timer", t }),
+			onScroll: () => dispatch({ kind: "scroll" }),
+		});
 	}
 
 	return {
@@ -84,6 +75,6 @@ export function createPortraitPress(onShowArt: (show: boolean) => void): Portrai
 				e.stopPropagation();
 			},
 		},
-		destroy: stopWatching,
+		destroy: () => watch.stop(),
 	};
 }

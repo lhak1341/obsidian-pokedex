@@ -18,8 +18,11 @@ time out (clear `.notice` before checking one shows); `dev:mobile` is global, tu
   favourite asterisk tap saves settings) (return the old-shape data, capture writes, `await plugin.loadSettings()`, then
   the leaf swap above), so `data.json` is never written. Poll for the banner to clear only when the real load is the
   thing under test.
-- Table rows stream in while loading, so a row count or before/after comparison taken right after a reload is
-  meaningless: poll the `tbody tr` count until two reads 1.5s apart match before measuring.
+- A live read can describe a state other than the one you set up, so return the setup's own value with every
+  measurement and read only after an `await`: rows stream in after a reload (poll `tbody tr` until two reads 1.5s
+  apart match), Svelte applies a dispatched event's state change on a later microtask (a same-tick read returned the
+  old class), and a window reload clears an inline width override (a hold check ran at the wide layout unnoticed until
+  its 181px image gave it away; return the leaf or container width with each read).
 - Narrow-pane width budget: a 390px leaf leaves the browse content 319px (12px `.view-content` + 16px `.pokedex-view`
   padding a side, and a 15px scrollbar gutter that `dev:mobile` keeps). `.pokedex-view` (not `.workspace-leaf-content`
   or `.table-wrap`, which merely wrap it) is the scroll container. A real Narrow pane needs no emulation:
@@ -90,13 +93,22 @@ time out (clear `.notice` before checking one shows); `dev:mobile` is global, tu
 ## Proving and showing
 
 - A "no visible change" refactor is proved by A/B against HEAD, not by eye: `git archive HEAD | tar -x -C <scratch>`,
-  symlink `node_modules`, `bun run build`; copy each build into `pokedex-test-vault`, `plugin:reload`, and compare a
-  hash of `JSON.stringify((await plugin.repository.getTableRows({start:1,end:1025})).rows)` with each `spriteDataUri`
+  symlink `node_modules`, `bun run build`; copy each build into `pokedex-test-vault`, reload the window (`plugin:reload`
+  keeps the old CSS), and compare. Data: a hash of
+  `JSON.stringify((await plugin.repository.getTableRows({start:1,end:1025})).rows)` with each `spriteDataUri`
   replaced by `plugin.repository.imagePathOf(it)` (blob URLs differ per load; a warm cache keeps it offline).
+  Layout: dump every element's rect relative to the screen at several leaf widths and diff the lists, skipping only
+  the wrapper elements the change adds (#31: 4 species × 4 widths, 0 diffs).
   Run both builds in one window state: `dev:mobile` changes the leaf width and base font (16px emulated, 15px desktop), so an emulated baseline never matches a desktop run of the same build.
+- A Narrow pane is a leaf width, and both screens read the leaf: PokedexApp's ResizeObserver and the `pane` container
+  (`styles.src.css`) that every Narrow pane query uses (`@container pane (width < 600px)`, pinned by
+  `src/view/paneBreakpoint.test.ts`). So drive it by the leaf: `leaf.view.containerEl.style.width = '390px'` (clear it
+  after) switches both screens, measured identical at 599/600 (#31). Inside the leaf, padding and the scrollbar gutter
+  take ~71px on desktop (12px `.view-content` + 16px `.pokedex-view` a side + a 15px gutter; less where scrollbars
+  overlay), so a 390px leaf leaves the detail screen 319px. Setting `.pokedex-view`'s width instead moves only the
+  inner `detail` container (920/1100px) and never the Narrow pane queries.
 - Phone-width design needs no emulator: inject a throwaway overlay into the live `pokedex-view` leaf inside a
-  fixed-width column (any width: `.pokedex-view{width:Npx}` also drives the detail screen's `@container detail`
-  queries, at N − 46px since the pane pads 23px a side, so state which of the two widths a breakpoint means), take row
+  fixed-width column (any width), take row
   order/filter/sort from the table DOM and raw records from `plugin.repository.pokemonMemCache` (by id, all 6 stats) /
   `speciesMemCache` (`capture_rate`), then remove it. To show motion, pause it at a set point with
   `animation-play-state: paused` plus a negative `animation-delay`, screenshot each frame (`dev:screenshot` takes

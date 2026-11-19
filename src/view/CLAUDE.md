@@ -30,7 +30,9 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
 - The browse screen is one list drawn two ways. `TableScreen.svelte` owns filters (search included) and one `SortState`
   and renders the `<table>` or `CardGrid.svelte` from the same `visibleRows`, so a layout switch keeps them; both sort
   through `nextSort`, and an effect resets the sort through `sortAfterFieldsChange` whichever leaf unchose the Field.
-  `PokedexApp` picks the layout per width class (`utils/browseLayout.ts`) from a `ResizeObserver` on the leaf. Card
+  `PokedexApp` picks the layout per width class (`utils/browseLayout.ts`) from a `ResizeObserver` on the leaf; CSS reads
+  the same leaf as the `pane` container, so a Narrow pane query is `@container pane (width < 600px)`, never a width
+  converted to an inner container (`paneBreakpoint.test.ts`). Card
   view's derivations (tile, grid, the tap panel's placement, columns and chips) are pure in `utils/cardView.ts`; a tile
   tap opens `CardPanel.svelte` (open id held in `CardGrid`), whose held item uses TableScreen's `itemPopover`.
 - `tsc` (`bun run typecheck`) skips `.svelte` and the build only catches compile errors, so a stale field or export
@@ -42,7 +44,8 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   templates (imported with `?raw`) for one branch per `custom` value.
 - `vitest.config.ts` has no Svelte plugin or jsdom, so a `.svelte.ts` rune module (`infoPopover.svelte.ts`,
   `quickJumpDropdown.svelte.ts`) can't be tested (the Info popover's pin rules are therefore `utils/infoPopoverPin.ts`;
-  press and hold's are `utils/pressHold.ts`, bound by `view/favoriteMenu.ts` and the portrait's `view/portraitPress.ts`).
+  press and hold's are `utils/pressHold.ts`, bound by `view/favoriteMenu.ts` and the portrait's `view/portraitPress.ts`, which share the timer and scroll watch in
+  `view/pressWatch.ts`).
   Put the branching in `utils/` and inject the DOM-bound piece: `resolvePortraitScale(…, measure)` takes DetailScreen's
   `measurePortrait`, and the decode's memo is `contentBounds = memoizeByCachePath(decode)` (`imageBounds.ts`, read by
   `contentScale` and Card view's `fitSprite`). ADR-0003 covers adding jsdom itself.

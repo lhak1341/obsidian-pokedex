@@ -147,7 +147,7 @@
 	let portraitScale = $state(1);
 	// A touch held on the portrait (#31; PortraitPanel runs the hold): below
 	// 600px the identity overlay fades with the toggles.
-	let showArt = $state(false);
+	let artPreview = $state(false);
 	// contentScale's memo is keyed by cache path, which only the repository
 	// can recover from a blob URL (see imageBounds.ts). An evicted URL has no
 	// path any more; keying it by itself is harmless, as its decode fails and
@@ -201,7 +201,7 @@
 		showShiny = false;
 		// A hold cut short by a remount (the grid swaps out while loading)
 		// sends no lift, so the next entry must not open with its overlay hidden.
-		showArt = false;
+		artPreview = false;
 		varietyToggle.resetSelection();
 		mirrorVariety();
 		const result = loadState.load(currentId, mirror, () => {
@@ -324,7 +324,7 @@
 				<!-- The phone hero (#31): below 600px the number, name, asterisk
 				and types sit over the portrait's bottom edge. From 600px .hero is
 				display: contents, so the column lays out as before. -->
-				<div class="hero" class:show-art={showArt}>
+				<div class="hero" class:art-preview={artPreview}>
 				<PortraitPanel
 					{entry}
 					portraitSource={activeMegaData ?? activeGigantamaxData ?? entry}
@@ -340,7 +340,7 @@
 					onLeavePortrait={hidePortraitPreview}
 					measure={measurePortrait}
 					bind:portraitScale
-					bind:showArt
+					bind:artPreview
 				/>
 
 				<div class="name-block">
@@ -568,10 +568,10 @@
 		line-height: 1;
 	}
 
-	/* Phone header (#31), below a 600px pane (container 554px: the pane pads
-	23px a side): Back to list and Quick check on one row, prev/next across the
-	full width under them, so neighbour names keep their full length. */
-	@container detail (width < 554px) {
+	/* Phone header (#31), in a Narrow pane (the `pane` container is the leaf,
+	styles.src.css): Back to list and Quick check on one row, prev/next across
+	the full width under them, so neighbour names keep their full length. */
+	@container pane (width < 600px) {
 		.detail-header {
 			display: grid;
 			grid-template-columns: auto minmax(0, 1fr);
@@ -634,7 +634,7 @@
 	below the box. .name-block becomes display: contents so its children are
 	the grid's items. The overlay passes presses through to the portrait (its
 	hold) except on the favourite asterisk. */
-	@container detail (width < 554px) {
+	@container pane (width < 600px) {
 		.hero {
 			display: grid;
 			grid-template-columns: minmax(0, 1fr) auto;
@@ -679,12 +679,12 @@
 			grid-area: 4 / 1 / 5 / 3;
 			justify-self: start;
 		}
-		.hero.show-art .dex-eyebrow,
-		.hero.show-art .name-line,
-		.hero.show-art .type-row {
+		.hero.art-preview .dex-eyebrow,
+		.hero.art-preview .name-line,
+		.hero.art-preview .type-row {
 			opacity: 0;
 		}
-		.hero.show-art .name-line :global(.favorite-toggle) {
+		.hero.art-preview .name-line :global(.favorite-toggle) {
 			pointer-events: none;
 		}
 		/* No hover-to-enlarge below 600px; touch has the hold. */

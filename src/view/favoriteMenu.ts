@@ -1,11 +1,12 @@
 import { Menu } from "obsidian";
 import { IDLE, MENU_PRESS, stepMenuPress, type MenuPressEvent, type MenuPressStep, type PressState } from "../utils/pressHold";
+import { createPressWatch } from "./pressWatch";
 
 // The favourites menu on a table row or Card view tile: "Add to favorites" /
 // "Remove from favorites", opened by a right-click or a ~500ms press and
 // hold. The rules (when a press holds, cancels, or swallows the tap after it)
 // are utils/pressHold.ts; this is the thin binding that turns DOM events into
-// its events, runs the timer and opens the Menu. DOM-bound, so untested here
+// its events, runs the timer (pressWatch.ts) and opens the Menu. DOM-bound, so untested here
 // (no jsdom in vitest.config.ts), the same split as infoPopover.svelte.ts.
 //
 // One per list, not per row: a press is one pointer at a time, and the tap a
@@ -28,15 +29,7 @@ export interface FavoriteMenu {
 
 export function createFavoriteMenu(deps: { isFavorite: (id: number) => boolean; onToggle: (id: number) => void }): FavoriteMenu {
 	let state: PressState = IDLE;
-	let timer: { win: Window; handle: number } | null = null;
-	let detachScroll: (() => void) | null = null;
-
-	function stopWatching() {
-		if (timer) timer.win.clearTimeout(timer.handle);
-		timer = null;
-		detachScroll?.();
-		detachScroll = null;
-	}
+	const watch = createPressWatch();
 
 	function buildMenu(id: number): Menu {
 		const isFavorite = deps.isFavorite(id);
@@ -54,12 +47,12 @@ export function createFavoriteMenu(deps: { isFavorite: (id: number) => boolean; 
 	function dispatch(event: MenuPressEvent): MenuPressStep {
 		const step = stepMenuPress(state, event);
 		state = step.state;
-		if (state.phase !== "pressing") stopWatching();
+		if (state.phase !== "pressing") watch.stop();
 		return step;
 	}
 
 	function onDown(e: PointerEvent, id: number) {
-		stopWatching();
+		watch.stop();
 		dispatch({
 			kind: "down",
 			pointerType: e.pointerType,
@@ -69,19 +62,13 @@ export function createFavoriteMenu(deps: { isFavorite: (id: number) => boolean; 
 			t: e.timeStamp,
 		});
 		if (state.phase !== "pressing") return;
-		const doc = (e.currentTarget as HTMLElement).ownerDocument;
-		const win = doc.defaultView ?? activeWindow;
-		// The event's timeStamp and performance.now() share a clock.
-		const onTimer = () => {
-			const { menu } = dispatch({ kind: "timer", t: win.performance.now() });
-			if (menu?.at === "press") buildMenu(id).showAtPosition({ x: menu.x, y: menu.y }, doc);
-		};
-		timer = { win, handle: win.setTimeout(onTimer, MENU_PRESS.holdMs) };
-		// Scroll doesn't bubble: capture on the document sees the pane
-		// (.pokedex-view) and the table's sideways scroller alike.
-		const onScroll = () => dispatch({ kind: "scroll" });
-		doc.addEventListener("scroll", onScroll, true);
-		detachScroll = () => doc.removeEventListener("scroll", onScroll, true);
+		watch.start(e, MENU_PRESS.holdMs, {
+			onTimer: (t, doc) => {
+				const { menu } = dispatch({ kind: "timer", t });
+				if (menu?.at === "press") buildMenu(id).showAtPosition({ x: menu.x, y: menu.y }, doc);
+			},
+			onScroll: () => dispatch({ kind: "scroll" }),
+		});
 	}
 
 	return {

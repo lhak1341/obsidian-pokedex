@@ -14,6 +14,14 @@
    PKDX's own values take the --pkdx- prefix: the type and stat colours
    (src/styles/pokemon-colours.css) and the per-Pokemon accent and stat colour set inline. */
 
+/* The leaf is the `pane` container, so a component's Narrow pane query reads the width
+   PokedexApp's ResizeObserver measures: `@container pane (width < 600px)`, the same
+   NARROW_PANE_MAX_WIDTH, with no padding to subtract (the padding and scrollbar gutter inside
+   the leaf differ by platform). src/view/paneBreakpoint.test.ts pins it. */
+.workspace-leaf-content[data-type="pokedex-view"] {
+	container: pane / inline-size;
+}
+
 .pokedex-view {
 	height: 100%;
 	overflow: auto;
