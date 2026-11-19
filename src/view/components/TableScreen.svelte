@@ -25,7 +25,7 @@
 
 	let {
 		rows, density, defaultSortColumn, visibleFields, useTypeIcons, repository, activeGen,
-		favoriteIds, layout, onLayoutChange, onToggleField, onToggleFavorite, onSelect,
+		favoriteIds, layout, narrow, onLayoutChange, onToggleField, onToggleFavorite, onSelect,
 	}: {
 		rows: PokedexTableRow[];
 		density: "compact" | "comfortable";
@@ -40,6 +40,9 @@
 		// Table or Card view for this pane's width class (PokedexApp owns the
 		// choice per width class; the toggle below only asks for a change).
 		layout: BrowseLayout;
+		// A Narrow pane: FilterBar folds into two rows and takes the Fields menu
+		// and layout toggle into its second row (see viewControls below).
+		narrow: boolean;
 		onLayoutChange: (layout: BrowseLayout) => void;
 		onToggleField: (key: string) => void;
 		onToggleFavorite: (id: number) => void;
@@ -177,70 +180,78 @@
 	}
 </script>
 
-<div class="table-screen">
-	<FilterBar bind:filters {abilityOptions} {useTypeIcons} {rows} onQuickSelect={onSelect} />
-
-	<div class="browse-toolbar">
-		<details class="fields-menu">
-			<summary>
-				<Icon name="list-checks" size={14} strokeWidth={2} />
-				<span>Fields</span>
-			</summary>
-			<div class="fields-list">
-				<div class="fields-section">
-					<div class="fields-section-label">Stats</div>
-					<div class="fields-grid fields-grid-stats">
-						{#each FIELDS.filter(isStatField) as field (field.key)}
-							<label class="fields-checkbox">
-								<input
-									type="checkbox"
-									checked={visibleFieldKeys.has(field.key)}
-									onchange={() => onToggleField(field.key)}
-								/>
-								{field.label}
-							</label>
-						{/each}
-					</div>
-				</div>
-				<div class="fields-section">
-					<div class="fields-section-label">Other</div>
-					<div class="fields-grid fields-grid-other">
-						{#each FIELDS.filter((f) => !isStatField(f)) as field (field.key)}
-							<label class="fields-checkbox">
-								<input
-									type="checkbox"
-									checked={visibleFieldKeys.has(field.key)}
-									onchange={() => onToggleField(field.key)}
-								/>
-								<Icon name={field.icon ?? "circle"} size={13} strokeWidth={2} />
-								{field.label}
-							</label>
-						{/each}
-					</div>
+<!-- The Fields menu and the layout toggle: in this screen's own toolbar on a
+wide pane, at the right of FilterBar's second row on a Narrow pane. -->
+{#snippet viewControls()}
+	<details class="fields-menu" class:end={narrow}>
+		<summary>
+			<Icon name="list-checks" size={14} strokeWidth={2} />
+			<span>Fields</span>
+		</summary>
+		<div class="fields-list">
+			<div class="fields-section">
+				<div class="fields-section-label">Stats</div>
+				<div class="fields-grid fields-grid-stats">
+					{#each FIELDS.filter(isStatField) as field (field.key)}
+						<label class="fields-checkbox">
+							<input
+								type="checkbox"
+								checked={visibleFieldKeys.has(field.key)}
+								onchange={() => onToggleField(field.key)}
+							/>
+							{field.label}
+						</label>
+					{/each}
 				</div>
 			</div>
-		</details>
-		<div class="layout-toggle" role="group" aria-label="Layout">
-			<button
-				type="button"
-				class="layout-toggle-item"
-				aria-label="Table"
-				aria-pressed={layout === "table"}
-				onclick={() => onLayoutChange("table")}
-			>
-				<Icon name="table-2" size={14} strokeWidth={2} />
-			</button>
-			<button
-				type="button"
-				class="layout-toggle-item"
-				aria-label="Card view"
-				aria-pressed={layout === "card"}
-				onclick={() => onLayoutChange("card")}
-			>
-				<Icon name="layout-grid" size={14} strokeWidth={2} />
-			</button>
+			<div class="fields-section">
+				<div class="fields-section-label">Other</div>
+				<div class="fields-grid fields-grid-other">
+					{#each FIELDS.filter((f) => !isStatField(f)) as field (field.key)}
+						<label class="fields-checkbox">
+							<input
+								type="checkbox"
+								checked={visibleFieldKeys.has(field.key)}
+								onchange={() => onToggleField(field.key)}
+							/>
+							<Icon name={field.icon ?? "circle"} size={13} strokeWidth={2} />
+							{field.label}
+						</label>
+					{/each}
+				</div>
+			</div>
 		</div>
+	</details>
+	<div class="layout-toggle" role="group" aria-label="Layout">
+		<button
+			type="button"
+			class="layout-toggle-item"
+			aria-label="Table"
+			aria-pressed={layout === "table"}
+			onclick={() => onLayoutChange("table")}
+		>
+			<Icon name="table-2" size={14} strokeWidth={2} />
+		</button>
+		<button
+			type="button"
+			class="layout-toggle-item"
+			aria-label="Card view"
+			aria-pressed={layout === "card"}
+			onclick={() => onLayoutChange("card")}
+		>
+			<Icon name="layout-grid" size={14} strokeWidth={2} />
+		</button>
 	</div>
+{/snippet}
+
+<div class="table-screen">
+	<FilterBar bind:filters {abilityOptions} {useTypeIcons} {rows} {narrow} controls={viewControls} onQuickSelect={onSelect} />
+
+	{#if !narrow}
+		<div class="browse-toolbar">
+			{@render viewControls()}
+		</div>
+	{/if}
 
 	<p class="result-count">{visibleRows.length} of {rows.length} Pokemon</p>
 
@@ -489,6 +500,18 @@
 		border: 1px solid var(--lk-border);
 		border-radius: 4px;
 		box-shadow: var(--lk-shadow-s);
+	}
+	/* On a Narrow pane the menu sits at the right of FilterBar's second row,
+	too far right for a 320px list to open from it either way. The menu stops
+	being the containing block, so the list spans that row
+	(.filter-toolbar-row is position: relative) instead. */
+	.fields-menu.end {
+		position: static;
+	}
+	.fields-menu.end .fields-list {
+		right: 0;
+		width: auto;
+		max-width: none;
 	}
 	.fields-section + .fields-section {
 		padding-top: 10px;

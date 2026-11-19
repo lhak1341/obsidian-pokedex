@@ -223,13 +223,15 @@ describe("stylelint", () => {
 });
 
 describe("filter chips", () => {
-	// The filter rail: every chip there except the Type badges (domain colours,
-	// drawn by TypeBadge) is the shared toggle chip, its state in aria-pressed.
-	const rail = filterBarSource.slice(
-		filterBarSource.indexOf('<div class="filter-rail"'),
-		filterBarSource.indexOf('<button class="filter-reset"'),
+	// The filter groups' content (snippets drawn into the rail or the Narrow
+	// pane's inline panel): every chip there except the Type badges (domain
+	// colours, drawn by TypeBadge) is the shared toggle chip, its state in
+	// aria-pressed.
+	const groupContent = filterBarSource.slice(
+		filterBarSource.indexOf("{#snippet typeContent()}"),
+		filterBarSource.indexOf('<div class="filter-bar"'),
 	);
-	const buttons = [...rail.matchAll(/<button\b([^>]*)>/g)].map(([, attrs]) => attrs);
+	const buttons = [...groupContent.matchAll(/<button\b([^>]*)>/g)].map(([, attrs]) => attrs);
 
 	it("are the chip pattern's toggle chip, pressed while their filter is on", () => {
 		const chips = buttons.filter((a) => !a.includes('class="type-chip"'));
@@ -239,7 +241,7 @@ describe("filter chips", () => {
 			expect(attrs).toMatch(/aria-pressed=\{filters\.\w+\.includes\(/);
 			expect(attrs).toContain('type="button"');
 		}
-		expect(rail).not.toContain("class:active");
+		expect(groupContent).not.toContain("class:active");
 	});
 
 	it("give the type badges their pressed state too", () => {

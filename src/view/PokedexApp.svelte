@@ -234,6 +234,7 @@
 				activeGen={settings.activeGen}
 				{favoriteIds}
 				{layout}
+				narrow={paneClass === "narrow"}
 				onLayoutChange={setLayout}
 				onToggleField={(key) => preferences.toggleField(key)}
 				onToggleFavorite={toggleFavorite}

@@ -9,12 +9,22 @@
 	import TypeBadge from "./TypeBadge.svelte";
 	import Icon from "./Icon.svelte";
 	import FilterGroup from "./FilterGroup.svelte";
+	import { activeFilterGroups, FILTER_GROUP_KEYS, filterGroupCount, FULL_STAT_RANGE, type FilterGroupKey } from "../../utils/filterGroups";
+	import type { Snippet } from "svelte";
 
-	let { filters = $bindable(), abilityOptions, useTypeIcons, rows, onQuickSelect }: {
+	// `narrow` (a Narrow pane, PokedexApp's width class) folds the bar into two
+	// rows: search and the favourites toggle, then Filters (n) with the caller's
+	// `controls` (TableScreen's Fields menu and layout toggle) at the right. Its
+	// Filters button opens an inline panel of collapsible sections instead of
+	// the rail's anchored flyouts. Wide panes draw today's rail and ignore
+	// `controls` (TableScreen draws them in its own toolbar there).
+	let { filters = $bindable(), abilityOptions, useTypeIcons, rows, narrow = false, controls, onQuickSelect }: {
 		filters: PokedexFilters;
 		abilityOptions: string[];
 		useTypeIcons: boolean;
 		rows: PokedexTableRow[];
+		narrow?: boolean;
+		controls?: Snippet;
 		onQuickSelect: (id: number) => void;
 	} = $props();
 
@@ -29,7 +39,7 @@
 	}
 
 	function statRange(key: keyof StatBlock) {
-		return filters.statRanges[key] ?? { min: 0, max: 255 };
+		return filters.statRanges[key] ?? FULL_STAT_RANGE;
 	}
 
 	function setStatMin(key: keyof StatBlock, value: number) {
@@ -51,7 +61,7 @@
 	// interacted-with one is the one now open, closing every sibling
 	// (scoped to filterRailEl, not the whole document, so nothing outside
 	// this bar is affected).
-	let filterRailEl: HTMLDivElement | undefined;
+	let filterRailEl = $state<HTMLDivElement | undefined>();
 	function onDetailsToggle(e: Event) {
 		const target = e.currentTarget as HTMLDetailsElement;
 		if (!target.open) return;
@@ -59,6 +69,29 @@
 			if (d !== target) (d as HTMLDetailsElement).open = false;
 		});
 	}
+
+	const activeGroups = $derived(activeFilterGroups(filters));
+
+	// Each group's rail segment / panel section chrome and content snippet.
+	// The order and the counts come from FILTER_GROUP_KEYS and
+	// filterGroupCount (utils/filterGroups.ts), the same source as Filters (n).
+	const GROUP_CHROME: Record<FilterGroupKey, { icon: string; label: string; content: Snippet }> = {
+		type: { icon: "swatch-book", label: "Type", content: typeContent },
+		gen: { icon: "layers", label: "Gen", content: genContent },
+		ability: { icon: "sparkles", label: "Ability", content: abilityContent },
+		stats: { icon: "bar-chart-3", label: "Stats", content: statsContent },
+		rarity: { icon: "crown", label: "Rarity", content: rarityContent },
+		ev: { icon: "dumbbell", label: "EV", content: evContent },
+		traits: { icon: "star", label: "Traits", content: traitsContent },
+		quirks: { icon: "glasses", label: "Quirks", content: quirksContent },
+	};
+	const groups = $derived(
+		FILTER_GROUP_KEYS.map((key) => ({ key, ...GROUP_CHROME[key], count: filterGroupCount(filters, key) })),
+	);
+
+	// The panel's sections mount each time it opens, and only the active
+	// groups start open (FilterGroup reads `open` once, at mount).
+	let panelOpen = $state(false);
 
 	let abilitySearch = $state("");
 	const filteredAbilityOptions = $derived(filterAndOrderAbilityOptions(abilityOptions, abilitySearch, filters.abilities));
@@ -87,7 +120,156 @@
 	});
 </script>
 
-<div class="filter-bar">
+{#snippet typeContent()}
+	<div class="filter-chips type-chips">
+		{#each TYPE_NAMES as type (type)}
+			<button
+				type="button"
+				class="type-chip"
+				aria-pressed={filters.types.includes(type)}
+				onclick={() => (filters.types = toggle(filters.types, type))}
+			>
+				<TypeBadge
+					{type}
+					useIcon={useTypeIcons}
+					selected={filters.types.includes(type)}
+				/>
+			</button>
+		{/each}
+	</div>
+{/snippet}
+
+{#snippet genContent()}
+	<div class="filter-chips">
+		{#each GENERATIONS as gen (gen.id)}
+			<button
+				type="button"
+				class="lk-chip lk-chip--toggle filter-chip"
+				aria-pressed={filters.generations.includes(gen.id)}
+				onclick={() => toggleGeneration(gen.id)}
+			>
+				{gen.name}
+			</button>
+		{/each}
+	</div>
+{/snippet}
+
+{#snippet abilityContent()}
+	<div class="filter-chips ability-panel">
+		<input
+			type="text"
+			placeholder="Search abilities..."
+			bind:value={abilitySearch}
+			class="ability-search"
+		/>
+		<div class="ability-chip-list">
+			{#each filteredAbilityOptions as ability (ability)}
+				<button
+					type="button"
+					class="lk-chip lk-chip--toggle filter-chip"
+					aria-pressed={filters.abilities.includes(ability)}
+					onclick={() => (filters.abilities = toggle(filters.abilities, ability))}
+				>
+					{ability}
+				</button>
+			{/each}
+			{#if filteredAbilityOptions.length === 0}
+				<span class="ability-empty">No matches</span>
+			{/if}
+		</div>
+	</div>
+{/snippet}
+
+{#snippet statsContent()}
+	<div class="stat-filters">
+		{#each STAT_COLUMNS as col (col.key)}
+			<div class="stat-filter-row">
+				<span class="stat-filter-label">{col.label}</span>
+				<input
+					type="number"
+					min={FULL_STAT_RANGE.min}
+					max={FULL_STAT_RANGE.max}
+					value={statRange(col.key).min}
+					oninput={(e) => setStatMin(col.key, Number((e.target as HTMLInputElement).value))}
+				/>
+				<span>to</span>
+				<input
+					type="number"
+					min={FULL_STAT_RANGE.min}
+					max={FULL_STAT_RANGE.max}
+					value={statRange(col.key).max}
+					oninput={(e) => setStatMax(col.key, Number((e.target as HTMLInputElement).value))}
+				/>
+			</div>
+		{/each}
+	</div>
+{/snippet}
+
+{#snippet rarityContent()}
+	<div class="filter-chips">
+		{#each RARITIES as rarity (rarity.key)}
+			<button
+				type="button"
+				class="lk-chip lk-chip--toggle filter-chip"
+				aria-pressed={filters.rarities.includes(rarity.key)}
+				onclick={() => (filters.rarities = toggle(filters.rarities, rarity.key))}
+			>
+				{rarity.label}
+			</button>
+		{/each}
+	</div>
+{/snippet}
+
+{#snippet evContent()}
+	<div class="filter-chips">
+		{#each STAT_COLUMNS as col (col.key)}
+			<button
+				type="button"
+				class="lk-chip lk-chip--toggle filter-chip"
+				aria-pressed={filters.evStats.includes(col.key)}
+				style:--pkdx-ev-colour={STAT_COLORS[col.key]}
+				onclick={() => (filters.evStats = toggle(filters.evStats, col.key))}
+			>
+				<span class="lk-chip__dot"></span>
+				{col.label}
+			</button>
+		{/each}
+	</div>
+{/snippet}
+
+{#snippet traitsContent()}
+	<div class="filter-chips">
+		{#each TRAITS as trait (trait.key)}
+			<button
+				type="button"
+				class="lk-chip lk-chip--toggle filter-chip quirk-chip"
+				aria-pressed={filters.traits.includes(trait.key)}
+				onclick={() => (filters.traits = toggle(filters.traits, trait.key))}
+			>
+				<Icon name={trait.icon} size={13} strokeWidth={2} />
+				{trait.label}
+			</button>
+		{/each}
+	</div>
+{/snippet}
+
+{#snippet quirksContent()}
+	<div class="filter-chips">
+		{#each QUIRKS as quirk (quirk.key)}
+			<button
+				type="button"
+				class="lk-chip lk-chip--toggle filter-chip quirk-chip"
+				aria-pressed={filters.quirks.includes(quirk.key)}
+				onclick={() => (filters.quirks = toggle(filters.quirks, quirk.key))}
+			>
+				<Icon name={quirk.icon} size={13} strokeWidth={2} />
+				{quirk.label}
+			</button>
+		{/each}
+	</div>
+{/snippet}
+
+<div class="filter-bar" class:narrow>
 	<div class="filter-search-wrapper">
 		<input
 			bind:this={searchInputEl}
@@ -120,161 +302,55 @@
 		{/if}
 	</div>
 
-	<div class="filter-rail" bind:this={filterRailEl}>
-		<FilterGroup icon="swatch-book" label="Type" count={filters.types.length} ontoggle={onDetailsToggle}>
-			<div class="filter-chips type-chips">
-				{#each TYPE_NAMES as type (type)}
-					<button
-						type="button"
-						class="type-chip"
-						aria-pressed={filters.types.includes(type)}
-						onclick={() => (filters.types = toggle(filters.types, type))}
+	{#if narrow}
+		<div class="filter-toolbar-row">
+			<button
+				type="button"
+				class="filters-toggle"
+				aria-expanded={panelOpen}
+				onclick={() => (panelOpen = !panelOpen)}
+			>
+				<Icon name="filter" size={14} strokeWidth={2} />
+				<span>Filters</span>
+				{#if activeGroups.length > 0}<span class="filters-count">{activeGroups.length}</span>{/if}
+			</button>
+			<div class="filter-toolbar-end">
+				{@render controls?.()}
+			</div>
+		</div>
+		{#if panelOpen}
+			<div class="filter-panel">
+				{#each groups as group (group.key)}
+					<FilterGroup
+						variant="section"
+						icon={group.icon}
+						label={group.label}
+						count={group.count}
+						open={activeGroups.includes(group.key)}
 					>
-						<TypeBadge
-							{type}
-							useIcon={useTypeIcons}
-							selected={filters.types.includes(type)}
-						/>
-					</button>
+						{@render group.content()}
+					</FilterGroup>
 				{/each}
+				<button class="filter-reset panel-reset" onclick={reset}>
+					<Icon name="filter-x" size={14} strokeWidth={2} />
+					<span>Clear filters</span>
+				</button>
 			</div>
-		</FilterGroup>
+		{/if}
+	{:else}
+		<div class="filter-rail" bind:this={filterRailEl}>
+			{#each groups as group (group.key)}
+				<FilterGroup icon={group.icon} label={group.label} count={group.count} ontoggle={onDetailsToggle}>
+					{@render group.content()}
+				</FilterGroup>
+			{/each}
+		</div>
 
-		<FilterGroup icon="layers" label="Gen" count={filters.generations.length} ontoggle={onDetailsToggle}>
-			<div class="filter-chips">
-				{#each GENERATIONS as gen (gen.id)}
-					<button
-						type="button"
-						class="lk-chip lk-chip--toggle filter-chip"
-						aria-pressed={filters.generations.includes(gen.id)}
-						onclick={() => toggleGeneration(gen.id)}
-					>
-						{gen.name}
-					</button>
-				{/each}
-			</div>
-		</FilterGroup>
-
-		<FilterGroup icon="sparkles" label="Ability" count={filters.abilities.length} ontoggle={onDetailsToggle}>
-			<div class="filter-chips ability-panel">
-				<input
-					type="text"
-					placeholder="Search abilities..."
-					bind:value={abilitySearch}
-					class="ability-search"
-				/>
-				<div class="ability-chip-list">
-					{#each filteredAbilityOptions as ability (ability)}
-						<button
-							type="button"
-							class="lk-chip lk-chip--toggle filter-chip"
-							aria-pressed={filters.abilities.includes(ability)}
-							onclick={() => (filters.abilities = toggle(filters.abilities, ability))}
-						>
-							{ability}
-						</button>
-					{/each}
-					{#if filteredAbilityOptions.length === 0}
-						<span class="ability-empty">No matches</span>
-					{/if}
-				</div>
-			</div>
-		</FilterGroup>
-
-		<FilterGroup icon="bar-chart-3" label="Stats" ontoggle={onDetailsToggle}>
-			<div class="stat-filters">
-				{#each STAT_COLUMNS as col (col.key)}
-					<div class="stat-filter-row">
-						<span class="stat-filter-label">{col.label}</span>
-						<input
-							type="number"
-							min="0"
-							max="255"
-							value={statRange(col.key).min}
-							oninput={(e) => setStatMin(col.key, Number((e.target as HTMLInputElement).value))}
-						/>
-						<span>to</span>
-						<input
-							type="number"
-							min="0"
-							max="255"
-							value={statRange(col.key).max}
-							oninput={(e) => setStatMax(col.key, Number((e.target as HTMLInputElement).value))}
-						/>
-					</div>
-				{/each}
-			</div>
-		</FilterGroup>
-
-		<FilterGroup icon="crown" label="Rarity" count={filters.rarities.length} ontoggle={onDetailsToggle}>
-			<div class="filter-chips">
-				{#each RARITIES as rarity (rarity.key)}
-					<button
-						type="button"
-						class="lk-chip lk-chip--toggle filter-chip"
-						aria-pressed={filters.rarities.includes(rarity.key)}
-						onclick={() => (filters.rarities = toggle(filters.rarities, rarity.key))}
-					>
-						{rarity.label}
-					</button>
-				{/each}
-			</div>
-		</FilterGroup>
-
-		<FilterGroup icon="dumbbell" label="EV" count={filters.evStats.length} ontoggle={onDetailsToggle}>
-			<div class="filter-chips">
-				{#each STAT_COLUMNS as col (col.key)}
-					<button
-						type="button"
-						class="lk-chip lk-chip--toggle filter-chip"
-						aria-pressed={filters.evStats.includes(col.key)}
-						style:--pkdx-ev-colour={STAT_COLORS[col.key]}
-						onclick={() => (filters.evStats = toggle(filters.evStats, col.key))}
-					>
-						<span class="lk-chip__dot"></span>
-						{col.label}
-					</button>
-				{/each}
-			</div>
-		</FilterGroup>
-
-		<FilterGroup icon="star" label="Traits" count={filters.traits.length} ontoggle={onDetailsToggle}>
-			<div class="filter-chips">
-				{#each TRAITS as trait (trait.key)}
-					<button
-						type="button"
-						class="lk-chip lk-chip--toggle filter-chip quirk-chip"
-						aria-pressed={filters.traits.includes(trait.key)}
-						onclick={() => (filters.traits = toggle(filters.traits, trait.key))}
-					>
-						<Icon name={trait.icon} size={13} strokeWidth={2} />
-						{trait.label}
-					</button>
-				{/each}
-			</div>
-		</FilterGroup>
-
-		<FilterGroup icon="glasses" label="Quirks" count={filters.quirks.length} ontoggle={onDetailsToggle}>
-			<div class="filter-chips">
-				{#each QUIRKS as quirk (quirk.key)}
-					<button
-						type="button"
-						class="lk-chip lk-chip--toggle filter-chip quirk-chip"
-						aria-pressed={filters.quirks.includes(quirk.key)}
-						onclick={() => (filters.quirks = toggle(filters.quirks, quirk.key))}
-					>
-						<Icon name={quirk.icon} size={13} strokeWidth={2} />
-						{quirk.label}
-					</button>
-				{/each}
-			</div>
-		</FilterGroup>
-	</div>
-
-	<button class="filter-reset" onclick={reset}>
-		<Icon name="filter-x" size={14} strokeWidth={2} />
-		<span>Clear filters</span>
-	</button>
+		<button class="filter-reset" onclick={reset}>
+			<Icon name="filter-x" size={14} strokeWidth={2} />
+			<span>Clear filters</span>
+		</button>
+	{/if}
 </div>
 
 <style>
@@ -480,5 +556,111 @@
 		color: var(--lk-text);
 		background: transparent;
 		box-shadow: none;
+	}
+
+	/* Narrow pane: two rows, then the inline panel. Row 1 is the search box
+	alone at full width; row 2 holds Filters (n) at the left and TableScreen's
+	controls at the right. */
+	.filter-bar.narrow {
+		flex-direction: column;
+		align-items: stretch;
+		flex-wrap: nowrap;
+	}
+	.narrow .filter-search-wrapper {
+		flex: none;
+		min-width: 0;
+	}
+	/* Positioned: TableScreen's Fields list spans this row (see .fields-menu.end). */
+	.filter-toolbar-row {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: var(--lk-space-2);
+	}
+	.filter-toolbar-end {
+		display: flex;
+		align-items: center;
+		gap: var(--lk-space-2);
+		margin-left: auto;
+	}
+	/* Drawn like the Fields menu's summary beside it (TableScreen), so row 2
+	reads as one set of controls. button.filters-toggle restates what
+	Obsidian's button rules set (root CLAUDE.md, Styles). */
+	button.filters-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		height: auto;
+		padding: 5px 10px;
+		border: 1px solid var(--lk-border);
+		border-radius: 6px;
+		background: transparent;
+		box-shadow: none;
+		font-size: inherit;
+		color: var(--lk-text-muted);
+		cursor: pointer;
+		transition: background-color var(--lk-duration-fast) ease-out, color var(--lk-duration-fast) ease-out;
+	}
+	button.filters-toggle:hover {
+		background: var(--lk-surface-hover);
+		color: var(--lk-text);
+	}
+	button.filters-toggle[aria-expanded="true"] {
+		background: color-mix(in srgb, var(--lk-accent) 12%, transparent);
+		color: var(--lk-accent);
+		border-color: color-mix(in srgb, var(--lk-accent) 40%, var(--lk-border));
+	}
+	/* The count of active groups: the same accent pill as a rail segment's
+	count (FilterGroup's .filter-count), absent at zero. */
+	.filters-count {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 15px;
+		height: 15px;
+		padding: 0 4px;
+		border-radius: 999px;
+		background: var(--lk-accent);
+		color: var(--lk-text-on-accent);
+		font-size: 0.7em;
+		font-weight: 600;
+		line-height: 1;
+		font-variant-numeric: tabular-nums;
+	}
+	/* Under Obsidian --lk-surface is the view's own colour, so the panel is
+	separated by its border, not a fill (root CLAUDE.md, Styles). */
+	.filter-panel {
+		display: flex;
+		flex-direction: column;
+		border: 1px solid var(--lk-border-strong);
+		border-radius: 6px;
+	}
+	/* Inside the panel each group's content sits in flow under its section's
+	summary, not as an anchored flyout. */
+	.filter-panel .filter-chips,
+	.filter-panel .stat-filters {
+		position: static;
+		width: auto;
+		max-width: none;
+		padding: 2px 10px 10px;
+		background: none;
+		border: none;
+		border-radius: 0;
+		box-shadow: none;
+	}
+	/* At full panel width the grid's auto column would push the max input to
+	the far edge; keep the row its flyout width. */
+	.filter-panel .stat-filter-row {
+		justify-content: start;
+	}
+	.filter-panel .ability-chip-list {
+		max-height: 200px;
+	}
+	.panel-reset {
+		align-self: stretch;
+		justify-content: center;
+		padding: 8px;
+		border-top: 1px solid var(--lk-border);
+		border-radius: 0 0 6px 6px;
 	}
 </style>

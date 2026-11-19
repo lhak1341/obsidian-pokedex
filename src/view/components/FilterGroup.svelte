@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { Snippet } from "svelte";
+	import { untrack, type Snippet } from "svelte";
 	import Icon from "./Icon.svelte";
 
-	// Shared by FilterBar's 7 filter groups: the <details>/<summary> shell
+	// Shared by FilterBar's 8 filter groups: the <details>/<summary> shell
 	// (icon, label, live count badge, the chevron/open-state chrome), leaving
 	// the flyout content to the caller via `children` — same chrome-vs-content
 	// split as InfoPopoverBox.svelte, since the content genuinely varies per
@@ -11,16 +11,32 @@
 	// rather than owned here, since closing sibling groups needs FilterBar's
 	// own filterRailEl scope. Every caller used the same Icon size/strokeWidth,
 	// so those are hardcoded here rather than threaded through as props.
-	let { icon, label, count, ontoggle, children }: {
+	//
+	// `variant` "rail" is one segment of the wide pane's rail, its content an
+	// anchored flyout. "section" is one collapsible row of the Narrow pane's
+	// inline Filters panel; several may be open at once, so it takes no
+	// `ontoggle`.
+	let { icon, label, count, variant = "rail", open = false, ontoggle, children }: {
 		icon: string;
 		label: string;
 		count?: number;
-		ontoggle: (e: Event) => void;
+		variant?: "rail" | "section";
+		open?: boolean;
+		ontoggle?: (e: Event) => void;
 		children: Snippet;
 	} = $props();
+
+	// `open` is the starting state only, set once at mount by an attachment.
+	// As an attribute (even a constant one) Svelte compiles `details.open = …`
+	// into the same render effect as the class list, which re-runs on any prop
+	// change (the count badge), so tapping a chip collapsed the section the user
+	// had just opened (seen live). untrack keeps the attachment from re-running.
+	function setStartOpen(el: HTMLDetailsElement) {
+		el.open = untrack(() => open);
+	}
 </script>
 
-<details class="filter-group" {ontoggle}>
+<details class="filter-group" class:section={variant === "section"} {@attach setStartOpen} {ontoggle}>
 	<summary>
 		<Icon name={icon} size={14} strokeWidth={2} />
 		<span>{label}</span>
@@ -33,13 +49,13 @@
 	.filter-group {
 		position: relative;
 	}
-	.filter-group:not(:last-child) summary {
+	.filter-group:not(.section):not(:last-child) summary {
 		border-right: 1px solid var(--lk-border);
 	}
-	.filter-group:first-child summary {
+	.filter-group:not(.section):first-child summary {
 		border-radius: 6px 0 0 6px;
 	}
-	.filter-group:last-child summary {
+	.filter-group:not(.section):last-child summary {
 		border-radius: 0 6px 6px 0;
 	}
 	.filter-group summary {
@@ -73,9 +89,24 @@
 	.filter-group[open] summary::after {
 		transform: rotate(180deg);
 	}
-	.filter-group[open] summary {
+	.filter-group:not(.section)[open] summary {
 		background: color-mix(in srgb, var(--lk-accent) 12%, transparent);
 		color: var(--lk-accent);
+	}
+	/* A section is a full-width row of the inline panel: its chevron sits at
+	the right edge, and its open state reads from the chevron and the content
+	below it, not an accent fill (several sections can be open at once). */
+	.filter-group.section:not(:first-child) {
+		border-top: 1px solid var(--lk-border);
+	}
+	.filter-group.section summary {
+		padding: 8px 10px;
+	}
+	.filter-group.section summary::after {
+		margin-left: auto;
+	}
+	.filter-group.section[open] summary {
+		color: var(--lk-text);
 	}
 	.filter-count {
 		display: inline-flex;
