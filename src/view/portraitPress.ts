@@ -1,12 +1,12 @@
 import { IDLE, PORTRAIT_PRESS, stepPortraitPress, type PortraitPressEvent, type PressState } from "../utils/pressHold";
-import { createPressWatch } from "./pressWatch";
+import { createPressWatch, type PressWatch } from "./pressWatch";
 
 // The portrait's art preview (#31): a touch held on the portrait hides the
 // identity overlay and the toggles and grows the art until the finger lifts.
 // The rules are utils/pressHold.ts's stepPortraitPress; this is the thin
 // binding that turns DOM events into its events and runs the timer
-// (pressWatch.ts, shared with favoriteMenu.ts). DOM-bound,
-// so untested here (no jsdom in vitest.config.ts), the same split as
+// (pressWatch.ts, shared with favoriteMenu.ts). The watch is injected, so
+// portraitPress.test.ts drives this wiring with a fake one, the same split as
 // favoriteMenu.ts.
 
 export interface PortraitPressProps {
@@ -26,9 +26,11 @@ export interface PortraitPress {
 	destroy(): void;
 }
 
-export function createPortraitPress(onArtPreview: (show: boolean) => void): PortraitPress {
+export function createPortraitPress(
+	onArtPreview: (show: boolean) => void,
+	{ watch = createPressWatch() }: { watch?: PressWatch } = {},
+): PortraitPress {
 	let state: PressState = IDLE;
-	const watch = createPressWatch();
 
 	function dispatch(event: PortraitPressEvent) {
 		const step = stepPortraitPress(state, event);

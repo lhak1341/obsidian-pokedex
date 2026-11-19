@@ -9,7 +9,7 @@
 	import { scopeRowsToGen } from "../../utils/stats";
 	import { FIELDS, formatEvYield, isStatField, sortAfterFieldsChange } from "../../utils/fields";
 	import { TABLE_COLUMNS, columnWidth, tableFrame } from "../../utils/tableColumns";
-	import { untrack } from "svelte";
+	import { onDestroy, untrack } from "svelte";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
 	import { createInfoDescription } from "../infoDescription.svelte";
 	import { createInfoPopover } from "../infoPopover.svelte";
@@ -172,6 +172,7 @@
 		isFavorite: (id) => favoriteIds.has(id),
 		onToggle: (id) => onToggleFavorite(id),
 	});
+	onDestroy(() => favoriteMenu.destroy());
 </script>
 
 <!-- A name with a favourite's dot just past its end (#35): placed absolutely,

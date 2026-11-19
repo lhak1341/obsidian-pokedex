@@ -3,8 +3,8 @@
 	import { onDestroy, onMount, setContext, tick, untrack } from "svelte";
 	import type { PokedexRepository } from "../data/PokedexRepository";
 	import type { PluginSettings } from "../data/types";
-	import { type BrowseLayout, widthClass, type WidthClass } from "../utils/browseLayout";
-	import { detailBand, type DetailBand } from "../utils/detailBand";
+	import type { BrowseLayout } from "../utils/browseLayout";
+	import { paneWidth } from "../utils/paneWidth";
 	import type { LocalPreferences, LocalPreferenceValues } from "../utils/localPreferences";
 	import { resolveGenerationScope } from "../utils/generationScope";
 	import { describePartialLoadOutcome, describeRetryOutcome } from "../utils/loadNotices";
@@ -46,39 +46,23 @@
 	const toggleFavorite = (id: number) => preferences.toggleFavorite(id);
 
 	// The browse layout follows the Pokedex leaf's width, not the device's: a
-	// ResizeObserver on the leaf feeds widthClass, and each width class shows
-	// its own saved choice, so resizing across 600px switches to that class's
-	// layout. The toggle writes only the current class.
-	// Measured at mount, so a Narrow pane never draws the table first. A hidden
-	// leaf (a background tab) measures 0 and starts wide until it has a width.
-	let paneClass = $state<WidthClass>(
-		untrack(() => {
-			const width = leafEl.getBoundingClientRect().width;
-			return width > 0 ? widthClass(width) : "wide";
-		}),
-	);
-	const layout = $derived(prefs.layoutByWidthClass[paneClass]);
-	// The detail screen's band (phone, rail, three columns: #32, #33), from
-	// the same leaf width. A hidden leaf starts in three columns, as wide.
-	let paneBand = $state<DetailBand>(
-		untrack(() => {
-			const width = leafEl.getBoundingClientRect().width;
-			return width > 0 ? detailBand(width) : "columns";
-		}),
-	);
+	// ResizeObserver on the leaf feeds pane, and each width class shows its own
+	// saved choice, so resizing across 600px switches to that class's layout.
+	// The toggle writes only the current class. pane also holds the detail
+	// screen's band (phone, rail, three columns: #32, #33). Measured at mount,
+	// so a Narrow pane never draws the table first; a hidden leaf's fallback
+	// and the keep-on-0 rule are paneWidth's (utils/paneWidth.ts). $state.raw:
+	// paneWidth returns the same object when nothing changed, so reassigning
+	// it every resize re-renders nothing.
+	let pane = $state.raw(untrack(() => paneWidth(leafEl.getBoundingClientRect().width)));
+	const layout = $derived(prefs.layoutByWidthClass[pane.widthClass]);
 
 	function setLayout(next: BrowseLayout) {
-		preferences.setLayout(paneClass, next);
+		preferences.setLayout(pane.widthClass, next);
 	}
 
 	function onLeafResize(width: number) {
-		// A hidden leaf (a background tab) measures 0: keep its class until it
-		// has a real width.
-		if (width <= 0) return;
-		const next = widthClass(width);
-		if (next !== paneClass) paneClass = next;
-		const band = detailBand(width);
-		if (band !== paneBand) paneBand = band;
+		pane = paneWidth(width, pane);
 	}
 
 	onMount(() => {
@@ -227,7 +211,7 @@
 				activeGen={settings.activeGen}
 				{favoriteIds}
 				{layout}
-				narrow={paneClass === "narrow"}
+				narrow={pane.widthClass === "narrow"}
 				onLayoutChange={setLayout}
 				onToggleField={(key) => preferences.toggleField(key)}
 				onToggleFavorite={toggleFavorite}
@@ -242,7 +226,7 @@
 				spriteStyle={settings.spriteStyle}
 				useTypeIcons={settings.useTypeIcons}
 				activeGen={settings.activeGen}
-				band={paneBand}
+				band={pane.band}
 				isFavorite={favoriteIds.has(selectedId)}
 				onToggleFavorite={toggleFavorite}
 				onBack={backToTable}

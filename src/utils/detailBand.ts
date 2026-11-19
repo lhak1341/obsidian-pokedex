@@ -1,8 +1,9 @@
 // The detail screen has three bands by Pokedex leaf width (#18): the phone
 // tabs in a Narrow pane, a sticky identity rail with two tabs up to 1100px,
-// and three columns from there. Read from the same leaf width as widthClass
-// (PokedexApp's ResizeObserver); CSS never re-derives a band.
-import { NARROW_PANE_MAX_WIDTH } from "./browseLayout";
+// and three columns from there. The phone band is the narrow width class, by
+// construction; PokedexApp reads both through paneWidth.ts. CSS never
+// re-derives a band.
+import { widthClass } from "./browseLayout";
 
 export const DETAIL_COLUMNS_MIN_WIDTH = 1100;
 // The header's one CSS-only breakpoint: two rows below a 780px leaf, one from
@@ -12,7 +13,7 @@ export const DETAIL_HEADER_ONE_ROW_MIN_WIDTH = 780;
 export type DetailBand = "phone" | "rail" | "columns";
 
 export function detailBand(width: number): DetailBand {
-	if (width < NARROW_PANE_MAX_WIDTH) return "phone";
+	if (widthClass(width) === "narrow") return "phone";
 	return width < DETAIL_COLUMNS_MIN_WIDTH ? "rail" : "columns";
 }
 

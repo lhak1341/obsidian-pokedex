@@ -1,13 +1,15 @@
 import { Menu } from "obsidian";
 import { IDLE, MENU_PRESS, stepMenuPress, type MenuPressEvent, type MenuPressStep, type PressState } from "../utils/pressHold";
-import { createPressWatch } from "./pressWatch";
+import { createPressWatch, type PressWatch } from "./pressWatch";
 
 // The favourites menu on a table row or Card view tile: "Add to favorites" /
 // "Remove from favorites", opened by a right-click or a ~500ms press and
 // hold. The rules (when a press holds, cancels, or swallows the tap after it)
 // are utils/pressHold.ts; this is the thin binding that turns DOM events into
-// its events, runs the timer (pressWatch.ts) and opens the Menu. DOM-bound, so untested here
-// (no jsdom in vitest.config.ts), the same split as infoPopover.svelte.ts.
+// its events, runs the timer (pressWatch.ts) and opens the Menu. The watch and
+// the opener are injected, so favoriteMenu.test.ts drives this wiring with
+// fakes; the real Menu (defaultOpenMenu) stays untested (no jsdom in
+// vitest.config.ts, and the obsidian stub has no Menu).
 //
 // One per list, not per row: a press is one pointer at a time, and the tap a
 // hold swallows can land on a neighbouring row if the finger moved after it.
@@ -25,25 +27,44 @@ export interface FavoriteMenuTargetProps {
 
 export interface FavoriteMenu {
 	target(id: number): FavoriteMenuTargetProps;
+	// Stops a live press's timer and scroll watch, so a hold still pending
+	// when the list unmounts (a settings change remounts the view) opens nothing.
+	destroy(): void;
 }
 
-export function createFavoriteMenu(deps: { isFavorite: (id: number) => boolean; onToggle: (id: number) => void }): FavoriteMenu {
-	let state: PressState = IDLE;
-	const watch = createPressWatch();
+// Where a menu opens: at the press point (a hold) or at the contextmenu event.
+export type MenuPlace = { at: "press"; x: number; y: number; doc: Document } | { at: "event"; e: MouseEvent };
 
-	function buildMenu(id: number): Menu {
-		const isFavorite = deps.isFavorite(id);
-		return new Menu().addItem((item) =>
-			item
-				.setTitle(isFavorite ? "Remove from favorites" : "Add to favorites")
-				.setIcon("asterisk")
-				.onClick(() => deps.onToggle(id)),
-		);
-	}
+export type OpenMenu = (id: number, place: MenuPlace, deps: FavoriteMenuDeps) => void;
+
+export interface FavoriteMenuDeps {
+	isFavorite: (id: number) => boolean;
+	onToggle: (id: number) => void;
+}
+
+// Reads isFavorite when it opens, so the title is never stale. On a phone
+// Obsidian draws either placement as a bottom sheet.
+const defaultOpenMenu: OpenMenu = (id, place, deps) => {
+	const isFavorite = deps.isFavorite(id);
+	const menu = new Menu().addItem((item) =>
+		item
+			.setTitle(isFavorite ? "Remove from favorites" : "Add to favorites")
+			.setIcon("asterisk")
+			.onClick(() => deps.onToggle(id)),
+	);
+	if (place.at === "press") menu.showAtPosition({ x: place.x, y: place.y }, place.doc);
+	else menu.showAtMouseEvent(place.e);
+};
+
+export function createFavoriteMenu(
+	deps: FavoriteMenuDeps,
+	{ watch = createPressWatch(), openMenu = defaultOpenMenu }: { watch?: PressWatch; openMenu?: OpenMenu } = {},
+): FavoriteMenu {
+	let state: PressState = IDLE;
 
 	// Steps the rules; a menu it asks for is opened by the caller, since
 	// only the timer opens one at the press point and only contextmenu at
-	// its own event. On a phone Obsidian draws either as a bottom sheet.
+	// its own event.
 	function dispatch(event: MenuPressEvent): MenuPressStep {
 		const step = stepMenuPress(state, event);
 		state = step.state;
@@ -65,7 +86,7 @@ export function createFavoriteMenu(deps: { isFavorite: (id: number) => boolean; 
 		watch.start(e, MENU_PRESS.holdMs, {
 			onTimer: (t, doc) => {
 				const { menu } = dispatch({ kind: "timer", t });
-				if (menu?.at === "press") buildMenu(id).showAtPosition({ x: menu.x, y: menu.y }, doc);
+				if (menu?.at === "press") openMenu(id, { at: "press", x: menu.x, y: menu.y, doc }, deps);
 			},
 			onScroll: () => dispatch({ kind: "scroll" }),
 		});
@@ -83,7 +104,7 @@ export function createFavoriteMenu(deps: { isFavorite: (id: number) => boolean; 
 				// Never the browser's own menu, whether or not ours opens.
 				e.preventDefault();
 				const step = dispatch({ kind: "contextmenu" });
-				if (step.menu) buildMenu(id).showAtMouseEvent(e);
+				if (step.menu) openMenu(id, { at: "event", e }, deps);
 				if (step.swallowed) e.stopPropagation();
 			},
 			onclickcapture: (e) => {
@@ -92,5 +113,6 @@ export function createFavoriteMenu(deps: { isFavorite: (id: number) => boolean; 
 				e.stopPropagation();
 			},
 		}),
+		destroy: () => watch.stop(),
 	};
 }

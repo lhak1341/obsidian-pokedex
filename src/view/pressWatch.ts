@@ -3,7 +3,8 @@
 // which each keep their own pointer handlers and decide when to stop (the menu
 // at the hold, the portrait at the lift, since a scroll ends its hold too).
 // The rules are utils/pressHold.ts; this is DOM-bound, so untested here (no
-// jsdom in vitest.config.ts).
+// jsdom in vitest.config.ts). Both bindings take a PressWatch, and their tests
+// pass a fake one whose timer and scroll fire on demand.
 
 export interface PressWatch {
 	// Starts the hold timer and the scroll watch for the press `e` began.
