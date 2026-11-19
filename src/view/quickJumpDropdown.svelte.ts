@@ -1,12 +1,12 @@
-import { onMount } from "svelte";
+import { getContext, onMount } from "svelte";
 import type { PokedexTableRow } from "../data/types";
 import { quickJumpMatches, stepQuickJumpNav } from "../utils/quickJump";
-import { registerGlobalHotkey } from "./globalHotkey";
+import { LEAF_COMMANDS_CONTEXT, type LeafCommandRegistry } from "./LeafCommandRegistry";
 
 // Shared by QuickSearch (detail screen) and FilterBar's own search box
 // (browse table) — both wrap quickJumpMatches/stepQuickJumpNav with the same
-// open/activeIndex state, DOM event wiring, and Cmd/Ctrl+Shift+L hotkey
-// registration. The two callers diverge only on what "search text" is bound
+// open/activeIndex state, DOM event wiring, and the Cmd/Ctrl+Shift+L leaf
+// hotkey's focus handler. The two callers diverge only on what "search text" is bound
 // to (QuickSearch owns an ephemeral local string; FilterBar's is
 // filters.search, also the table's own live filter) and on two commit-path
 // side effects — see onSelect/onEscape below — so this hook takes both as
@@ -15,11 +15,15 @@ export function createQuickJumpDropdown(options: {
 	rows: () => PokedexTableRow[];
 	query: () => string;
 	inputRef: () => HTMLInputElement | undefined;
+	// The screen this search box sits on. Mod+Shift+L focuses only the
+	// showing screen's box (LeafCommandRegistry), not FilterBar's under the
+	// hidden table too.
+	screen: "table" | "detail";
 	// Caller-specific extra for a committed selection — e.g. QuickSearch
-	// blurs (so isEditableTarget doesn't block PokedexApp's "["/"]" history
+	// blurs (so the editable-target rule doesn't block the "["/"]" leaf
 	// hotkey right after navigating, since it stays mounted on the same
-	// screen); FilterBar's onQuickSelect navigates away to the detail
-	// screen entirely, so its own callback doesn't need to blur at all.
+	// screen); FilterBar's onQuickSelect switches to the detail screen, so
+	// its own callback doesn't need to blur at all.
 	onSelect: (id: number) => void;
 	// Caller-specific extra on Escape — e.g. QuickSearch clears its
 	// ephemeral query; FilterBar's dropdown dismisses without touching
@@ -73,10 +77,14 @@ export function createQuickJumpDropdown(options: {
 		}
 	}
 
-	onMount(() => registerGlobalHotkey("l", () => {
+	// Read during the calling component's init, as getContext requires.
+	const commands = getContext<LeafCommandRegistry>(LEAF_COMMANDS_CONTEXT);
+	onMount(() => commands.register(options.screen, "focusSearch", () => {
 		const el = options.inputRef();
-		el?.focus();
-		el?.select();
+		if (!el) return false;
+		el.focus();
+		el.select();
+		return true;
 	}));
 
 	return {

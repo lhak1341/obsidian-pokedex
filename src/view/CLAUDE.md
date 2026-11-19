@@ -19,6 +19,7 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   (`utils/encounters.ts`); missed independently for the table cell, its tooltip, the detail page and the Quirks filter
   in one session. `filterPokemon`'s `FilterContext.activeGen` is required (no any-generation fallback), and a Field's
   `render(row, activeGen)`/`title` take it too, so the Capture Field scopes its locations in `fields.ts` for both layouts.
+- Every open Pokédex leaf mounts its own app, so a `window`/`document` listener in a component fires once per leaf, background tabs included (←/→ stepped every leaf, probed live). Keys go through Leaf hotkeys (CONTEXT.md: `PokedexView`'s one gated listener, `leafHotkeyListener.test.ts` pins it); any other global listener must check the event is its own leaf's (`infoPopover`'s Escape attaches only while its popover is open).
 - Saved preferences are never a local copy. Favourites, the Fields selection and the layout per width class live in
   `PokedexPlugin.preferences` (`utils/localPreferences.ts`, ADR-0012), one holder shared by every open Pokédex leaf;
   `PokedexApp` mirrors it (`prefs`, refreshed by `subscribe`) and writes through it, and every layout or panel takes

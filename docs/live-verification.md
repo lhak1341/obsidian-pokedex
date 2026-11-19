@@ -78,6 +78,7 @@ time out (clear `.notice` before checking one shows); `dev:mobile` is global, tu
   `el.querySelector('svg')?.innerHTML` is non-empty; an overlay takes icon SVGs from rendered table headers, inlines
   them, or harvests them from a remount with the setting flipped in memory only (`useTypeIcons` for type icons: badge
   mode renders none).
+- A synthetic event's options default to inert, so a check on its effect can pass without testing anything: a `KeyboardEvent` without `cancelable: true` always reads `defaultPrevented === false`. Dispatch keys as `new KeyboardEvent('keydown', {key, bubbles: true, cancelable: true})` on `document.body`. For a multi-leaf check, save `app.workspace.getLayout()` first, open the extra leaves with `getLeaf('split', 'vertical')`, and restore with `changeLayout(saved)`. A leaf in a background tab measures 0 wide, and `focus()` on its inputs does nothing.
 - View history: read `leaf.history.backHistory`/`forwardHistory` (each entry's `state.state` is a `NavRecord`) and
   `leaf.view.getState()`. Step with the header arrows (`leaf.containerEl` `.view-header-nav-buttons button`), a
   `keydown` `[`/`]` on `document.body` (focused Pokédex tab only), or, in emulated mobile,

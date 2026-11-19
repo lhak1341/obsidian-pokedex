@@ -15,9 +15,10 @@
 		rows: () => rows,
 		query: () => query,
 		inputRef: () => inputEl,
+		screen: "detail",
 		// Both the mousedown and Enter paths land here — without the blur,
-		// focus stays in the input after jumping to a result, so
-		// isEditableTarget blocks PokedexApp's global "["/"]" view-history
+		// focus stays in the input after jumping to a result, so the
+		// editable-target rule (utils/leafHotkeys.ts) blocks the "["/"]" leaf
 		// hotkey right after the exact navigation it's meant to step back
 		// through. QuickSearch stays mounted on the same detail screen after
 		// selecting (unlike FilterBar's onQuickSelect, which navigates away

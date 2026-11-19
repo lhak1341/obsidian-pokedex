@@ -4,7 +4,10 @@ import { mount, unmount } from "svelte";
 import type { PokedexRepository } from "../data/PokedexRepository";
 import type { PluginSettings } from "../data/types";
 import type { LocalPreferences } from "../utils/localPreferences";
+import { resolveLeafHotkey } from "../utils/leafHotkeys";
 import { DetailNavigationState, type NavRecord, parseNavRecord, type ScrollInstruction } from "./DetailNavigationState";
+import { isEditableTarget } from "./domTarget";
+import { LeafCommandRegistry } from "./LeafCommandRegistry";
 import PokedexApp from "./PokedexApp.svelte";
 
 export const VIEW_TYPE_POKEDEX = "pokedex-view";
@@ -35,6 +38,11 @@ export class PokedexView extends ItemView {
 	// screen, and getState can answer before the app has mounted.
 	private nav = new DetailNavigationState();
 
+	// Leaf hotkeys whose state lives in a screen component (see
+	// LeafCommandRegistry.ts). Here, not in the app, for the same reason as
+	// `nav`: a settings remount re-registers into the same registry.
+	private commands = new LeafCommandRegistry();
+
 	constructor(
 		leaf: WorkspaceLeaf,
 		private repository: PokedexRepository,
@@ -46,6 +54,40 @@ export class PokedexView extends ItemView {
 		// `on` overloads omit it. Registered here, not in onOpen, which can run
 		// more than once per leaf (see mountApp).
 		this.registerEvent((leaf as Events).on("history-change", () => this.refreshMobileNavbar()));
+		// Leaf hotkeys (CONTEXT.md): the one keydown listener this leaf has.
+		// Every leaf's listener sees every key, so resolveLeafHotkey returns
+		// nothing unless this is the active Pokedex leaf, and an event it
+		// returns nothing for is left untouched.
+		//
+		// Capture phase on `window` is load-bearing for Mod+Shift+L. Plain
+		// Mod+<letter> is unusable here because Electron's native application
+		// menu binds several CommandOrControl+<letter> chords (e.g. Cmd+L to
+		// Insert Link), an OS/main-process accelerator no renderer JS can
+		// intercept. Adding Shift sidesteps that, but Obsidian's HotkeyManager
+		// bakes some Mod+Shift+<letter> chords too (Mod+Shift+L is
+		// editor:insert-embed) and listens on `document` in the capture phase:
+		// a capture listener on `window` runs first, and stopPropagation keeps
+		// HotkeyManager from also firing. Plain "[", "]" and the arrows have no
+		// binding in either (checked against app.hotkeyManager.bakedHotkeys and
+		// Menu.getApplicationMenu()), so they need neither.
+		this.registerDomEvent(window, "keydown", (e) => this.onKeydown(e), { capture: true });
+	}
+
+	private onKeydown(e: KeyboardEvent): void {
+		const hotkey = resolveLeafHotkey({
+			key: e.key,
+			mod: e.metaKey || e.ctrlKey,
+			shift: e.shiftKey,
+			editable: isEditableTarget(e.target),
+			screen: this.nav.screen,
+			active: this.app.workspace.getActiveViewOfType(PokedexView) === this,
+		});
+		if (!hotkey) return;
+		const { command } = hotkey;
+		if (command.kind === "history") this.stepHistory(command.dir);
+		else if (!this.commands.run(this.nav.screen, command)) return;
+		e.preventDefault();
+		if (hotkey.stopPropagation) e.stopPropagation();
 	}
 
 	getViewType(): string {
@@ -86,11 +128,11 @@ export class PokedexView extends ItemView {
 		void this.leaf.setViewState({ type: VIEW_TYPE_POKEDEX, state: record });
 	}
 
-	// "[" / "]" are window-wide listeners in every mounted app, so only the
-	// focused Pokedex tab steps; a background tab stepping its leaf back could
-	// leave the Pokedex for whatever note the tab showed before.
+	// "[" / "]": the tab's own history, the same one as the tab header arrows
+	// and the mobile navigation bar. Only the active leaf gets here
+	// (resolveLeafHotkey): a background tab stepping back could leave the
+	// Pokedex for whatever note the tab showed before.
 	private stepHistory(direction: "back" | "forward"): void {
-		if (this.app.workspace.getActiveViewOfType(PokedexView) !== this) return;
 		const { history } = this.leaf as unknown as LeafWithHistory;
 		void (direction === "back" ? history.back() : history.forward());
 	}
@@ -155,8 +197,8 @@ export class PokedexView extends ItemView {
 				leafEl: this.containerEl,
 				preferences: this.preferences,
 				navState: this.nav,
+				commands: this.commands,
 				onNavigate: (record: NavRecord) => this.navigate(record),
-				onStepHistory: (direction: "back" | "forward") => this.stepHistory(direction),
 			},
 		}) as unknown as MountedApp;
 	}

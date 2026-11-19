@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Notice } from "obsidian";
-	import { onDestroy, onMount } from "svelte";
+	import { getContext, onDestroy, onMount } from "svelte";
 	import { TYPE_COLORS } from "../../data/constants";
 	import { getAdjacentDexEntries } from "../../utils/dexNav";
 	import { nextEvolutionLevels } from "../../data/normalize";
@@ -11,8 +11,8 @@
 	import EvChips from "./EvChips.svelte";
 	import FavoriteToggle from "./FavoriteToggle.svelte";
 	import { DetailLoadState, type DetailEntrySnapshot } from "../DetailLoadState";
-	import { isEditableTarget } from "../domTarget";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
+	import { LEAF_COMMANDS_CONTEXT, type LeafCommandRegistry } from "../LeafCommandRegistry";
 	import { contentScale } from "../imageBounds";
 	import EvolutionTree from "./EvolutionTree.svelte";
 	import FlavorTextPanel from "./FlavorTextPanel.svelte";
@@ -258,20 +258,16 @@
 			: { prev: null, next: null },
 	);
 
-	function onKeydown(e: KeyboardEvent) {
-		if (isEditableTarget(e.target)) return;
-		if (e.key === "ArrowLeft" && adjacent.prev) {
-			e.preventDefault();
-			onSelect(adjacent.prev.id);
-		} else if (e.key === "ArrowRight" && adjacent.next) {
-			e.preventDefault();
-			onSelect(adjacent.next.id);
-		}
-	}
-	onMount(() => {
-		window.addEventListener("keydown", onKeydown);
-		return () => window.removeEventListener("keydown", onKeydown);
-	});
+	// ←/→ are leaf hotkeys (utils/leafHotkeys.ts): PokedexView decides the
+	// key and the active leaf, and this answers whether there was a neighbour.
+	const commands = getContext<LeafCommandRegistry>(LEAF_COMMANDS_CONTEXT);
+	onMount(() => commands.register("detail", "adjacent", (command) => {
+		if (command.kind !== "adjacent") return false;
+		const target = command.dir === "prev" ? adjacent.prev : adjacent.next;
+		if (!target) return false;
+		onSelect(target.id);
+		return true;
+	}));
 </script>
 
 <div class="detail-screen">

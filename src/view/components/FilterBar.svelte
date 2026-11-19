@@ -109,9 +109,10 @@
 		rows: () => rows,
 		query: () => filters.search,
 		inputRef: () => searchInputEl,
-		// onQuickSelect navigates away to the detail screen entirely, so
-		// unlike QuickSearch's onSelect this doesn't need to blur — the
-		// search input (and this whole screen) leaves the DOM on select.
+		screen: "table",
+		// onQuickSelect switches to the detail screen, so unlike
+		// QuickSearch's onSelect this doesn't need to blur: the table screen
+		// stays mounted but goes display:none, which drops the input's focus.
 		onSelect: (id) => onQuickSelect(id),
 		// Unlike QuickSearch's own Escape, this doesn't clear filters.search
 		// — that's the table's real live filter, not an ephemeral query, so

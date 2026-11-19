@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Notice } from "obsidian";
-	import { onDestroy, onMount, tick, untrack } from "svelte";
+	import { onDestroy, onMount, setContext, tick, untrack } from "svelte";
 	import type { PokedexRepository } from "../data/PokedexRepository";
 	import type { PluginSettings } from "../data/types";
 	import { type BrowseLayout, widthClass, type WidthClass } from "../utils/browseLayout";
@@ -9,13 +9,13 @@
 	import { resolveGenerationScope } from "../utils/generationScope";
 	import { describePartialLoadOutcome, describeRetryOutcome } from "../utils/loadNotices";
 	import type { DetailNavigationState, NavRecord, ScrollInstruction } from "./DetailNavigationState";
-	import { isEditableTarget } from "./domTarget";
+	import { LEAF_COMMANDS_CONTEXT, type LeafCommandRegistry } from "./LeafCommandRegistry";
 	import DetailScreen from "./components/DetailScreen.svelte";
 	import { emptyLoadSnapshot, type LoadSnapshot, PokedexLoadState } from "./PokedexLoadState";
 	import TableScreen from "./components/TableScreen.svelte";
 
 	let {
-		repository, settings, leafEl, preferences, navState, onNavigate, onStepHistory,
+		repository, settings, leafEl, preferences, navState, commands, onNavigate,
 	}: {
 		repository: PokedexRepository;
 		settings: PluginSettings;
@@ -23,9 +23,13 @@
 		leafEl: HTMLElement;
 		preferences: LocalPreferences;
 		navState: DetailNavigationState;
+		// The leaf's Leaf hotkey handlers (LeafCommandRegistry.ts), owned by
+		// PokedexView so a settings remount keeps the same registry. The
+		// screens register into it through context.
+		commands: LeafCommandRegistry;
 		onNavigate: (record: NavRecord) => void;
-		onStepHistory: (direction: "back" | "forward") => void;
 	} = $props();
+	setContext(LEAF_COMMANDS_CONTEXT, untrack(() => commands));
 
 	// Favourites, Fields and the layout per width class live in the plugin's
 	// one LocalPreferences (ADR-0012), shared by every open Pokedex leaf. This
@@ -177,28 +181,6 @@
 	function openDetail(id: number) {
 		onNavigate({ screen: "detail", pokemonId: id });
 	}
-
-	// "[" / "]" step the tab's own history, the same one as the tab header
-	// arrows and the mobile navigation bar. No modifier is free of conflict
-	// (Cmd+[/Cmd+] collide with Obsidian's/Electron's own bindings; see
-	// QuickSearch.svelte's comment). Verified against both Obsidian's
-	// HotkeyManager and Electron's native app menu
-	// (app.hotkeyManager.bakedHotkeys / Menu.getApplicationMenu()) that plain
-	// "[" and "]" have zero existing bindings, so this needs neither the
-	// capture-phase trick nor stopPropagation that Mod+Shift+L required.
-	function onGlobalKeydown(e: KeyboardEvent) {
-		if (isEditableTarget(e.target)) return;
-		if (e.key === "[") {
-			e.preventDefault();
-			onStepHistory("back");
-		} else if (e.key === "]") {
-			e.preventDefault();
-			onStepHistory("forward");
-		}
-	}
-
-	onMount(() => window.addEventListener("keydown", onGlobalKeydown));
-	onDestroy(() => window.removeEventListener("keydown", onGlobalKeydown));
 
 	function backToTable() {
 		onNavigate(navState.backToTable());
