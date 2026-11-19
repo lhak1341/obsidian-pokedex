@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { Menu } from "obsidian";
 	import type { PokedexRepository } from "../../data/PokedexRepository";
 	import type { PokedexTableRow } from "../../data/types";
 	import { EMPTY_FILTERS, filterPokemon } from "../../utils/filterPokemon";
@@ -15,9 +14,10 @@
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
 	import { createInfoDescription } from "../infoDescription.svelte";
 	import { createInfoPopover } from "../infoPopover.svelte";
+	import { createFavoriteMenu } from "../favoriteMenu";
 	import CardGrid from "./CardGrid.svelte";
 	import EvChips from "./EvChips.svelte";
-	import FavoriteToggle from "./FavoriteToggle.svelte";
+	import FavoriteMark from "./FavoriteMark.svelte";
 	import FilterBar from "./FilterBar.svelte";
 	import InfoPopoverBox from "./InfoPopoverBox.svelte";
 	import Icon from "./Icon.svelte";
@@ -166,18 +166,13 @@
 		return sort.direction === "asc" ? " ^" : " v";
 	}
 
-	function showRowMenu(e: MouseEvent, row: PokedexTableRow) {
-		e.preventDefault();
-		const isFavorite = favoriteIds.has(row.id);
-		const menu = new Menu();
-		menu.addItem((item) =>
-			item
-				.setTitle(isFavorite ? "Remove from favorites" : "Add to favorites")
-				.setIcon("asterisk")
-				.onClick(() => onToggleFavorite(row.id))
-		);
-		menu.showAtMouseEvent(e);
-	}
+	// Favouriting from a list is a menu (right-click or press and hold), on
+	// table rows and Card view tiles alike: their asterisk is a marker only
+	// (#35). Reads favoriteIds when it opens, so it never shows a stale title.
+	const favoriteMenu = createFavoriteMenu({
+		isFavorite: (id) => favoriteIds.has(id),
+		onToggle: (id) => onToggleFavorite(id),
+	});
 </script>
 
 <!-- The Fields menu and the layout toggle: in this screen's own toolbar on a
@@ -266,6 +261,7 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 			onSort={setSort}
 			{onSelect}
 			{onToggleFavorite}
+			{favoriteMenu}
 			{heldItemTarget}
 		/>
 	{:else}
@@ -316,8 +312,13 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 				</thead>
 				<tbody>
 					{#each visibleRows as row (row.id)}
-						<tr onclick={() => onSelect(row.id)} oncontextmenu={(e) => showRowMenu(e, row)}>
-							<td class="pin pin-number">{formatDexNumber(row.dexNumber)}</td>
+						<tr onclick={() => onSelect(row.id)} {...favoriteMenu.target(row.id)}>
+							<td class="pin pin-number">
+								{formatDexNumber(row.dexNumber)}
+								<!-- Narrow: the marker sits under the number, so the 108px
+								Name column holds the base name alone (#35). -->
+								{#if narrow && favoriteIds.has(row.id)}<span class="number-mark"><FavoriteMark size={11} /></span>{/if}
+							</td>
 							<td
 								class="center sprite-cell pin pin-sprite"
 								onpointerenter={(e) => {
@@ -334,19 +335,12 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 							<td class="name-cell pin pin-name">
 								{#if narrow}
 									<!-- The base name over an 11px regional-form line, so the
-									108px column keeps the base name whole. The asterisk follows
-									the name, and drops under it only where both don't fit in
-									one line (Sandy Shocks is 98px of the 98 available). -->
-									<span class="base-name"><span class="base-name-text">{row.name}</span><FavoriteToggle
-										active={favoriteIds.has(row.id)}
-										onToggle={() => onToggleFavorite(row.id)}
-									/></span>
+									108px column keeps the base name whole (Sandy Shocks is 98px
+									of the 98 available); a favourite's marker is in No. -->
+									<span class="base-name">{row.name}</span>
 									{#if row.formLabel}<span class="form-line">{row.formLabel}</span>{/if}
 								{:else}
-									{formatPokemonDisplayName(row)}<FavoriteToggle
-										active={favoriteIds.has(row.id)}
-										onToggle={() => onToggleFavorite(row.id)}
-									/>
+									{formatPokemonDisplayName(row)}{#if favoriteIds.has(row.id)}<span class="name-mark"><FavoriteMark /></span>{/if}
 								{/if}
 							</td>
 							<td class="info-target-cell type-cell">
@@ -609,10 +603,14 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 	/* The row's stripe or hover colour is set once as --pkdx-row-bg, read by
 	the row and again by a Narrow pane's pinned cells (below), which must
 	paint it themselves to stay opaque. */
+	/* A press and hold opens the favourites menu (favoriteMenu.ts): iOS's
+	own selection and callout must not answer it first. */
 	tbody tr {
 		--pkdx-row-bg: transparent;
 		background: var(--pkdx-row-bg);
 		cursor: pointer;
+		-webkit-touch-callout: none;
+		user-select: none;
 	}
 	tbody tr:nth-child(even) {
 		--pkdx-row-bg: var(--lk-surface-chrome);
@@ -623,6 +621,10 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 	.name-cell {
 		text-transform: capitalize;
 		font-weight: 600;
+	}
+	/* 6px after the name, as FavoriteToggle sits in the single-Pokémon views (4px margin, 2px padding). */
+	.name-mark {
+		margin-left: 6px;
 	}
 	/* inline-block so the target's dotted underline doesn't run under the
 	comma (decorations don't propagate into an atomic inline); pre keeps
@@ -725,6 +727,12 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 		font-variant-numeric: tabular-nums;
 		color: var(--lk-text-muted);
 	}
+	/* A favourite's marker, centred under the number. */
+	table.narrow .number-mark {
+		display: flex;
+		justify-content: center;
+		margin-top: 1px;
+	}
 	/* "No." and its sort arrow wrap onto two lines rather than widen 32px. */
 	table.narrow th.pin-number {
 		white-space: normal;
@@ -739,16 +747,12 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 		padding-inline: 5px;
 		box-shadow: inset -1px 0 var(--lk-border-strong);
 	}
-	/* The name never breaks; the line may break between it and the asterisk,
-	so Name's min-content is the name alone. */
+	/* The name never breaks, so Name's min-content is the name alone. */
 	table.narrow .base-name {
 		display: block;
 		font-size: 0.875rem;
 		font-weight: 600;
 		line-height: 1.25;
-		white-space: normal;
-	}
-	table.narrow .base-name-text {
 		white-space: nowrap;
 	}
 	/* width: 0 + min-width: 100% keeps the form line out of the cell's

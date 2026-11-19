@@ -1,14 +1,15 @@
 <script lang="ts">
 	import Icon from "./Icon.svelte";
 
-	// The favourite asterisk after a name: faint when unset, accent when set,
-	// toggles on tap or click. Favourite state itself is owned by PokedexApp
-	// (shared by the table and the detail screen), so this only draws and asks.
+	// The favourite asterisk after a name in a single-Pokémon view (the detail
+	// screen, Card view's tap panel): faint when unset, accent when set,
+	// toggles on tap or click. Lists draw FavoriteMark instead and toggle
+	// through the favourites menu (#35). Favourite state itself is owned by
+	// PokedexApp (ADR-0012), so this only draws and asks.
 	let { active, onToggle, size = 13 }: { active: boolean; onToggle: () => void; size?: number } = $props();
 
 	function onclick(e: MouseEvent) {
-		// Inside a table row whose own click opens the detail screen: the
-		// asterisk acts on itself only.
+		// The asterisk acts on itself only, never on whatever holds it.
 		e.stopPropagation();
 		onToggle();
 	}

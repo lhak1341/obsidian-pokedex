@@ -14,19 +14,23 @@
 	import { totalStat } from "../../utils/stats";
 	import type { HeldItemForGen } from "../../utils/heldItemGen";
 	import { contentBounds } from "../imageBounds";
+	import type { FavoriteMenu } from "../favoriteMenu";
 	import type { InfoTargetProps } from "../infoPopover.svelte";
 	import CardPanel from "./CardPanel.svelte";
+	import FavoriteMark from "./FavoriteMark.svelte";
 
 	// Card view (CONTEXT.md): the browse screen's rows drawn as a grid of tiles.
 	// It owns its drawing and which tap panel is open, nothing else: rows (already filtered, sorted and Active
 	// Gen scoped), the Fields selection, the sort and favourites all come from
 	// TableScreen, the browse screen's owner, so a switch to or from the table
-	// keeps them. The tile's ★ is display-only (no accidental toggles while
-	// scrolling); favouriting stays on the table's asterisk, the detail screen
-	// and the tap panel's asterisk. A tile tap opens the tap panel; the panel's
+	// keeps them. The tile's asterisk is a marker only (no accidental toggles
+	// while scrolling); a tile favourites through TableScreen's favourites menu
+	// (right-click or press and hold, as a table row does), and the tap panel
+	// keeps its asterisk toggle. A tile tap opens the tap panel; the panel's
 	// "Open ›" opens the detail screen (onSelect).
 	let {
-		rows, visibleFields, favoriteIds, sort, repository, activeGen, onSort, onSelect, onToggleFavorite, heldItemTarget,
+		rows, visibleFields, favoriteIds, sort, repository, activeGen, onSort, onSelect, onToggleFavorite, favoriteMenu,
+		heldItemTarget,
 	}: {
 		rows: PokedexTableRow[];
 		visibleFields: ReadonlySet<string>;
@@ -37,6 +41,7 @@
 		onSort: (column: SortColumn) => void;
 		onSelect: (id: number) => void;
 		onToggleFavorite: (id: number) => void;
+		favoriteMenu: FavoriteMenu;
 		// TableScreen's held-item Info popover, so its box (rarity included)
 		// is the table's own and draws over the panel.
 		heldItemTarget: (item: HeldItemForGen) => InfoTargetProps;
@@ -148,6 +153,7 @@
 			aria-controls={openId === row.id ? panelId : undefined}
 			onclick={(e) => void toggle(row.id, e.currentTarget)}
 			onkeydown={(e) => onTileKeydown(e, row.id)}
+			{...favoriteMenu.target(row.id)}
 		>
 			<div
 				class="sprite-well"
@@ -171,7 +177,7 @@
 				{/if}
 				<span class="corner corner-tl tile-chip">{formatDexNumber(row.dexNumber)}</span>
 				{#if favoriteIds.has(row.id)}
-					<span class="corner corner-tr favorite-mark" title="Favorite">★</span>
+					<span class="corner corner-tr"><FavoriteMark size={12} /></span>
 				{/if}
 				{#if corners.ev && row.evYield.length > 0}
 					<span class="corner corner-bl ev-dots" title={formatEvYield(row)}>
@@ -251,6 +257,10 @@
 		cursor: pointer;
 		border-radius: 10px;
 		outline: none;
+		/* A press and hold opens the favourites menu: iOS's own selection and
+		callout must not answer it first. */
+		-webkit-touch-callout: none;
+		user-select: none;
 	}
 	.card-tile:focus-visible .sprite-well {
 		outline: 2px solid var(--lk-focus-ring);
@@ -324,10 +334,6 @@
 	.total-chip {
 		color: var(--lk-text);
 		font-weight: 600;
-	}
-	.favorite-mark {
-		color: var(--lk-accent);
-		font-size: 0.75rem;
 	}
 	.ev-dots {
 		gap: 2px;

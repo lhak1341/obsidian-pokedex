@@ -85,9 +85,11 @@ count, 428 MB of it iCloud conflict copies), so the first sync is slow.
 5. Touch checks carried from the Touch replacement for hover popovers ticket (**not yet
    done**: skipped in the first run, so every touch behaviour below is unverified on a real
    device):
-   1. Long-press a table row and a type icon: does `contextmenu` fire? (Inspector console:
-      `document.addEventListener('contextmenu', e => console.log('ctx', e.target), true)`.)
-      Inferred no on iOS.
+   1. Long-press a table row and a Card view tile (#35): the favourites menu opens once, as a
+      bottom sheet, with no iOS selection callout, and the tap that follows does not open the
+      detail screen or tile panel. To see whether `contextmenu` also fires (inferred no on iOS;
+      it must neither open a second menu nor close the first), Inspector console:
+      `document.addEventListener('contextmenu', e => console.log('ctx', e.target), true)`.
    2. Tap an Info popover target: it opens once and does not flicker from the mouse events
       that follow the tap.
    3. Row-height tap areas on held items and type icons are comfortable to hit.
