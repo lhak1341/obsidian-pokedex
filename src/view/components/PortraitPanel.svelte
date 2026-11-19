@@ -2,6 +2,8 @@
 	import type { PluginSettings, PokedexEntry, PortraitImageSource } from "../../data/types";
 	import { formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { resolvePortrait, resolvePortraitScale } from "../../utils/portrait";
+	import { onDestroy } from "svelte";
+	import { createPortraitPress } from "../portraitPress";
 	import Icon from "./Icon.svelte";
 	import VarietyFormToggle from "./VarietyFormToggle.svelte";
 
@@ -19,7 +21,9 @@
 	// every normal desktop-width pane. DetailScreen derives portraitSource
 	// and portraitUri itself (it owns every input) and hands them down;
 	// portraitScale is async, so it is surfaced back via $bindable; onHoverPortrait/onLeavePortrait
-	// forward the raw hover events up for the same reason.
+	// forward the raw hover events up for the same reason. showArt (a touch
+	// held on the portrait, #31) is bound back up too: below 600px the
+	// identity overlay DetailScreen draws over this box fades with it.
 	let {
 		entry,
 		portraitSource,
@@ -35,6 +39,7 @@
 		onLeavePortrait,
 		measure,
 		portraitScale = $bindable(),
+		showArt = $bindable(false),
 	}: {
 		entry: PokedexEntry;
 		// Which image set renders: the active Mega/Gigantamax form, else the
@@ -56,7 +61,15 @@
 		// URL back to its path.
 		measure: (uri: string) => Promise<number>;
 		portraitScale: number;
+		showArt?: boolean;
 	} = $props();
+
+	const hasShiny = $derived(Boolean(portraitSource?.shinyDataUri || portraitSource?.shinyArtworkDataUri));
+
+	// Press and hold to see the art alone, any width, touch only (rules:
+	// stepPortraitPress in utils/pressHold.ts).
+	const press = createPortraitPress((show) => (showArt = show));
+	onDestroy(() => press.destroy());
 
 	// Always the non-shiny render — resolvePortrait(..., false) is the same
 	// "official-artwork falls back to spriteDataUri" logic portraitUri itself
@@ -88,19 +101,30 @@
 	});
 </script>
 
+<!-- Hover-to-enlarge is mouse only: a tap sends a compatibility mouseenter
+that would otherwise open it, and touch has the hold instead. -->
 <div
 	class="portrait-panel"
+	class:show-art={showArt}
+	class:has-shiny={hasShiny}
 	role="note"
-	onmouseenter={(e) => onHoverPortrait(e.currentTarget)}
-	onmouseleave={onLeavePortrait}
+	onpointerenter={(e) => {
+		if (e.pointerType === "mouse") onHoverPortrait(e.currentTarget);
+	}}
+	onpointerleave={onLeavePortrait}
+	{...press.props}
 >
 	<img
 		src={portraitUri ?? ""}
 		alt={formatPokemonDisplayName(entry)}
 		class="portrait-image"
+		draggable="false"
 		style:transform="scale({portraitScale})"
 	/>
-	{#if portraitSource?.shinyDataUri || portraitSource?.shinyArtworkDataUri}
+	<!-- Below 600px the identity overlay sits on this fade (CSS shows it
+	there only). -->
+	<div class="portrait-fade"></div>
+	{#if hasShiny}
 		<button
 			class="shiny-toggle"
 			class:active={showShiny}
@@ -148,6 +172,9 @@
 			var(--lk-surface-chrome);
 		border: 1px solid var(--lk-border);
 		border-radius: var(--lk-radius-l);
+		/* A held touch must not select text or open iOS's image callout. */
+		user-select: none;
+		-webkit-touch-callout: none;
 	}
 	.portrait-image {
 		width: 76%;
@@ -155,6 +182,67 @@
 		object-fit: contain;
 		image-rendering: pixelated;
 		filter: drop-shadow(0 6px 10px color-mix(in srgb, var(--lk-scrim) 60%, transparent));
+		transition: width var(--lk-duration-base) var(--lk-ease-standard), height var(--lk-duration-base) var(--lk-ease-standard);
+	}
+	.portrait-fade {
+		display: none;
+	}
+	.shiny-toggle,
+	.portrait-panel :global(.variety-form-toggle) {
+		transition: opacity var(--lk-duration-base) var(--lk-ease-standard);
+	}
+	/* The art alone: toggles out, art grown to fill the box. */
+	.show-art .portrait-image {
+		width: 92%;
+		height: 92%;
+	}
+	.show-art .shiny-toggle,
+	.show-art :global(.variety-form-toggle) {
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	/* Phone hero (#31), below a 600px pane (the pane pads 23px a side): full
+	width, 250px tall, the art in its upper part above DetailScreen's identity
+	overlay, which sits on a fade into the panel colour. Mega X/Y move to the
+	top-left; Gigantamax sits beside the shiny toggle top-right. */
+	@container detail (width < 554px) {
+		.portrait-panel {
+			align-items: flex-start;
+			max-width: none;
+			max-height: none;
+			height: 250px;
+			aspect-ratio: auto;
+			overflow: hidden;
+		}
+		.portrait-image {
+			width: 100%;
+			height: 168px;
+			margin-top: 10px;
+		}
+		.show-art .portrait-image {
+			width: 100%;
+			height: 230px;
+		}
+		.portrait-fade {
+			display: block;
+			position: absolute;
+			inset: auto 0 0;
+			height: 110px;
+			background: linear-gradient(to bottom, transparent, var(--lk-surface-chrome) 72%);
+			pointer-events: none;
+			transition: opacity var(--lk-duration-base) var(--lk-ease-standard);
+		}
+		.show-art .portrait-fade {
+			opacity: 0;
+		}
+		.portrait-panel :global(.variety-form-toggle) {
+			top: 8px;
+			bottom: auto;
+		}
+		.portrait-panel.has-shiny :global(.variety-form-toggle.corner-right) {
+			right: 38px;
+		}
 	}
 	.shiny-toggle {
 		position: absolute;

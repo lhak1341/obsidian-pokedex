@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-	IDLE, MENU_PRESS, stepMenuPress, stepPress, type MenuPressEvent, type PressEvent, type PressOptions, type PressState,
+	IDLE, MENU_PRESS, PORTRAIT_PRESS, stepMenuPress, stepPortraitPress, stepPress, type MenuPressEvent, type PortraitPressEvent,
+	type PressEvent, type PressOptions, type PressState,
 } from "./pressHold";
 
 const MENU: PressOptions = MENU_PRESS;
@@ -141,5 +142,58 @@ describe("favourites menu press", () => {
 	it("a later right-click opens it again", () => {
 		const { steps } = runMenu([down(0), timer(500), { kind: "up" }, down(3000, 0, 0, "mouse"), { kind: "up" }, contextmenu]);
 		expect(steps.filter((s) => s.menu !== null)).toHaveLength(2);
+	});
+});
+
+// The portrait's art preview (#31): hold to hide the overlay and toggles and
+// grow the art, lift to restore them.
+function runPortrait(events: PortraitPressEvent[]) {
+	let state: PressState = IDLE;
+	const steps = events.map((e) => {
+		const step = stepPortraitPress(state, e);
+		state = step.state;
+		return step;
+	});
+	return { state, steps };
+}
+const portraitDown = (t: number, opts: { pointerType?: string; onToggle?: boolean } = {}): PortraitPressEvent => ({
+	kind: "down", pointerType: opts.pointerType ?? "touch", isPrimary: true, x: 100, y: 100, t, onToggle: opts.onToggle ?? false,
+});
+const portraitTimer = (t: number): PortraitPressEvent => ({ kind: "timer", t });
+
+describe("portrait art preview press", () => {
+	it("holds for 350ms", () => {
+		expect(PORTRAIT_PRESS.holdMs).toBe(350);
+		const { steps } = runPortrait([portraitDown(0), portraitTimer(349), portraitTimer(350)]);
+		expect(steps.map((s) => s.showArt)).toEqual([false, false, true]);
+	});
+
+	it("shows the art for as long as the finger stays down, and restores on release", () => {
+		const { steps } = runPortrait([portraitDown(0), portraitTimer(350), { kind: "move", x: 104, y: 103 }, { kind: "up" }]);
+		expect(steps.map((s) => s.showArt)).toEqual([false, true, true, false]);
+	});
+
+	it.each<[string, PortraitPressEvent]>([
+		["a lift", { kind: "up" }],
+		["a pointercancel", { kind: "cancel" }],
+		["a scroll", { kind: "scroll" }],
+	])("%s before 350ms cancels it", (_, event) => {
+		const { steps } = runPortrait([portraitDown(0), event, portraitTimer(350)]);
+		expect(steps[2].showArt).toBe(false);
+	});
+
+	it("a press that starts on a toggle never shows the art", () => {
+		const { steps } = runPortrait([portraitDown(0, { onToggle: true }), portraitTimer(350), portraitTimer(1000)]);
+		expect(steps.map((s) => s.showArt)).toEqual([false, false, false]);
+	});
+
+	it.each(["mouse", "pen"])("only touch holds: a %s press does nothing", (pointerType) => {
+		const { steps } = runPortrait([portraitDown(0, { pointerType }), portraitTimer(350), portraitTimer(1000)]);
+		expect(steps.map((s) => s.showArt)).toEqual([false, false, false]);
+	});
+
+	it("swallows the tap a hold's lift produces, and only that one", () => {
+		const { steps } = runPortrait([portraitDown(0), portraitTimer(350), { kind: "up" }, { kind: "click" }, portraitDown(900), { kind: "up" }, { kind: "click" }]);
+		expect(steps.map((s) => s.swallowed)).toEqual([false, false, false, true, false, false, false]);
 	});
 });

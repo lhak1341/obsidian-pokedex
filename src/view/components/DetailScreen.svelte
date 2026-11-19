@@ -145,6 +145,9 @@
 		return source ? resolvePortrait(source, spriteStyle, showShiny) : null;
 	});
 	let portraitScale = $state(1);
+	// A touch held on the portrait (#31; PortraitPanel runs the hold): below
+	// 600px the identity overlay fades with the toggles.
+	let showArt = $state(false);
 	// contentScale's memo is keyed by cache path, which only the repository
 	// can recover from a blob URL (see imageBounds.ts). An evicted URL has no
 	// path any more; keying it by itself is harmless, as its decode fails and
@@ -196,6 +199,9 @@
 
 	function startLoad(currentId: number) {
 		showShiny = false;
+		// A hold cut short by a remount (the grid swaps out while loading)
+		// sends no lift, so the next entry must not open with its overlay hidden.
+		showArt = false;
 		varietyToggle.resetSelection();
 		mirrorVariety();
 		const result = loadState.load(currentId, mirror, () => {
@@ -269,7 +275,7 @@
 							{#if prev.spriteDataUri}
 								<img src={prev.spriteDataUri} alt="" class="dex-nav-sprite" />
 							{/if}
-							<span class="dex-nav-label">#{formatDexNumber(prev.dexNumber)} {formatPokemonDisplayName(prev)}</span>
+							<span class="dex-nav-label"><span class="dex-nav-num">#{formatDexNumber(prev.dexNumber)}</span> <span class="dex-nav-name">{formatPokemonDisplayName(prev)}</span></span>
 						</button>
 					{/if}
 				</div>
@@ -282,7 +288,7 @@
 					{#if adjacent.next}
 						{@const next = adjacent.next}
 						<button type="button" class="dex-nav-button dex-nav-next" onclick={() => onSelect(next.id)}>
-							<span class="dex-nav-label">#{formatDexNumber(next.dexNumber)} {formatPokemonDisplayName(next)}</span>
+							<span class="dex-nav-label"><span class="dex-nav-num">#{formatDexNumber(next.dexNumber)}</span> <span class="dex-nav-name">{formatPokemonDisplayName(next)}</span></span>
 							{#if next.spriteDataUri}
 								<img src={next.spriteDataUri} alt="" class="dex-nav-sprite" />
 							{/if}
@@ -315,6 +321,10 @@
 			narrow one. -->
 			<div class="detail-grid" style:--pkdx-accent={accentColor}>
 				<aside class="identity-col">
+				<!-- The phone hero (#31): below 600px the number, name, asterisk
+				and types sit over the portrait's bottom edge. From 600px .hero is
+				display: contents, so the column lays out as before. -->
+				<div class="hero" class:show-art={showArt}>
 				<PortraitPanel
 					{entry}
 					portraitSource={activeMegaData ?? activeGigantamaxData ?? entry}
@@ -330,6 +340,7 @@
 					onLeavePortrait={hidePortraitPreview}
 					measure={measurePortrait}
 					bind:portraitScale
+					bind:showArt
 				/>
 
 				<div class="name-block">
@@ -344,6 +355,7 @@
 						{/each}
 					</div>
 					<RegionalFormNav {rows} currentId={entry.id} dexNumber={entry.dexNumber} {onSelect} />
+				</div>
 				</div>
 				<dl class="physical-readout">
 					<div>
@@ -554,6 +566,131 @@
 		font-size: 0.95em;
 		font-weight: 700;
 		line-height: 1;
+	}
+
+	/* Phone header (#31), below a 600px pane (container 554px: the pane pads
+	23px a side): Back to list and Quick check on one row, prev/next across the
+	full width under them, so neighbour names keep their full length. */
+	@container detail (width < 554px) {
+		.detail-header {
+			display: grid;
+			grid-template-columns: auto minmax(0, 1fr);
+			grid-template-areas: "back search" "nav nav";
+			row-gap: 6px;
+		}
+		.back-button {
+			grid-area: back;
+		}
+		.detail-header > :global(.quick-search) {
+			grid-area: search;
+			justify-self: end;
+			width: 100%;
+		}
+		.dex-nav {
+			grid-area: nav;
+			column-gap: 4px;
+		}
+		.dex-nav-button {
+			gap: 4px;
+			padding: 4px;
+		}
+		.dex-nav-sprite {
+			width: 28px;
+			height: 28px;
+		}
+		/* Number over name: a 390px phone leaves each side ~150px, and
+		"#740 Crabominable" on one line needs ~120px of text beside the
+		chevron and sprite. */
+		.dex-nav-label {
+			display: flex;
+			flex-direction: column;
+			gap: 2px;
+		}
+		.dex-nav-prev .dex-nav-label {
+			align-items: flex-start;
+		}
+		.dex-nav-next .dex-nav-label {
+			align-items: flex-end;
+		}
+		.dex-nav-num {
+			font-family: var(--lk-font-code);
+			font-size: 0.8em;
+			font-weight: 600;
+		}
+		.dex-nav-name {
+			min-width: 0;
+			max-width: 100%;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+	}
+
+	.hero {
+		display: contents;
+	}
+	/* Phone hero (#31): the portrait (PortraitPanel draws its 250px box, fade
+	and toggle corners) fills rows 1-3; the identity overlays rows 2-3, number
+	and name left, types bottom-right; a regional-form switcher gets row 4,
+	below the box. .name-block becomes display: contents so its children are
+	the grid's items. The overlay passes presses through to the portrait (its
+	hold) except on the favourite asterisk. */
+	@container detail (width < 554px) {
+		.hero {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto;
+			grid-template-rows: 1fr auto auto auto;
+			column-gap: 10px;
+		}
+		.hero > :global(.portrait-panel) {
+			grid-area: 1 / 1 / 4 / 3;
+		}
+		.hero .name-block {
+			display: contents;
+		}
+		/* position: relative so they paint above the (positioned) portrait. */
+		.hero .dex-eyebrow,
+		.hero .name-line,
+		.hero .type-row {
+			position: relative;
+			pointer-events: none;
+			transition: opacity var(--lk-duration-base) var(--lk-ease-standard);
+		}
+		.hero .dex-eyebrow {
+			grid-area: 2 / 1;
+			padding-left: 14px;
+		}
+		.hero .name-line {
+			grid-area: 3 / 1;
+			min-width: 0;
+			padding: 2px 0 12px 14px;
+		}
+		.hero .name-line :global(.favorite-toggle) {
+			pointer-events: auto;
+		}
+		.hero .type-row {
+			grid-area: 2 / 2 / 4 / 3;
+			align-self: end;
+			display: flex;
+			gap: 4px;
+			margin-top: 0;
+			padding: 0 14px 14px 0;
+		}
+		.hero .name-block > :global(.regional-form-nav) {
+			grid-area: 4 / 1 / 5 / 3;
+			justify-self: start;
+		}
+		.hero.show-art .dex-eyebrow,
+		.hero.show-art .name-line,
+		.hero.show-art .type-row {
+			opacity: 0;
+		}
+		.hero.show-art .name-line :global(.favorite-toggle) {
+			pointer-events: none;
+		}
+		/* No hover-to-enlarge below 600px; touch has the hold. */
+		.portrait-preview {
+			display: none;
+		}
 	}
 
 	.detail-grid {

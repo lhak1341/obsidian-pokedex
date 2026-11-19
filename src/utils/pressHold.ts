@@ -111,3 +111,27 @@ export function stepMenuPress(state: PressState, event: MenuPressEvent): MenuPre
 		swallowed: step.swallowed,
 	};
 }
+
+// The portrait's art preview (#31): a touch held on the portrait hides the
+// identity overlay and the toggles and grows the art to fill the box, until
+// the finger lifts. Touch only: a mouse keeps hover-to-enlarge (wide panes),
+// and a pen has neither. A press that starts on a toggle (shiny, Mega,
+// Gigantamax) is that toggle's tap, never a hold. The favourite asterisk sits
+// in DetailScreen's overlay, outside the portrait, so its presses never get here.
+export const PORTRAIT_PRESS: PressOptions = { holdMs: 350, moveTolerance: 10 };
+
+type DownEvent = Extract<PressEvent, { kind: "down" }>;
+export type PortraitPressEvent = Exclude<PressEvent, DownEvent> | (DownEvent & { onToggle: boolean });
+
+export interface PortraitPressStep {
+	state: PressState;
+	// The overlay and toggles are hidden and the art fills the box.
+	showArt: boolean;
+	swallowed: boolean;
+}
+
+export function stepPortraitPress(state: PressState, event: PortraitPressEvent): PortraitPressStep {
+	const ignored = event.kind === "down" && event.isPrimary && (event.pointerType !== "touch" || event.onToggle);
+	const step = ignored ? { state: IDLE, swallowed: false } : stepPress(state, event, PORTRAIT_PRESS);
+	return { state: step.state, showArt: step.state.phase === "held", swallowed: step.swallowed };
+}

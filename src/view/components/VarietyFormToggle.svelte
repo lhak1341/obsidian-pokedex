@@ -48,7 +48,8 @@
 	right on the portrait) — Mega takes bottom-left, Gigantamax bottom-right,
 	so a species with both (e.g. Venusaur/Charizard/Blastoise) can show both
 	toggles without overlap. Multiple forms (Charizard/Mewtwo's Mega X/Y
-	pair) lay out left-to-right from the corner. */
+	pair) lay out left-to-right from the corner. Below a 600px pane
+	PortraitPanel moves both to the top corners (#31). */
 	.variety-form-toggle {
 		position: absolute;
 		bottom: 8px;

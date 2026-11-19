@@ -41,7 +41,8 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   has a default (an empty `<td>`, a bare icon chip), so `tableColumns.test.ts` and `cardView.test.ts` scan the
   templates (imported with `?raw`) for one branch per `custom` value.
 - `vitest.config.ts` has no Svelte plugin or jsdom, so a `.svelte.ts` rune module (`infoPopover.svelte.ts`,
-  `quickJumpDropdown.svelte.ts`) can't be tested (the Info popover's pin rules are therefore `utils/infoPopoverPin.ts`).
+  `quickJumpDropdown.svelte.ts`) can't be tested (the Info popover's pin rules are therefore `utils/infoPopoverPin.ts`;
+  press and hold's are `utils/pressHold.ts`, bound by `view/favoriteMenu.ts` and the portrait's `view/portraitPress.ts`).
   Put the branching in `utils/` and inject the DOM-bound piece: `resolvePortraitScale(…, measure)` takes DetailScreen's
   `measurePortrait`, and the decode's memo is `contentBounds = memoizeByCachePath(decode)` (`imageBounds.ts`, read by
   `contentScale` and Card view's `fitSprite`). ADR-0003 covers adding jsdom itself.
