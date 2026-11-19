@@ -40,6 +40,13 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   screens; the table takes the set, the detail screen takes its one `isFavorite`, both take
   `onToggleFavorite` and draw `FavoriteToggle.svelte`, so a toggle on one shows on the other with no reload. A new layout
   (Card view) reads the same props; it must not keep its own copy.
+- The browse screen is one list drawn two ways. `TableScreen.svelte` owns filters (search included), the Fields
+  selection and one `SortState`, and renders either the `<table>` or `CardGrid.svelte` from the same `visibleRows`,
+  so a layout switch keeps all of them; both sort through `nextSort` and reset through `sortAfterFieldsChange`.
+  `PokedexApp` owns the layout per width class (`utils/browseLayout.ts`), fed by a `ResizeObserver` on the leaf
+  (`PokedexView` passes `containerEl`). Card view's derivations (corners, stat strip, sort chips, grid columns,
+  sprite fit) are pure in `utils/cardView.ts`; `CardGrid` keeps only drawing glue (an EV yield as one dot per point, and
+  the canvas-centred placement of a sprite whose bounds are not decoded yet).
 - Fields (`utils/fields.ts`, `FIELDS`) are `{ render }` text Fields or `{ custom: CustomCell }`
   Fields the layout draws itself; the table's width/floor/alignment per Field is
   `TABLE_GEOMETRY` in `utils/tableColumns.ts` (keyed by `FieldKey`), joined as `TABLE_COLUMNS`. TableScreen
@@ -51,7 +58,7 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   `tableColumns.test.ts` scans the template for one branch per `custom` value in
   `FIELDS` (imports the template with `?raw`, see root CLAUDE.md).
 - `tsc` (`bun run typecheck`) skips `.svelte` files and the build only catches compile errors, so after renaming or removing a field/export, grep `src/**/*.svelte` for the old name by hand. A stale use builds clean and reads `undefined` live.
-- `vitest.config.ts` has no Svelte plugin or jsdom, so a `.svelte.ts` rune module (`infoPopover.svelte.ts`, `quickJumpDropdown.svelte.ts`) can't be tested (the Info popover's pin rules are therefore `utils/infoPopoverPin.ts`, tested there). Put the branching in `utils/` and inject the DOM-bound piece: `resolvePortraitScale(…, measure)` takes a `measure` (DetailScreen's `measurePortrait`, over `contentScale`), and `contentScale`'s memo is `memoizeByCachePath(decode)`. ADR-0003 covers adding jsdom itself.
+- `vitest.config.ts` has no Svelte plugin or jsdom, so a `.svelte.ts` rune module (`infoPopover.svelte.ts`, `quickJumpDropdown.svelte.ts`) can't be tested (the Info popover's pin rules are therefore `utils/infoPopoverPin.ts`, tested there). Put the branching in `utils/` and inject the DOM-bound piece: `resolvePortraitScale(…, measure)` takes a `measure` (DetailScreen's `measurePortrait`, over `contentScale`), and the decode's memo is `contentBounds = memoizeByCachePath(decode)` (`imageBounds.ts`; `contentScale` and Card view's `fitSprite` both read it). ADR-0003 covers adding jsdom itself.
 
 Adding a generation stales cached Moves/Flavor Text and needs a checklist walk — see
 `docs/multi-gen-expansion-plan.md`'s Recipe section, not a bespoke fix here.
@@ -138,7 +145,7 @@ layout that frames an image tightly must size and centre it by its alpha bbox, n
   SVGs from rendered table headers, inlines them, or harvests them from a remount with the
   setting flipped in memory only (`useTypeIcons` for type icons: badge mode renders none).
 - A `$state` field seeded once via `untrack(() => initialX)` (TableScreen.svelte's
-  `visibleFieldKeys`, `sortColumn`; PokedexApp.svelte's `favoriteIds`) never re-seeds when its prop changes —
+  `visibleFieldKeys`, `sort`; PokedexApp.svelte's `favoriteIds`, `layouts`) never re-seeds when its prop changes —
   it owns the value locally and only pushes out via a callback. Verifying one live via eval
   needs a real remount (force `saveSettings()`'s refresh, or the leaf swap above), not just
   mutating `plugin.settings.X` in place.

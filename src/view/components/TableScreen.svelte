@@ -6,7 +6,8 @@
 	import { describeEncounters } from "../../utils/encounters";
 	import { filterHeldItemsForGen } from "../../utils/heldItemGen";
 	import { formatDexNumber, formatItemName, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
-	import { sortPokemon, type SortColumn, type SortDirection } from "../../utils/sortPokemon";
+	import type { BrowseLayout } from "../../utils/browseLayout";
+	import { nextSort, sortPokemon, type SortColumn, type SortState } from "../../utils/sortPokemon";
 	import { scopeRowsToGen } from "../../utils/stats";
 	import { FIELDS, formatEvYield, isStatField, sortAfterFieldsChange } from "../../utils/fields";
 	import { TABLE_COLUMNS } from "../../utils/tableColumns";
@@ -14,6 +15,7 @@
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
 	import { createInfoDescription } from "../infoDescription.svelte";
 	import { createInfoPopover } from "../infoPopover.svelte";
+	import CardGrid from "./CardGrid.svelte";
 	import EvChips from "./EvChips.svelte";
 	import FavoriteToggle from "./FavoriteToggle.svelte";
 	import FilterBar from "./FilterBar.svelte";
@@ -23,7 +25,7 @@
 
 	let {
 		rows, density, defaultSortColumn, initialVisibleFields, useTypeIcons, repository, activeGen,
-		favoriteIds, onFieldsChange, onToggleFavorite, onSelect,
+		favoriteIds, layout, onLayoutChange, onFieldsChange, onToggleFavorite, onSelect,
 	}: {
 		rows: PokedexTableRow[];
 		density: "compact" | "comfortable";
@@ -33,6 +35,10 @@
 		repository: PokedexRepository;
 		activeGen: number;
 		favoriteIds: ReadonlySet<number>;
+		// Table or Card view for this pane's width class (PokedexApp owns the
+		// choice per width class; the toggle below only asks for a change).
+		layout: BrowseLayout;
+		onLayoutChange: (layout: BrowseLayout) => void;
 		onFieldsChange: (fields: string[]) => void;
 		onToggleFavorite: (id: number) => void;
 		onSelect: (id: number) => void;
@@ -91,6 +97,10 @@
 		previewPos = null;
 	}
 
+	// This component is the browse screen's owner: filters (search included),
+	// the Fields selection and the sort live here, and both layouts read them,
+	// so switching between the table and Card view never re-sorts or clears a
+	// filter (#22's review). It is one list drawn two ways.
 	let filters = $state({ ...EMPTY_FILTERS, statRanges: {} });
 	// Only the initial value seeds local state — same reasoning as
 	// defaultSortColumn below, this shouldn't get clobbered by prop identity
@@ -98,8 +108,8 @@
 	let visibleFieldKeys = $state(new Set(untrack(() => initialVisibleFields)));
 	// Only the initial value of defaultSortColumn seeds local sort state —
 	// the user's in-table sort choice shouldn't get clobbered if it changes.
-	let sortColumn = $state<SortColumn>(untrack(() => defaultSortColumn));
-	let sortDirection = $state<SortDirection>("asc");
+	// Table headers and Card view's sort chips both go through nextSort.
+	let sort = $state<SortState>({ column: untrack(() => defaultSortColumn), direction: "asc" });
 
 	const abilityOptions = $derived(
 		[...new Set(rows.flatMap((r) => r.abilityNames))].sort(),
@@ -109,7 +119,7 @@
 	// the detail page shows — see scopeRowsToGen.
 	const scopedRows = $derived(scopeRowsToGen(rows, activeGen));
 	const visibleRows = $derived(
-		sortPokemon(filterPokemon(scopedRows, filters, { favoriteIds, activeGen }), sortColumn, sortDirection),
+		sortPokemon(filterPokemon(scopedRows, filters, { favoriteIds, activeGen }), sort.column, sort.direction),
 	);
 	const activeColumns = $derived(
 		TABLE_COLUMNS.filter((col) => visibleFieldKeys.has(col.key)),
@@ -132,17 +142,12 @@
 	const typeColWidth = $derived(useTypeIcons ? { pct: "6%", min: "76px" } : { pct: "10%", min: "168px" });
 
 	function setSort(column: SortColumn) {
-		if (sortColumn === column) {
-			sortDirection = sortDirection === "asc" ? "desc" : "asc";
-		} else {
-			sortColumn = column;
-			sortDirection = "asc";
-		}
+		sort = nextSort(sort, column);
 	}
 
 	function sortIndicator(column: SortColumn): string {
-		if (sortColumn !== column) return "";
-		return sortDirection === "asc" ? " ^" : " v";
+		if (sort.column !== column) return "";
+		return sort.direction === "asc" ? " ^" : " v";
 	}
 
 	function toggleField(key: string) {
@@ -150,11 +155,9 @@
 		if (next.has(key)) next.delete(key);
 		else next.add(key);
 		visibleFieldKeys = next;
-		// Never leave the list sorted by a Field that is no longer shown.
-		({ column: sortColumn, direction: sortDirection } = sortAfterFieldsChange(
-			{ column: sortColumn, direction: sortDirection },
-			next,
-		));
+		// Never leave the list sorted by a Field that is no longer shown, in
+		// either layout.
+		sort = sortAfterFieldsChange(sort, next);
 		onFieldsChange([...next]);
 	}
 
@@ -175,153 +178,187 @@
 <div class="table-screen">
 	<FilterBar bind:filters {abilityOptions} {useTypeIcons} {rows} onQuickSelect={onSelect} />
 
-	<details class="fields-menu">
-		<summary>
-			<Icon name="list-checks" size={14} strokeWidth={2} />
-			<span>Fields</span>
-		</summary>
-		<div class="fields-list">
-			<div class="fields-section">
-				<div class="fields-section-label">Stats</div>
-				<div class="fields-grid fields-grid-stats">
-					{#each FIELDS.filter(isStatField) as field (field.key)}
-						<label class="fields-checkbox">
-							<input
-								type="checkbox"
-								checked={visibleFieldKeys.has(field.key)}
-								onchange={() => toggleField(field.key)}
-							/>
-							{field.label}
-						</label>
-					{/each}
+	<div class="browse-toolbar">
+		<details class="fields-menu">
+			<summary>
+				<Icon name="list-checks" size={14} strokeWidth={2} />
+				<span>Fields</span>
+			</summary>
+			<div class="fields-list">
+				<div class="fields-section">
+					<div class="fields-section-label">Stats</div>
+					<div class="fields-grid fields-grid-stats">
+						{#each FIELDS.filter(isStatField) as field (field.key)}
+							<label class="fields-checkbox">
+								<input
+									type="checkbox"
+									checked={visibleFieldKeys.has(field.key)}
+									onchange={() => toggleField(field.key)}
+								/>
+								{field.label}
+							</label>
+						{/each}
+					</div>
+				</div>
+				<div class="fields-section">
+					<div class="fields-section-label">Other</div>
+					<div class="fields-grid fields-grid-other">
+						{#each FIELDS.filter((f) => !isStatField(f)) as field (field.key)}
+							<label class="fields-checkbox">
+								<input
+									type="checkbox"
+									checked={visibleFieldKeys.has(field.key)}
+									onchange={() => toggleField(field.key)}
+								/>
+								<Icon name={field.icon ?? "circle"} size={13} strokeWidth={2} />
+								{field.label}
+							</label>
+						{/each}
+					</div>
 				</div>
 			</div>
-			<div class="fields-section">
-				<div class="fields-section-label">Other</div>
-				<div class="fields-grid fields-grid-other">
-					{#each FIELDS.filter((f) => !isStatField(f)) as field (field.key)}
-						<label class="fields-checkbox">
-							<input
-								type="checkbox"
-								checked={visibleFieldKeys.has(field.key)}
-								onchange={() => toggleField(field.key)}
-							/>
-							<Icon name={field.icon ?? "circle"} size={13} strokeWidth={2} />
-							{field.label}
-						</label>
-					{/each}
-				</div>
-			</div>
+		</details>
+		<div class="layout-toggle" role="group" aria-label="Layout">
+			<button
+				type="button"
+				class="layout-toggle-item"
+				aria-label="Table"
+				aria-pressed={layout === "table"}
+				onclick={() => onLayoutChange("table")}
+			>
+				<Icon name="table-2" size={14} strokeWidth={2} />
+			</button>
+			<button
+				type="button"
+				class="layout-toggle-item"
+				aria-label="Card view"
+				aria-pressed={layout === "card"}
+				onclick={() => onLayoutChange("card")}
+			>
+				<Icon name="layout-grid" size={14} strokeWidth={2} />
+			</button>
 		</div>
-	</details>
+	</div>
 
 	<p class="result-count">{visibleRows.length} of {rows.length} Pokemon</p>
 
-	<div class="table-wrap">
-		<table class:compact={density === "compact"}>
-			<colgroup>
-				<col style:width="4%" />
-				<col style:width={spriteColWidth.pct} />
-				<col style:width="25%" />
-				<col style:width={typeColWidth.pct} />
-				{#each activeColumns as col (col.key)}
-					<col style:width={col.widthPercent} />
-				{/each}
-			</colgroup>
-			<thead>
-				<tr>
-					<th style:min-width="60px" onclick={() => setSort("id")}>No.{sortIndicator("id")}</th>
-					<th class="center" style:min-width={spriteColWidth.min}>Sprite</th>
-					<th style:min-width="20ch" onclick={() => setSort("name")}>Name{sortIndicator("name")}</th>
-					<th style:min-width={typeColWidth.min}>Type</th>
+	{#if layout === "card"}
+		<CardGrid
+			rows={visibleRows}
+			visibleFields={visibleFieldKeys}
+			{favoriteIds}
+			{sort}
+			{repository}
+			onSort={setSort}
+			{onSelect}
+		/>
+	{:else}
+		<div class="table-wrap">
+			<table class:compact={density === "compact"}>
+				<colgroup>
+					<col style:width="4%" />
+					<col style:width={spriteColWidth.pct} />
+					<col style:width="25%" />
+					<col style:width={typeColWidth.pct} />
 					{#each activeColumns as col (col.key)}
-						<th
-							class:center={!!col.icon}
-							class:right={col.align === "right"}
-							style:min-width={col.minWidth}
-							onclick={() => col.sortKey && setSort(col.sortKey)}
-							title={col.label}
-						>
-							{#if col.icon}
-								<Icon name={col.icon} />
-							{:else}
-								{col.label}
-							{/if}
-							{col.sortKey ? sortIndicator(col.sortKey) : ""}
-						</th>
+						<col style:width={col.widthPercent} />
 					{/each}
-				</tr>
-			</thead>
-			<tbody>
-				{#each visibleRows as row (row.id)}
-					<tr onclick={() => onSelect(row.id)} oncontextmenu={(e) => showRowMenu(e, row)}>
-						<td>{formatDexNumber(row.dexNumber)}</td>
-						<td
-							class="center sprite-cell"
-							onpointerenter={(e) => {
-								// The Art preview is a mouse-hover affordance; a tap on the
-								// sprite opens the detail screen and nothing else.
-								if (e.pointerType === "mouse") showPreview(row.id, e.currentTarget);
-							}}
-							onpointerleave={hidePreview}
-						>
-							{#if row.spriteDataUri}
-								<img src={row.spriteDataUri} alt={formatPokemonDisplayName(row)} class="sprite-thumb" />
-							{/if}
-						</td>
-						<td class="name-cell">
-							{formatPokemonDisplayName(row)}<FavoriteToggle
-								active={favoriteIds.has(row.id)}
-								onToggle={() => onToggleFavorite(row.id)}
-							/>
-						</td>
-						<td class="info-target-cell">
-							{#each row.types as type (type)}
-								{#if useTypeIcons}
-									<span class="type-icon-target pkdx-info-target" {...typePopover.target(type)}>
-										<TypeBadge {type} useIcon />
-									</span>
-								{:else}
-									<TypeBadge {type} />
-								{/if}
-							{/each}
-						</td>
+				</colgroup>
+				<thead>
+					<tr>
+						<th style:min-width="60px" onclick={() => setSort("id")}>No.{sortIndicator("id")}</th>
+						<th class="center" style:min-width={spriteColWidth.min}>Sprite</th>
+						<th style:min-width="20ch" onclick={() => setSort("name")}>Name{sortIndicator("name")}</th>
+						<th style:min-width={typeColWidth.min}>Type</th>
 						{#each activeColumns as col (col.key)}
-							{#if col.custom}
-								{#if col.custom === "heldItems"}
-									{@const genItems = filterHeldItemsForGen(row.heldItemsAllGens, activeGen)}
-									<td class="info-target-cell">
-										{#if genItems.length === 0}
-											-
-										{:else}
-											{#each genItems as item (item.name)}
-												<span
-													class="held-item-name pkdx-info-target"
-													{...itemPopover.target(item.name, () => (openItemRarities = item.rarities))}
-												>{formatItemName(item.name)}</span>
-											{/each}
-										{/if}
-									</td>
-								{:else if col.custom === "encounters"}
-									{@const encounters = describeEncounters(row.encounterLocationsAllGens, activeGen)}
-									<td title={encounters.tooltip}>{encounters.isEmpty ? "-" : encounters.summary}</td>
-								{:else if col.custom === "ev"}
-									<td title={formatEvYield(row)}>
-										<EvChips evYield={row.evYield} />
-									</td>
+							<th
+								class:center={!!col.icon}
+								class:right={col.align === "right"}
+								style:min-width={col.minWidth}
+								onclick={() => col.sortKey && setSort(col.sortKey)}
+								title={col.label}
+							>
+								{#if col.icon}
+									<Icon name={col.icon} />
 								{:else}
-									<!-- A CustomCell with no branch above: keep the row aligned (tsc skips .svelte). -->
-									<td></td>
+									{col.label}
 								{/if}
-							{:else}
-								<td class:right={col.align === "right"}>{col.render(row)}</td>
-							{/if}
+								{col.sortKey ? sortIndicator(col.sortKey) : ""}
+							</th>
 						{/each}
 					</tr>
-				{/each}
-			</tbody>
-		</table>
-	</div>
+				</thead>
+				<tbody>
+					{#each visibleRows as row (row.id)}
+						<tr onclick={() => onSelect(row.id)} oncontextmenu={(e) => showRowMenu(e, row)}>
+							<td>{formatDexNumber(row.dexNumber)}</td>
+							<td
+								class="center sprite-cell"
+								onpointerenter={(e) => {
+									// The Art preview is a mouse-hover affordance; a tap on the
+									// sprite opens the detail screen and nothing else.
+									if (e.pointerType === "mouse") showPreview(row.id, e.currentTarget);
+								}}
+								onpointerleave={hidePreview}
+							>
+								{#if row.spriteDataUri}
+									<img src={row.spriteDataUri} alt={formatPokemonDisplayName(row)} class="sprite-thumb" />
+								{/if}
+							</td>
+							<td class="name-cell">
+								{formatPokemonDisplayName(row)}<FavoriteToggle
+									active={favoriteIds.has(row.id)}
+									onToggle={() => onToggleFavorite(row.id)}
+								/>
+							</td>
+							<td class="info-target-cell">
+								{#each row.types as type (type)}
+									{#if useTypeIcons}
+										<span class="type-icon-target pkdx-info-target" {...typePopover.target(type)}>
+											<TypeBadge {type} useIcon />
+										</span>
+									{:else}
+										<TypeBadge {type} />
+									{/if}
+								{/each}
+							</td>
+							{#each activeColumns as col (col.key)}
+								{#if col.custom}
+									{#if col.custom === "heldItems"}
+										{@const genItems = filterHeldItemsForGen(row.heldItemsAllGens, activeGen)}
+										<td class="info-target-cell">
+											{#if genItems.length === 0}
+												-
+											{:else}
+												{#each genItems as item (item.name)}
+													<span
+														class="held-item-name pkdx-info-target"
+														{...itemPopover.target(item.name, () => (openItemRarities = item.rarities))}
+													>{formatItemName(item.name)}</span>
+												{/each}
+											{/if}
+										</td>
+									{:else if col.custom === "encounters"}
+										{@const encounters = describeEncounters(row.encounterLocationsAllGens, activeGen)}
+										<td title={encounters.tooltip}>{encounters.isEmpty ? "-" : encounters.summary}</td>
+									{:else if col.custom === "ev"}
+										<td title={formatEvYield(row)}>
+											<EvChips evYield={row.evYield} />
+										</td>
+									{:else}
+										<!-- A CustomCell with no branch above: keep the row aligned (tsc skips .svelte). -->
+										<td></td>
+									{/if}
+								{:else}
+									<td class:right={col.align === "right"}>{col.render(row)}</td>
+								{/if}
+							{/each}
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+	{/if}
 
 	{#if hoveredSpriteId !== null && previewPos}
 		{@const hoveredRow = visibleRows.find((r) => r.id === hoveredSpriteId)}
@@ -351,9 +388,48 @@
 		font-size: 0.85em;
 		margin: 6px 0;
 	}
+	.browse-toolbar {
+		display: flex;
+		align-items: center;
+		gap: var(--lk-space-2);
+		margin-bottom: var(--lk-space-3);
+	}
 	.fields-menu {
 		position: relative;
-		margin-bottom: var(--lk-space-3);
+	}
+	/* Two icons, one pressed: the kit's segmented-control look (kit.css is not
+	in this bundle). button.layout-toggle-item restates what Obsidian's
+	button rules set, as button.filter-chip does (root CLAUDE.md, Styles). The
+	pressed segment takes a tint of the text, not --lk-surface-raised, which is
+	the view's own colour under Obsidian. */
+	.layout-toggle {
+		display: inline-flex;
+		gap: 2px;
+		padding: 2px;
+		border: 1px solid var(--lk-border);
+		border-radius: 6px;
+	}
+	button.layout-toggle-item {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		height: auto;
+		padding: 4px 8px;
+		border: none;
+		border-radius: 4px;
+		background: transparent;
+		box-shadow: none;
+		color: var(--lk-text-muted);
+		cursor: pointer;
+		transition: background-color var(--lk-duration-fast) ease-out, color var(--lk-duration-fast) ease-out;
+	}
+	button.layout-toggle-item:hover {
+		background: var(--lk-surface-hover);
+		color: var(--lk-text);
+	}
+	button.layout-toggle-item[aria-pressed="true"] {
+		background: color-mix(in srgb, var(--lk-text) 10%, transparent);
+		color: var(--lk-text);
 	}
 	.fields-menu summary {
 		display: inline-flex;

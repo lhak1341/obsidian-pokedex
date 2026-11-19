@@ -5,6 +5,7 @@ import { PokeApiClient } from "./data/PokeApiClient";
 import { PokedexRepository } from "./data/PokedexRepository";
 import type { PluginSettings } from "./data/types";
 import { DEFAULT_SETTINGS, PokedexSettingTab } from "./settings";
+import type { LayoutByWidthClass } from "./utils/browseLayout";
 import { hydrateSettings } from "./utils/settingsHydrate";
 import { PokedexView, VIEW_TYPE_POKEDEX } from "./view/PokedexView";
 
@@ -30,6 +31,7 @@ export default class PokedexPlugin extends Plugin {
 				() => this.settings,
 				(fields) => void this.setVisibleFields(fields),
 				(ids) => void this.setFavorites(ids),
+				(layouts) => void this.setLayoutByWidthClass(layouts),
 			),
 		);
 
@@ -76,6 +78,14 @@ export default class PokedexPlugin extends Plugin {
 	// already on screen.
 	async setFavorites(ids: number[]): Promise<void> {
 		this.settings.favoritePokemonIds = ids;
+		await this.saveData(this.settings);
+	}
+
+	// Same "persist without remounting" reasoning as setVisibleFields: the
+	// open view already shows the new layout. A new object, so another open
+	// Pokedex leaf re-reading it on a width-class change sees the new choice.
+	async setLayoutByWidthClass(layouts: LayoutByWidthClass): Promise<void> {
+		this.settings.layoutByWidthClass = { ...layouts };
 		await this.saveData(this.settings);
 	}
 

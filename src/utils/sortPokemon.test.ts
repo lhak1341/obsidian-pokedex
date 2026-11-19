@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PokedexTableRow } from "../data/types";
-import { sortPokemon } from "./sortPokemon";
+import { nextSort, sortPokemon } from "./sortPokemon";
 import { makeRow } from "../data/__fixtures__/rows";
 
 function row(id: number, name: string, speed: number, overrides: Partial<PokedexTableRow> = {}): PokedexTableRow {
@@ -67,5 +67,16 @@ describe("sortPokemon", () => {
 		];
 		expect(sortPokemon(regionalRows, "id", "asc").map((r) => r.id)).toEqual([1, 6, 19, 10091]);
 		expect(sortPokemon(regionalRows, "id", "desc").map((r) => r.id)).toEqual([19, 10091, 6, 1]);
+	});
+});
+
+describe("nextSort", () => {
+	it("a tap on the sorted column flips its direction", () => {
+		expect(nextSort({ column: "speed", direction: "asc" }, "speed")).toEqual({ column: "speed", direction: "desc" });
+		expect(nextSort({ column: "speed", direction: "desc" }, "speed")).toEqual({ column: "speed", direction: "asc" });
+	});
+
+	it("a tap on another column sorts by it ascending", () => {
+		expect(nextSort({ column: "speed", direction: "desc" }, "name")).toEqual({ column: "name", direction: "asc" });
 	});
 });

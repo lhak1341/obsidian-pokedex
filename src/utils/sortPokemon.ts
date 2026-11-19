@@ -17,6 +17,14 @@ export interface SortState {
 	direction: SortDirection;
 }
 
+// A tap on a sort control (a table header, a Card view sort chip): the sorted
+// column flips direction, any other column sorts ascending. One rule, so the
+// two layouts never disagree about what a second tap does.
+export function nextSort(sort: SortState, column: SortColumn): SortState {
+	if (sort.column === column) return { column, direction: sort.direction === "asc" ? "desc" : "asc" };
+	return { column, direction: "asc" };
+}
+
 function valueOf(row: PokedexTableRow, column: SortColumn): number | string {
 	switch (column) {
 		case "id": return row.dexNumber;

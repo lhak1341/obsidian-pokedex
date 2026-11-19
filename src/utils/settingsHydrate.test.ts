@@ -15,6 +15,7 @@ const DEFAULTS: PluginSettings = {
 	activeGen: 9,
 	favoritePokemonIds: [],
 	reduceMotion: false,
+	layoutByWidthClass: { narrow: "card", wide: "table" },
 };
 
 describe("hydrateSettings", () => {
@@ -35,6 +36,7 @@ describe("hydrateSettings", () => {
 			activeGen: 3,
 			favoritePokemonIds: [25, 6],
 			reduceMotion: true,
+			layoutByWidthClass: { narrow: "table", wide: "card" },
 		};
 		expect(hydrateSettings(saved, DEFAULTS)).toEqual(saved);
 	});
@@ -133,6 +135,33 @@ describe("hydrateSettings", () => {
 		expect(hydrateSettings({ reduceMotion: true }, DEFAULTS).reduceMotion).toBe(true);
 		const once = hydrateSettings({ reduceMotion: true }, DEFAULTS);
 		expect(hydrateSettings(JSON.parse(JSON.stringify(once)), DEFAULTS)).toEqual(once);
+	});
+
+	// #27: the browse layout per width class. An older data.json has none.
+	describe("layoutByWidthClass", () => {
+		it("gives an older data.json Card view on a Narrow pane and the table on a wide one", () => {
+			expect(hydrateSettings({}, DEFAULTS).layoutByWidthClass).toEqual({ narrow: "card", wide: "table" });
+		});
+
+		it("round-trips a saved choice", () => {
+			const once = hydrateSettings({ layoutByWidthClass: { narrow: "table", wide: "card" } }, DEFAULTS);
+			expect(once.layoutByWidthClass).toEqual({ narrow: "table", wide: "card" });
+			expect(hydrateSettings(JSON.parse(JSON.stringify(once)), DEFAULTS)).toEqual(once);
+		});
+
+		it.each([
+			["a non-object", "card", { narrow: "card", wide: "table" }],
+			["an unknown layout per class", { narrow: "list", wide: "card" }, { narrow: "card", wide: "card" }],
+			["a missing class", { wide: "card" }, { narrow: "card", wide: "card" }],
+		])("repairs %s, class by class", (_label, bad, expected) => {
+			expect(hydrateSettings({ layoutByWidthClass: bad }, DEFAULTS).layoutByWidthClass).toEqual(expected);
+		});
+
+		it("never aliases the defaults' object", () => {
+			const out = hydrateSettings(null, DEFAULTS);
+			out.layoutByWidthClass.narrow = "table";
+			expect(DEFAULTS.layoutByWidthClass.narrow).toBe("card");
+		});
 	});
 
 	it("drops unknown keys", () => {

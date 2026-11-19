@@ -1,3 +1,4 @@
+import type { ContentBounds } from "../utils/cardView";
 import { memoizeByCachePath } from "../utils/memoizeByCachePath";
 
 // Some official-artwork PNGs (PokeAPI's `other.official-artwork` sprites)
@@ -12,7 +13,10 @@ import { memoizeByCachePath } from "../utils/memoizeByCachePath";
 // gives DetailScreen a per-image "how much of its own canvas does the
 // character actually fill" number so it can shrink the outlier back down to
 // match its non-shiny counterpart (see resolvePortraitScale in utils/portrait.ts).
-function decode(url: string): Promise<number> {
+// The same decode serves Card view's tile (cardView.ts fitSprite), which
+// centres a sprite on its opaque box rather than its canvas. null: nothing
+// opaque in the image.
+function decode(url: string): Promise<ContentBounds | null> {
 	return new Promise((resolve, reject) => {
 		const img = new Image();
 		img.onload = () => {
@@ -21,7 +25,7 @@ function decode(url: string): Promise<number> {
 			canvas.height = img.naturalHeight;
 			const ctx = canvas.getContext("2d");
 			if (!ctx) {
-				resolve(1);
+				resolve(null);
 				return;
 			}
 			ctx.drawImage(img, 0, 0);
@@ -42,12 +46,17 @@ function decode(url: string): Promise<number> {
 				}
 			}
 			if (maxX < 0) {
-				resolve(1);
+				resolve(null);
 				return;
 			}
-			const contentSize = Math.max(maxX - minX + 1, maxY - minY + 1);
-			const canvasSize = Math.max(canvas.width, canvas.height);
-			resolve(contentSize / canvasSize);
+			resolve({
+				x: minX,
+				y: minY,
+				width: maxX - minX + 1,
+				height: maxY - minY + 1,
+				canvasWidth: canvas.width,
+				canvasHeight: canvas.height,
+			});
 		};
 		img.onerror = () => reject(new Error("image decode failed"));
 		img.src = url;
@@ -55,4 +64,12 @@ function decode(url: string): Promise<number> {
 }
 
 // Memoized by image cache path, never by URL (see memoizeByCachePath).
-export const contentScale = memoizeByCachePath(decode);
+export const contentBounds = memoizeByCachePath(decode);
+
+// How much of its own canvas the content fills (1 when nothing is opaque, or
+// no 2D context): the portrait's shrink-only correction reads this.
+export function contentScale(cachePath: string, url: string): Promise<number> {
+	return contentBounds(cachePath, url).then((b) =>
+		b ? Math.max(b.width, b.height) / Math.max(b.canvasWidth, b.canvasHeight) : 1
+	);
+}

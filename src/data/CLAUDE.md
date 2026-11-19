@@ -90,7 +90,7 @@ table rows, the hover preview and dex nav keep sprite URLs for the whole view mo
 may keep a detail's URLs across calls: `VarietyToggleState` re-asks on every select,
 `mega-forms/`/`gigantamax-forms/` store an image-free `VarietyFormSource` (ADR-0002 addendum),
 and `cacheRange` stores extras bytes without making URLs. `*DataUri` fields now hold blob URLs;
-`imagePathOf(url)` gives the cache path (`contentScale`'s memo key). A budget test's budget must
+`imagePathOf(url)` gives the cache path (`contentBounds`' memo key, `imageBounds.ts`). A budget test's budget must
 fit every image its assertion needs live at once: one `getEntryExtras` or form load is 3
 budgeted images in parallel, so a smaller budget evicts inside the call.
 

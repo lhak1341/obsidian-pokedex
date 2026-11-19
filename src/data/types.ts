@@ -1,4 +1,5 @@
 import type { FontRoleSettings } from "@lhak/style/obsidian-helpers/font-roles";
+import type { LayoutByWidthClass } from "../utils/browseLayout";
 
 // --- Raw PokeAPI response shapes (subset of fields we actually use) ---
 
@@ -480,4 +481,8 @@ export interface PluginSettings extends FontRoleSettings {
 	// for the OS's prefers-reduced-motion (stricter than the kit, which keeps
 	// colour fades there), so this is for someone who wants it in Pokedex only.
 	reduceMotion: boolean;
+	// The browse layout (table or Card view) each pane-width class last chose
+	// (#27, utils/browseLayout.ts). Saved through PokedexPlugin.setLayoutByWidthClass,
+	// which does not remount the view (same reasoning as visibleFields).
+	layoutByWidthClass: LayoutByWidthClass;
 }

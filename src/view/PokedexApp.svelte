@@ -3,6 +3,9 @@
 	import { onDestroy, onMount, tick, untrack } from "svelte";
 	import type { PokedexRepository } from "../data/PokedexRepository";
 	import type { PluginSettings } from "../data/types";
+	import {
+		type BrowseLayout, chooseLayout, type LayoutByWidthClass, widthClass, type WidthClass,
+	} from "../utils/browseLayout";
 	import { resolveGenerationScope } from "../utils/generationScope";
 	import { describePartialLoadOutcome, describeRetryOutcome } from "../utils/loadNotices";
 	import type { DetailNavigationState, NavRecord, ScrollInstruction } from "./DetailNavigationState";
@@ -11,10 +14,16 @@
 	import { emptyLoadSnapshot, type LoadSnapshot, PokedexLoadState } from "./PokedexLoadState";
 	import TableScreen from "./components/TableScreen.svelte";
 
-	let { repository, settings, onFieldsChange, onFavoritesChange, navState, onNavigate, onStepHistory }: {
+	let {
+		repository, settings, leafEl, onFieldsChange, onFavoritesChange, onLayoutChange, navState, onNavigate,
+		onStepHistory,
+	}: {
 		repository: PokedexRepository;
 		settings: PluginSettings;
+		// The Pokedex leaf, whose width decides the width class.
+		leafEl: HTMLElement;
 		onFieldsChange: (fields: string[]) => void;
+		onLayoutChange: (layouts: LayoutByWidthClass) => void;
 		onFavoritesChange: (ids: number[]) => void;
 		navState: DetailNavigationState;
 		onNavigate: (record: NavRecord) => void;
@@ -35,6 +44,49 @@
 		favoriteIds = next;
 		onFavoritesChange([...next]);
 	}
+
+	// The browse layout follows the Pokedex leaf's width, not the device's: a
+	// ResizeObserver on the leaf feeds widthClass, and each width class shows
+	// its own saved choice, so resizing across 600px switches to that class's
+	// layout. The toggle writes only the current class (chooseLayout). Saved
+	// through onLayoutChange (PokedexPlugin.setLayoutByWidthClass), which does
+	// not remount. settings is the plugin's live object, so a toggle builds
+	// from it and a class change re-reads it: with two Pokedex leaves open, one
+	// never saves a stale copy over the other's choice for the other class.
+	let layouts = $state<LayoutByWidthClass>(untrack(() => settings.layoutByWidthClass));
+	// Measured at mount, so a Narrow pane never draws the table first. A hidden
+	// leaf (a background tab) measures 0 and starts wide until it has a width.
+	let paneClass = $state<WidthClass>(
+		untrack(() => {
+			const width = leafEl.getBoundingClientRect().width;
+			return width > 0 ? widthClass(width) : "wide";
+		}),
+	);
+	const layout = $derived(layouts[paneClass]);
+
+	function setLayout(next: BrowseLayout) {
+		layouts = chooseLayout(settings.layoutByWidthClass, paneClass, next);
+		onLayoutChange(layouts);
+	}
+
+	function onLeafResize(width: number) {
+		// A hidden leaf (a background tab) measures 0: keep its class until it
+		// has a real width.
+		if (width <= 0) return;
+		const next = widthClass(width);
+		if (next === paneClass) return;
+		layouts = settings.layoutByWidthClass;
+		paneClass = next;
+	}
+
+	onMount(() => {
+		const observer = new ResizeObserver((entries) => {
+			const entry = entries[entries.length - 1];
+			onLeafResize(entry.borderBoxSize?.[0]?.inlineSize ?? entry.contentRect.width);
+		});
+		observer.observe(leafEl);
+		return () => observer.disconnect();
+	});
 
 	// View history is the tab's own Obsidian navigation history (CONTEXT.md).
 	// PokedexView owns navState and the leaf: a new screen goes out through
@@ -194,6 +246,8 @@
 				{repository}
 				activeGen={settings.activeGen}
 				{favoriteIds}
+				{layout}
+				onLayoutChange={setLayout}
 				{onFieldsChange}
 				onToggleFavorite={toggleFavorite}
 				onSelect={openDetail}

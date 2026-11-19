@@ -3,16 +3,28 @@
 import { parseFontRoleSettings } from "@lhak/style/obsidian-helpers/font-roles";
 import { GENERATIONS } from "../data/constants";
 import type { PluginSettings } from "../data/types";
+import type { BrowseLayout, LayoutByWidthClass } from "./browseLayout";
 
 // One Record per closed set, so a new union member without a row fails
 // typecheck here instead of being rejected as "unknown" at load.
 const SPRITE_STYLES: Record<PluginSettings["spriteStyle"], true> = { "official-artwork": true, sprite: true };
 const GRID_DENSITIES: Record<PluginSettings["gridDensity"], true> = { compact: true, comfortable: true };
 const SORT_COLUMNS: Record<PluginSettings["defaultSortColumn"], true> = { id: true, name: true };
+const BROWSE_LAYOUTS: Record<BrowseLayout, true> = { table: true, card: true };
 
 function oneOf<T extends string>(value: unknown, allowed: readonly T[] | Record<T, true>, fallback: T): T {
 	const list = Array.isArray(allowed) ? (allowed as readonly T[]) : (Object.keys(allowed) as T[]);
 	return typeof value === "string" && (list as readonly string[]).includes(value) ? (value as T) : fallback;
+}
+
+// Each width class is repaired on its own, so one bad entry does not reset the
+// other class's choice.
+function layoutByWidthClass(value: unknown, fallback: LayoutByWidthClass): LayoutByWidthClass {
+	const v = (typeof value === "object" && value !== null ? value : {}) as Record<string, unknown>;
+	return {
+		narrow: oneOf(v.narrow, BROWSE_LAYOUTS, fallback.narrow),
+		wide: oneOf(v.wide, BROWSE_LAYOUTS, fallback.wide),
+	};
 }
 
 function numberArray(value: unknown, fallback: number[]): number[] {
@@ -64,5 +76,6 @@ export function hydrateSettings(saved: unknown, defaults: PluginSettings): Plugi
 			typeof s.activeGen === "number" && knownGenerationIds.includes(s.activeGen) ? s.activeGen : defaults.activeGen,
 		favoritePokemonIds: numberArray(s.favoritePokemonIds, defaults.favoritePokemonIds),
 		reduceMotion: typeof s.reduceMotion === "boolean" ? s.reduceMotion : defaults.reduceMotion,
+		layoutByWidthClass: layoutByWidthClass(s.layoutByWidthClass, defaults.layoutByWidthClass),
 	};
 }

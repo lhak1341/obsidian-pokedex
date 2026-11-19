@@ -1,5 +1,6 @@
 import { Notice, PluginSettingTab, Setting, type ButtonComponent, type SettingDefinitionItem } from "obsidian";
 import { DEFAULT_ENABLED_GENERATIONS, GENERATIONS } from "./data/constants";
+import { DEFAULT_LAYOUT_BY_WIDTH_CLASS } from "./utils/browseLayout";
 import { DEFAULT_VISIBLE_FIELDS } from "./utils/fields";
 import { addFontRoleSetting, DEFAULT_FONT_ROLE_SETTINGS, type FontRole } from "@lhak/style/obsidian-helpers";
 import type { PluginSettings } from "./data/types";
@@ -23,6 +24,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	activeGen: Math.max(...GENERATIONS.map((g) => g.id)),
 	favoritePokemonIds: [],
 	reduceMotion: false,
+	layoutByWidthClass: { ...DEFAULT_LAYOUT_BY_WIDTH_CLASS },
 };
 
 export class PokedexSettingTab extends PluginSettingTab {
