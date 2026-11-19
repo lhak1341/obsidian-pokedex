@@ -4,7 +4,7 @@
 	import type { PokedexTableRow } from "../../data/types";
 	import { EMPTY_FILTERS, filterPokemon } from "../../utils/filterPokemon";
 	import { describeEncounters } from "../../utils/encounters";
-	import { filterHeldItemsForGen } from "../../utils/heldItemGen";
+	import { filterHeldItemsForGen, type HeldItemForGen } from "../../utils/heldItemGen";
 	import { formatDexNumber, formatItemName, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import type { BrowseLayout } from "../../utils/browseLayout";
 	import { nextSort, sortPokemon, type SortColumn, type SortState } from "../../utils/sortPokemon";
@@ -58,6 +58,11 @@
 	// carry a different % on a different row, so this tracks whichever
 	// row/item's popover is open, set by that target's onOpen.
 	let openItemRarities = $state<number[]>([]);
+	// One held item's popover target, for the table cell and Card view's tap
+	// panel alike, so both show the same box (rarity included).
+	function heldItemTarget(item: HeldItemForGen) {
+		return itemPopover.target(item.name, () => (openItemRarities = item.rarities));
+	}
 
 	// TypeBadge's icon mode already carries a native `title` for the type
 	// name, but a native title tooltip is unverifiable through this repo's
@@ -246,8 +251,11 @@
 			{favoriteIds}
 			{sort}
 			{repository}
+			{activeGen}
 			onSort={setSort}
 			{onSelect}
+			{onToggleFavorite}
+			{heldItemTarget}
 		/>
 	{:else}
 		<div class="table-wrap">
@@ -330,7 +338,7 @@
 												{#each genItems as item (item.name)}
 													<span
 														class="held-item-name pkdx-info-target"
-														{...itemPopover.target(item.name, () => (openItemRarities = item.rarities))}
+														{...heldItemTarget(item)}
 													>{formatItemName(item.name)}</span>
 												{/each}
 											{/if}

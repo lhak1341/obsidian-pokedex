@@ -8,10 +8,15 @@ import type { PokedexTableRow } from "../data/types";
 // Returns the same `{ name, rarities: number[] }[]` shape the table cell and
 // HeldItemsPanel already render, now carrying only the values, since the
 // generation tag has done its job by this point.
+export interface HeldItemForGen {
+	name: string;
+	rarities: number[];
+}
+
 export function filterHeldItemsForGen(
 	heldItemsAllGens: PokedexTableRow["heldItemsAllGens"],
 	activeGen: number,
-): { name: string; rarities: number[] }[] {
+): HeldItemForGen[] {
 	return heldItemsAllGens.flatMap((item) => {
 		const rarities = item.rarities.filter((r) => r.generationId === activeGen).map((r) => r.value);
 		return rarities.length === 0 ? [] : [{ name: item.name, rarities }];

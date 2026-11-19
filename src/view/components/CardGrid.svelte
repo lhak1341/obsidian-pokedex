@@ -1,32 +1,45 @@
 <script lang="ts">
+	import { tick } from "svelte";
 	import { SvelteMap } from "svelte/reactivity";
 	import { STAT_COLORS, TYPE_COLORS } from "../../data/constants";
 	import type { PokedexRepository } from "../../data/PokedexRepository";
 	import type { PokedexTableRow } from "../../data/types";
 	import {
-		CARD_GRID_GAP, cardGrid, type ContentBounds, fitSprite, sortChips, type SpritePlacement, statStrip, tileCorners,
+		CARD_GRID_GAP, cardGrid, type ContentBounds, fitSprite, panelChips, panelPlacement, panelStats, sortChips,
+		type SpritePlacement, statStrip, tileCorners,
 	} from "../../utils/cardView";
 	import { formatEvYield, STAT_LABEL_BY_KEY } from "../../utils/fields";
 	import { formatDexNumber, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import type { SortColumn, SortState } from "../../utils/sortPokemon";
 	import { totalStat } from "../../utils/stats";
+	import type { HeldItemForGen } from "../../utils/heldItemGen";
 	import { contentBounds } from "../imageBounds";
+	import type { InfoTargetProps } from "../infoPopover.svelte";
+	import CardPanel from "./CardPanel.svelte";
 
 	// Card view (CONTEXT.md): the browse screen's rows drawn as a grid of tiles.
-	// It owns nothing but its drawing: rows (already filtered, sorted and Active
+	// It owns its drawing and which tap panel is open, nothing else: rows (already filtered, sorted and Active
 	// Gen scoped), the Fields selection, the sort and favourites all come from
 	// TableScreen, the browse screen's owner, so a switch to or from the table
 	// keeps them. The tile's ★ is display-only (no accidental toggles while
 	// scrolling); favouriting stays on the table's asterisk, the detail screen
-	// and, in #28, the tap panel.
-	let { rows, visibleFields, favoriteIds, sort, repository, onSort, onSelect }: {
+	// and the tap panel's asterisk. A tile tap opens the tap panel; the panel's
+	// "Open ›" opens the detail screen (onSelect).
+	let {
+		rows, visibleFields, favoriteIds, sort, repository, activeGen, onSort, onSelect, onToggleFavorite, heldItemTarget,
+	}: {
 		rows: PokedexTableRow[];
 		visibleFields: ReadonlySet<string>;
 		favoriteIds: ReadonlySet<number>;
 		sort: SortState;
 		repository: PokedexRepository;
+		activeGen: number;
 		onSort: (column: SortColumn) => void;
 		onSelect: (id: number) => void;
+		onToggleFavorite: (id: number) => void;
+		// TableScreen's held-item Info popover, so its box (rarity included)
+		// is the table's own and draws over the panel.
+		heldItemTarget: (item: HeldItemForGen) => InfoTargetProps;
 	} = $props();
 
 	let gridWidth = $state(0);
@@ -34,6 +47,37 @@
 	const corners = $derived(tileCorners(visibleFields));
 	const strip = $derived(statStrip(rows, visibleFields));
 	const chips = $derived(sortChips(visibleFields));
+	const panelStatCols = $derived(panelStats(visibleFields));
+	const panelFieldChips = $derived(panelChips(visibleFields));
+
+	// The tap panel is an accordion: one open at a time, under its tile's grid
+	// row. Held by id, so a re-sort or filter moves it with its tile; a filter
+	// that drops the tile hides it.
+	let openId = $state<number | null>(null);
+	// Unique per grid: two Pokedex leaves can each have a panel open.
+	const gridUid = $props.id();
+	const panelId = `pkdx-card-panel-${gridUid}`;
+	const openIndex = $derived(openId === null ? -1 : rows.findIndex((r) => r.id === openId));
+	const panelAfter = $derived(
+		openIndex < 0 ? -1 : panelPlacement(openIndex, grid.columns, rows.length).afterIndex,
+	);
+
+	// Opening another tile closes the open panel at once (no closing motion:
+	// a collapse running while the new one grows would move the tapped tile
+	// twice). When the closed panel sat above the tapped tile, everything
+	// below it moves up by its height; this scrolls by the same amount so the
+	// tapped tile stays under the finger. Done by hand, not by the browser's
+	// CSS scroll anchoring (overflow-anchor), which picks its own anchor and
+	// is missing on older iOS WebKit; the grid opts out of it so the two never
+	// both correct.
+	async function toggle(id: number, tile: HTMLElement) {
+		const scroller = tile.closest<HTMLElement>(".pokedex-view");
+		const before = tile.getBoundingClientRect().top;
+		openId = openId === id ? null : id;
+		await tick();
+		const shift = tile.getBoundingClientRect().top - before;
+		if (scroller && shift !== 0) scroller.scrollTop += shift;
+	}
 
 	// Each sprite's opaque box, by URL, so the tile can centre the content
 	// rather than the canvas. Decoded once per cache path (contentBounds'
@@ -62,7 +106,7 @@
 	function onTileKeydown(e: KeyboardEvent, id: number) {
 		if (e.key !== "Enter" && e.key !== " ") return;
 		e.preventDefault();
-		onSelect(id);
+		void toggle(id, e.currentTarget as HTMLElement);
 	}
 
 	// One dot per EV point, in its stat's colour.
@@ -90,15 +134,19 @@
 	bind:clientWidth={gridWidth}
 	style:grid-template-columns="repeat({grid.columns}, minmax(0, 1fr))"
 	style:gap="{CARD_GRID_GAP * 2}px {CARD_GRID_GAP}px"
+	style:--pkdx-row-gap="{CARD_GRID_GAP * 2}px"
+	style:--pkdx-panel-gap="{CARD_GRID_GAP}px"
 >
-	{#each rows as row (row.id)}
+	{#each rows as row, i (row.id)}
 		{@const [typeA, typeB = typeA] = row.types}
 		<div
 			class="card-tile"
 			role="button"
 			tabindex="0"
 			aria-label={formatPokemonDisplayName(row)}
-			onclick={() => onSelect(row.id)}
+			aria-expanded={openId === row.id}
+			aria-controls={openId === row.id ? panelId : undefined}
+			onclick={(e) => void toggle(row.id, e.currentTarget)}
 			onkeydown={(e) => onTileKeydown(e, row.id)}
 		>
 			<div
@@ -151,6 +199,24 @@
 				</div>
 			{/if}
 		</div>
+		{#if i === panelAfter && openIndex >= 0}
+			{@const open = rows[openIndex]}
+			<!-- Keyed by id: switching tiles mounts a fresh panel, so it grows again. -->
+			{#key open.id}
+				<CardPanel
+					id={panelId}
+					row={open}
+					stats={panelStatCols}
+					chips={panelFieldChips}
+					barHeight={strip.height}
+					{activeGen}
+					favorite={favoriteIds.has(open.id)}
+					onToggleFavorite={() => onToggleFavorite(open.id)}
+					onOpen={() => onSelect(open.id)}
+					{heldItemTarget}
+				/>
+			{/key}
+		{/if}
 	{/each}
 </div>
 
@@ -174,6 +240,7 @@
 	}
 	.card-grid {
 		display: grid;
+		overflow-anchor: none;
 	}
 	.card-tile {
 		container-type: inline-size;

@@ -33,6 +33,16 @@ let openName = $state.raw<string | null>(null);
 let openPos = $state.raw<Pos | null>(null);
 let detachDocListeners: (() => void) | null = null;
 
+// The attributes a target spreads onto its element (`{...popover.target(name)}`).
+export interface InfoTargetProps {
+	role: "button";
+	tabindex: 0;
+	onpointerenter: (e: PointerEvent) => void;
+	onpointerleave: (e: PointerEvent) => void;
+	onclick: (e: MouseEvent) => void;
+	onkeydown: (e: KeyboardEvent) => void;
+}
+
 interface OpenInfo {
 	owner: object;
 	name: string;
@@ -145,7 +155,7 @@ export function createInfoPopover(anchorSelector: string, offsetY = 6) {
 	// Spread onto each target element: `<span class="pkdx-info-target"
 	// {...popover.target(name)}>`. `onOpen` runs each time this target's
 	// popover opens (a fetch, or per-target content like a held item's rarity).
-	function target(name: string, onOpen?: () => void) {
+	function target(name: string, onOpen?: () => void): InfoTargetProps {
 		const info: OpenInfo = { owner, name, anchorSelector, offsetY, onOpen };
 		return {
 			role: "button",

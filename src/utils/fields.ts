@@ -7,7 +7,7 @@ import { totalStat } from "./stats";
 // The Fields the user chooses from in the browse screen's Fields menu (see
 // CONTEXT.md, "Fields"). One list, read by every layout: the table draws a
 // chosen Field as a column (its geometry lives in tableColumns.ts, keyed by
-// FieldKey), and Card view will draw it on the tile and in the tap panel.
+// FieldKey), and Card view draws it on the tile and in the tap panel.
 // Order is menu order: stats in stat order, then the Other Fields.
 
 // Exported for EvChips.svelte (the table's EV cell and the detail screen),
@@ -39,7 +39,8 @@ export type FieldKey =
 interface FieldBase {
 	key: FieldKey;
 	label: string;
-	// The Lucide icon for the Field in the Fields menu and, in the table, the
+	// The Lucide icon for the Field in the Fields menu, on Card view's tap panel
+	// chip and, in the table, the
 	// header (with `label` as a hover tooltip) instead of the full text label,
 	// to keep wide columns like "Catch rate"/"Hatch counter" from blowing out
 	// the table width. Stats have none: they keep their short text labels.
@@ -55,9 +56,10 @@ interface FieldBase {
 // but production never calls it" unrepresentable; those two Fields used to
 // carry such a function, and tests pinned behavior the app never ran. EV yield
 // is custom for the same reason: it draws chips, so a `render` string would be
-// a second, unused cell body. `custom` names which cell TableScreen draws; the
-// template branches on each value with no default (tsc skips .svelte, so a new
-// value needs its own branch there by hand).
+// a second, unused cell body. `custom` names which cell TableScreen and
+// CardPanel draw; both templates branch on each value with no default (tsc
+// skips .svelte, so a new value needs its own branch in each by hand; the
+// tableColumns and cardView tests scan for them).
 export type CustomCell = "heldItems" | "encounters" | "ev";
 
 export type Field =

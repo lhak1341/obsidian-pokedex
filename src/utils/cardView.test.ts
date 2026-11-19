@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { makeRow } from "../data/__fixtures__/rows";
+import panelTemplate from "../view/components/CardPanel.svelte?raw";
 import type { StatBlock } from "../data/types";
-import { cardGrid, fitSprite, sortChips, statStrip, tileCorners } from "./cardView";
+import { FIELDS } from "./fields";
+import { cardGrid, fitSprite, panelChips, panelPlacement, panelStats, sortChips, statStrip, tileCorners } from "./cardView";
 
 const stats = (overrides: Partial<StatBlock>): StatBlock => ({
 	hp: 50, attack: 50, defense: 50, specialAttack: 50, specialDefense: 50, speed: 50, ...overrides,
@@ -101,5 +103,80 @@ describe("fitSprite", () => {
 	it("never scales up", () => {
 		const tiny = { x: 40, y: 40, width: 16, height: 16, canvasWidth: 96, canvasHeight: 96 };
 		expect(fitSprite(tiny, 85).scale).toBe(1);
+	});
+});
+
+describe("panelPlacement", () => {
+	// The tap panel opens under the tapped tile's grid row, after the last tile
+	// in that row (or the last tile of all, on a short final row).
+	it.each([
+		// [tapped index, columns, tiles, grid row, panel after index]
+		[0, 4, 20, 0, 3],
+		[3, 4, 20, 0, 3],
+		[4, 4, 20, 1, 7],
+		[9, 4, 20, 2, 11],
+		[5, 7, 20, 0, 6],
+		[13, 7, 20, 1, 13],
+		[14, 7, 20, 2, 19],
+		[0, 1, 3, 0, 0],
+		[2, 1, 3, 2, 2],
+		[17, 4, 18, 4, 17],
+		[16, 4, 18, 4, 17],
+	])("index %i with %i columns of %i tiles opens under row %i, after tile %i", (index, columns, count, row, afterIndex) => {
+		expect(panelPlacement(index, columns, count)).toEqual({ row, afterIndex });
+	});
+});
+
+describe("panelStats", () => {
+	it.each([
+		[["hp", "attack", "defense", "specialAttack", "specialDefense", "speed"], "stretched"],
+		[["hp", "attack", "defense", "specialAttack", "speed"], "stretched"],
+		[["hp", "attack", "defense", "speed"], "fixed"],
+		[["hp", "speed"], "fixed"],
+		[["attack"], "fixed"],
+	])("draws %j as %s columns", (chosen, mode) => {
+		expect(panelStats(new Set(chosen)).mode).toBe(mode);
+	});
+
+	it("draws the chosen stats in stat order, and Total as its own column only when chosen", () => {
+		expect(panelStats(new Set(["speed", "total", "hp", "ev"]))).toEqual({
+			stats: ["hp", "speed"], mode: "fixed", total: true,
+		});
+		expect(panelStats(new Set(["hp"])).total).toBe(false);
+	});
+
+	it("has no stat row with no stat chosen, so the panel is header and chips (Total becomes a chip)", () => {
+		expect(panelStats(new Set(["total", "weight"]))).toEqual({ stats: [], mode: "fixed", total: false });
+		expect(panelChips(new Set(["weight", "total"])).map((f) => f.key)).toEqual(["total", "weight"]);
+		expect(panelStats(new Set(["weight"])).stats).toEqual([]);
+	});
+});
+
+describe("panelChips", () => {
+	it("draws every chosen Other Field as a chip in menu order, never a stat or Total", () => {
+		const keys = panelChips(
+			new Set(["weight", "hp", "catchRate", "total", "encounterLocation", "ev", "height", "heldItems", "hatchCounter"]),
+		).map((f) => f.key);
+		expect(keys).toEqual(["ev", "heldItems", "encounterLocation", "catchRate", "hatchCounter", "height", "weight"]);
+	});
+
+	it("draws no chips when only stats and Total are chosen", () => {
+		expect(panelChips(new Set(["hp", "total"]))).toEqual([]);
+	});
+});
+
+describe("CardPanel's chips", () => {
+	// tsc skips .svelte, and the panel's chip has no default branch: a custom
+	// Field with no `field.custom === …` branch there would draw its icon and
+	// no value. Same pin as tableColumns.test.ts's for TableScreen.
+	it("has a CardPanel template branch for every custom Field", () => {
+		const customValues = [...new Set(FIELDS.flatMap((f) => (f.custom ? [f.custom] : [])))];
+		expect(customValues.length).toBeGreaterThan(0);
+		expect(panelTemplate).toContain("{#each chips as field");
+		for (const value of customValues) {
+			expect(panelTemplate, `no \`field.custom === "${value}"\` branch in CardPanel.svelte`).toContain(
+				`field.custom === "${value}"`,
+			);
+		}
 	});
 });

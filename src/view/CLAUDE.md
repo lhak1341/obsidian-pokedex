@@ -47,18 +47,24 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   `sortAfterFieldsChange` whichever leaf unchose the Field. `PokedexApp` picks the layout for the leaf's width class
   (`utils/browseLayout.ts`), fed by a `ResizeObserver` on the leaf
   (`PokedexView` passes `containerEl`). Card view's derivations (corners, stat strip, sort chips, grid columns,
-  sprite fit) are pure in `utils/cardView.ts`; `CardGrid` keeps only drawing glue (an EV yield as one dot per point, and
-  the canvas-centred placement of a sprite whose bounds are not decoded yet).
+  sprite fit, and the tap panel's placement, column mode and chips) are pure in `utils/cardView.ts`; `CardGrid` keeps only
+  drawing glue (an EV yield as one dot per point, and the canvas-centred placement of a sprite whose bounds are not
+  decoded yet). A tile tap opens `CardPanel.svelte` (accordion, open id held in `CardGrid`), drawn as the grid item after
+  the last tile of the tapped row; its "Open ›" is the way to the detail screen. A panel above the tapped tile closes
+  instantly and `CardGrid.toggle` scrolls `.pokedex-view` by the shift (the grid sets `overflow-anchor: none`). Its held
+  item uses TableScreen's `itemPopover` (passed as `heldItemTarget`), so the box is the table's own. The dev machine has
+  the OS Reduce Motion on, so every transition reads 0s live: to see real timing, set `--lk-duration-base` inline on the
+  leaf's `contentEl` in a `try`/`finally`.
 - Fields (`utils/fields.ts`, `FIELDS`) are `{ render }` text Fields or `{ custom: CustomCell }`
   Fields the layout draws itself; the table's width/floor/alignment per Field is
   `TABLE_GEOMETRY` in `utils/tableColumns.ts` (keyed by `FieldKey`), joined as `TABLE_COLUMNS`. TableScreen
   draws custom cells itself (`heldItems`, `encounterLocation`: they need the Active Gen; `ev`: chips via `EvChips.svelte`,
   shared with the detail screen; its tooltip text is `formatEvYield`). A custom Field has no `render`; do not add a text
   fallback (for the Active Gen Fields it can only show every generation's data). A new custom
-  Field needs its own `col.custom === …` branch in `TableScreen.svelte`; there is no default
-  (an unhandled value renders an empty `<td>`, and `tsc` cannot check the template), so
-  `tableColumns.test.ts` scans the template for one branch per `custom` value in
-  `FIELDS` (imports the template with `?raw`, see root CLAUDE.md).
+  Field needs its own `col.custom === …` branch in `TableScreen.svelte` and `field.custom === …` in
+  `CardPanel.svelte`; neither has a default (an unhandled value renders an empty `<td>` or a bare icon chip, and `tsc`
+  cannot check the template), so `tableColumns.test.ts` and `cardView.test.ts` scan the templates for one branch per
+  `custom` value in `FIELDS` (imports the template with `?raw`, see root CLAUDE.md).
 - `tsc` (`bun run typecheck`) skips `.svelte` files and the build only catches compile errors, so after renaming or removing a field/export, grep `src/**/*.svelte` for the old name by hand. A stale use builds clean and reads `undefined` live.
 - `vitest.config.ts` has no Svelte plugin or jsdom, so a `.svelte.ts` rune module (`infoPopover.svelte.ts`, `quickJumpDropdown.svelte.ts`) can't be tested (the Info popover's pin rules are therefore `utils/infoPopoverPin.ts`, tested there). Put the branching in `utils/` and inject the DOM-bound piece: `resolvePortraitScale(…, measure)` takes a `measure` (DetailScreen's `measurePortrait`, over `contentScale`), and the decode's memo is `contentBounds = memoizeByCachePath(decode)` (`imageBounds.ts`; `contentScale` and Card view's `fitSprite` both read it). ADR-0003 covers adding jsdom itself.
 

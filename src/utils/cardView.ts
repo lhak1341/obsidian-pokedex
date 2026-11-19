@@ -1,10 +1,15 @@
 import type { PokedexTableRow, StatBlock } from "../data/types";
-import { FIELDS, isStatField } from "./fields";
+import { type Field, FIELDS, isStatField } from "./fields";
 import type { SortColumn } from "./sortPokemon";
 
-// Card view's tile (CONTEXT.md, "Card view") reads the same Fields selection as
-// the table. These are the tile's choices that depend on it, kept out of the
-// component so they are testable without a DOM.
+// Card view's tile and tap panel (CONTEXT.md, "Card view") read the same Fields
+// selection as the table. These are their choices that depend on it, and the
+// grid geometry, kept out of the components so they are testable without a DOM.
+
+// The chosen stats, in stat order (menu order). Total is not a stat Field.
+function chosenStats(visibleFields: ReadonlySet<string>): (keyof StatBlock)[] {
+	return FIELDS.filter((f) => isStatField(f) && visibleFields.has(f.key)).map((f) => f.key as keyof StatBlock);
+}
 
 // The two summary corners at the bottom of the sprite well. The top corners do
 // not depend on Fields: the number always shows, the favourite mark when it is
@@ -28,7 +33,7 @@ export interface StatStrip {
 // `rows` are the rows shown (filtered, Active Gen scoped), so a bar compares
 // against its own stat among what is on screen, not a fixed ceiling.
 export function statStrip(rows: readonly PokedexTableRow[], visibleFields: ReadonlySet<string>): StatStrip {
-	const stats = FIELDS.filter((f) => isStatField(f) && visibleFields.has(f.key)).map((f) => f.key as keyof StatBlock);
+	const stats = chosenStats(visibleFields);
 	const max = new Map<keyof StatBlock, number>();
 	for (const stat of stats) {
 		let m = 0;
@@ -70,6 +75,47 @@ export const CARD_GRID_GAP = 6;
 export function cardGrid(width: number): { columns: number; tileWidth: number } {
 	const columns = Math.max(1, Math.floor((width + CARD_GRID_GAP) / (MIN_TILE_WIDTH + CARD_GRID_GAP)));
 	return { columns, tileWidth: Math.max(0, (width - CARD_GRID_GAP * (columns - 1)) / columns) };
+}
+
+// The tap panel (CONTEXT.md, "Card view") is an accordion that opens under the
+// tapped tile's grid row, spanning the grid's full width. In a CSS grid that
+// means it is drawn after the last tile of that row: `afterIndex`, which on a
+// short final row is the last tile of all.
+export function panelPlacement(index: number, columns: number, count: number): { row: number; afterIndex: number } {
+	const row = Math.floor(index / columns);
+	return { row, afterIndex: Math.min(count - 1, (row + 1) * columns - 1) };
+}
+
+// Five or six stats stretch across the panel as the tile's columns scaled up.
+// Four or fewer keep a fixed narrow width, aligned left, so two stats do not
+// become flat slabs.
+const MIN_STRETCHED_STATS = 5;
+
+export interface PanelStats {
+	// The chosen stats, in stat order (menu order).
+	stats: (keyof StatBlock)[];
+	mode: "stretched" | "fixed";
+	// Total is not a stat Field: a muted column after a hairline at the right
+	// of the stats. With no stat chosen there is no stat row, and Total is a
+	// chip instead (panelChips), so the panel stays header and chips.
+	total: boolean;
+}
+
+export function panelStats(visibleFields: ReadonlySet<string>): PanelStats {
+	const stats = chosenStats(visibleFields);
+	return {
+		stats,
+		mode: stats.length >= MIN_STRETCHED_STATS ? "stretched" : "fixed",
+		total: stats.length > 0 && visibleFields.has("total"),
+	};
+}
+
+// The panel's chips: every chosen Field that is not a stat, in menu order
+// (FIELDS order; users cannot reorder Fields). Total only when it has no stat
+// row to sit in (see PanelStats.total).
+export function panelChips(visibleFields: ReadonlySet<string>): Field[] {
+	const totalIsColumn = panelStats(visibleFields).total;
+	return FIELDS.filter((f) => !isStatField(f) && visibleFields.has(f.key) && !(f.key === "total" && totalIsColumn));
 }
 
 // An image's opaque bounding box inside its canvas (imageBounds.ts measures it).
