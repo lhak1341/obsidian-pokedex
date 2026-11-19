@@ -22,7 +22,10 @@ time out (clear `.notice` before checking one shows); `dev:mobile` is global, tu
   measurement and read only after an `await`: rows stream in after a reload (poll `tbody tr` until two reads 1.5s
   apart match), Svelte applies a dispatched event's state change on a later microtask (a same-tick read returned the
   old class), and a window reload clears an inline width override (a hold check ran at the wide layout unnoticed until
-  its 181px image gave it away; return the leaf or container width with each read).
+  its 181px image gave it away; return the leaf or container width with each read). A window reload can bring the
+  window back hidden, and a hidden window runs no ResizeObserver, so a leaf width set inline moves every `pane` query but
+  not the JS width class or detail band (#33: a 768px leaf drew three columns). Re-run mobile-verification step 2's
+  `show()` after each reload and return the mounted layout with each read.
 - Narrow-pane width budget: a 390px leaf leaves the browse content 319px (12px `.view-content` + 16px `.pokedex-view`
   padding a side, and a 15px scrollbar gutter that `dev:mobile` keeps). `.pokedex-view` (not `.workspace-leaf-content`
   or `.table-wrap`, which merely wrap it) is the scroll container. A real Narrow pane needs no emulation:
@@ -87,8 +90,9 @@ time out (clear `.notice` before checking one shows); `dev:mobile` is global, tu
 - Venusaur has both Mega (single "M" badge) and Gigantamax ("G"). Charizard's Mega splits into X/Y badges and is the
   `portraitScale` fixture: Mega X + shiny reads `scale(0.907)` on `.portrait-image` and `.portrait-preview` (shiny
   crops ~9% tighter).
-- Farfetch'd always holds an item (Stick, 5%). Held items are Active Gen scoped and Gen 9 has none (probed ids 1–200),
-  so a held-item check first sets Active Gen ≤ 7 (Butterfree: Silver Powder at Gen 7).
+- Gen 9 data is missing whole categories: no held items (probed ids 1–200) and no tutor moves (ids 1–160). A
+  held-item or Tutor-list check sets Active Gen ≤ 7 in memory first (Butterfree: Silver Powder; Infernape: 2 tutor
+  moves). Farfetch'd always holds an item (Stick, 5%).
 
 ## Proving and showing
 
@@ -106,12 +110,12 @@ time out (clear `.notice` before checking one shows); `dev:mobile` is global, tu
   after) switches both screens, measured identical at 599/600 (#31). Inside the leaf, padding and the scrollbar gutter
   take ~71px on desktop (12px `.view-content` + 16px `.pokedex-view` a side + a 15px gutter; less where scrollbars
   overlay), so a 390px leaf leaves the detail screen 319px. Setting `.pokedex-view`'s width instead moves only the
-  inner `detail` container (920/1100px) and never the Narrow pane queries.
+  inner `detail` container (its one query is Base stats beside Abilities at 1100px) and never a `pane` query.
 - Phone-width design needs no emulator: inject a throwaway overlay into the live `pokedex-view` leaf inside a
   fixed-width column (any width), take row
   order/filter/sort from the table DOM and raw records from `plugin.repository.pokemonMemCache` (by id, all 6 stats) /
   `speciesMemCache` (`capture_rate`), then remove it. To show motion, pause it at a set point with
   `animation-play-state: paused` plus a negative `animation-delay`, screenshot each frame (`dev:screenshot` takes
   seconds, too slow for a live animation), and combine frames with `ffmpeg` `hstack`/`vstack` (no PIL or `magick`
-  here). The user may click the live overlay between shots, so return its state from each eval and check it before
-  trusting a frame.
+  here). Shots are in device pixels (2880 wide for a 1440 window), so `crop` a leaf at 2× its client rect. The user
+  may click the live overlay between shots, so return its state from each eval and check it before trusting a frame.

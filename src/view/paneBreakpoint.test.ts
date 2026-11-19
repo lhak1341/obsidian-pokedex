@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { NARROW_PANE_MAX_WIDTH } from "../utils/browseLayout";
+import { DETAIL_HEADER_ONE_ROW_MIN_WIDTH } from "../utils/detailBand";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const componentsDir = join(root, "src/view/components");
@@ -32,13 +33,21 @@ describe("narrow pane breakpoint", () => {
 		expect(css).toContain(`.workspace-leaf-content[data-type="${viewType}"] { container: pane / inline-size; }`);
 	});
 
-	it("every narrow pane query uses NARROW_PANE_MAX_WIDTH", () => {
+	it("every narrow pane query uses NARROW_PANE_MAX_WIDTH, or the detail header's own 780", () => {
 		const pane = queries.filter((q) => q.name === "pane");
 		// The phone hero and header (#31) at least: the scan found something.
 		expect(pane.length).toBeGreaterThanOrEqual(3);
+		const narrowQuery = `width < ${NARROW_PANE_MAX_WIDTH}px`;
+		const headerQuery = `width < ${DETAIL_HEADER_ONE_ROW_MIN_WIDTH}px`;
 		for (const q of pane.filter((q) => isNarrow(q.condition))) {
-			expect({ file: q.file, condition: q.condition }).toEqual({ file: q.file, condition: `width < ${NARROW_PANE_MAX_WIDTH}px` });
+			const allowed = q.file === "DetailScreen.svelte" && q.condition === headerQuery ? headerQuery : narrowQuery;
+			expect({ file: q.file, condition: q.condition }).toEqual({ file: q.file, condition: allowed });
 		}
+	});
+
+	it("the detail header has two rows below a 780px leaf (#33)", () => {
+		const header = queries.filter((q) => q.file === "DetailScreen.svelte" && q.name === "pane");
+		expect(header.map((q) => q.condition)).toContain(`width < ${DETAIL_HEADER_ONE_ROW_MIN_WIDTH}px`);
 	});
 
 	it("no narrow query is written against an inner container", () => {

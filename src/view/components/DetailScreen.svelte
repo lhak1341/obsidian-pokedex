@@ -31,6 +31,7 @@
 	import { formatDexNumber, formatHeight, formatPokemonDisplayName, formatWeight } from "../../utils/pokemonDisplay";
 	import { romanNumeral } from "../../utils/romanNumeral";
 	import { resolveStatsForGen } from "../../utils/stats";
+	import { shownDetailTab, tabsForBand, type DetailBand, type DetailTab } from "../../utils/detailBand";
 	import { VarietyToggleState, type VarietyToggleSnapshot } from "../VarietyToggleState";
 
 	// True game ceilings (unlike StatBars' MAX_STAT, not compressed) —
@@ -42,7 +43,7 @@
 	const MAX_HATCH_COUNTER = 120;
 
 	let {
-		repository, id, rows, spriteStyle, useTypeIcons, activeGen, narrow, isFavorite, onToggleFavorite, onBack, onSelect,
+		repository, id, rows, spriteStyle, useTypeIcons, activeGen, band, isFavorite, onToggleFavorite, onBack, onSelect,
 	}: {
 		repository: PokedexRepository;
 		id: number;
@@ -50,9 +51,10 @@
 		spriteStyle: PluginSettings["spriteStyle"];
 		useTypeIcons: boolean;
 		activeGen: number;
-		// A Narrow pane (PokedexApp's leaf ResizeObserver, the same 600px the
-		// `pane` container queries read): the phone tabs (#32).
-		narrow: boolean;
+		// From the leaf width (PokedexApp's ResizeObserver, the same leaf the
+		// `pane` container queries read): the phone tabs below 600px (#32), the
+		// identity rail to 1100px (#33), three columns from there.
+		band: DetailBand;
 		isFavorite: boolean;
 		onToggleFavorite: (id: number) => void;
 		onBack: () => void;
@@ -90,16 +92,15 @@
 		entryLoad = loadState.snapshot();
 	}
 
-	// The phone layout's tabs (#32). Not reset in startLoad, so prev/next
-	// keeps the tab (compare Stats down the dex); leaving for the list
-	// unmounts this screen, so a fresh visit opens on About.
-	const PHONE_TABS = [
-		{ key: "about", label: "About" },
-		{ key: "evolution", label: "Evolution" },
-		{ key: "stats", label: "Stats" },
-		{ key: "moves", label: "Moves" },
-	] as const;
-	let phoneTab = $state<(typeof PHONE_TABS)[number]["key"]>("about");
+	// The phone (#32) and rail (#33) tabs. One selection across both bands:
+	// shownDetailTab shows it where the band has it, else the band's first tab
+	// (so Moves survives a resize across 600, and Stats comes back after a
+	// visit to the rail). Not reset in startLoad, so prev/next keeps the tab
+	// (compare Stats down the dex); leaving for the list unmounts this screen,
+	// so a fresh visit opens on the first tab.
+	let selectedTab = $state<DetailTab>("about");
+	const tabs = $derived(tabsForBand(band));
+	const shownTab = $derived(shownDetailTab(selectedTab, band));
 
 	// Reset per-entry (see startLoad below) so switching Pokemon never
 	// leaves a previous one's shiny toggle silently applied.
@@ -328,12 +329,14 @@
 			{@const entry = entryLoad.entry}
 			{@const activeHeldItems = filterHeldItemsForGen(entry.heldItemsAllGens, activeGen)}
 			{@const encounters = describeEncounters(entry.encounterLocationsAllGens, activeGen)}
-			<!-- Each group is a snippet, so the phone tabs (#32) and the wide
-			grid lay out the same panels without a second copy of any. -->
+			<!-- Each group is a snippet, so the phone tabs (#32), the rail
+			(#33) and the three columns lay out the same panels without a second
+			copy of any. -->
 			{#snippet hero()}
 				<!-- The phone hero (#31): below 600px the number, name, asterisk
 				and types sit over the portrait's bottom edge. From 600px .hero is
-				display: contents, so the column lays out as before. -->
+				display: contents, so the rail and the identity column stack the
+				square portrait, then the name block. -->
 				<div class="hero" class:art-preview={artPreview}>
 					<PortraitPanel
 						{entry}
@@ -491,55 +494,84 @@
 				</section>
 			{/snippet}
 
-			{#if narrow}
+			{#snippet tabBar()}
+				<div class="detail-tabs-bar">
+					<!-- A button group, like MoveBrowser's method tabs, not an ARIA
+					tablist: that promises arrow keys between tabs, and ←/→ already
+					step to the previous/next Pokemon window-wide (onKeydown). -->
+					<div class="detail-tabs" role="group" aria-label="Detail sections">
+						{#each tabs as tab (tab.key)}
+							<button
+								type="button"
+								class="detail-tab"
+								class:active={shownTab === tab.key}
+								aria-pressed={shownTab === tab.key}
+								onclick={() => (selectedTab = tab.key)}
+							>{tab.label}</button>
+						{/each}
+					</div>
+				</div>
+			{/snippet}
+
+			<!-- Base stats beside Capture & Breeding, rings in place of bars:
+			the phone's Stats tab and the rail's Overview. -->
+			{#snippet pairedStats()}
+				<div class="paired-stats">
+					{@render baseStats()}
+					{@render capture(true)}
+				</div>
+			{/snippet}
+
+			{#if band === "phone"}
 				<!-- Phone layout (#32), in a Narrow pane: the hero, then one group
 				at a time under a sticky segmented control. -->
 				<div class="detail-phone" style:--pkdx-accent={accentColor}>
 					{@render hero()}
-					<div class="phone-tabs-bar">
-						<!-- A button group, like MoveBrowser's method tabs, not an ARIA
-						tablist: that promises arrow keys between tabs, and ←/→ already
-						step to the previous/next Pokemon window-wide (onKeydown). -->
-						<div class="phone-tabs" role="group" aria-label="Detail sections">
-							{#each PHONE_TABS as tab (tab.key)}
-								<button
-									type="button"
-									class="phone-tab"
-									class:active={phoneTab === tab.key}
-									aria-pressed={phoneTab === tab.key}
-									onclick={() => (phoneTab = tab.key)}
-								>{tab.label}</button>
-							{/each}
-						</div>
-					</div>
-					<div class="phone-tab-body">
-						{#if phoneTab === "about"}
+					{@render tabBar()}
+					<div class="detail-tab-body">
+						{#if shownTab === "about"}
 							{@render flavor()}
 							{@render facts()}
 							{@render abilities()}
-						{:else if phoneTab === "evolution"}
+						{:else if shownTab === "evolution"}
 							{#if entry.evolutionChain}
 								{@render evolution(true)}
 							{:else}
 								<p class="phone-empty">Doesn't evolve.</p>
 							{/if}
-						{:else if phoneTab === "stats"}
-							<div class="phone-stats">
-								{@render baseStats()}
-								{@render capture(true)}
-							</div>
-						{:else if phoneTab === "moves"}
+						{:else if shownTab === "stats"}
+							{@render pairedStats()}
+						{:else if shownTab === "moves"}
 							{@render moves()}
 						{/if}
 					</div>
 				</div>
+			{:else if band === "rail"}
+				<!-- Rail layout (#33), a 600-1100px leaf (tablets, splits): a sticky
+				232px identity rail, and Overview · Moves tabs beside it. The hero is
+				display: contents here, so the portrait is a plain square. -->
+				<div class="detail-rail" style:--pkdx-accent={accentColor}>
+					<aside class="detail-rail-identity">
+						{@render hero()}
+						{@render facts()}
+						{@render flavor()}
+					</aside>
+					<div class="detail-rail-main">
+						{@render tabBar()}
+						<div class="detail-tab-body">
+							{#if shownTab === "overview"}
+								{@render evolution(false)}
+								{@render abilities()}
+								{@render pairedStats()}
+							{:else if shownTab === "moves"}
+								{@render moves()}
+							{/if}
+						</div>
+					</div>
+				</div>
 			{:else}
-				<!-- container-type (not a viewport media query) because this is an
-				Obsidian pane: it can be a sidebar in a wide window or fill a whole
-				ultrawide window, independent of the window's own size. Three columns
-				from a 920px `detail` container — identity | evolution/stats/abilities/
-				breeding | moves — and one stacked column (same DOM order) below it,
-				down to the 600px pane where the phone tabs above take over. -->
+				<!-- Three columns from a 1100px leaf (#33; was a 920px `detail`
+				container): identity | evolution/stats/abilities/breeding | moves. -->
 				<div class="detail-grid" style:--pkdx-accent={accentColor}>
 					<aside class="identity-col">
 						{@render hero()}
@@ -598,6 +630,12 @@
 		justify-content: space-between;
 		gap: 12px;
 		margin-bottom: var(--lk-space-2);
+		/* Above the rail's tab bar (z-index 5), whose fill reaches 14px up
+		into this row at rest (.detail-rail-main .detail-tabs-bar) and covered Quick check's
+		lower edge in a one-row header. Once the bar sticks the header has
+		already scrolled off, so it never covers the stuck bar. */
+		position: relative;
+		z-index: 6;
 	}
 	.dex-nav {
 		/* Grid (not a centered flex row) so the "|" divider sits at a fixed
@@ -669,10 +707,12 @@
 		line-height: 1;
 	}
 
-	/* Phone header (#31), in a Narrow pane (the `pane` container is the leaf,
-	styles.src.css): Back to list and Quick check on one row, prev/next across
-	the full width under them, so neighbour names keep their full length. */
-	@container pane (width < 600px) {
+	/* Two-row header below a 780px leaf (#31 for the phone, #33 for the rail
+	band; the `pane` container is the leaf, styles.src.css): Back to list and
+	Quick check on one row, prev/next across the full width under them, so
+	neighbour names keep their full length. 780 is its own breakpoint, not the
+	rail's 600: one row of "#740 Crabominable" either side fits from there. */
+	@container pane (width < 780px) {
 		.detail-header {
 			display: grid;
 			grid-template-columns: auto minmax(0, 1fr);
@@ -689,6 +729,26 @@
 		}
 		.dex-nav {
 			grid-area: nav;
+		}
+	}
+	/* One row from 780 (#33). The nav's basis is its full labels (both
+	sides at the longer label's width), and Quick check, shrinking 20x as
+	fast, gives way first, down to 120px: at 780 that leaves it ~160px beside
+	"#740 Crabominable" either side, where its own 260px cap otherwise left
+	the nav 319px and cut both names. Past that floor the nav shrinks and the
+	labels' ellipsis (min-width: 0 above) is the last resort, never overflow. */
+	@container pane (width >= 780px) {
+		.dex-nav {
+			flex: 1 1 auto;
+		}
+		.detail-header > :global(.quick-search) {
+			flex-shrink: 20;
+			min-width: 120px;
+		}
+	}
+	/* The phone's tighter nav (#31). */
+	@container pane (width < 600px) {
+		.dex-nav {
 			column-gap: 4px;
 		}
 		.dex-nav-button {
@@ -794,10 +854,14 @@
 		}
 	}
 
-	.detail-grid {
-		display: flex;
-		flex-direction: column;
-		gap: 24px;
+	/* Capped and centered on .page (back-button + grid together), not just
+	.detail-grid — otherwise only the grid recenters on a wide pane and the
+	back-button (which has no such margin) is left behind at the raw
+	container edge, so their left edges no longer line up. The cap only binds
+	in three columns. */
+	.page {
+		max-width: 1160px;
+		margin: 0 auto;
 	}
 	.identity-col, .core-col, .moves-col {
 		display: flex;
@@ -810,42 +874,34 @@
 		gap: 20px;
 	}
 
-	@container detail (min-width: 920px) {
-		/* Capped and centered on .page (back-button + grid together), not just
-		.detail-grid — otherwise only the grid recenters on a wide pane and the
-		back-button (which has no such margin) is left behind at the raw
-		container edge, so their left edges no longer line up. */
-		.page {
-			max-width: 1160px;
-			margin: 0 auto;
-		}
-		.detail-grid {
-			display: grid;
-			/* Fixed identity rail; core and moves split the rest 1.15:1.15 —
-			was 1.3:1 (core getting more room since stat bars/ability text/
-			evolution nodes read better with breathing room than a 3-column
-			move table needs), narrowed toward moves so its 6-column table has
-			more room. Both fr-based, not a fixed max-width, so the two
-			columns always consume exactly the remaining row width — a
-			minmax(min, Npx) pair stops growing once each hits its own cap and
-			leaves whatever's left unclaimed, which is what stranded ~70px of
-			dead space after the moves column instead of it being real,
-			usable margin. */
-			grid-template-columns: 240px minmax(300px, 1.15fr) minmax(260px, 1.15fr);
-			align-items: start;
-			gap: 24px;
-		}
-		.identity-col {
-			position: sticky;
-			top: 0;
-		}
+	/* Three columns, rendered only from a 1100px leaf (the `band` prop), so
+	no container query switches them on. */
+	.detail-grid {
+		display: grid;
+		/* Fixed identity rail; core and moves split the rest 1.15:1.15 —
+		was 1.3:1 (core getting more room since stat bars/ability text/
+		evolution nodes read better with breathing room than a 3-column
+		move table needs), narrowed toward moves so its 6-column table has
+		more room. Both fr-based, not a fixed max-width, so the two
+		columns always consume exactly the remaining row width — a
+		minmax(min, Npx) pair stops growing once each hits its own cap and
+		leaves whatever's left unclaimed, which is what stranded ~70px of
+		dead space after the moves column instead of it being real,
+		usable margin. */
+		grid-template-columns: 240px minmax(300px, 1.15fr) minmax(260px, 1.15fr);
+		align-items: start;
+		gap: 24px;
+	}
+	.identity-col {
+		position: sticky;
+		top: 0;
 	}
 
-	/* Separate, higher breakpoint than the 920px 3-column switch above —
-	core-col is only ~357px wide right at 920px (920 - 240px identity rail -
-	48px gaps, split 1.3:1 with moves-col), too cramped to fit stat bars and
-	the ability list side by side without wrapping. Row layout waits for
-	genuine breathing room instead of triggering right at the column split. */
+	/* A higher breakpoint than the three-column switch: core-col is ~357px
+	wide at a 920px container, too cramped to fit stat bars and the ability
+	list side by side without wrapping. Kept as it was when three columns
+	started at that 920px container; from a 1100px leaf they now start nearer
+	a 1030px one, so this still waits for real breathing room. */
 	@container detail (min-width: 1100px) {
 		.stats-abilities-row {
 			flex-direction: row;
@@ -866,7 +922,7 @@
 	plain single-class selector on specificity. Deliberately rendered here
 	(root-level sibling of .detail-grid), not inside PortraitPanel, even
 	though the hover trigger lives on PortraitPanel's own box: .identity-col
-	becomes position: sticky at the ≥920px container-query breakpoint below,
+	(and the rail, #33) is position: sticky,
 	which would make IT the containing block for a position: absolute
 	descendant nested inside it instead of .detail-screen — silently
 	mispositioning this overlay on every normal desktop-width pane. */
@@ -1030,19 +1086,19 @@
 		color: var(--lk-danger);
 	}
 
-	/* Phone layout (#32). Rendered only in a Narrow pane (the `narrow` prop),
+	/* Phone layout (#32). Rendered only in a Narrow pane (the `band` prop),
 	so these need no container query. */
 	.detail-phone {
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
 	}
-	/* Opaque, so the panels scroll under it; the segmented pill matches
-	MoveBrowser's method tabs. A sticky top of 0 sits inside the scroller's
+	/* The phone and rail tab bar. Opaque, so the panels scroll under it; the
+	segmented pill matches MoveBrowser's method tabs. A sticky top of 0 sits inside the scroller's
 	(.pokedex-view) --lk-space-4 padding, and rows showed through that band
 	above it: the bar sticks at the scroller's edge instead and fills the
 	band itself, and the negative margin keeps its resting place unchanged. */
-	.phone-tabs-bar {
+	.detail-tabs-bar {
 		position: sticky;
 		top: calc(-1 * var(--lk-space-4));
 		z-index: 5;
@@ -1050,7 +1106,7 @@
 		padding: calc(var(--lk-space-4) + 6px) 0 6px;
 		background: var(--lk-surface);
 	}
-	.phone-tabs {
+	.detail-tabs {
 		display: flex;
 		gap: 4px;
 		padding: 4px;
@@ -1058,7 +1114,7 @@
 		border: 1px solid var(--lk-border);
 		border-radius: 10px;
 	}
-	.phone-tab {
+	.detail-tab {
 		flex: 1;
 		min-width: 0;
 		height: auto;
@@ -1073,15 +1129,15 @@
 		color: var(--lk-text);
 		transition: background var(--lk-duration-fast) ease-out;
 	}
-	.phone-tab:hover:not(.active) {
+	.detail-tab:hover:not(.active) {
 		background: var(--lk-surface-hover);
 	}
-	.phone-tab.active {
+	.detail-tab.active {
 		background: var(--lk-surface);
 		box-shadow: var(--lk-shadow-s);
 		font-weight: 600;
 	}
-	.phone-tab-body {
+	.detail-tab-body {
 		display: flex;
 		flex-direction: column;
 		gap: 16px;
@@ -1116,7 +1172,7 @@
 	.detail-phone .gender-labels {
 		gap: 6px;
 	}
-	.phone-stats {
+	.paired-stats {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 		gap: 8px;
@@ -1129,10 +1185,56 @@
 		gap: 8px 2px;
 		margin: 10px 0 8px;
 	}
-	/* A move table wider than the phone scrolls inside its panel, never the
-	page. The Info popover is positioned from .detail-screen, outside this
-	scroller, so it is not clipped. */
-	.detail-phone .moves-panel {
+	/* A move table wider than the phone or the rail's tab column scrolls
+	inside its panel, never the page. The Info popover is positioned from
+	.detail-screen, outside this scroller, so it is not clipped. */
+	.detail-phone .moves-panel,
+	.detail-rail .moves-panel {
 		overflow-x: auto;
+	}
+
+	/* Rail layout (#33). Rendered only in a 600-1100px leaf (the `band`
+	prop). The rail sticks like the three columns' identity column; the tab
+	bar beside it sticks at the scroller's edge (.detail-tabs-bar). */
+	.detail-rail {
+		display: grid;
+		grid-template-columns: 232px minmax(0, 1fr);
+		align-items: start;
+		gap: 24px;
+	}
+	.detail-rail-identity {
+		position: sticky;
+		top: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+	.detail-rail-identity .name-block {
+		margin-bottom: 0;
+	}
+	/* Height · Weight, then EV yield on its own row. */
+	.detail-rail .physical-readout {
+		grid-template-columns: auto auto;
+		justify-content: start;
+		column-gap: 24px;
+		row-gap: 10px;
+	}
+	.detail-rail .ev-readout {
+		grid-column: 1 / -1;
+	}
+	.detail-rail-main {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		min-width: 0;
+	}
+	/* At rest the pill's top lines up with the portrait's (the bar's own top
+	padding is the scroller's band plus 6px). The tighter gaps here and below
+	keep Infernape's Overview inside a 768px leaf without scrolling. */
+	.detail-rail-main .detail-tabs-bar {
+		margin-top: calc(-1 * var(--lk-space-4) - 6px);
+	}
+	.detail-rail-main .detail-tab-body {
+		gap: 12px;
 	}
 </style>

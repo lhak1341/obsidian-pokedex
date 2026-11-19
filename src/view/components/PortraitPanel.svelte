@@ -14,8 +14,8 @@
 	// candidate 1). Deliberately does NOT own the hover-to-enlarge preview:
 	// that overlay must render as a sibling of .detail-grid at the
 	// .detail-screen root (see DetailScreen.svelte's own comment on
-	// .portrait-preview) because .identity-col becomes position: sticky at
-	// the ≥920px container-query breakpoint, which would make IT the
+	// .portrait-preview) because .identity-col (and #33's .detail-rail-identity) is
+	// position: sticky, which would make IT the
 	// containing block for a position: absolute descendant nested here
 	// instead of .detail-screen — silently mispositioning the overlay on
 	// every normal desktop-width pane. DetailScreen derives portraitSource
@@ -159,11 +159,10 @@ that would otherwise open it, and touch has the hold instead. -->
 		justify-content: center;
 		aspect-ratio: 1;
 		width: 100%;
-		/* Capped (both axes, so it stays square) so a moderately-narrow-but-
-		not-yet-3-column pane (identity column at full container width, still
-		under the 920px breakpoint) doesn't turn this into a huge square that
-		pushes the name/stats far down. The 3-column layout's identity column
-		is a fixed 240px anyway, well under this cap. */
+		/* Capped (both axes, so it stays square) for any column wider than
+		the box should get. The three columns' identity column is a fixed 240px
+		and the rail (#33) 232px, both under this cap, so there the square
+		fills the column and shares its left edge. */
 		max-width: 260px;
 		max-height: 260px;
 		align-self: center;

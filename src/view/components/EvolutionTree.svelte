@@ -55,7 +55,7 @@
 
 	// Re-measure whenever the chain changes (a different Pokemon), sprites
 	// arrive (cards grow once their image loads in), or the container itself
-	// resizes (pane width change flips the 920px container-query breakpoint,
+	// resizes (a pane width change within a band,
 	// or a branch wraps to a new line) — all of these move card centers
 	// without necessarily remounting this component.
 	$effect(() => {

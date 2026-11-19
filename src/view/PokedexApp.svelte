@@ -4,6 +4,7 @@
 	import type { PokedexRepository } from "../data/PokedexRepository";
 	import type { PluginSettings } from "../data/types";
 	import { type BrowseLayout, widthClass, type WidthClass } from "../utils/browseLayout";
+	import { detailBand, type DetailBand } from "../utils/detailBand";
 	import type { LocalPreferences, LocalPreferenceValues } from "../utils/localPreferences";
 	import { resolveGenerationScope } from "../utils/generationScope";
 	import { describePartialLoadOutcome, describeRetryOutcome } from "../utils/loadNotices";
@@ -53,6 +54,14 @@
 		}),
 	);
 	const layout = $derived(prefs.layoutByWidthClass[paneClass]);
+	// The detail screen's band (phone, rail, three columns: #32, #33), from
+	// the same leaf width. A hidden leaf starts in three columns, as wide.
+	let paneBand = $state<DetailBand>(
+		untrack(() => {
+			const width = leafEl.getBoundingClientRect().width;
+			return width > 0 ? detailBand(width) : "columns";
+		}),
+	);
 
 	function setLayout(next: BrowseLayout) {
 		preferences.setLayout(paneClass, next);
@@ -64,6 +73,8 @@
 		if (width <= 0) return;
 		const next = widthClass(width);
 		if (next !== paneClass) paneClass = next;
+		const band = detailBand(width);
+		if (band !== paneBand) paneBand = band;
 	}
 
 	onMount(() => {
@@ -249,7 +260,7 @@
 				spriteStyle={settings.spriteStyle}
 				useTypeIcons={settings.useTypeIcons}
 				activeGen={settings.activeGen}
-				narrow={paneClass === "narrow"}
+				band={paneBand}
 				isFavorite={favoriteIds.has(selectedId)}
 				onToggleFavorite={toggleFavorite}
 				onBack={backToTable}
