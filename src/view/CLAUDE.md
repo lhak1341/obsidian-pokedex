@@ -27,7 +27,7 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   `FavoriteToggle.svelte`; lists mark favourites only (the table with the dot `FavoriteMark.svelte`, Card view with an accent outline on the tile) and toggle
   through `view/favoriteMenu.ts` (right-click or press and hold; rules in `utils/pressHold.ts`). A `$state` seeded once via
   `untrack(() => initialX)` (TableScreen's `sort`) never re-seeds from its prop, which is right for view state and wrong
-  for anything saved: two leaves then save over each other (reproduced for favourites and Fields before ADR-0012).
+  for anything saved: two leaves then save over each other.
 - The browse screen is one list drawn two ways. `TableScreen.svelte` owns filters (search included) and one `SortState`
   and renders the `<table>` or `CardGrid.svelte` from the same `visibleRows`, so a layout switch keeps them; both sort
   through `nextSort`, and an effect resets the sort through `sortAfterFieldsChange` whichever leaf unchose the Field.
@@ -43,15 +43,12 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   band (`.detail-tabs-bar`); that fill reaches up into whatever sits above it at rest, so the header stacks above the bar. Card
   view's derivations (tile, grid, the tap panel's placement, columns and chips) are pure in `utils/cardView.ts`; a tile
   tap opens `CardPanel.svelte` (open id held in `CardGrid`), whose held item uses TableScreen's `itemPopover`.
-- `tsc` (`bun run typecheck`) skips `.svelte` and the build only catches compile errors, so a stale field or export
-  builds clean and reads `undefined` live: after renaming or removing one, grep `src/**/*.svelte` by hand.
 - Fields (`utils/fields.ts`, `FIELDS`) are `{ render, title? }` text Fields, both called with the Active Gen, or
   `{ custom: CustomCell }` Fields the layout draws itself (held items, EV yield: more than a string). A value that only
   needs Active Gen scoping is a text Field, not a custom one. The table's geometry per Field is `TABLE_GEOMETRY`
   (`utils/tableColumns.ts`). A new custom Field needs a `col.custom === …` branch in `TableScreen.svelte` and a
-  `field.custom === …` branch in `CardPanel.svelte`; neither has a default (an empty `<td>`, a bare icon chip), so
-  `tableColumns.test.ts` and `cardView.test.ts` scan the templates (imported with `?raw`) for one branch per `custom`
-  value, and for the `render(row, activeGen)`/`title?.(row, activeGen)` calls.
+  `field.custom === …` branch in `CardPanel.svelte`; both end in `unhandledCustomCell` (a `never` parameter), so a
+  missing branch fails typecheck.
 - `vitest.config.ts` has no Svelte plugin or jsdom, so a `.svelte.ts` rune module (`infoPopover.svelte.ts`,
   `quickJumpDropdown.svelte.ts`) can't be tested (the Info popover's pin rules are therefore `utils/infoPopoverPin.ts`;
   press and hold's are `utils/pressHold.ts`). Put the branching in `utils/`, and give a DOM-bound module its DOM piece

@@ -200,6 +200,6 @@ export class PokedexView extends ItemView {
 				commands: this.commands,
 				onNavigate: (record: NavRecord) => this.navigate(record),
 			},
-		}) as unknown as MountedApp;
+		});
 	}
 }

@@ -55,8 +55,8 @@ interface FieldBase {
 // layout passes the user's Active Gen, so a Field whose data is stored for
 // every generation (Capture, CONTEXT.md "Active Gen scoping") scopes it here,
 // once, where the tests can reach it; the stat-backed Fields ignore it (their
-// rows arrive already scoped by scopeRowsToGen). tsc skips .svelte, so the
-// tableColumns and cardView tests scan both templates for that call.
+// rows arrive already scoped by scopeRowsToGen). A template that drops the
+// argument fails `bun run typecheck` (svelte-check reads the templates).
 //
 // A `custom` Field has no `render` at all — the layout draws its cell itself
 // because the cell is more than a string: held items are Info popover
@@ -64,9 +64,17 @@ interface FieldBase {
 // production never calls it" unrepresentable; Fields used to carry such a
 // function, and tests pinned behavior the app never ran. `custom` names which
 // cell TableScreen and CardPanel draw; both templates branch on each value
-// with no default (a new value needs its own branch in each by hand; the same
-// two tests scan for them).
+// and end in unhandledCustomCell, so a new value without its own branch in
+// each fails typecheck there.
 export type CustomCell = "heldItems" | "ev";
+
+// A layout's fallback after its last `custom` branch. The parameter is
+// `never`, so it type-checks only while every CustomCell value has a branch
+// above it; at runtime it draws nothing, keeping the row aligned.
+export function unhandledCustomCell(custom: never): string {
+	void custom;
+	return "";
+}
 
 export type Field =
 	| (FieldBase & {

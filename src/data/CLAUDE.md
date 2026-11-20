@@ -42,8 +42,7 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `CacheStore`/`IndexedDbCacheStor
   `encounterLocations.json` going stale against the function that produced it — the generator walks live PokeAPI, so
   CI cannot regenerate it. `generationTables.test.ts` gates only consistency with `GENERATIONS` (array length
   covers the last dex number, generation ids exist), not freshness. `normalize.test.ts` ties the per-form rule (`evolutionReachByForm`) and the
-  known divergent rows in `evolutionStageOverrides.json` together offline (the second drift instance
-  that the deferred fixture test was waiting for: species-id tables mis-served regional-gated rows).
+  known divergent rows in `evolutionStageOverrides.json` together offline.
   Regenerating also picks up any live PokeAPI drift (Meltan -> Melmetal flipped #808/#809 in one
   run), so diff all three files and read the logged override list before keeping a regen.
 - Tests build a `PokedexTableRow` through `makeRow` / `makeRegionalFormRow`

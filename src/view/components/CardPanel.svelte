@@ -2,7 +2,7 @@
 	import { STAT_COLORS, TYPE_COLORS } from "../../data/constants";
 	import type { PokedexTableRow, StatBlock } from "../../data/types";
 	import type { PanelStats } from "../../utils/cardView";
-	import { type Field, formatEvYield, STAT_LABEL_BY_KEY } from "../../utils/fields";
+	import { type Field, formatEvYield, STAT_LABEL_BY_KEY, unhandledCustomCell } from "../../utils/fields";
 	import { filterHeldItemsForGen, type HeldItemForGen } from "../../utils/heldItemGen";
 	import { formatItemName, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { totalStat } from "../../utils/stats";
@@ -82,6 +82,8 @@
 									{/each}
 								{:else if field.custom === undefined}
 									<span class="chip-value" title={field.title?.(row, activeGen)}>{field.render(row, activeGen)}</span>
+								{:else}
+									{unhandledCustomCell(field.custom)}
 								{/if}
 							</span>
 						{/each}

@@ -4,8 +4,8 @@
 	let { name, size = 15, strokeWidth = 2.75 }: { name: string; size?: number; strokeWidth?: number } =
 		$props();
 
-	function applyIcon(el: HTMLElement) {
-		setIcon(el, name);
+	function applyIcon(el: HTMLElement, iconName: string) {
+		setIcon(el, iconName);
 		return {
 			update(newName: string) {
 				setIcon(el, newName);

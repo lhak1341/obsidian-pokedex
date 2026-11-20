@@ -19,10 +19,8 @@ build instead (`docs/mobile-verification.md` step 1).
 Inline comments here are unusually thorough and load-bearing. Most "shallow module" or
 "duplicate logic" findings from automated architecture review turn out to be deliberate,
 already-documented separations once the comments are read (6 of 8 candidates misdiagnosed
-in one round, 3 of 5 in another; a third round's claim that "typecheck catches a missing
-cell kind" was false, since `tsc` skips `.svelte`). Reread the full file and check for an existing ADR in
+in one round, 3 of 5 in another). Reread the full file and check for an existing ADR in
 `docs/adr/` before writing a candidate into a report — not only before implementing one.
-Re-derive any count too: a grep-derived "8 files" included an assertion, not a builder (was 7).
 
 ## Repo-specific toolchain
 
@@ -32,9 +30,11 @@ them before publishing — a tag can be pushed from a commit CI never saw. Nothi
 "remember to" any more; it explains why the gate is shaped the way it is.
 
 - `bun run build` transpiles with esbuild and never typechecks, so a green build proves
-  nothing about types (verified: a deliberate type error builds clean). It is still a
-  required step — esbuild-svelte is the only thing that catches a Svelte compile error, and
-  `svelte-check` is not a dependency here.
+  nothing about types (verified: a deliberate type error builds clean).
+- `bun run typecheck` is `svelte-check`, not `tsc`: it checks `.ts`, `scripts/*.ts` and every
+  `.svelte` template and prop, and reports Svelte compile errors. Plain `tsc` types a `.svelte`
+  import as Svelte's ambient `Record<string, any>` shim, so it rejects `PokedexView`'s uncast
+  `mount` while missing every template error; don't put it back in the chain.
 - TypeScript 6 does not auto-include `@types/*`, so `node:fs` in a test fails typecheck even with
   `@types/node` installed. Read source text with Vite's `?raw` (declared in `src/raw-imports.d.ts`).
   A test that must run Node itself (esbuild, stylelint, a vendored file) adds

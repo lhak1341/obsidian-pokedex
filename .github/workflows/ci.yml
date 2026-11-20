@@ -32,7 +32,7 @@ jobs:
 
       - run: bun run test
 
-      # Catches Svelte compile errors, which nothing above sees.
+      # The bundle the release ships; typecheck already reports Svelte compile errors.
       - run: bun run build
 
       # Not tag-gated: manifest.json and versions.json can drift apart in any

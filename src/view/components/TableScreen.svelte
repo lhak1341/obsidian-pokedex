@@ -7,7 +7,7 @@
 	import type { BrowseLayout } from "../../utils/browseLayout";
 	import { nextSort, sortPokemon, type SortColumn, type SortState } from "../../utils/sortPokemon";
 	import { scopeRowsToGen } from "../../utils/stats";
-	import { FIELDS, formatEvYield, isStatField, sortAfterFieldsChange } from "../../utils/fields";
+	import { FIELDS, formatEvYield, isStatField, sortAfterFieldsChange, unhandledCustomCell } from "../../utils/fields";
 	import { TABLE_COLUMNS, columnWidth, tableFrame } from "../../utils/tableColumns";
 	import { onDestroy, untrack } from "svelte";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
@@ -376,8 +376,7 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 											<EvChips evYield={row.evYield} />
 										</td>
 									{:else}
-										<!-- A CustomCell with no branch above: keep the row aligned (tsc skips .svelte). -->
-										<td></td>
+										<td>{unhandledCustomCell(col.custom)}</td>
 									{/if}
 								{:else}
 									<td class:right={col.align === "right"} title={col.title?.(row, activeGen)}>{col.render(row, activeGen)}</td>

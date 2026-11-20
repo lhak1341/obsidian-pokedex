@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makeRow } from "../data/__fixtures__/rows";
-import panelTemplate from "../view/components/CardPanel.svelte?raw";
 import type { StatBlock } from "../data/types";
-import { FIELDS } from "./fields";
 import { cardGrid, fitSprite, panelChips, panelPlacement, panelStats, sortChips, statStrip, tileCorners } from "./cardView";
 
 const stats = (overrides: Partial<StatBlock>): StatBlock => ({
@@ -162,28 +160,5 @@ describe("panelChips", () => {
 
 	it("draws no chips when only stats and Total are chosen", () => {
 		expect(panelChips(new Set(["hp", "total"]))).toEqual([]);
-	});
-});
-
-describe("CardPanel's chips", () => {
-	// tsc skips .svelte, and the panel's chip has no default branch: a custom
-	// Field with no `field.custom === …` branch there would draw its icon and
-	// no value. Same pin as tableColumns.test.ts's for TableScreen.
-	// Same pin as tableColumns.test.ts's: a chip that dropped the argument
-	// would compile and show every Capture as "-".
-	it("passes the Active Gen to a plain Field's render and title", () => {
-		expect(panelTemplate).toContain("field.render(row, activeGen)");
-		expect(panelTemplate).toContain("field.title?.(row, activeGen)");
-	});
-
-	it("has a CardPanel template branch for every custom Field", () => {
-		const customValues = [...new Set(FIELDS.flatMap((f) => (f.custom ? [f.custom] : [])))];
-		expect(customValues.length).toBeGreaterThan(0);
-		expect(panelTemplate).toContain("{#each chips as field");
-		for (const value of customValues) {
-			expect(panelTemplate, `no \`field.custom === "${value}"\` branch in CardPanel.svelte`).toContain(
-				`field.custom === "${value}"`,
-			);
-		}
 	});
 });
