@@ -3,6 +3,11 @@ import type { PokedexTableRow } from "../data/types";
 import { isIdInGenerations, matchesGenerations } from "./filterPokemon";
 
 export interface GenerationScope {
+	// Equal for two scopes over the same enabled generations, whatever order or
+	// duplicates the list had: the scope holds closures, so this is what
+	// PokedexLoadState.setScope compares to tell a real scope change from a
+	// settings change that leaves the rows alone.
+	key: string;
 	fetchRange: { start: number; end: number };
 	includes: (row: PokedexTableRow) => boolean;
 	// The bare-dex-number counterpart of `includes`, for a fetch that failed
@@ -28,6 +33,7 @@ export interface GenerationScope {
 export function resolveGenerationScope(enabledGenerations: number[]): GenerationScope {
 	const enabled = GENERATIONS.filter((g) => enabledGenerations.includes(g.id));
 	return {
+		key: enabled.map((g) => g.id).join(","),
 		fetchRange: {
 			start: Math.min(...enabled.map((g) => g.start)),
 			end: Math.max(...enabled.map((g) => g.end)),

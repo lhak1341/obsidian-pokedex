@@ -8,6 +8,7 @@ Three preferences change in place without remounting the view: favourites, the F
 
 - **Fields stay one selection for every leaf**, not one per width class like the layout (#27 grilling, Q3). Per-pane Fields would be new scope.
 - **Settings that need a reload** (dex range, Active Gen, sprite style, Reduce motion) stay on `saveSettings`, which remounts every leaf.
+  - *Update (2026-11-21):* `saveSettings` no longer remounts. `PokedexView.refresh` hands each app a settings copy (`applySettings`), and only the dex range (enabled generations) reloads rows, in place, through `PokedexLoadState.setScope`. Active Gen, sprite style and Reduce motion never needed a reload. The split this ADR draws stands: these preferences still bypass `saveSettings`, because each leaf mirrors them live from the holder.
 - The holder is DOM-free and tested with vitest (`localPreferences.test.ts`). The Svelte wiring is checked live with a second leaf in the right sidebar (`src/view/CLAUDE.md`).
 
 **Rejected:** building each write from the live `settings` but keeping per-leaf copies. That stops the lost saves in about six lines, but the two panes would still disagree on screen about which Pokémon are favourites until a remount.

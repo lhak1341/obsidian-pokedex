@@ -29,7 +29,8 @@ also has a `test-vault`. Its cache starts empty, so the first open fetches from 
    `is-phone` is computed at load: if it reads false after the resize, reload (`setTimeout(()=>location.reload(),200)`) and re-check.
 5. `eval code="app.commands.executeCommandById('obsidian-pokedex:open-pokedex')"`. Rows
    stream in; a cold cache shows `Loading more Pokemon… n/1025` for a while.
-   To remount the view (e.g. after changing `plugin.settings` in memory), do not detach the
+   To remount the view (a fresh mount; a setting changed in memory shows through
+   `plugin.saveSettings()` without one), do not detach the
    leaf: detaching the only leaf in emulated mobile leaves no tab group, and the open command
    then fails with `No tab group found` in `dev:errors`. Swap the view in place instead:
    `const l=app.workspace.getLeavesOfType('pokedex-view')[0]; await l.setViewState({type:'empty'}); await l.setViewState({type:'pokedex-view',active:true})`.

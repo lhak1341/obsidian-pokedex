@@ -113,10 +113,17 @@
 	// selection itself is the plugin's (ADR-0012), shared by every leaf.
 	let filters = $state({ ...EMPTY_FILTERS, statRanges: {} });
 	const visibleFieldKeys = $derived<ReadonlySet<string>>(new Set(visibleFields));
-	// Only the initial value of defaultSortColumn seeds local sort state —
-	// the user's in-table sort choice shouldn't get clobbered if it changes.
+	// defaultSortColumn seeds the sort, and changing the setting re-sorts by
+	// it (ascending), as the remount that used to follow every settings change
+	// did. Any other settings change leaves the user's sort alone.
 	// Table headers and Card view's sort chips both go through nextSort.
 	let sort = $state<SortState>({ column: untrack(() => defaultSortColumn), direction: "asc" });
+	let seededSortColumn = untrack(() => defaultSortColumn);
+	$effect.pre(() => {
+		if (defaultSortColumn === seededSortColumn) return;
+		seededSortColumn = defaultSortColumn;
+		sort = { column: defaultSortColumn, direction: "asc" };
+	});
 	// Never leave the list sorted by a Field that is no longer shown, in either
 	// layout, whichever leaf unchose it. sortAfterFieldsChange hands back the
 	// same object when nothing changes, so this writes only on a reset.

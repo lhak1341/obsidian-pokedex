@@ -93,8 +93,8 @@ function isVarietyFormSource(value: unknown): value is VarietyFormSource {
 // about whether that means a cache hit or a live PokeAPI call.
 export class PokedexRepository {
 	// Session-lifetime in-memory layer on top of the CacheStore. The table reload
-	// (settings change, tab close/reopen) is common — PokedexView remounts on
-	// every settings save — and without this, each of those re-reads and
+	// (tab close/reopen, a generation enabled or disabled in Settings) is
+	// common, and without this, each of those re-reads and
 	// re-parses the same ~400 files from disk even though
 	// nothing on disk changed since the last read a moment ago.
 	private pokemonMemCache = new Map<number, StoredPokemon>();

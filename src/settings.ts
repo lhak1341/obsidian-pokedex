@@ -224,8 +224,9 @@ export class PokedexSettingTab extends PluginSettingTab {
 		const appearanceItems = containerEl.createDiv("setting-group").createDiv("setting-items");
 
 		// The shared @lhak/style font-role row: the dropdown, and the custom family
-		// field shown only while "Custom" is chosen. saveSettings remounts every
-		// open view, which re-applies the roles.
+		// field shown only while "Custom" is chosen. The field saves on every
+		// keystroke; saveSettings re-applies the roles on each open view's
+		// contentEl (PokedexView.refresh) without remounting it.
 		const fontRow = (role: FontRole, name: string, desc: string) => addFontRoleSetting(appearanceItems, {
 			role,
 			name,

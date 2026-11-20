@@ -492,8 +492,8 @@ export interface PluginSettings extends FontRoleSettings {
 	// Table-row ids (PokedexTableRow.id, not dexNumber — a regional form's
 	// own row can be favorited independent of its base species) a user has
 	// starred. Saved through PokedexPlugin.preferences (ADR-0012), not the
-	// saveSettings path, which remounts the view; so are visibleFields and
-	// layoutByWidthClass.
+	// saveSettings path, which pushes a settings copy into every open view;
+	// so are visibleFields and layoutByWidthClass.
 	favoritePokemonIds: number[];
 	// Makes every plugin transition instant (#26). styles.src.css does the same
 	// for the OS's prefers-reduced-motion (stricter than the kit, which keeps

@@ -133,6 +133,16 @@ describe("the view root", () => {
 			/this\.contentEl\.toggleClass\("pkdx-reduce-motion", this\.getSettings\(\)\.reduceMotion\)/,
 		);
 	});
+
+	// A settings change no longer remounts the app, so the font roles and
+	// Reduce motion reach contentEl only if refresh re-applies them.
+	it("re-applies both on every settings refresh, not only at mount", () => {
+		const refresh = /\n\trefresh\(\): void \{([\s\S]*?)\n\t\}/.exec(pokedexViewSource)?.[1] ?? "";
+		const mount = /\n\tprivate mountApp\(\): void \{([\s\S]*?)\n\t\}/.exec(pokedexViewSource)?.[1] ?? "";
+		expect(refresh).toMatch(/this\.applyHostSettings\(\)/);
+		expect(mount).toMatch(/this\.applyHostSettings\(\)/);
+		expect(pokedexViewSource).toMatch(/private applyHostSettings\(\): void \{[^}]*applyFontRoles[^}]*pkdx-reduce-motion/);
+	});
 });
 
 // #26: the setting, or the OS's Reduce Motion, makes every plugin transition

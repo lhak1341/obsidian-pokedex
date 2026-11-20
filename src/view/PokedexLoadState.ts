@@ -62,13 +62,17 @@ export class PokedexLoadState {
 	loading = true;
 	retrying = false;
 	progress = { loaded: 0, total: 0 };
-	// Set by the owning view when it's closed/remounted while a load is still
-	// in flight (e.g. a settings change triggers a remount mid-fetch). Without
-	// this, that stale load keeps running in the background — a brand new
-	// PokedexLoadState starts its own full fetch at the same time, and every
-	// id the old one hasn't reached yet gets fetched twice. It also silences
-	// onUpdate, so a destroyed view is never written to.
+	// Set by the owning view when its leaf closes (or onOpen remounts it) while
+	// a load is still in flight. Without this, that stale load keeps running in
+	// the background, and if a new app mounts, every id the old load hasn't
+	// reached yet gets fetched twice. It also silences onUpdate, so a destroyed
+	// view is never written to.
 	cancelled = false;
+	// Which load is current. setScope bumps it, and a load or retry that
+	// started under an older value stops fetching and drops everything it
+	// still hands back, the way a cancelled one does, while this instance
+	// carries on with the new scope.
+	private loadNumber = 0;
 	// The throttle (see UPDATE_INTERVAL_MS): `cooldown` holds the timer
 	// started by the last update sent, and `pending` records that something
 	// changed while it ran, so the timer sends one update with the newest state.
@@ -142,6 +146,30 @@ export class PokedexLoadState {
 		this.stopCooldown();
 	}
 
+	private isCurrent(loadNumber: number): boolean {
+		return !this.cancelled && loadNumber === this.loadNumber;
+	}
+
+	// A settings change hands every leaf the scope its saved settings resolve
+	// to, changed or not. The same scope (by key) is a no-op returning null, so
+	// only enabling or disabling a generation reloads. A new one supersedes
+	// the running load or retry, clears the rows, failures and progress, and
+	// loads the new scope. `loading` stays as it was: a table already showing
+	// stays mounted (PokedexApp shows it only once `loading` is off), empty
+	// while the new rows stream in, so its filters, sort and an open detail
+	// screen survive.
+	setScope(scope: GenerationScope): Promise<LoadOutcome | null> {
+		if (this.cancelled || scope.key === this.scope.key) return Promise.resolve(null);
+		this.loadNumber++;
+		this.scope = scope;
+		this.rows = [];
+		this.failedIds = [];
+		this.retrying = false;
+		this.progress = { loaded: 0, total: 0 };
+		this.flush();
+		return this.load();
+	}
+
 	// The single place the generation scope is applied to fetched rows.
 	// `scope.fetchRange` is a contiguous span that can include ids from a
 	// disabled generation, and getRowsForIds adds regional-form rows next to
@@ -166,14 +194,17 @@ export class PokedexLoadState {
 	// Returns the outcome only when some ids failed (a clean load gets no
 	// Notice), and null when cancelled.
 	async load(): Promise<LoadOutcome | null> {
+		const loadNumber = this.loadNumber;
 		const result = await this.repository.getTableRows(
 			this.scope.fetchRange,
 			(loaded, total) => {
+				if (!this.isCurrent(loadNumber)) return;
 				this.progress = { loaded, total };
 				this.emit();
 			},
-			() => this.cancelled,
+			() => !this.isCurrent(loadNumber),
 			(row) => {
+				if (!this.isCurrent(loadNumber)) return;
 				const admitted = this.admit([row]);
 				if (admitted.length === 0) return;
 				this.rows = [...this.rows, ...admitted];
@@ -185,7 +216,7 @@ export class PokedexLoadState {
 				}
 			},
 		);
-		if (this.cancelled) return null;
+		if (!this.isCurrent(loadNumber)) return null;
 		this.rows = this.admit(result.rows);
 		// failedIds are bare ids (a row never got built, nothing to check
 		// generationId on) — a failure always happens on the *base* fetch id
@@ -199,22 +230,27 @@ export class PokedexLoadState {
 	}
 
 	// Returns null (a no-op) if there's nothing to retry, a retry is already in
-	// flight, or the load was cancelled meanwhile. `recovered` counts ids
+	// flight, or the load was cancelled or superseded (setScope) meanwhile. `recovered` counts ids
 	// (`attempted - stillFailing`), not rows: a base id's regional-form rows
 	// come back with it, so a row count would overstate it.
 	async retry(): Promise<RetryOutcome | null> {
 		if (this.failedIds.length === 0 || this.retrying) return null;
 		const attempted = this.failedIds.length;
+		const loadNumber = this.loadNumber;
 		this.retrying = true;
 		this.flush();
 		const result = await this.repository.retryRows(
 			this.failedIds,
 			(loaded, total) => {
+				if (!this.isCurrent(loadNumber)) return;
 				this.progress = { loaded, total };
 				this.emit();
 			},
-			() => this.cancelled,
+			() => !this.isCurrent(loadNumber),
 		);
+		// A superseded retry leaves `retrying` alone: setScope cleared it, and
+		// the new scope may have a retry of its own in flight by now.
+		if (loadNumber !== this.loadNumber) return null;
 		this.retrying = false;
 		if (this.cancelled) return null;
 		this.mergeRows(this.admit(result.rows));

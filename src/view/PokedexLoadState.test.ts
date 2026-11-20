@@ -53,7 +53,7 @@ function makeLoadState(
 	const client = new FakePokeApiClient();
 	const cache = new MemoryCacheStore();
 	const repository = new PokedexRepository(client, cache);
-	const scope: GenerationScope = { fetchRange: range, includes, includesFailedId };
+	const scope: GenerationScope = { key: "test", fetchRange: range, includes, includesFailedId };
 	const timer = new ManualTimer();
 	return { client, updates, timer, loadState: new PokedexLoadState(repository, scope, (s) => updates.push(s), timer) };
 }
@@ -230,7 +230,7 @@ function makeDrivenLoad() {
 			});
 		},
 	} as unknown as PokedexRepository;
-	const scope: GenerationScope = { fetchRange: { start: 1, end: 10 }, includes: () => true, includesFailedId: () => true };
+	const scope: GenerationScope = { key: "test", fetchRange: { start: 1, end: 10 }, includes: () => true, includesFailedId: () => true };
 	const loadState = new PokedexLoadState(repository, scope, (s) => updates.push(s), timer);
 	const loading = loadState.load();
 	return {
@@ -337,5 +337,123 @@ describe("PokedexLoadState update throttle", () => {
 		expect(load.updates[2].rows.map((r) => r.id)).toEqual([1, 2]);
 		// the earlier update's array was not changed in place
 		expect(load.updates[0].rows.map((r) => r.id)).toEqual([1]);
+	});
+});
+
+// Every getTableRows/retryRows call keeps its own callbacks, so a test can
+// drive a superseded load after setScope has started the next one.
+function makeScopedLoads() {
+	const updates: LoadSnapshot[] = [];
+	const timer = new ManualTimer();
+	type Call = {
+		range: { start: number; end: number };
+		progress: (loaded: number, total: number) => void;
+		isCancelled: () => boolean;
+		row: (row: PokedexTableRow) => void;
+		finish: (ids: number[], failedIds?: number[]) => void;
+	};
+	const loads: Call[] = [];
+	const retries: { finish: (ids: number[]) => void }[] = [];
+	const repository = {
+		getTableRows: (
+			range: Call["range"],
+			progress: Call["progress"],
+			isCancelled: Call["isCancelled"],
+			row: Call["row"],
+		) =>
+			new Promise((resolve) => {
+				loads.push({
+					range, progress, isCancelled, row,
+					finish: (ids, failedIds = []) =>
+						resolve({ rows: ids.map((id) => makeRow({ id })), failedIds, servedFromCache: true }),
+				});
+			}),
+		retryRows: () =>
+			new Promise((resolve) => {
+				retries.push({ finish: (ids) => resolve({ rows: ids.map((id) => makeRow({ id })), failedIds: [] }) });
+			}),
+	} as unknown as PokedexRepository;
+	const scopeOf = (key: string, start: number, end: number): GenerationScope => ({
+		key, fetchRange: { start, end }, includes: () => true, includesFailedId: () => true,
+	});
+	const loadState = new PokedexLoadState(repository, scopeOf("a", 1, 10), (s) => updates.push(s), timer);
+	return { updates, timer, loadState, loads, retries, scopeOf };
+}
+
+describe("PokedexLoadState.setScope", () => {
+	it("does nothing for a scope with the same key", async () => {
+		const { loadState, loads, updates, scopeOf } = makeScopedLoads();
+		const first = loadState.load();
+		loads[0].finish([1, 2]);
+		await first;
+		const sent = updates.length;
+
+		expect(await loadState.setScope(scopeOf("a", 50, 60))).toBeNull();
+
+		expect(loads).toHaveLength(1);
+		expect(updates).toHaveLength(sent);
+		expect(loadState.rows.map((r) => r.id)).toEqual([1, 2]);
+	});
+
+	it("loads a new key's range, clearing the rows at once and keeping loading off", async () => {
+		const { loadState, loads, updates, scopeOf } = makeScopedLoads();
+		const first = loadState.load();
+		loads[0].finish([1, 2], [3]);
+		await first;
+
+		const next = loadState.setScope(scopeOf("b", 20, 22));
+		const cleared = updates[updates.length - 1];
+		expect(cleared.rows).toEqual([]);
+		expect(cleared.failedIds).toEqual([]);
+		expect(cleared.loading).toBe(false);
+		expect(loads[1].range).toEqual({ start: 20, end: 22 });
+
+		loads[1].finish([20, 21, 22]);
+		expect(await next).toBeNull();
+		expect(loadState.rows.map((r) => r.id)).toEqual([20, 21, 22]);
+	});
+
+	it("drops whatever the superseded load hands back after the switch, and stops it fetching", async () => {
+		const { loadState, loads, timer, scopeOf } = makeScopedLoads();
+		const first = loadState.load();
+		loads[0].row(makeRow({ id: 1 }));
+		void loadState.setScope(scopeOf("b", 20, 22));
+
+		expect(loads[0].isCancelled()).toBe(true);
+		expect(loads[1].isCancelled()).toBe(false);
+		loads[0].row(makeRow({ id: 2 }));
+		loads[0].progress(5, 10);
+		loads[0].finish([1, 2, 3]);
+		expect(await first).toBeNull();
+		timer.fire();
+
+		expect(loadState.rows).toEqual([]);
+		expect(loadState.progress).toEqual({ loaded: 0, total: 0 });
+		loads[1].row(makeRow({ id: 20 }));
+		expect(loadState.rows.map((r) => r.id)).toEqual([20]);
+	});
+
+	it("drops a retry the switch superseded, leaving the new scope's state alone", async () => {
+		const { loadState, loads, retries, scopeOf } = makeScopedLoads();
+		const first = loadState.load();
+		loads[0].finish([1], [2]);
+		await first;
+		const retrying = loadState.retry();
+		expect(loadState.retrying).toBe(true);
+
+		void loadState.setScope(scopeOf("b", 20, 22));
+		expect(loadState.retrying).toBe(false);
+		retries[0].finish([2]);
+
+		expect(await retrying).toBeNull();
+		expect(loadState.rows).toEqual([]);
+	});
+
+	it("is a no-op once cancelled", async () => {
+		const { loadState, loads, scopeOf } = makeScopedLoads();
+		loadState.cancel();
+
+		expect(await loadState.setScope(scopeOf("b", 20, 22))).toBeNull();
+		expect(loads).toHaveLength(0);
 	});
 });

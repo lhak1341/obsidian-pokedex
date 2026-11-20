@@ -11,25 +11,38 @@
 	import type { DetailNavigationState, NavRecord, ScrollInstruction } from "./DetailNavigationState";
 	import { LEAF_COMMANDS_CONTEXT, type LeafCommandRegistry } from "./LeafCommandRegistry";
 	import DetailScreen from "./components/DetailScreen.svelte";
-	import { emptyLoadSnapshot, type LoadSnapshot, PokedexLoadState } from "./PokedexLoadState";
+	import { emptyLoadSnapshot, type LoadOutcome, type LoadSnapshot, PokedexLoadState } from "./PokedexLoadState";
 	import TableScreen from "./components/TableScreen.svelte";
 
 	let {
-		repository, settings, leafEl, preferences, navState, commands, onNavigate,
+		repository, initialSettings, leafEl, preferences, navState, commands, onNavigate,
 	}: {
 		repository: PokedexRepository;
-		settings: PluginSettings;
+		// The settings at mount. Later changes arrive through applySettings.
+		initialSettings: PluginSettings;
 		// The Pokedex leaf, whose width decides the width class.
 		leafEl: HTMLElement;
 		preferences: LocalPreferences;
 		navState: DetailNavigationState;
 		// The leaf's Leaf hotkey handlers (LeafCommandRegistry.ts), owned by
-		// PokedexView so a settings remount keeps the same registry. The
-		// screens register into it through context.
+		// PokedexView so an app mounted again on the same leaf keeps the same
+		// registry. The screens register into it through context.
 		commands: LeafCommandRegistry;
 		onNavigate: (record: NavRecord) => void;
 	} = $props();
 	setContext(LEAF_COMMANDS_CONTEXT, untrack(() => commands));
+
+	// A settings change reaches the mounted app through applySettings, called
+	// by PokedexView.refresh: nothing remounts, so filters, sort, scroll and the
+	// open screen survive it. Each call is a fresh copy, since the settings tab
+	// changes the plugin's settings object in place and handing over the same
+	// object again would change nothing here. Only the generation scope reloads
+	// rows (the scope effect below); every other setting is a prop.
+	let settings = $state.raw<PluginSettings>(untrack(() => initialSettings));
+
+	export function applySettings(next: PluginSettings): void {
+		settings = next;
+	}
 
 	// Favourites, Fields and the layout per width class live in the plugin's
 	// one LocalPreferences (ADR-0012), shared by every open Pokedex leaf. This
@@ -79,8 +92,8 @@
 	// onNavigate, and every entry (new, back/forward, restart) comes back in
 	// through show() below. navState is a plain, non-reactive class (same
 	// reason as PokedexLoadState below), so screen/selectedId are the reactive
-	// mirror, re-assigned after every call. Seeded from it, so a settings
-	// refresh remount keeps the screen.
+	// mirror, re-assigned after every call. Seeded from it, so an app that
+	// mounts again on the same leaf (onOpen firing twice) keeps the screen.
 	let screen = $state<"table" | "detail">(untrack(() => navState.screen));
 	let selectedId = $state<number | null>(untrack(() => navState.selectedId));
 
@@ -97,29 +110,37 @@
 	// TableScreen a new `rows` even when the class shared its array.
 	let view = $state.raw<LoadSnapshot>(emptyLoadSnapshot());
 
-	let loadState: PokedexLoadState;
+	const loadState = new PokedexLoadState(
+		untrack(() => repository),
+		resolveGenerationScope(untrack(() => settings.enabledGenerations)),
+		(snapshot) => (view = snapshot),
+	);
 
-	// PokedexView.refresh() (fired on any settings change — see main.ts
-	// saveSettings) unmounts this component and mounts a fresh one. Without
-	// cancelling here, a load still in flight when that happens keeps running
-	// in the background while the new instance starts its own load — every id
-	// the old one hadn't reached yet gets fetched twice for nothing. A
+	function noticePartialLoad(outcome: LoadOutcome | null) {
+		if (outcome) new Notice(describePartialLoadOutcome(outcome.loaded, outcome.failed));
+	}
+
+	// The app unmounts when its leaf closes, or when Obsidian calls onOpen
+	// again for the same leaf (PokedexView.mountApp). Without cancelling here, a
+	// load still in flight keeps running in the background, and if a new app
+	// mounts, every id the old one hadn't reached yet gets fetched twice. A
 	// cancelled load also stops calling onUpdate and returns a null outcome,
 	// so nothing below needs its own cancelled check.
-	onDestroy(() => loadState?.cancel());
+	onDestroy(() => loadState.cancel());
 
+	// Render the table as soon as the first row lands instead of blocking on
+	// the whole batch — the rest streams in behind a slim progress indicator
+	// (see the template) rather than a full-screen loader.
 	onMount(() => {
-		// Render the table as soon as the first row lands instead of blocking on
-		// the whole batch — the rest streams in behind a slim progress indicator
-		// (see the template) rather than a full-screen loader.
-		loadState = new PokedexLoadState(
-			repository,
-			resolveGenerationScope(settings.enabledGenerations),
-			(snapshot) => (view = snapshot),
-		);
-		void loadState.load().then((outcome) => {
-			if (outcome) new Notice(describePartialLoadOutcome(outcome.loaded, outcome.failed));
-		});
+		void loadState.load().then(noticePartialLoad);
+	});
+
+	// Every applySettings re-runs this, and setScope ignores a scope with the
+	// same key, so only enabling or disabling a generation reloads (in place,
+	// keeping the table mounted: see setScope).
+	$effect(() => {
+		const scope = resolveGenerationScope(settings.enabledGenerations);
+		untrack(() => void loadState.setScope(scope).then(noticePartialLoad));
 	});
 
 	function retryFailed() {

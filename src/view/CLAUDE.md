@@ -8,9 +8,10 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   `resolveGenerationId(dexNumber)` in UI code: it is wrong for every regional form (Alolan Rattata: dexNumber 19/Gen 1,
   real generationId 7), and `DetailScreen.svelte` once showed the wrong numeral that way. eslint parses no `.svelte`
   here, so nothing catches it.
-- `PokedexLoadState.admit()` is the one place the generation scope is applied to fetched rows; the streamed rows,
-  `load()` and `retry()` all go through it, and a new path that adds rows must too (`getRowsForIds` adds regional-form
-  rows next to every base id, so `retry()` once merged a disabled generation's Alolan Rattata into the table).
+- Every path in `PokedexLoadState` that hands back state (streamed rows, progress, `load()`'s end, `retry()`) crosses
+  both guards, and a new path must too: `admit()` applies the generation scope to its rows (`getRowsForIds` adds
+  regional-form rows next to every base id, so `retry()` once merged a disabled generation's Alolan Rattata into the
+  table), and `isCurrent(loadNumber)` drops whatever a load superseded by `setScope` still hands back.
   `onUpdate(snapshot)` hands a new `rows` array exactly when the rows changed (the class only replaces it), and at most
   one progress or streamed-row update per `UPDATE_INTERVAL_MS`: each update re-runs every `TableScreen` derived, and an
   update per callback took a cache-served load from 1.85 s to 24 s. `PokedexApp` holds it in `$state.raw`, since a deep
@@ -29,7 +30,8 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   `favoriteIds`/`onToggleFavorite` from there. The single-Pokémon views (detail screen, tap panel) draw
   `FavoriteToggle.svelte`; lists mark favourites only (the table with the dot `FavoriteMark.svelte`, Card view with an accent outline on the tile) and toggle
   through `view/favoriteMenu.ts` (right-click or press and hold; rules in `utils/pressHold.ts`). A `$state` seeded once via
-  `untrack(() => initialX)` (TableScreen's `sort`) never re-seeds from its prop, which is right for view state and wrong
+  `untrack(() => initialX)` never re-seeds from its prop unless an effect does it on purpose (TableScreen's `sort` only on a
+  `defaultSortColumn` change), which is right for view state and wrong
   for anything saved: two leaves then save over each other.
 - The browse screen is one list drawn two ways. `TableScreen.svelte` owns filters (search included) and one `SortState`
   and renders the `<table>` or `CardGrid.svelte` from the same `visibleRows`, so a layout switch keeps them; both sort
@@ -60,8 +62,11 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   plain-object events cast `as unknown as PointerEvent`, `vi.stubGlobal` for an `instanceof Element`; ADR-0013 keeps
   them two bindings). The decode's memo is `contentBounds = memoizeByCachePath(decode)` (`imageBounds.ts`, read by
   `contentScale` and Card view's `fitSprite`). ADR-0003 covers adding jsdom itself.
-- A screen's `onDestroy` runs only when the whole app remounts (any settings change → `PokedexView.refresh()`, or the
-  leaf closing): TableScreen stays mounted under `display:none`, so an "after unmount" bug needs a remount to trigger.
+- A settings change never remounts: `PokedexView.refresh()` re-applies fonts and Reduce motion on `contentEl` and hands
+  the app a settings copy (`applySettings`); only a new generation scope reloads rows, in place, through
+  `PokedexLoadState.setScope`, which keeps `loading` off so the table (filters, sort) and detail screen stay mounted. So a
+  screen's `onDestroy` runs only when the leaf closes or `onOpen` fires again; TableScreen also stays mounted under
+  `display:none`, so an "after unmount" bug needs the view swapped (`docs/live-verification.md`) to trigger.
 
 Adding a generation stales cached Moves/Flavor Text and needs a checklist walk — see
 `docs/multi-gen-expansion-plan.md`'s Recipe section, not a bespoke fix here.

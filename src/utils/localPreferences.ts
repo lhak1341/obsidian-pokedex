@@ -2,9 +2,9 @@ import type { PluginSettings } from "../data/types";
 import { type BrowseLayout, chooseLayout, type WidthClass } from "./browseLayout";
 
 // The preferences the browse and detail screens change in place: favourites,
-// the Fields selection and the layout per width class (ADR-0012). Saving one
-// must not remount the view (that would reset scroll, sort and filters), so
-// they bypass PokedexPlugin.saveSettings.
+// the Fields selection and the layout per width class (ADR-0012). They bypass
+// PokedexPlugin.saveSettings: every leaf reads them from this holder's
+// subscription, not from the settings copy saveSettings pushes into each app.
 //
 // One holder per plugin, shared by every open Pokedex leaf. Each write starts
 // from the plugin's live settings, never a leaf's copy, and every subscriber

@@ -9,8 +9,9 @@ time out (clear `.notice` before checking one shows); `dev:mobile` is global, tu
 
 - Focus first: `getLeavesOfType('pokedex-view')` + `setActiveLeaf(leaf, {focus:true})`. For a genuinely fresh Svelte
   mount, swap the same leaf's view: `setViewState({type:'empty'})`, then `setViewState({type:'pokedex-view',active:true})`.
-  Detaching breaks emulated mobile (`docs/mobile-verification.md` step 5). A saved setting needs that remount (or
-  `saveSettings()`'s refresh) to show: mutating `plugin.settings.X` in place changes nothing on screen.
+  Detaching breaks emulated mobile (`docs/mobile-verification.md` step 5). A setting changed in memory shows after
+  `plugin.saveSettings()`, whose `refresh` pushes a copy into every leaf's app without remounting it (only a generation
+  scope change reloads rows), or after that remount: mutating `plugin.settings.X` in place changes nothing on screen.
 - Fake the plugin's slow or persistent I/O on the live instance, restored in a `finally` by `delete`-ing the own property
   (the prototype method shows through): `repo.getTableRows`/`retryRows` for the load, banner and Notice paths, since a
   real-vault load once took over 90 s (rows render, `.loading-more-banner` stays up, so a few-second sleep reads the

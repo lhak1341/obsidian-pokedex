@@ -28,7 +28,7 @@ export interface FavoriteMenuTargetProps {
 export interface FavoriteMenu {
 	target(id: number): FavoriteMenuTargetProps;
 	// Stops a live press's timer and scroll watch, so a hold still pending
-	// when the list unmounts (a settings change remounts the view) opens nothing.
+	// when the list unmounts (the leaf closes) opens nothing.
 	destroy(): void;
 }
 

@@ -12,8 +12,11 @@ import PokedexApp from "./PokedexApp.svelte";
 
 export const VIEW_TYPE_POKEDEX = "pokedex-view";
 
-// PokedexApp's exported `show` (see its comment).
-type MountedApp = { show: (record: NavRecord) => ScrollInstruction };
+// PokedexApp's exported `show` and `applySettings` (see their comments).
+type MountedApp = {
+	show: (record: NavRecord) => ScrollInstruction;
+	applySettings: (settings: PluginSettings) => void;
+};
 
 // Not in obsidian.d.ts: the leaf's own back/forward stack, the one the tab
 // header arrows and the mobile navigation bar step. Probed live: `back()` and
@@ -34,13 +37,13 @@ export class PokedexView extends ItemView {
 	navigation = true;
 
 	// View history (CONTEXT.md): the screen and Pokemon live here, not in the
-	// Svelte app, so a settings refresh (which remounts the app) keeps the
-	// screen, and getState can answer before the app has mounted.
+	// Svelte app, so an app mounted again on this leaf (onOpen firing twice)
+	// keeps the screen, and getState can answer before the app has mounted.
 	private nav = new DetailNavigationState();
 
 	// Leaf hotkeys whose state lives in a screen component (see
 	// LeafCommandRegistry.ts). Here, not in the app, for the same reason as
-	// `nav`: a settings remount re-registers into the same registry.
+	// `nav`: a remount re-registers into the same registry.
 	private commands = new LeafCommandRegistry();
 
 	constructor(
@@ -150,12 +153,15 @@ export class PokedexView extends ItemView {
 		if (this.appInstance) await unmount(this.appInstance);
 	}
 
-	// Called after settings change (e.g. dex range, Active Gen) so the table
-	// reloads with the new configuration instead of requiring the tab to be
-	// closed and reopened. Two separate title surfaces need refreshing, and
-	// neither is covered by re-mounting the Svelte content (which only
-	// touches `contentEl`, not the header bar that lives alongside it in
-	// `containerEl`):
+	// Called after every saved setting (main.ts saveSettings). Nothing
+	// remounts: the app takes the new settings as props and reloads rows only
+	// when the generation scope changed (PokedexLoadState.setScope), so the
+	// table's filters, sort and scroll survive a settings change, and typing a
+	// custom font family (one save per keystroke) costs a few style writes.
+	// Fonts and Reduce motion live on contentEl (applyHostSettings). Two title
+	// surfaces need refreshing as well, and neither belongs to the Svelte
+	// content (which only touches `contentEl`, not the header bar that lives
+	// alongside it in `containerEl`):
 	//  - the tab-strip chip, refreshed by leaf.updateHeader() (not part of
 	//    Obsidian's public API surface / obsidian.d.ts, but a long-standing,
 	//    widely-relied-on method — verified live that it exists and works)
@@ -164,10 +170,21 @@ export class PokedexView extends ItemView {
 	//    Active Gen change, the tab chip updated but this element stayed on
 	//    the old value) — set directly instead.
 	refresh(): void {
-		this.mountApp();
+		this.applyHostSettings();
+		// A copy: the settings tab changes the plugin's object in place, and
+		// the app's `$state.raw` re-renders only for a new object.
+		this.appInstance?.applySettings({ ...this.getSettings() });
 		(this.leaf as unknown as { updateHeader: () => void }).updateHeader();
 		const titleEl = this.containerEl.querySelector(".view-header-title");
 		if (titleEl) titleEl.textContent = this.getDisplayText();
+	}
+
+	// The settings that live on contentEl rather than in the app: the font
+	// roles (applyFontRoles also removes a role set back to the default) and
+	// Reduce motion, which zeroes the transition durations (styles.src.css).
+	private applyHostSettings(): void {
+		applyFontRoles(this.contentEl, this.getSettings());
+		this.contentEl.toggleClass("pkdx-reduce-motion", this.getSettings().reduceMotion);
 	}
 
 	// Defensively unmounts any existing instance first — Obsidian can call
@@ -184,14 +201,12 @@ export class PokedexView extends ItemView {
 		this.contentEl.empty();
 		// lk-root: the @lhak/style alias layer defines the --lk- roles under it.
 		this.contentEl.addClasses(["lk-root", "pokedex-outer"]);
-		applyFontRoles(this.contentEl, this.getSettings());
-		// Zeroes the transition durations (styles.src.css, "Reduce motion").
-		this.contentEl.toggleClass("pkdx-reduce-motion", this.getSettings().reduceMotion);
+		this.applyHostSettings();
 		this.appInstance = mount(PokedexApp, {
 			target: this.contentEl,
 			props: {
 				repository: this.repository,
-				settings: this.getSettings(),
+				initialSettings: { ...this.getSettings() },
 				// The leaf's own element, not contentEl: the width class is the
 				// pane's width, padding included.
 				leafEl: this.containerEl,

@@ -13,6 +13,11 @@ describe("resolveGenerationScope", () => {
 		expect(scope.fetchRange).toEqual({ start: 1, end: 386 });
 	});
 
+	it("keys a scope by its enabled generations, ignoring order and duplicates", () => {
+		expect(resolveGenerationScope([3, 1, 3]).key).toBe(resolveGenerationScope([1, 3]).key);
+		expect(resolveGenerationScope([1, 3]).key).not.toBe(resolveGenerationScope([1, 2, 3]).key);
+	});
+
 	it("spans the gap when a middle generation is excluded", () => {
 		const scope = resolveGenerationScope([1, 3]);
 		expect(scope.fetchRange).toEqual({ start: 1, end: 386 });

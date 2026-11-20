@@ -13,8 +13,8 @@ export interface PaneWidth {
 
 // A hidden leaf (a background tab) measures 0, so at mount it starts wide, in
 // three columns, until it has a width. Inferred, not observed: a background
-// tab on a phone remounted by a settings change draws the table until its
-// first resize.
+// tab on a phone mounted while hidden (a restored workspace) draws the table
+// until its first resize.
 export const HIDDEN_LEAF_FALLBACK: PaneWidth = { widthClass: "wide", band: "columns" };
 
 // A width of 0 keeps `prev` (the fallback at mount); otherwise `prev` itself
