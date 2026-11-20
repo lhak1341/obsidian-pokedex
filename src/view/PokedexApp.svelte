@@ -91,8 +91,11 @@
 	// boundary instead, reassigned wholesale from the snapshot the class hands
 	// its onUpdate callback after every change (same shape as DetailScreen's
 	// entryLoad). The class owns the rows, failed ids and outcome counts; this
-	// component only renders them and shows the Notices.
-	let view = $state<LoadSnapshot>(emptyLoadSnapshot());
+	// component only renders them and shows the Notices. `$state.raw`: nothing
+	// here changes a snapshot in place, and a deep `$state` would wrap each
+	// update anew (Svelte's proxy() keeps no per-object cache), handing
+	// TableScreen a new `rows` even when the class shared its array.
+	let view = $state.raw<LoadSnapshot>(emptyLoadSnapshot());
 
 	let loadState: PokedexLoadState;
 

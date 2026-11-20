@@ -26,6 +26,25 @@ export interface RetryOutcome {
 	stillFailing: number;
 }
 
+// How often a progress tick or a streamed row may reach the view. Each update
+// re-runs TableScreen's filter and sort and re-checks every drawn row (38 ms
+// apiece with 1,082 rows, measured live), and a load reports one progress
+// tick per id plus one callback per row: about 2,100 updates, which took a
+// cache-served load to 24 s through the UI against 1.85 s with the rows
+// handed over once. Changes the user must see at once (see flush) skip it.
+export const UPDATE_INTERVAL_MS = 100;
+
+// The timer the throttle runs on: setTimeout in the app, a manual one in tests.
+export interface UpdateTimer {
+	set(fn: () => void, ms: number): unknown;
+	clear(handle: unknown): void;
+}
+
+const browserTimer: UpdateTimer = {
+	set: (fn, ms) => window.setTimeout(fn, ms),
+	clear: (handle) => window.clearTimeout(handle as number),
+};
+
 export function emptyLoadSnapshot(): LoadSnapshot {
 	return { rows: [], failedIds: [], loading: true, retrying: false, progress: { loaded: 0, total: 0 } };
 }
@@ -36,6 +55,8 @@ export function emptyLoadSnapshot(): LoadSnapshot {
 // Presentation concerns (showing the Notice) are the caller's job — this class
 // only tracks state and talks to PokedexRepository.
 export class PokedexLoadState {
+	// Only ever replaced, never changed in place, so a snapshot can hand the
+	// view this same array until the rows really change (see snapshot).
 	rows: PokedexTableRow[] = [];
 	failedIds: number[] = [];
 	loading = true;
@@ -48,6 +69,11 @@ export class PokedexLoadState {
 	// id the old one hasn't reached yet gets fetched twice. It also silences
 	// onUpdate, so a destroyed view is never written to.
 	cancelled = false;
+	// The throttle (see UPDATE_INTERVAL_MS): `cooldown` holds the timer
+	// started by the last update sent, and `pending` records that something
+	// changed while it ran, so the timer sends one update with the newest state.
+	private cooldown: unknown = null;
+	private pending = false;
 
 	constructor(
 		private repository: PokedexRepository,
@@ -59,11 +85,16 @@ export class PokedexLoadState {
 		// (a new `rows` array each time, which TableScreen's deriveds need to
 		// re-run) for it to assign into its own `$state`.
 		private onUpdate: (snapshot: LoadSnapshot) => void = () => {},
+		private timer: UpdateTimer = browserTimer,
 	) {}
 
+	// `rows` is the class's own array, safe to share because it is only ever
+	// replaced: the view sees a new array exactly when the rows changed
+	// (TableScreen's deriveds re-run on identity), and a progress-only update
+	// leaves them alone.
 	snapshot(): LoadSnapshot {
 		return {
-			rows: [...this.rows],
+			rows: this.rows,
 			failedIds: [...this.failedIds],
 			loading: this.loading,
 			retrying: this.retrying,
@@ -71,12 +102,44 @@ export class PokedexLoadState {
 		};
 	}
 
+	// Sends now, unless an update went out within UPDATE_INTERVAL_MS: then the
+	// cooldown's timer sends the newest state when it ends.
 	private emit(): void {
-		if (!this.cancelled) this.onUpdate(this.snapshot());
+		if (this.cancelled) return;
+		if (this.cooldown !== null) {
+			this.pending = true;
+			return;
+		}
+		this.send();
+	}
+
+	// For changes the user must see at once (the table replacing the loading
+	// screen, a load or retry starting or ending): sends now and replaces any
+	// update the throttle still holds.
+	private flush(): void {
+		if (this.cancelled) return;
+		this.stopCooldown();
+		this.send();
+	}
+
+	private send(): void {
+		this.pending = false;
+		this.onUpdate(this.snapshot());
+		this.cooldown = this.timer.set(() => {
+			this.cooldown = null;
+			if (this.pending) this.send();
+		}, UPDATE_INTERVAL_MS);
+	}
+
+	private stopCooldown(): void {
+		if (this.cooldown !== null) this.timer.clear(this.cooldown);
+		this.cooldown = null;
+		this.pending = false;
 	}
 
 	cancel(): void {
 		this.cancelled = true;
+		this.stopCooldown();
 	}
 
 	// The single place the generation scope is applied to fetched rows.
@@ -113,9 +176,13 @@ export class PokedexLoadState {
 			(row) => {
 				const admitted = this.admit([row]);
 				if (admitted.length === 0) return;
-				this.rows.push(...admitted);
-				this.loading = false;
-				this.emit();
+				this.rows = [...this.rows, ...admitted];
+				if (this.loading) {
+					this.loading = false;
+					this.flush();
+				} else {
+					this.emit();
+				}
 			},
 		);
 		if (this.cancelled) return null;
@@ -127,7 +194,7 @@ export class PokedexLoadState {
 		// this stays the simple dex-range check.
 		this.failedIds = result.failedIds.filter((id) => this.scope.includesFailedId(id));
 		this.loading = false;
-		this.emit();
+		this.flush();
 		return this.failedIds.length > 0 ? { loaded: this.rows.length, failed: this.failedIds.length } : null;
 	}
 
@@ -139,7 +206,7 @@ export class PokedexLoadState {
 		if (this.failedIds.length === 0 || this.retrying) return null;
 		const attempted = this.failedIds.length;
 		this.retrying = true;
-		this.emit();
+		this.flush();
 		const result = await this.repository.retryRows(
 			this.failedIds,
 			(loaded, total) => {
@@ -152,7 +219,7 @@ export class PokedexLoadState {
 		if (this.cancelled) return null;
 		this.mergeRows(this.admit(result.rows));
 		this.failedIds = result.failedIds;
-		this.emit();
+		this.flush();
 		return {
 			attempted,
 			recovered: attempted - result.failedIds.length,

@@ -11,7 +11,10 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
 - `PokedexLoadState.admit()` is the one place the generation scope is applied to fetched rows; the streamed rows,
   `load()` and `retry()` all go through it, and a new path that adds rows must too (`getRowsForIds` adds regional-form
   rows next to every base id, so `retry()` once merged a disabled generation's Alolan Rattata into the table).
-  `onUpdate(snapshot)` hands a fresh `rows` array each time, which `TableScreen`'s deriveds need.
+  `onUpdate(snapshot)` hands a new `rows` array exactly when the rows changed (the class only replaces it), and at most
+  one progress or streamed-row update per `UPDATE_INTERVAL_MS`: each update re-runs every `TableScreen` derived, and an
+  update per callback took a cache-served load from 1.85 s to 24 s. `PokedexApp` holds it in `$state.raw`, since a deep
+  `$state` wraps every assignment in a new proxy.
 - Active Gen data is unscoped at its source and scoped once before anything shows it, so a new reader takes the scoped
   form. Stats: `scopeRowsToGen` (`utils/stats.ts`), applied once as `TableScreen`'s `scopedRows` (`row.stats` is
   latest-game). Held items and encounters: `heldItemsAllGens`/`encounterLocationsAllGens` carry every generation, the

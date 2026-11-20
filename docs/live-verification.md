@@ -106,6 +106,13 @@ time out (clear `.notice` before checking one shows); `dev:mobile` is global, tu
   Layout: dump every element's rect relative to the screen at several leaf widths and diff the lists, skipping only
   the wrapper elements the change adds (#31: 4 species × 4 widths, 0 diffs).
   Run both builds in one window state: `dev:mobile` changes the leaf width and base font (16px emulated, 15px desktop), so an emulated baseline never matches a desktop run of the same build.
+- A slowdown is located by timing one load at each layer and subtracting, in-app (`performance.now()` plus
+  `PerformanceObserver({type:'longtask'})`, read once): the repository alone (a fresh
+  `new plugin.repository.constructor(client, plugin.cache)`, the `src/data/CLAUDE.md` recipe), then through the UI by
+  setting `plugin.repository` to it before the leaf swap (restore in a `finally`, swap again), then with one of its
+  callbacks changed (rows held to the end, progress only). That split found the 24 s load was per-update rendering, not
+  row count (1.7 s repository, 1.85 s rows handed over once). Each fresh repository leaves its sprite blob URLs live
+  until a window reload.
 - A Narrow pane is a leaf width, and both screens read the leaf: PokedexApp's ResizeObserver and the `pane` container
   (`styles.src.css`) that every Narrow pane query uses (`@container pane (width < 600px)`, pinned by
   `src/view/paneBreakpoint.test.ts`). So drive it by the leaf: `leaf.view.containerEl.style.width = '390px'` (clear it

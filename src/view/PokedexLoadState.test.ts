@@ -1,10 +1,45 @@
 import { describe, expect, it } from "vitest";
 import { FakePokeApiClient, MemoryCacheStore } from "../data/__fixtures__/fakes";
-import { makeRegionalFormRow } from "../data/__fixtures__/rows";
+import { makeRegionalFormRow, makeRow } from "../data/__fixtures__/rows";
 import { PokedexRepository } from "../data/PokedexRepository";
 import type { PokedexTableRow } from "../data/types";
 import type { GenerationScope } from "../utils/generationScope";
-import { type LoadSnapshot, PokedexLoadState } from "./PokedexLoadState";
+import { type LoadSnapshot, PokedexLoadState, UPDATE_INTERVAL_MS, type UpdateTimer } from "./PokedexLoadState";
+
+// A timer on a clock that moves only when a test says so: the throttle's
+// cooldown never ends on its own, so every update a test sees is one the class
+// chose to send. `advance` fires only what is due, in due order, as real time
+// would; `fire` ends every cooldown at once.
+class ManualTimer implements UpdateTimer {
+	private now = 0;
+	private nextHandle = 1;
+	private callbacks = new Map<number, { due: number; fn: () => void }>();
+	readonly delays: number[] = [];
+
+	set(fn: () => void, ms: number): number {
+		const handle = this.nextHandle++;
+		this.callbacks.set(handle, { due: this.now + ms, fn });
+		this.delays.push(ms);
+		return handle;
+	}
+
+	clear(handle: unknown): void {
+		this.callbacks.delete(handle as number);
+	}
+
+	advance(ms: number): void {
+		this.now += ms;
+		const due = [...this.callbacks].filter(([, c]) => c.due <= this.now).sort(([, a], [, b]) => a.due - b.due);
+		for (const [handle, c] of due) {
+			this.callbacks.delete(handle);
+			c.fn();
+		}
+	}
+
+	fire(): void {
+		this.advance(Infinity);
+	}
+}
 
 // A plain permissive scope (not resolveGenerationScope, whose empty list
 // would give an Infinity range): these tests exercise fetch/retry behavior,
@@ -19,7 +54,8 @@ function makeLoadState(
 	const cache = new MemoryCacheStore();
 	const repository = new PokedexRepository(client, cache);
 	const scope: GenerationScope = { fetchRange: range, includes, includesFailedId };
-	return { client, updates, loadState: new PokedexLoadState(repository, scope, (s) => updates.push(s)) };
+	const timer = new ManualTimer();
+	return { client, updates, timer, loadState: new PokedexLoadState(repository, scope, (s) => updates.push(s), timer) };
 }
 
 describe("PokedexLoadState", () => {
@@ -72,8 +108,6 @@ describe("PokedexLoadState", () => {
 		// every snapshot with rows has loading off; rows only ever grow while streaming
 		const withRows = updates.slice(firstWithRow);
 		expect(withRows.every((u) => !u.loading)).toBe(true);
-		// each update hands over a fresh rows array (TableScreen's deriveds key on identity)
-		expect(new Set(updates.map((u) => u.rows)).size).toBe(updates.length);
 		expect(updates[updates.length - 1].rows.map((r) => r.id)).toEqual([1, 2, 3]);
 	});
 
@@ -171,5 +205,137 @@ describe("PokedexLoadState", () => {
 
 		expect(await second).toBeNull();
 		expect(await first).toEqual({ attempted: 1, recovered: 1, stillFailing: 0 });
+	});
+});
+
+// Drives load() by hand: the test calls the repository's callbacks and decides
+// when the load ends, so the throttle's choices are visible one by one.
+function makeDrivenLoad() {
+	const updates: LoadSnapshot[] = [];
+	const timer = new ManualTimer();
+	let onProgress: (loaded: number, total: number) => void = () => {};
+	let onRow: (row: PokedexTableRow) => void = () => {};
+	let finish: (rows: PokedexTableRow[]) => void = () => {};
+	const repository = {
+		getTableRows: (
+			_range: unknown,
+			progress: typeof onProgress,
+			_isCancelled: unknown,
+			row: typeof onRow,
+		) => {
+			onProgress = progress;
+			onRow = row;
+			return new Promise((resolve) => {
+				finish = (rows) => resolve({ rows, failedIds: [], servedFromCache: true });
+			});
+		},
+	} as unknown as PokedexRepository;
+	const scope: GenerationScope = { fetchRange: { start: 1, end: 10 }, includes: () => true, includesFailedId: () => true };
+	const loadState = new PokedexLoadState(repository, scope, (s) => updates.push(s), timer);
+	const loading = loadState.load();
+	return {
+		updates,
+		timer,
+		loadState,
+		loading,
+		progress: (loaded: number) => onProgress(loaded, 10),
+		row: (id: number) => onRow(makeRow({ id })),
+		finish: (ids: number[]) => finish(ids.map((id) => makeRow({ id }))),
+	};
+}
+
+describe("PokedexLoadState update throttle", () => {
+	it("sends the same three updates however many ids load, while the cooldown never ends", async () => {
+		const small = makeLoadState({ start: 1, end: 3 });
+		await small.loadState.load();
+		const large = makeLoadState({ start: 1, end: 300 });
+		await large.loadState.load();
+
+		// the first progress tick (the repository reports it before the row),
+		// the first admitted row, then the load's end: the other 299 ticks and
+		// 299 rows sent nothing in between
+		expect(small.updates).toHaveLength(3);
+		expect(large.updates).toHaveLength(3);
+		expect(large.updates[2].rows).toHaveLength(300);
+		expect(large.timer.delays.every((ms) => ms === UPDATE_INTERVAL_MS)).toBe(true);
+	});
+
+	it("sends the newest held state once when the cooldown ends, and nothing more", () => {
+		const load = makeDrivenLoad();
+		load.progress(1);
+		load.progress(2);
+		load.progress(3);
+		expect(load.updates.map((u) => u.progress.loaded)).toEqual([1]);
+
+		load.timer.fire();
+		expect(load.updates.map((u) => u.progress.loaded)).toEqual([1, 3]);
+
+		load.timer.fire();
+		expect(load.updates).toHaveLength(2);
+	});
+
+	it("shows the first admitted row at once, inside a cooldown", () => {
+		const load = makeDrivenLoad();
+		load.progress(1);
+		load.row(1);
+
+		expect(load.updates).toHaveLength(2);
+		expect(load.updates[1].loading).toBe(false);
+		expect(load.updates[1].rows.map((r) => r.id)).toEqual([1]);
+	});
+
+	it("replaces a held update with the load's end, and sends nothing after it", async () => {
+		const load = makeDrivenLoad();
+		load.row(1);
+		load.progress(2);
+		load.finish([1, 2]);
+		await load.loading;
+
+		expect(load.updates).toHaveLength(2);
+		load.timer.fire();
+		expect(load.updates).toHaveLength(2);
+		expect(load.updates[1].rows.map((r) => r.id)).toEqual([1, 2]);
+	});
+
+	it("starts a fresh cooldown after an update that skipped it", () => {
+		const load = makeDrivenLoad();
+		load.progress(1); // sent at 0: cooldown to 100
+		load.timer.advance(UPDATE_INTERVAL_MS / 2);
+		load.row(1); // sent at 50, past the throttle: cooldown to 150
+		load.timer.advance(UPDATE_INTERVAL_MS / 2);
+		load.progress(2); // at 100, still inside the second cooldown
+
+		expect(load.updates).toHaveLength(2);
+		load.timer.advance(UPDATE_INTERVAL_MS / 2);
+		expect(load.updates.map((u) => u.progress.loaded)).toEqual([1, 1, 2]);
+	});
+
+	it("drops a held update on cancel", () => {
+		const load = makeDrivenLoad();
+		load.progress(1);
+		load.progress(2);
+		load.loadState.cancel();
+		load.timer.fire();
+
+		expect(load.updates).toHaveLength(1);
+	});
+
+	it("hands the view a new rows array exactly when the rows changed", () => {
+		const load = makeDrivenLoad();
+		load.row(1);
+		load.timer.fire();
+		load.progress(2);
+		load.timer.fire();
+		load.row(2);
+		load.timer.fire();
+
+		expect(load.updates).toHaveLength(3);
+		// progress only: the same array, so TableScreen's deriveds stay put
+		expect(load.updates[1].rows).toBe(load.updates[0].rows);
+		// a new row: a new array, which those deriveds re-run on
+		expect(load.updates[2].rows).not.toBe(load.updates[1].rows);
+		expect(load.updates[2].rows.map((r) => r.id)).toEqual([1, 2]);
+		// the earlier update's array was not changed in place
+		expect(load.updates[0].rows.map((r) => r.id)).toEqual([1]);
 	});
 });
