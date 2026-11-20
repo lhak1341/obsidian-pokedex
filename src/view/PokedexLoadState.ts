@@ -81,9 +81,9 @@ export class PokedexLoadState {
 		// PokedexLoadState is a plain class, not reactive: Svelte 5's `$state`
 		// only deep-proxies plain objects/arrays, not class instances, so
 		// mutating a field here is invisible to a Svelte view watching this
-		// instance. onUpdate hands the owner a fresh snapshot after every change
-		// (a new `rows` array each time, which TableScreen's deriveds need to
-		// re-run) for it to assign into its own `$state`.
+		// instance. onUpdate hands the owner a fresh snapshot (throttled, see
+		// emit/flush; a new `rows` array only when the rows changed, see
+		// snapshot) for it to assign into its own `$state.raw`.
 		private onUpdate: (snapshot: LoadSnapshot) => void = () => {},
 		private timer: UpdateTimer = browserTimer,
 	) {}
