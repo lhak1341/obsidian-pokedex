@@ -22,6 +22,13 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `CacheStore`/`IndexedDbCacheStor
   a trim-down of something already cached, like `moves`/`flavor_text_entries`) needs a
   matching `isStale` check on its `getOrFetch` call in `PokedexRepository.ts`. Otherwise an
   existing user's cache has the field `undefined` and crashes instead of self-healing.
+- The pokemon cache (store and mem) holds `StoredPokemon`, not `RawPokemon`: `toStoredPokemon` cuts moves to
+  `MOVE_VERSION_GROUPS` and to `StoredMove`'s three fields (145 → ~38 MB over 1,025 pokemon), a projection only, so no
+  normalize rule lives in the cache. `RawPokemon` is only what `PokeApiClient` returns and fixtures hold; normalize
+  functions take `StoredPokemon` (tests: `toStoredPokemon(fixture)`). A record still in PokeAPI's move shape is
+  rewritten on first read (`hasPokeApiMoves`, the `migrate` step). Reading a new move field means extending
+  `StoredMove` and adding an `isStale` check, since cached records lack it. A cached finished row was rejected
+  (ADR-0015).
 - For a per-row derived value needing more than the already-fetched pokemon+species
   response and stable until the next generation ships (e.g. evolution-family depth), do not
   add a runtime fetch. Generate a static lookup table via `scripts/generate-*.ts`, reusing

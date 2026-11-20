@@ -13,7 +13,7 @@ A ticket's interface is shaped by the tickets that consume it: before settling a
 
 Deploys to the vault folder `pokedex` (intentionally ≠ manifest id `obsidian-pokedex`), and
 to `pokedex-test-vault/` (named so the Obsidian CLI's by-name `vault=` cannot hit a sibling
-repo's `test-vault`). `bun run deploy` writes both, so a test-vault-only live check copies the
+repo's `test-vault`; `vault=` counts only before the subcommand — `obsidian eval vault=…` silently runs in the focused vault, the real one). `bun run deploy` writes both, so a test-vault-only live check copies the
 build instead (`docs/mobile-verification.md` step 1).
 
 Inline comments here are unusually thorough and load-bearing. Most "shallow module" or
@@ -82,4 +82,4 @@ roles, which resolve only under `.lk-root` (`PokedexView`'s `contentEl`).
   kit pattern rule of the same shape. Obsidian's `button` rules beat the chip pattern's rest
   state; `button.filter-chip` in `styles.src.css` restates them.
 
-`temp/` is gitignored and already used for scratch output — prefer it over the OS tmp dir.
+`temp/` is gitignored scratch, purged automatically — prefer it over the OS tmp dir, and never cite a `temp/` path from an ADR or doc (inline the probe method instead).

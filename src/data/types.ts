@@ -47,6 +47,24 @@ export interface RawPokemon {
 	}[];
 }
 
+// One learnable move as the cache stores it: the three fields normalizeMoves
+// reads from each of PokeAPI's version_group_details, as a tuple, already
+// filtered to MOVE_VERSION_GROUPS. PokeAPI's own shape (a NamedApiResource,
+// url included, per field, plus `order` and `enhancement_level`) made moves
+// 124 of the 145 MB a table load held for 1,025 pokemon; this is 17.
+export interface StoredMove {
+	name: string;
+	details: [versionGroup: string, learnMethod: string, levelLearnedAt: number][];
+}
+
+// A /pokemon response as PokedexRepository caches and holds it (toStoredPokemon
+// in normalize.ts builds it): everything but moves stays PokeAPI's shape. Every
+// normalize function that reads a pokemon takes this, not RawPokemon, which is
+// only what PokeApiClient returns. Reading a new move field means extending
+// StoredMove AND adding an isStale check (src/data/CLAUDE.md): records already
+// cached lack it.
+export type StoredPokemon = Omit<RawPokemon, "moves"> & { moves: StoredMove[] };
+
 export interface RawSpecies {
 	id: number;
 	name: string;

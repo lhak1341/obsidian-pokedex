@@ -22,8 +22,9 @@ import {
 	toGigantamaxFormDetail,
 	toMegaFormDetail,
 	toTableRow,
+	hasPokeApiMoves,
+	toStoredPokemon,
 	trimFlavorTextEntries,
-	trimMovesToVersionGroups,
 } from "./normalize";
 import { PokeApiClient } from "./PokeApiClient";
 import { REGIONAL_FORMS, type Generation } from "./constants";
@@ -38,6 +39,7 @@ import type {
 	RawEvolutionChain,
 	RawPokemon,
 	RawSpecies,
+	StoredPokemon,
 } from "./types";
 
 // Outer dispatch concurrency for loops that are all network-bound work (e.g.
@@ -95,12 +97,12 @@ export class PokedexRepository {
 	// every settings save — and without this, each of those re-reads and
 	// re-parses the same ~400 files from disk even though
 	// nothing on disk changed since the last read a moment ago.
-	private pokemonMemCache = new Map<number, RawPokemon>();
+	private pokemonMemCache = new Map<number, StoredPokemon>();
 	// Regional-form varieties (e.g. "rattata-alola") are fetched by PokeAPI
 	// *name*, not a numeric dex id — a separate cache/map so a variety name
 	// can never collide with a numeric pokemonMemCache key, and so
 	// `pokemon/{name}.json` and `pokemon/{id}.json` stay distinct disk paths.
-	private pokemonVariantMemCache = new Map<string, RawPokemon>();
+	private pokemonVariantMemCache = new Map<string, StoredPokemon>();
 	private speciesMemCache = new Map<number, RawSpecies>();
 	private evolutionChainMemCache = new Map<string, RawEvolutionChain>();
 	private imageMemCache: ImageMemory;
@@ -200,58 +202,56 @@ export class PokedexRepository {
 
 	// Shared fetch/migrate/isStale logic behind getOrFetchPokemon (numeric id)
 	// and getOrFetchPokemonVariant (name) below — both fetch the exact same
-	// /pokemon/{idOrName} shape and need the exact same trim/self-heal
+	// /pokemon/{idOrName} shape and need the exact same projection/self-heal
 	// treatment, just keyed differently.
-	private async fetchAndTrimPokemon(idOrName: number | string): Promise<RawPokemon> {
-		const fresh = await this.client.fetchPokemon(idOrName);
-		// See trimMovesToVersionGroups: strips the ~20 version groups this
-		// plugin never reads before it's written to disk / kept in memory.
-		return { ...fresh, moves: trimMovesToVersionGroups(fresh.moves) };
+	private async fetchStoredPokemon(idOrName: number | string): Promise<StoredPokemon> {
+		// See toStoredPokemon: moves cut to the version groups shown and the
+		// three fields read, before the record is written or held in memory.
+		return toStoredPokemon(await this.client.fetchPokemon(idOrName));
 	}
-	// Self-heals a cache written before trimMovesToVersionGroups existed (a
-	// full, untrimmed moves array) by rewriting it trimmed the first time
-	// it's read, rather than requiring a manual cache clear.
-	private trimCachedPokemonMoves(cached: RawPokemon): RawPokemon {
-		const trimmedMoves = trimMovesToVersionGroups(cached.moves);
-		return trimmedMoves.length !== cached.moves.length ? { ...cached, moves: trimmedMoves } : cached;
+	// Self-heals a record cached in PokeAPI's move shape (written before
+	// toStoredPokemon, trimmed to the version groups or not) by rewriting it
+	// the first time it's read, rather than refetching or requiring a clear.
+	private storeCachedPokemon(cached: StoredPokemon): StoredPokemon {
+		return hasPokeApiMoves(cached) ? toStoredPokemon(cached) : cached;
 	}
 	// held_items is new data, not a trim-down of something already on disk
 	// (unlike moves/flavor text above) — same as getMoveDetails' `description`
 	// field, a cache written before it existed can't self-heal via a local
 	// transform and needs a real refetch.
-	private pokemonIsStale(cached: RawPokemon): boolean {
+	private pokemonIsStale(cached: StoredPokemon): boolean {
 		return !("held_items" in cached);
 	}
 
-	private async getOrFetchPokemon(id: number): Promise<RawPokemon> {
+	private async getOrFetchPokemon(id: number): Promise<StoredPokemon> {
 		return this.getOrFetch(
 			this.pokemonMemCache,
 			id,
 			pokemonPath(id),
-			() => this.fetchAndTrimPokemon(id),
-			(cached) => this.trimCachedPokemonMoves(cached),
+			() => this.fetchStoredPokemon(id),
+			(cached) => this.storeCachedPokemon(cached),
 			(cached) => this.pokemonIsStale(cached),
 		);
 	}
 
-	private async getOrFetchPokemonVariant(name: string): Promise<RawPokemon> {
+	private async getOrFetchPokemonVariant(name: string): Promise<StoredPokemon> {
 		return this.getOrFetch(
 			this.pokemonVariantMemCache,
 			name,
 			pokemonPath(name),
-			() => this.fetchAndTrimPokemon(name),
-			(cached) => this.trimCachedPokemonMoves(cached),
+			() => this.fetchStoredPokemon(name),
+			(cached) => this.storeCachedPokemon(cached),
 			(cached) => this.pokemonIsStale(cached),
 		);
 	}
 
-	// Every RawPokemon carries its own species reference (name + URL) —
+	// Every pokemon record carries its own species reference (name + URL) —
 	// resolving the species id from *that* rather than assuming it equals
 	// the pokemon's own id is what lets every call site below work
 	// uniformly for both a default variety (where they're numerically the
 	// same anyway) and a regional-form variety (where they're not: Alolan
 	// Rattata's own id is 10091, but its species is still #19).
-	private speciesIdFromPokemon(pokemon: RawPokemon): number {
+	private speciesIdFromPokemon(pokemon: StoredPokemon): number {
 		const match = pokemon.species.url.match(/\/(\d+)\/?$/);
 		return match ? Number(match[1]) : pokemon.id;
 	}
@@ -579,7 +579,7 @@ export class PokedexRepository {
 				// — see this repo's CLAUDE.md cache-duplication gotcha. Read the
 				// name-keyed file first to learn the variant's own numeric id
 				// before removing it out from under itself.
-				const cachedVariant = await this.cache.readJson<RawPokemon>(pokemonPath(form.key));
+				const cachedVariant = await this.cache.readJson<StoredPokemon>(pokemonPath(form.key));
 				await this.evictPokemonAssets(this.pokemonVariantMemCache, form.key);
 				if (cachedVariant) {
 					await this.evictPokemonAssets(this.pokemonMemCache, cachedVariant.id);
@@ -600,7 +600,7 @@ export class PokedexRepository {
 	}
 
 	private async evictVarietyForms(id: number): Promise<void> {
-		const pokemon = await this.cache.readJson<RawPokemon>(pokemonPath(id));
+		const pokemon = await this.cache.readJson<StoredPokemon>(pokemonPath(id));
 		const species = await this.cache.readJson<RawSpecies>(speciesPath(id));
 		if (!pokemon || !species) return;
 		for (const form of deriveMegaForms(pokemon, species)) {
@@ -687,7 +687,7 @@ export class PokedexRepository {
 	// entry, the pokemon JSON, and every ALL_IMAGE_SUFFIXES image (mem +
 	// disk). Species eviction is deliberately not folded in here — it only
 	// applies to the base-id case, not the shape this helper covers.
-	private async evictPokemonAssets<K extends number | string>(memCache: Map<K, RawPokemon>, key: K): Promise<void> {
+	private async evictPokemonAssets<K extends number | string>(memCache: Map<K, StoredPokemon>, key: K): Promise<void> {
 		memCache.delete(key);
 		await this.cache.remove(pokemonPath(key));
 		await this.evictImages(key);
@@ -932,7 +932,7 @@ export class PokedexRepository {
 	// currently-browsed generation range is the one case that's a real
 	// network fetch — but even then it's one fetch per partner id, not a
 	// separate one for sprite vs types, since both come off the same
-	// already-fetched RawPokemon. Skips species entirely, unlike
+	// already-fetched StoredPokemon. Skips species entirely, unlike
 	// getEntryCore — the evolution tree only ever renders a partner's
 	// id/name/sprite/types, name already comes free from the evolution-chain
 	// response itself (see normalizeEvolutionChain), so fetching a partner's

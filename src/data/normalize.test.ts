@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { MOVE_VERSION_GROUPS } from "./constants";
 import overrides from "./evolutionStageOverrides.json";
 import {
 	canonicalizeEvolutionChain,
@@ -10,6 +11,7 @@ import {
 	evolutionFamilyDepth,
 	evolutionReachByForm,
 	extractFlavorTexts,
+	hasPokeApiMoves,
 	inferAncestorFormSuffix,
 	nextEvolutionLevels,
 	normalizeEvolutionChain,
@@ -22,15 +24,17 @@ import {
 	resolveRegionalFormSuffix,
 	sortBySlot,
 	toEntry,
+	toStoredPokemon,
 	toTableRow,
-	trimMovesToVersionGroups,
 } from "./normalize";
-import type { EvolutionNode, RawEvolutionChain, RawEvolutionChainLink, RawMove, RawPokemon, RawSpecies } from "./types";
+import type { EvolutionNode, RawEvolutionChain, RawEvolutionChainLink, RawMove, RawPokemon, RawSpecies, StoredPokemon } from "./types";
 import bulbasaurChain from "./__fixtures__/bulbasaur-evolution-chain.json";
 import bulbasaurSpecies from "./__fixtures__/bulbasaur-species.json";
 import bulbasaur from "./__fixtures__/bulbasaur.json";
 
-const pokemon = bulbasaur as unknown as RawPokemon;
+// PokeAPI's /pokemon shape, and the record the cache holds and normalize reads.
+const rawPokemon = bulbasaur as unknown as RawPokemon;
+const pokemon = toStoredPokemon(rawPokemon);
 const species: RawSpecies = bulbasaurSpecies;
 const chain = bulbasaurChain as unknown as RawEvolutionChain;
 
@@ -142,26 +146,45 @@ describe("normalizeMoves", () => {
 	});
 });
 
-describe("trimMovesToVersionGroups", () => {
-	it("drops version_group_details outside the requested groups", () => {
-		const trimmed = trimMovesToVersionGroups(pokemon.moves, ["firered-leafgreen", "emerald"]);
-		for (const entry of trimmed) {
-			for (const detail of entry.version_group_details) {
-				expect(["firered-leafgreen", "emerald"]).toContain(detail.version_group.name);
-			}
+describe("toStoredPokemon", () => {
+	const groups = ["firered-leafgreen", "emerald"];
+	const moveKey = (name: string, method: string, level: number, group: string) => `${name}|${method}|${level}|${group}`;
+
+	it("keeps only details in the requested version groups", () => {
+		const stored = toStoredPokemon(rawPokemon, groups);
+		for (const entry of stored.moves) {
+			for (const [group] of entry.details) expect(groups).toContain(group);
 		}
 	});
 
-	it("drops a move entirely once it has no remaining version_group_details", () => {
-		const trimmed = trimMovesToVersionGroups(pokemon.moves, ["firered-leafgreen", "emerald"]);
-		expect(trimmed.some((m) => m.move.name === "solar-beam")).toBe(false); // black-white only
+	it("drops a move entirely once it has no detail left", () => {
+		const stored = toStoredPokemon(rawPokemon, groups);
+		expect(stored.moves.some((m) => m.name === "solar-beam")).toBe(false); // black-white only
 	});
 
-	it("produces output normalizeMoves still resolves the same way", () => {
-		const trimmed = trimMovesToVersionGroups(pokemon.moves, ["firered-leafgreen", "emerald"]);
-		const before = normalizeMoves(pokemon.moves, ["firered-leafgreen", "emerald"]).map((m) => m.name).sort();
-		const after = normalizeMoves(trimmed, ["firered-leafgreen", "emerald"]).map((m) => m.name).sort();
-		expect(after).toEqual(before);
+	it("keeps every move detail normalizeMoves reads", () => {
+		const expected = new Set<string>();
+		for (const entry of rawPokemon.moves) {
+			for (const d of entry.version_group_details) {
+				if (!MOVE_VERSION_GROUPS.includes(d.version_group.name)) continue;
+				expected.add(moveKey(entry.move.name, d.move_learn_method.name, d.level_learned_at, d.version_group.name));
+			}
+		}
+		const actual = normalizeMoves(toStoredPokemon(rawPokemon).moves)
+			.map((m) => moveKey(m.name, m.learnMethod, m.levelLearnedAt, m.versionGroup));
+		expect(expected.size).toBeGreaterThan(0);
+		expect(actual.sort()).toEqual([...expected].sort());
+	});
+
+	it("leaves every field but moves as PokeAPI sent it", () => {
+		const { moves: _rawMoves, ...rawRest } = rawPokemon;
+		const { moves: _storedMoves, ...storedRest } = toStoredPokemon(rawPokemon);
+		expect(storedRest).toEqual(rawRest);
+	});
+
+	it("is what hasPokeApiMoves tells apart from PokeAPI's move shape", () => {
+		expect(hasPokeApiMoves(rawPokemon)).toBe(true);
+		expect(hasPokeApiMoves(toStoredPokemon(rawPokemon))).toBe(false);
 	});
 });
 
@@ -948,7 +971,7 @@ describe("toTableRow", () => {
 				{ is_default: false, pokemon: { name: "venusaur-gmax", url: "" } },
 			],
 		};
-		const megaGmaxPokemon: RawPokemon = { ...pokemon, name: "venusaur" };
+		const megaGmaxPokemon: StoredPokemon = { ...pokemon, name: "venusaur" };
 		const row = toTableRow(megaGmaxPokemon, megaGmaxSpecies, null);
 		expect(row.canMegaEvolve).toBe(true);
 		expect(row.canGigantamax).toBe(true);
@@ -1008,7 +1031,7 @@ describe("toEntry", () => {
 	it("carries a three-stat EV yield in stat order (Infernape: 1 Atk, 1 Sp. Atk, 1 Speed)", () => {
 		// Infernape's real effort values, on the Bulbasaur fixture's stat list.
 		const effort: Record<string, number> = { attack: 1, "special-attack": 1, speed: 1 };
-		const infernape: RawPokemon = {
+		const infernape: StoredPokemon = {
 			...pokemon,
 			stats: pokemon.stats.map((s) => ({ ...s, effort: effort[s.stat.name] ?? 0 })),
 		};
@@ -1459,7 +1482,7 @@ describe("sortBySlot", () => {
 		expect(out.map((x) => x.n)).toEqual(["a", "b", "c"]);
 	});
 
-	it("does not reorder the input array (RawPokemon sits in a shared mem cache)", () => {
+	it("does not reorder the input array (StoredPokemon sits in a shared mem cache)", () => {
 		const input = [{ slot: 2, n: "b" }, { slot: 1, n: "a" }];
 		sortBySlot(input);
 		expect(input.map((x) => x.n)).toEqual(["b", "a"]);

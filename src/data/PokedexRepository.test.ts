@@ -3,7 +3,9 @@ import bulbasaur from "./__fixtures__/bulbasaur.json";
 import bulbasaurSpecies from "./__fixtures__/bulbasaur-species.json";
 import { FakePokeApiClient, MemoryCacheStore, RecordingObjectUrls } from "./__fixtures__/fakes";
 import { PokedexRepository } from "./PokedexRepository";
-import type { MegaFormDetail, RawPokemon, RawSpecies } from "./types";
+import { MOVE_VERSION_GROUPS } from "./constants";
+import { hasPokeApiMoves } from "./normalize";
+import type { MegaFormDetail, RawPokemon, RawSpecies, StoredPokemon } from "./types";
 
 function makeRepository(imageBudgetBytes?: number) {
 	const client = new FakePokeApiClient();
@@ -54,18 +56,46 @@ describe("PokedexRepository", () => {
 		expect(readJsonSpy).not.toHaveBeenCalled();
 	});
 
-	it("trims an untrimmed pokemon.json (from before moves-trimming existed) on next read", async () => {
+	it("writes a fetched pokemon in the stored move shape, not PokeAPI's", async () => {
 		const { cache, repository } = makeRepository();
-		// Simulate a cache written before trimMovesToVersionGroups existed: the
-		// full fixture still has out-of-scope version groups (e.g. solar-beam,
-		// legends-za only).
-		await cache.writeJson("pokemon/1.json", bulbasaur);
-		expect((bulbasaur as unknown as RawPokemon).moves.some((m) => m.move.name === "solar-beam")).toBe(true);
 
 		await repository.getTableRows({ start: 1, end: 1 });
 
-		const migrated = await cache.readJson<RawPokemon>("pokemon/1.json");
-		expect(migrated?.moves.some((m) => m.move.name === "solar-beam")).toBe(false);
+		const written = await cache.readJson<StoredPokemon>("pokemon/1.json");
+		expect(written?.moves.length).toBeGreaterThan(0);
+		expect(hasPokeApiMoves(written!)).toBe(false);
+	});
+
+	it("rewrites a pokemon.json cached in PokeAPI's move shape on first read, without refetching", async () => {
+		// Two generations of old record: the untrimmed fixture (out-of-scope
+		// groups such as solar-beam's black-white still in it), and one cut to
+		// the version groups but still PokeAPI-shaped (the trim that predated
+		// toStoredPokemon).
+		const raw = bulbasaur as unknown as RawPokemon;
+		const versionTrimmed = {
+			...raw,
+			moves: raw.moves
+				.map((m) => ({
+					...m,
+					version_group_details: m.version_group_details.filter((d) => MOVE_VERSION_GROUPS.includes(d.version_group.name)),
+				}))
+				.filter((m) => m.version_group_details.length > 0),
+		};
+		const fresh = makeRepository();
+		const [expectedRow] = (await fresh.repository.getTableRows({ start: 1, end: 1 })).rows;
+
+		for (const old of [raw, versionTrimmed]) {
+			const { client, cache, repository } = makeRepository();
+			await cache.writeJson("pokemon/1.json", old);
+
+			const { rows } = await repository.getTableRows({ start: 1, end: 1 });
+
+			expect(client.fetchPokemon).not.toHaveBeenCalled();
+			const migrated = await cache.readJson<StoredPokemon>("pokemon/1.json");
+			expect(hasPokeApiMoves(migrated!)).toBe(false);
+			expect(migrated?.moves.some((m) => m.name === "solar-beam")).toBe(false);
+			expect({ ...rows[0], spriteDataUri: null }).toEqual({ ...expectedRow, spriteDataUri: null });
+		}
 	});
 
 	it("refetches a pokemon.json cached before held_items existed instead of crashing on undefined", async () => {

@@ -113,6 +113,7 @@ time out (clear `.notice` before checking one shows); `dev:mobile` is global, tu
   callbacks changed (rows held to the end, progress only). That split found the 24 s load was per-update rendering, not
   row count (1.7 s repository, 1.85 s rows handed over once). Each fresh repository leaves its sprite blob URLs live
   until a window reload.
+- A cold measurement reloads the plugin (`disablePlugin`/`enablePlugin`) after emptying every Pokédex leaf: a leaf swap keeps module memos (`contentBounds`) and the repository's mem caches, and a leaf left open starts its own load, which warms them (and runs any cache self-heal) before the probe. Time what the user sees, a full first screen, not the last off-screen item: Card view's 7.3 s "all measured" was 0.4 s to a usable screen (ADR-0014).
 - A Narrow pane is a leaf width, and both screens read the leaf: PokedexApp's ResizeObserver and the `pane` container
   (`styles.src.css`) that every Narrow pane query uses (`@container pane (width < 600px)`, pinned by
   `src/view/paneBreakpoint.test.ts`). So drive it by the leaf: `leaf.view.containerEl.style.width = '390px'` (clear it

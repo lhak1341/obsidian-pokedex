@@ -74,7 +74,7 @@ export const MOVE_VERSION_TABS_BY_GEN: Record<number, readonly { key: string; la
 };
 
 // Every version group any tab above reads, across every supported
-// generation — trimming/caching (trimMovesToVersionGroups) keeps exactly
+// generation — the cached pokemon record (toStoredPokemon) keeps exactly
 // this set instead of the ~20+ games a move's version_group_details spans.
 export const MOVE_VERSION_GROUPS: string[] = Object.values(MOVE_VERSION_TABS_BY_GEN).flatMap((tabs) =>
 	tabs.map((t) => t.key),

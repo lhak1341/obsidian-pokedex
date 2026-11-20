@@ -30,6 +30,8 @@ import type {
 	RawPokemon,
 	RawSpecies,
 	StatBlock,
+	StoredMove,
+	StoredPokemon,
 } from "./types";
 
 const STAT_KEY_MAP: Record<string, keyof StatBlock> = {
@@ -42,7 +44,7 @@ const STAT_KEY_MAP: Record<string, keyof StatBlock> = {
 };
 
 // PokeAPI's types/abilities arrive slot-keyed; callers want slot order. Returns
-// a copy: RawPokemon is the object held in PokedexRepository's pokemonMemCache,
+// a copy: StoredPokemon is the object held in PokedexRepository's pokemonMemCache,
 // and an in-place .sort would reorder that shared cached array.
 export function sortBySlot<T extends { slot: number }>(items: readonly T[]): T[] {
 	return [...items].sort((a, b) => a.slot - b.slot);
@@ -60,7 +62,7 @@ export function normalizeStats(rawStats: RawPokemon["stats"]): StatBlock {
 }
 
 export function normalizeMoves(
-	rawMoves: RawPokemon["moves"],
+	storedMoves: readonly StoredMove[],
 	versionGroups: readonly string[] = MOVE_VERSION_GROUPS,
 ): MoveEntry[] {
 	// Dedupe key includes versionGroup — FRLG and Emerald can teach the same
@@ -72,18 +74,13 @@ export function normalizeMoves(
 	// once for a move).
 	const seen = new Set<string>();
 	const moves: MoveEntry[] = [];
-	for (const entry of rawMoves) {
-		for (const detail of entry.version_group_details) {
-			if (!versionGroups.includes(detail.version_group.name)) continue;
-			const dedupeKey = `${entry.move.name}|${detail.move_learn_method.name}|${detail.level_learned_at}|${detail.version_group.name}`;
+	for (const entry of storedMoves) {
+		for (const [versionGroup, learnMethod, levelLearnedAt] of entry.details) {
+			if (!versionGroups.includes(versionGroup)) continue;
+			const dedupeKey = `${entry.name}|${learnMethod}|${levelLearnedAt}|${versionGroup}`;
 			if (seen.has(dedupeKey)) continue;
 			seen.add(dedupeKey);
-			moves.push({
-				name: entry.move.name,
-				levelLearnedAt: detail.level_learned_at,
-				learnMethod: detail.move_learn_method.name,
-				versionGroup: detail.version_group.name,
-			});
+			moves.push({ name: entry.name, levelLearnedAt, learnMethod, versionGroup });
 		}
 	}
 	// Level-up moves first in learn order, then everything else alphabetically.
@@ -98,24 +95,33 @@ export function normalizeMoves(
 	return moves;
 }
 
-// PokeAPI's `moves` array carries every version group the move has ever
-// appeared in (20+ games) — `normalizeMoves` only ever reads the couple this
-// plugin cares about (MOVE_VERSION_GROUPS). Trimming it down to just those
-// before a raw pokemon response is cached cuts a ~260KB moves array (out of
-// ~263KB total) down to a few KB, since that's ~99% of what makes
-// `pokemon/<id>.json` slow to read and parse on every table load.
-export function trimMovesToVersionGroups(
-	rawMoves: RawPokemon["moves"],
-	versionGroups: readonly string[] = MOVE_VERSION_GROUPS,
-): RawPokemon["moves"] {
-	return rawMoves
-		.map((entry) => ({
-			...entry,
-			version_group_details: entry.version_group_details.filter((d) =>
-				versionGroups.includes(d.version_group.name),
-			),
-		}))
-		.filter((entry) => entry.version_group_details.length > 0);
+// What PokedexRepository caches for a /pokemon response (StoredPokemon): moves
+// filtered to the version groups this plugin shows (MOVE_VERSION_GROUPS) and
+// reduced to the three fields normalizeMoves reads per version group, as a
+// tuple. A projection only: no dedupe, sort or other normalize rule is baked
+// into the cache, so changing one never strands old records. After the
+// multi-generation work the filter alone still left 14 version groups (~120 KB
+// of moves per pokemon, 124 MB over 1,025); the projection is ~17 MB.
+export function toStoredPokemon(raw: RawPokemon, versionGroups: readonly string[] = MOVE_VERSION_GROUPS): StoredPokemon {
+	const moves: StoredMove[] = [];
+	for (const entry of raw.moves) {
+		const details: StoredMove["details"] = [];
+		for (const d of entry.version_group_details) {
+			if (versionGroups.includes(d.version_group.name)) {
+				details.push([d.version_group.name, d.move_learn_method.name, d.level_learned_at]);
+			}
+		}
+		if (details.length > 0) moves.push({ name: entry.move.name, details });
+	}
+	return { ...raw, moves };
+}
+
+// A cached record written before toStoredPokemon existed still carries
+// PokeAPI's move shape (trimmed to the version groups or not). The repository
+// rewrites it through toStoredPokemon on first read rather than refetching.
+export function hasPokeApiMoves(cached: StoredPokemon | RawPokemon): cached is RawPokemon {
+	const moves: readonly object[] = cached.moves;
+	return moves.some((m) => "version_group_details" in m);
 }
 
 export function normalizeMoveDetail(raw: RawMove): MoveDetail {
@@ -853,7 +859,7 @@ export function deriveRegionalForms(
 // Evolve in-game. Every curated `MEGA_VARIETY_KEYS` entry is itself always
 // `{base-species-name}-mega...`, never a regional-form-prefixed variant, so
 // this check alone is sufficient — no regional form needs its own entry.
-export function deriveMegaForms(pokemon: RawPokemon, species: RawSpecies): MegaFormSummary[] {
+export function deriveMegaForms(pokemon: Pick<StoredPokemon, "name">, species: RawSpecies): MegaFormSummary[] {
 	if (pokemon.name !== species.name) return [];
 	const prefix = `${species.name}-mega`;
 	return species.varieties
@@ -876,7 +882,7 @@ export function deriveMegaForms(pokemon: RawPokemon, species: RawSpecies): MegaF
 // aren't separately browsable, a pre-existing gap, not a new one), this
 // naturally only ever surfaces the one Gigantamax form relevant to whichever
 // row is actually being viewed.
-export function deriveGigantamaxForms(pokemon: RawPokemon, species: RawSpecies): GigantamaxFormSummary[] {
+export function deriveGigantamaxForms(pokemon: Pick<StoredPokemon, "name">, species: RawSpecies): GigantamaxFormSummary[] {
 	const gmaxName = `${pokemon.name}-gmax`;
 	return species.varieties
 		.filter((v) => v.pokemon.name === gmaxName)
@@ -918,7 +924,7 @@ export function toMegaFormDetail(
 }
 
 export function toTableRow(
-	pokemon: RawPokemon,
+	pokemon: StoredPokemon,
 	species: RawSpecies,
 	spriteDataUri: string | null,
 ): PokedexTableRow {
@@ -967,7 +973,7 @@ export function toTableRow(
 }
 
 export function toEntry(
-	pokemon: RawPokemon,
+	pokemon: StoredPokemon,
 	species: RawSpecies,
 	evolutionChain: EvolutionNode | null,
 	images: ImageBundle,
