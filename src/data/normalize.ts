@@ -22,6 +22,7 @@ import type {
 	MegaFormSummary,
 	MoveDetail,
 	MoveEntry,
+	NamedApiResource,
 	PokedexEntry,
 	PokedexTableRow,
 	RawEvolutionChain,
@@ -139,6 +140,29 @@ function idFromUrl(url: string): number {
 	return match ? Number(match[1]) : 0;
 }
 
+// An evolution entry's base_form/evolved_form names a variety, but its URL is
+// whatever PokeAPI links it to: a `/pokemon/{id}/` URL in the old field, a
+// `/pokemon-form/{id}/` one in the renamed `required_pokemon_form`/
+// `evolved_pokemon_form` (checked against the live Rattata chain: rattata-alola
+// links to pokemon-form/10193, while its pokemon id is 10091 and pokemon 10193
+// is Calyrex Ice Rider). A pokemon-form id is a different numbering, so only a
+// `/pokemon/` URL gives the id directly. Otherwise the node keeps the species'
+// default id as a placeholder plus the variety name, and
+// resolveEvolutionVarietyIds swaps in the real id by name.
+function varietyIdFromForm(form: NamedApiResource, fallbackId: number): { id: number; varietyName?: string } {
+	const match = form.url.match(/\/pokemon\/(\d+)\/?$/);
+	return match ? { id: Number(match[1]) } : { id: fallbackId, varietyName: form.name };
+}
+
+type EvolutionDetail = RawEvolutionChainLink["evolution_details"][number];
+
+// A suffix this repo models as a regional form ("alola"), else undefined —
+// "midnight", "polar" or "small" name a variety but never gate a branch.
+function regionalSuffix(formName: string, speciesName: string): string | undefined {
+	const suffix = extractFormSuffix(formName, speciesName);
+	return suffix !== undefined && suffix in REGIONAL_FORMS ? suffix : undefined;
+}
+
 // "rattata-alola" against species name "rattata" -> "alola". undefined if
 // varietyName isn't literally "{speciesName}-{suffix}" (e.g. a Mega variety,
 // or "raticate-totem-alola" — that one exact-matching against "raticate"
@@ -204,6 +228,9 @@ function buildEvolutionNode(
 	id: number,
 	detail: RawEvolutionChainLink["evolution_details"][number] | undefined,
 	formSuffix: string | undefined,
+	// Set when `id` is still the species' default id standing in for a
+	// variety whose pokemon id the chain didn't give (see varietyIdFromForm).
+	varietyName: string | undefined,
 	// `formSuffix` on context drives which BRANCH this function walks toward
 	// the viewed species (see targetSuffix below) — `ownFormSuffix` is what
 	// the viewed node itself displays as its own variety label. These differ
@@ -226,6 +253,7 @@ function buildEvolutionNode(
 	if (isViewedNode) {
 		id = context.rootId;
 		formSuffix = context.ownFormSuffix;
+		varietyName = undefined;
 	}
 
 	// The suffix that decides which BRANCH/entry to walk toward is normally
@@ -299,8 +327,12 @@ function buildEvolutionNode(
 		// route to Mr. Rime is through the region-gated Galar entry. Show
 		// every distinct outcome (deduped by evolved_form, since redundant
 		// entries across old/new version groups for the identical evolution
-		// are common) as a sibling branch instead of arbitrarily dropping the
-		// others.
+		// are common; within one outcome the is_default entry wins, so
+		// Leafeon reads Leaf Stone, not Diamond/Pearl's Eterna Forest) as a
+		// sibling branch instead of arbitrarily dropping the others. Since
+		// canonicalizeEvolutionChain leaves only regional base_forms, this is
+		// also where a non-regional split lands: Rockruff -> Lycanroc
+		// Midday/Midnight/Dusk, one card each.
 		let selectedDetails: RawEvolutionChainLink["evolution_details"];
 		if (viewedDetail) {
 			selectedDetails = [viewedDetail];
@@ -312,13 +344,13 @@ function buildEvolutionNode(
 			// viewed as Galarian: Cofagrigus is dropped here).
 			return [];
 		} else if (targetSuffix === undefined && !child.evolution_details.some((d) => !!d.base_form)) {
-			const seen = new Set<string>();
-			selectedDetails = child.evolution_details.filter((d) => {
+			const byOutcome = new Map<string, EvolutionDetail>();
+			for (const d of child.evolution_details) {
 				const key = d.evolved_form?.name ?? "default";
-				if (seen.has(key)) return false;
-				seen.add(key);
-				return true;
-			});
+				const kept = byOutcome.get(key);
+				if (!kept || (kept.is_default !== true && d.is_default === true)) byOutcome.set(key, d);
+			}
+			selectedDetails = [...byOutcome.values()];
 		} else if (unconditionalDetail) {
 			selectedDetails = [unconditionalDetail];
 		} else if (targetSuffix === undefined) {
@@ -357,7 +389,7 @@ function buildEvolutionNode(
 				const ancestorSuffix = extractFormSuffix(childDetail.base_form.name, link.species.name);
 				if (ancestorSuffix !== undefined) {
 					formSuffix = ancestorSuffix;
-					id = idFromUrl(childDetail.base_form.url);
+					({ id, varietyName } = varietyIdFromForm(childDetail.base_form, idFromUrl(link.species.url)));
 				}
 			}
 
@@ -373,22 +405,23 @@ function buildEvolutionNode(
 			// can't recover the *ancestor's* own variety from that same gap
 			// (see the `!isViewedNode &&` guard above). A known, documented
 			// half-gap, not a silent bug.
-			const childId = isViewedChild
-				? context.rootId
+			const child_ = isViewedChild
+				? { id: context.rootId }
 				: childDetail?.evolved_form
-					? idFromUrl(childDetail.evolved_form.url)
-					: idFromUrl(child.species.url);
+					? varietyIdFromForm(childDetail.evolved_form, idFromUrl(child.species.url))
+					: { id: idFromUrl(child.species.url) };
 			const childFormSuffix = isViewedChild
 				? context.ownFormSuffix
 				: childDetail?.evolved_form
 					? extractFormSuffix(childDetail.evolved_form.name, child.species.name)
 					: undefined;
-			return buildEvolutionNode(child, childId, childDetail, childFormSuffix, context);
+			return buildEvolutionNode(child, child_.id, childDetail, childFormSuffix, child_.varietyName, context);
 		});
 	});
 
 	return {
 		id,
+		...(varietyName !== undefined && { varietyName }),
 		dexNumber: idFromUrl(link.species.url),
 		name: link.species.name,
 		formLabel: formSuffix ? REGIONAL_FORMS[formSuffix]?.label ?? null : null,
@@ -412,6 +445,9 @@ function buildEvolutionNode(
 		usedMove: detail?.used_move?.name ?? null,
 		minMoveCount: detail?.min_move_count ?? null,
 		minSteps: detail?.min_steps ?? null,
+		knownMoveType: detail?.known_move_type?.name ?? null,
+		minAffection: detail?.min_affection ?? null,
+		partyType: detail?.party_type?.name ?? null,
 		needsMultiplayer: detail?.needs_multiplayer ?? false,
 		children,
 	};
@@ -436,7 +472,35 @@ export function normalizeEvolutionChain(
 	link: RawEvolutionChainLink,
 	context?: { formSuffix: string; ownFormSuffix?: string; rootId: number; speciesName: string },
 ): EvolutionNode {
-	return buildEvolutionNode(link, idFromUrl(link.species.url), undefined, undefined, context);
+	return buildEvolutionNode(link, idFromUrl(link.species.url), undefined, undefined, undefined, context);
+}
+
+// Replaces each placeholder id varietyIdFromForm left (a node carrying
+// `varietyName`) with that variety's real pokemon id, from `idOf`, which
+// looks the name up among the node's species' varieties. Null (or a failed
+// lookup) keeps the species' default id: the name is a cosmetic form with no
+// pokemon of its own ("vivillon-polar", "alcremie-ruby-cream-...") or the
+// lookup failed, and the card then shows the plain form, never an unrelated
+// pokemon.
+//
+// Siblings that end on the same id are then merged, keeping the first: one
+// card per pokemon. The 20 Vivillon patterns or 63 Alcremie decorations all
+// land on the species id, while a real variety keeps its own card (Lycanroc
+// Midnight, Wormadam Sandy, Meowstic female). The view keys cards by id, so
+// this also keeps the keys unique.
+export async function resolveEvolutionVarietyIds(
+	node: EvolutionNode,
+	idOf: (varietyName: string, dexNumber: number) => Promise<number | null>,
+): Promise<EvolutionNode> {
+	const resolved = await Promise.all(node.children.map((c) => resolveEvolutionVarietyIds(c, idOf)));
+	const children: EvolutionNode[] = [];
+	for (const child of resolved) {
+		if (!children.some((c) => c.id === child.id)) children.push(child);
+	}
+	if (node.varietyName === undefined) return { ...node, children };
+	const { varietyName, ...rest } = node;
+	const id = (await idOf(varietyName, node.dexNumber).catch(() => null)) ?? node.id;
+	return { ...rest, id, children };
 }
 
 // The entry PokedexRepository.getEntryExtras uses: given a species' raw chain
@@ -538,19 +602,58 @@ export function evolutionFamilyDepth(link: RawEvolutionChainLink): number {
 // evolved_form names every reader in this file uses. Idempotent, and returns
 // the SAME object when no entry needs touching, so getOrFetch's migrate hook
 // only rewrites a cached chain that genuinely held new-format data.
+//
+// Also narrows the forms to what this repo models. Since PokeAPI #1656
+// (2026-09) the form fields name any pokemon-form, cosmetic ones included,
+// and since #1634 they name the default form too ("eevee" on every Eevee
+// entry, so cap Pikachu and Partner Eevee read as unable to evolve). Every
+// reader here takes a non-null base_form to mean "only this regional variety
+// may take this route", so a default view dropped all of Eevee's
+// evolutions, Raichu, Gourgeist (gated per Pumpkaboo size), Wormadam (per
+// Burmy cloak), Vivillon (per pattern) and others. So:
+// - base_form survives only when it names a regional variety (REGIONAL_FORMS)
+//   of the parent: a size, cloak, pattern or Own Tempo Rockruff gates
+//   nothing a row here can be.
+// - evolved_form is dropped when it names the child's own default form
+//   (by name, or a pokemon-form id equal to the species id, as default forms
+//   number like their species: lycanroc-midday is pokemon-form 745). Any
+//   other evolved_form stays, since it says which variety results
+//   (Lycanroc Midnight); resolveEvolutionVarietyIds sorts real varieties
+//   from cosmetic ones.
+// A chain cached before PokeAPI added is_default (#1558, 2026-06): its
+// entries can't say which method current games use, so the repository
+// refetches it once rather than labelling Leafeon with an old game's method.
+// A chain with no evolutions at all has nothing to judge and never is.
+export function evolutionChainPredatesDefaults(raw: RawEvolutionChain): boolean {
+	const lacks = (link: RawEvolutionChainLink): boolean =>
+		link.evolution_details.some((d) => d.is_default === undefined) || link.evolves_to.some(lacks);
+	return lacks(raw.chain);
+}
+
 export function canonicalizeEvolutionChain(raw: RawEvolutionChain): RawEvolutionChain {
 	let changed = false;
-	const walk = (link: RawEvolutionChainLink): RawEvolutionChainLink => {
+	const isDefaultFormOf = (form: NamedApiResource, link: RawEvolutionChainLink): boolean => {
+		if (form.name === link.species.name) return true;
+		const formId = idFromUrl(form.url);
+		return formId > 0 && formId === idFromUrl(link.species.url);
+	};
+	const walk = (link: RawEvolutionChainLink, parent: RawEvolutionChainLink | null): RawEvolutionChainLink => {
 		const evolution_details = link.evolution_details.map((d) => {
-			const baseForm = d.base_form ?? d.required_pokemon_form ?? null;
-			const evolvedForm = d.evolved_form ?? d.evolved_pokemon_form ?? null;
+			let baseForm = d.base_form ?? d.required_pokemon_form ?? null;
+			let evolvedForm = d.evolved_form ?? d.evolved_pokemon_form ?? null;
+			if (baseForm && (!parent || regionalSuffix(baseForm.name, parent.species.name) === undefined)) baseForm = null;
+			if (evolvedForm && isDefaultFormOf(evolvedForm, link)) evolvedForm = null;
 			if (baseForm === (d.base_form ?? null) && evolvedForm === (d.evolved_form ?? null)) return d;
 			changed = true;
 			return { ...d, base_form: baseForm, evolved_form: evolvedForm };
 		});
-		return { ...link, evolution_details, evolves_to: link.evolves_to.map(walk) };
+		return {
+			...link,
+			evolution_details,
+			evolves_to: link.evolves_to.map((child) => walk(child, link)),
+		};
 	};
-	const chain = walk(raw.chain);
+	const chain = walk(raw.chain, null);
 	return changed ? { ...raw, chain } : raw;
 }
 
@@ -682,11 +785,16 @@ export function evolutionReachByForm(root: RawEvolutionChainLink): FormEvolution
 // without happiness actually being the real requirement). heldItem and
 // tradeSpecies are mutually exclusive in practice (Gen 5's Karrablast/Shelmet
 // pair is trade_species-only, no held item).
+function capitalize(word: string): string {
+	return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
 export function describeEvolutionRequirement(node: EvolutionNode): string {
 	let base = "";
 	if (node.minLevel) base = `Lv. ${node.minLevel}`;
 	else if (node.item) base = node.item.replace(/-/g, " ");
 	else if (node.minHappiness) base = "Friendship";
+	else if (node.minAffection) base = "Affection";
 	else if (node.minBeauty) base = "Beauty";
 	else if (node.knownMove) base = `Knows ${node.knownMove.replace(/-/g, " ")}`;
 	else if (node.partySpecies) base = `${node.partySpecies.replace(/-/g, " ")} in party`;
@@ -718,6 +826,17 @@ export function describeEvolutionRequirement(node: EvolutionNode): string {
 	else if (node.relativePhysicalStats === -1) base = base ? `${base} (Def > Atk)` : "Def > Atk";
 	else if (node.relativePhysicalStats === 0) base = base ? `${base} (Atk = Def)` : "Atk = Def";
 
+	// Sylveon: a Fairy-type move, alongside its friendship. Pancham: a
+	// Dark-type Pokemon in the party, alongside its level.
+	if (node.knownMoveType) {
+		const type = capitalize(node.knownMoveType);
+		base = base ? `${base} (${type} move)` : `Knows ${type} move`;
+	}
+	if (node.partyType) {
+		const type = capitalize(node.partyType);
+		base = base ? `${base} (${type} type in party)` : `${type} type in party`;
+	}
+
 	if (node.needsOverworldRain) base = base ? `${base} (Rain)` : "Rain";
 	if (node.turnUpsideDown) base = base ? `${base} (Upside-down)` : "Upside-down";
 	if (node.needsMultiplayer) base = base ? `${base} (Multiplayer)` : "Multiplayer";
@@ -736,12 +855,12 @@ export function describeEvolutionRequirement(node: EvolutionNode): string {
 	// from formLabel, which describes THIS node's own variety, not where its
 	// evolution happened.
 	if (node.region) {
-		const regionLabel = node.region.charAt(0).toUpperCase() + node.region.slice(1);
+		const regionLabel = capitalize(node.region);
 		base = base ? `${base} (in ${regionLabel})` : `In ${regionLabel}`;
 	}
 
 	if (!node.timeOfDay) return base;
-	const timeLabel = node.timeOfDay === "day" ? "Day" : node.timeOfDay === "night" ? "Night" : node.timeOfDay;
+	const timeLabel = capitalize(node.timeOfDay);
 	return base ? `${base} (${timeLabel})` : timeLabel;
 }
 

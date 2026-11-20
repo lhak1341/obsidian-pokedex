@@ -15,7 +15,9 @@ import {
 	inferAncestorFormSuffix,
 	nextEvolutionLevels,
 	normalizeEvolutionChain,
+	evolutionChainPredatesDefaults,
 	normalizeEvolutionChainForViewed,
+	resolveEvolutionVarietyIds,
 	normalizeEvYield,
 	normalizeHeldItemDetails,
 	normalizeMoveDetail,
@@ -29,6 +31,7 @@ import {
 } from "./normalize";
 import type { EvolutionNode, RawEvolutionChain, RawEvolutionChainLink, RawMove, RawPokemon, RawSpecies, StoredPokemon } from "./types";
 import bulbasaurChain from "./__fixtures__/bulbasaur-evolution-chain.json";
+import liveChains from "./__fixtures__/evolution-chains-2026-11.json";
 import bulbasaurSpecies from "./__fixtures__/bulbasaur-species.json";
 import bulbasaur from "./__fixtures__/bulbasaur.json";
 
@@ -631,6 +634,68 @@ describe("normalizeEvolutionChain", () => {
 			expect(node.children[0].children[0].id).toBe(862);
 		});
 
+		// Live Rattata chain (evolution-chain/7): the renamed fields link to
+		// /pokemon-form/ ids, and pokemon 10193/10194 are Calyrex's riders.
+		const rattataChain: RawEvolutionChainLink = {
+			species: { name: "rattata", url: "https://pokeapi.co/api/v2/pokemon-species/19/" },
+			evolution_details: [],
+			evolves_to: [
+				{
+					species: { name: "raticate", url: "https://pokeapi.co/api/v2/pokemon-species/20/" },
+					evolution_details: [
+						evolutionDetail({ min_level: 20, trigger: { name: "level-up", url: "" } }),
+						evolutionDetail({
+							min_level: 20,
+							time_of_day: "night",
+							trigger: { name: "level-up", url: "" },
+							base_form: { name: "rattata-alola", url: "https://pokeapi.co/api/v2/pokemon-form/10193/" },
+							evolved_form: { name: "raticate-alola", url: "https://pokeapi.co/api/v2/pokemon-form/10194/" },
+						}),
+					],
+					evolves_to: [],
+				},
+			],
+		};
+		const varietyIds: Record<string, number> = { "rattata-alola": 10091, "raticate-alola": 10092 };
+		const idOf = (name: string) => Promise.resolve(varietyIds[name]);
+
+		it("never reads a pokemon id off a /pokemon-form/ URL (Alolan Raticate's ancestor)", async () => {
+			const node = normalizeEvolutionChainForViewed(rattataChain, {
+				id: 10092,
+				pokemonName: "raticate-alola",
+				speciesName: "raticate",
+			});
+			expect(node.id).toBe(19);
+			expect(node.varietyName).toBe("rattata-alola");
+			expect(node.formLabel).toBe("Alolan");
+
+			const resolved = await resolveEvolutionVarietyIds(node, idOf);
+			expect(resolved.id).toBe(10091);
+			expect(resolved.varietyName).toBeUndefined();
+			expect(resolved.children[0].id).toBe(10092);
+		});
+
+		it("resolves an evolved form linked by /pokemon-form/ (Alolan Rattata's child)", async () => {
+			const node = normalizeEvolutionChainForViewed(rattataChain, {
+				id: 10091,
+				pokemonName: "rattata-alola",
+				speciesName: "rattata",
+			});
+			expect(node.children[0].varietyName).toBe("raticate-alola");
+			const resolved = await resolveEvolutionVarietyIds(node, idOf);
+			expect(collectChainIds(resolved)).toEqual([10091, 10092]);
+		});
+
+		it("keeps the species' default id when the variety lookup fails", async () => {
+			const node = normalizeEvolutionChainForViewed(rattataChain, {
+				id: 10092,
+				pokemonName: "raticate-alola",
+				speciesName: "raticate",
+			});
+			const resolved = await resolveEvolutionVarietyIds(node, () => Promise.reject(new Error("offline")));
+			expect(resolved.id).toBe(19);
+		});
+
 		it("gives a base-species row the default no-context view", () => {
 			const viewed = { id: 52, pokemonName: "meowth", speciesName: "meowth" };
 			expect(normalizeEvolutionChainForViewed(meowthChain, viewed)).toEqual(normalizeEvolutionChain(meowthChain));
@@ -673,10 +738,10 @@ describe("collectChainIds", () => {
 			needsOverworldRain: false,
 			turnUpsideDown: false,
 			region: null,
-			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false,
+			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false,
 			children: [
-				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false, children: [] },
-				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false, children: [] },
+				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, children: [] },
+				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, children: [] },
 			],
 		};
 		expect(collectChainIds(forked)).toEqual([1, 2, 3]);
@@ -723,8 +788,8 @@ describe("nextEvolutionLevels", () => {
 			needsOverworldRain: false,
 			turnUpsideDown: false,
 			region: null,
-			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false,
-			children: [{ id: 2, dexNumber: 2, formLabel: null, name: "evolved", minLevel: null, trigger: "trade", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false, children: [] }],
+			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false,
+			children: [{ id: 2, dexNumber: 2, formLabel: null, name: "evolved", minLevel: null, trigger: "trade", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, children: [] }],
 		};
 		expect(nextEvolutionLevels(itemEvolution, 1)).toEqual([]);
 	});
@@ -751,11 +816,11 @@ describe("nextEvolutionLevels", () => {
 			needsOverworldRain: false,
 			turnUpsideDown: false,
 			region: null,
-			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false,
+			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false,
 			children: [
-				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false, children: [] },
-				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: 10, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false, children: [] },
-				{ id: 4, dexNumber: 4, formLabel: null, name: "branch-c", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false, children: [] },
+				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, children: [] },
+				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: 10, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, children: [] },
+				{ id: 4, dexNumber: 4, formLabel: null, name: "branch-c", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, children: [] },
 			],
 		};
 		expect(nextEvolutionLevels(forked, 1)).toEqual([10, 20]);
@@ -785,7 +850,7 @@ describe("describeEvolutionRequirement", () => {
 			needsOverworldRain: false,
 			turnUpsideDown: false,
 			region: null,
-			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, needsMultiplayer: false,
+			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false,
 			children: [],
 			...overrides,
 		};
@@ -1474,6 +1539,30 @@ describe("canonicalizeEvolutionChain", () => {
 	it("returns the same object for a chain already in the old format", () => {
 		expect(canonicalizeEvolutionChain(chain)).toBe(chain);
 	});
+
+	// Live Eevee/Pikachu chains (2026-11): required_pokemon_form names the
+	// parent's own default variety on every entry.
+	const defaultGated = (): RawEvolutionChain => {
+		const gated = (name: string, evolved: string | null = null) => {
+			const l = link(name, [{}]);
+			const { base_form: _b, evolved_form: _e, ...rest } = l.evolution_details[0];
+			l.evolution_details[0] = {
+				...rest,
+				required_pokemon_form: { name: "eevee", url: "" },
+				evolved_pokemon_form: evolved ? { name: evolved, url: "" } : null,
+			} as unknown as typeof l.evolution_details[0];
+			return l;
+		};
+		return { id: 67, chain: link("eevee", [], [gated("vaporeon"), gated("jolteon", "jolteon")]) };
+	};
+
+	it("drops a form that only names the species' own default variety (Eevee)", () => {
+		const out = canonicalizeEvolutionChain(defaultGated());
+		// Absent (undefined) or null: every reader tests these for truthiness.
+		expect(out.chain.evolves_to.map((c) => !!c.evolution_details[0].base_form)).toEqual([false, false]);
+		expect(out.chain.evolves_to[1].evolution_details[0].evolved_form).toBeFalsy();
+		expect(normalizeEvolutionChain(out.chain).children.map((c) => c.name)).toEqual(["vaporeon", "jolteon"]);
+	});
 });
 
 describe("sortBySlot", () => {
@@ -1488,3 +1577,107 @@ describe("sortBySlot", () => {
 		expect(input.map((x) => x.n)).toEqual(["b", "a"]);
 	});
 });
+
+// Live PokeAPI chains as served 2026-11 (empty fields trimmed, keyed by root
+// species): pokemon-form references, cosmetic forms in the form fields,
+// default forms named, one entry per game with is_default on the current
+// method. See canonicalizeEvolutionChain.
+describe("live evolution chains (2026-11)", () => {
+	const raw = liveChains as unknown as Record<string, RawEvolutionChain>;
+	const chainOf = (root: string) => canonicalizeEvolutionChain(raw[root]).chain;
+	// Stub for the repository's species-varieties lookup: real pokemon ids for
+	// varieties that are pokemon, null for cosmetic forms.
+	const varietyIds: Record<string, number> = {
+		"lycanroc-midnight": 10126, "lycanroc-dusk": 10152, "wormadam-sandy": 10004, "wormadam-trash": 10005,
+		"gourgeist-small": 10030, "gourgeist-large": 10031, "gourgeist-super": 10032, "meowstic-female": 10025,
+		"basculegion-female": 10248, "urshifu-rapid-strike": 10191, "toxtricity-low-key": 10184,
+		"raichu-alola": 10100, "exeggutor-alola": 10114, "mr-mime-galar": 10168,
+	};
+	const idOf = (name: string) => Promise.resolve(varietyIds[name] ?? null);
+	const resolvedDefault = (root: string) => resolveEvolutionVarietyIds(normalizeEvolutionChain(chainOf(root)), idOf);
+	const edges = (node: EvolutionNode, out: string[] = []): string[] => {
+		for (const c of node.children) {
+			out.push(`${node.name}>${c.name}#${c.id}: ${describeEvolutionRequirement(c)}`);
+			edges(c, out);
+		}
+		return out;
+	};
+	const speciesIn = (link: RawEvolutionChainLink, out: string[] = []): string[] => {
+		out.push(link.species.name);
+		for (const c of link.evolves_to) speciesIn(c, out);
+		return out;
+	};
+
+	it("shows every family member a cosmetic or default form used to gate away", async () => {
+		const shown = async (root: string) => edges(await resolvedDefault(root)).map((e) => e.split(">")[1].split("#")[0]);
+		expect(await shown("eevee")).toEqual([
+			"vaporeon", "jolteon", "flareon", "espeon", "umbreon", "leafeon", "glaceon", "sylveon",
+		]);
+		expect(await shown("pumpkaboo")).toContain("gourgeist");
+		expect(await shown("burmy")).toEqual(expect.arrayContaining(["wormadam", "mothim"]));
+		expect(await shown("scatterbug")).toEqual(["spewpa", "vivillon"]);
+		expect(await shown("flabebe")).toEqual(["floette", "florges"]);
+		expect(await shown("sinistea")).toEqual(["polteageist"]);
+		expect(await shown("poltchageist")).toEqual(["sinistcha"]);
+		expect(await shown("basculin")).toContain("basculegion");
+		expect(await shown("pichu")).toEqual(["pikachu", "raichu", "raichu"]);
+	});
+
+	it("labels each evolution with the method current games use (is_default)", async () => {
+		const eevee = edges(await resolvedDefault("eevee"));
+		expect(eevee).toContain("eevee>leafeon#470: leaf stone");
+		expect(eevee).toContain("eevee>glaceon#471: ice stone");
+		expect(eevee).toContain("eevee>sylveon#700: Friendship (Fairy move)");
+		expect(edges(await resolvedDefault("magnemite"))).toContain("magneton>magnezone#462: thunder stone");
+		expect(edges(await resolvedDefault("crabrawler"))).toEqual(["crabrawler>crabominable#740: ice stone"]);
+		expect(edges(await resolvedDefault("cyndaquil"))[0]).toBe("cyndaquil>quilava#156: Lv. 14");
+	});
+
+	it("gives each real variety outcome its own card (Lycanroc Midday/Midnight/Dusk)", async () => {
+		expect(edges(await resolvedDefault("rockruff"))).toEqual([
+			"rockruff>lycanroc#745: Lv. 25 (Day)",
+			"rockruff>lycanroc#10126: Lv. 25 (Night)",
+			"rockruff>lycanroc#10152: Lv. 25 (Dusk)",
+		]);
+		expect(collectChainIds(await resolvedDefault("espurr"))).toEqual([677, 678, 10025]);
+	});
+
+	it("merges cosmetic outcomes into one card per pokemon (Vivillon, Alcremie)", async () => {
+		expect(collectChainIds(await resolvedDefault("scatterbug"))).toEqual([664, 665, 666]);
+		expect(collectChainIds(await resolvedDefault("milcery"))).toEqual([868, 869]);
+		expect(collectChainIds(await resolvedDefault("flabebe"))).toEqual([669, 670, 671]);
+	});
+
+	it("still gates regional branches (Meowth, Farfetch'd) and follows a viewed regional form", async () => {
+		expect(edges(await resolvedDefault("meowth"))).toEqual(["meowth>persian#53: Lv. 28"]);
+		expect(edges(await resolvedDefault("farfetchd"))).toEqual([]);
+		const alolan = normalizeEvolutionChainForViewed(chainOf("meowth"), {
+			id: 10107,
+			pokemonName: "meowth-alola",
+			speciesName: "meowth",
+		});
+		expect(alolan.children.map((c) => c.formLabel)).toEqual(["Alolan"]);
+	});
+
+	it("keeps every species on its own page", () => {
+		for (const root of Object.keys(raw)) {
+			const chain = chainOf(root);
+			for (const species of speciesIn(chain)) {
+				const viewed = normalizeEvolutionChainForViewed(chain, { id: -1, pokemonName: species, speciesName: species });
+				const names: string[] = [];
+				const walk = (n: EvolutionNode) => {
+					names.push(n.name);
+					n.children.forEach(walk);
+				};
+				walk(viewed);
+				expect(names, `${species} in ${root}'s chain`).toContain(species);
+			}
+		}
+	});
+
+	it("flags a chain cached before is_default existed, and not a current one", () => {
+		expect(evolutionChainPredatesDefaults(chain)).toBe(true);
+		expect(evolutionChainPredatesDefaults(raw.eevee)).toBe(false);
+	});
+});
+

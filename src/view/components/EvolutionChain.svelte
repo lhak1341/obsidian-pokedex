@@ -5,7 +5,7 @@
 	import EvolutionChain from "./EvolutionChain.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 
-	let { node, onSelect, sprites, types, useTypeIcons, evolveLabel, compact = false }: {
+	let { node, onSelect, sprites, types, useTypeIcons, evolveLabel, compact = false, splitLabels = false }: {
 		node: EvolutionNode;
 		onSelect: (id: number) => void;
 		// Keyed by dex id. Evolution partners are always within the same
@@ -27,11 +27,14 @@
 		// The phone layout's 72px cards with 10px gaps (#32), so a
 		// three-stage chain fits one row of a 390px pane.
 		compact?: boolean;
+		// Compact only: put every card's number and name on separate lines.
+		// EvolutionTree decides it for the whole chain (see its splitLabels).
+		splitLabels?: boolean;
 	} = $props();
 
 </script>
 
-<div class="evo-node" class:compact>
+<div class="evo-node" class:compact class:split-labels={splitLabels}>
 	<!-- data-evo-id: the connecting lines are drawn by EvolutionTree (the
 	wrapper that mounts this component), which measures card centers by this
 	attribute rather than this component tracking its own position — it has
@@ -46,8 +49,13 @@
 		the other stages line up on. A plain " " collapses to 0 height here
 		(whitespace-only inline content gets trimmed away), which silently
 		defeated that — a non-breaking space renders like real text instead. -->
-		<span class="evo-method">{evolveLabel || " "}</span>
-		<span class="evo-label">#{formatDexNumber(node.dexNumber)} {formatPokemonDisplayName(node)}</span>
+		<span class="evo-method"><span class="evo-method-text">{evolveLabel || " "}</span></span>
+		<!-- Two spans so the phone layout can give the number and the name a
+		line each (see .compact below); inline with a space on desktop. -->
+		<span class="evo-label"
+			><span class="evo-num">#{formatDexNumber(node.dexNumber)}</span>
+			<span class="evo-name">{formatPokemonDisplayName(node)}</span></span
+		>
 		<span class="evo-types">
 			{#each types[node.id] ?? [] as type (type)}
 				<TypeBadge {type} useIcon={useTypeIcons} compact />
@@ -67,6 +75,7 @@
 						{useTypeIcons}
 						evolveLabel={describeEvolutionRequirement(child)}
 						{compact}
+						{splitLabels}
 					/>
 				</div>
 			{/each}
@@ -145,16 +154,27 @@
 		flex-wrap: wrap;
 		align-items: center;
 	}
-	/* Phone (#32): 72px cards, 10px gaps. The method and "#006 Charizard"
-	lines wrap inside the card instead of widening it. Top-aligned: two type
-	badges wrap to a second row at 72px, so a one-type card (Chimchar) is
-	shorter, and centring dropped its sprite below its evolutions'. */
+	/* Phone (#32): cards at least 72px, 10px gaps. A fixed 72px card wrapped
+	the label wherever the text ran out: "#032" alone over "Nidoran♂" but
+	"#033 Nidorino" on one line, so the cards' numbers and names fell out of
+	line. Now a card grows to its label, which is "#032 Name" on one line on
+	every card, or number and name a line each on every card
+	(.split-labels: EvolutionTree picks it when the chain wouldn't fit the
+	pane on one line). The method and type badges wrap inside the card
+	instead of widening it (contain: inline-size), and the method always
+	reserves the chain's tallest method (--pkdx-evo-method-height, measured by
+	EvolutionTree; two lines until then), so every card's number and name
+	land on the same rows. The badge row likewise reserves the chain's
+	tallest (--pkdx-evo-types-height): two badges wrap to a second row, one
+	doesn't, and a shorter one-type card (Chimchar) centred with its sprite
+	below its evolutions'. With every card one height, the cards stay
+	centred like the desktop layout, so a parent sits level with the middle
+	of its branches (Gloom between Vileplume and Bellossom), not the first. */
 	.compact {
 		gap: 10px;
-		align-items: flex-start;
 	}
 	.compact > .evo-card {
-		width: 72px;
+		min-width: 72px;
 		padding: 2px;
 	}
 	.compact .evo-sprite {
@@ -162,9 +182,31 @@
 		height: 64px;
 	}
 	.compact .evo-method,
-	.compact .evo-label {
+	.compact .evo-types {
+		contain: inline-size;
+		align-self: stretch;
+	}
+	.compact .evo-method {
 		white-space: normal;
 		text-align: center;
 		overflow-wrap: anywhere;
+		min-height: var(--pkdx-evo-method-height, calc(2em * 1.15));
+	}
+	.compact .evo-types {
+		min-height: var(--pkdx-evo-types-height, 0);
+		align-content: flex-start;
+	}
+	.compact .evo-label {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		column-gap: 0.3em;
+	}
+	.compact .evo-num,
+	.compact .evo-name {
+		flex-shrink: 0;
+	}
+	.split-labels .evo-label {
+		flex-direction: column;
 	}
 </style>

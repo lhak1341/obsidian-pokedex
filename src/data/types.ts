@@ -154,6 +154,20 @@ export interface RawEvolutionChainLink {
 		// battle, layered alongside its own min_level 38 the same way
 		// needs_overworld_rain layers onto Sliggoo's min_level.
 		needs_multiplayer: boolean;
+		// Since mid-2026 PokeAPI records an evolution once per game that
+		// changed it (Leafeon: a Moss Rock location in seven games, a Leaf
+		// Stone from Sword/Shield on), tagged with the game that introduced it,
+		// and marks the method current games use is_default (PokeAPI #1558).
+		// Optional: fixtures and caches from before that lack both.
+		// normalize.ts prefers the is_default entry among those describing one
+		// outcome.
+		is_default?: boolean;
+		version_group?: NamedApiResource | null;
+		// Sylveon: a move of this type known (with friendship, or affection in
+		// Gen 6-7). Pancham: a Pokemon of this type in the party.
+		known_move_type?: NamedApiResource | null;
+		min_affection?: number | null;
+		party_type?: NamedApiResource | null;
 	}[];
 	evolves_to: RawEvolutionChainLink[];
 }
@@ -194,8 +208,13 @@ export interface EvolutionNode {
 	// variety's own id (e.g. 10104 for ninetales-alola) when the chain was
 	// normalized for a regional-form-aware traversal (see
 	// normalizeEvolutionChain's currentFormSuffix parameter). Always safe to
-	// pass straight into PokedexRepository fetch calls either way.
+	// pass straight into PokedexRepository fetch calls either way — once
+	// PokedexRepository has run resolveEvolutionVarietyIds over the chain.
 	id: number;
+	// Only on a chain straight out of normalizeEvolutionChain: the variety
+	// ("rattata-alola") whose pokemon id the raw chain didn't give, so `id`
+	// is still the species' default id. resolveEvolutionVarietyIds removes it.
+	varietyName?: string;
 	// Same split as PokedexTableRow: the National Dex number ("No. 038"),
 	// identical for every variety of a species — id above is what's actually
 	// fetched/clicked/keyed-by, dexNumber is what's displayed. See
@@ -238,6 +257,9 @@ export interface EvolutionNode {
 	// Gen 9+ independent conditions — see
 	// RawEvolutionChainLink.evolution_details.min_steps/needs_multiplayer.
 	minSteps: number | null;
+	knownMoveType: string | null;
+	minAffection: number | null;
+	partyType: string | null;
 	needsMultiplayer: boolean;
 	children: EvolutionNode[];
 }

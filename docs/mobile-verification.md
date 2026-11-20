@@ -12,6 +12,7 @@ also has a `test-vault`. Its cache starts empty, so the first open fetches from 
 
 1. Build and copy into the test vault only (`bun run deploy` also writes the real vault):
    `bun run build && /bin/cp main.js manifest.json styles.css pokedex-test-vault/.obsidian/plugins/obsidian-pokedex/`
+   `plugin:reload` keeps a `.svelte` component's old CSS (injected once into `<head>`): after a CSS change, reload the window.
 2. Open the window if it is closed. `obsidian://open?path=…` does **not** register or open
    an unknown folder (it opened the other `test-vault`). From any open vault:
    `obsidian vault=lhakZettel eval code="require('electron').ipcRenderer.sendSync('vault-open', '<abs path>/pokedex-test-vault', false)"`
@@ -37,6 +38,7 @@ also has a `test-vault`. Its cache starts empty, so the first open fetches from 
    If it is already detached, `app.workspace.createLeafInParent(app.workspace.rootSplit, 0)`
    gives a leaf to call `setViewState` on.
    The mobile window restores its own saved layout, not the desktop one, so a leaf opens on whatever it last showed in emulation.
+   Rows are card tiles here: `.card-tile` `.click()` expands one, its `.panel-open` button opens the detail.
 6. Screenshot: `dev:screenshot path=<abs>/temp/mobile-loop/<name>.png`. A background window
    returns stale frames (a "New tab" shot while the DOM already held the Pokédex): after
    step 2's visibility fix, run `require('electron').remote.getCurrentWindow().webContents.invalidate()`

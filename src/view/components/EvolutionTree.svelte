@@ -14,6 +14,54 @@
 
 	let containerEl: HTMLDivElement | undefined;
 	let lines = $state<{ x1: number; y1: number; x2: number; y2: number }[]>([]);
+	// Phone layout only: whether every card shows "#032" and the name on
+	// separate lines. One decision for the whole chain, so the numbers and
+	// names stay on shared rows: all on one line when the whole chain fits
+	// the pane that way (compact cards grow past 72px to fit their label),
+	// all split when it doesn't.
+	let splitLabels = $state(false);
+	// Phone layout only: the tallest method text in the chain ("Trade
+	// holding Metal Coat" wraps to three lines in a 72px card, "Lv. 16" takes
+	// one). Every card reserves this much above its label, so the labels
+	// share rows however differently the methods wrap. 0 until measured.
+	let methodHeight = $state(0);
+	// Same for the type badges: two badges wrap to a second row in a narrow
+	// card, one doesn't. With both reserved, every card in the chain is the
+	// same height, so the cards can be centred like the desktop layout
+	// (Oddish and Gloom level with the middle of Vileplume/Bellossom)
+	// without a one-type card's sprite dropping out of line.
+	let typesHeight = $state(0);
+
+	const px = (v: string) => parseFloat(v) || 0;
+
+	// The width `nodeEl`'s subtree takes with every label on one line: its
+	// card, then the gap, then its widest child branch (siblings stack).
+	// Built from the number/name spans' own widths, which are max-content in
+	// both modes (EvolutionChain's .compact .evo-label), so the answer is the
+	// same whichever mode is showing and the decision never flips back.
+	function inlineWidth(nodeEl: HTMLElement): number {
+		const card = nodeEl.querySelector<HTMLElement>(":scope > .evo-card");
+		const label = card?.querySelector<HTMLElement>(".evo-label");
+		const num = label?.querySelector<HTMLElement>(".evo-num");
+		const name = label?.querySelector<HTMLElement>(".evo-name");
+		if (!card || !label || !num || !name) return 0;
+		const cardStyle = getComputedStyle(card);
+		const labelWidth =
+			num.getBoundingClientRect().width + px(getComputedStyle(label).columnGap) + name.getBoundingClientRect().width;
+		const cardWidth = Math.max(
+			px(cardStyle.minWidth),
+			labelWidth + px(cardStyle.paddingLeft) + px(cardStyle.paddingRight),
+		);
+		const children = [...nodeEl.querySelectorAll<HTMLElement>(":scope > .evo-children > .evo-branch > .evo-node")];
+		if (children.length === 0) return cardWidth;
+		return cardWidth + px(getComputedStyle(nodeEl).columnGap) + Math.max(...children.map(inlineWidth));
+	}
+
+	function labelsNeedSplit(): boolean {
+		if (!containerEl || !compact) return false;
+		const root = containerEl.querySelector<HTMLElement>(":scope > .evo-node");
+		return root !== null && inlineWidth(root) > containerEl.clientWidth;
+	}
 
 	// A straight line from center to center is the only shape that's both
 	// "full length" for a plain linear chain AND correctly angled for a
@@ -28,8 +76,44 @@
 		return edges;
 	}
 
+	// Read off the inner text span, whose box is its lines' own height
+	// whatever min-height the outer .evo-method has been given, so applying
+	// the result never changes the next reading.
+	function tallestMethod(): number {
+		if (!containerEl || !compact) return 0;
+		const heights = [...containerEl.querySelectorAll<HTMLElement>(".evo-method-text")].map(
+			(el) => el.getBoundingClientRect().height,
+		);
+		return Math.ceil(Math.max(0, ...heights));
+	}
+
+	// From the badges' own boxes, not the row's, which carries the reserved
+	// min-height: the reading doesn't change once the result is applied.
+	function tallestTypes(): number {
+		if (!containerEl || !compact) return 0;
+		const heights = [...containerEl.querySelectorAll<HTMLElement>(".evo-types")].map((row) => {
+			const badges = [...row.children];
+			if (badges.length === 0) return 0;
+			const top = row.getBoundingClientRect().top;
+			return Math.max(...badges.map((b) => b.getBoundingClientRect().bottom)) - top;
+		});
+		return Math.ceil(Math.max(0, ...heights));
+	}
+
 	function measure() {
 		if (!containerEl) return;
+		const split = labelsNeedSplit();
+		const tallest = tallestMethod();
+		const types = tallestTypes();
+		if (split !== splitLabels || tallest !== methodHeight || types !== typesHeight) {
+			// Re-measure once the cards have re-laid out: all three change
+			// their height, so the sprite centres the lines join move.
+			splitLabels = split;
+			methodHeight = tallest;
+			typesHeight = types;
+			void tick().then(measure);
+			return;
+		}
 		const containerRect = containerEl.getBoundingClientRect();
 		const centerOf = (id: number) => {
 			const cardEl = containerEl?.querySelector<HTMLElement>(`[data-evo-id="${id}"]`);
@@ -72,13 +156,18 @@
 	});
 </script>
 
-<div class="evo-tree" bind:this={containerEl}>
+<div
+	class="evo-tree"
+	bind:this={containerEl}
+	style:--pkdx-evo-method-height={compact && methodHeight > 0 ? `${methodHeight}px` : null}
+	style:--pkdx-evo-types-height={compact && typesHeight > 0 ? `${typesHeight}px` : null}
+>
 	<svg class="evo-lines">
 		{#each lines as line, i (i)}
 			<line x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} />
 		{/each}
 	</svg>
-	<EvolutionChain node={chain} {onSelect} {sprites} {types} {useTypeIcons} {compact} />
+	<EvolutionChain node={chain} {onSelect} {sprites} {types} {useTypeIcons} {compact} {splitLabels} />
 </div>
 
 <style>

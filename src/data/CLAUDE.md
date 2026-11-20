@@ -76,10 +76,11 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `CacheStore`/`IndexedDbCacheStor
   differs from the species (plain Farfetch'd is final; its species-wide entry says it evolves).
   Key by `pokemon.name` (`EVOLUTION_STAGE_OVERRIDES`, `ENCOUNTER_LOCATIONS`) or check
   `evolutionReachByForm` before adding another species-id table. See CONTEXT.md "Evolution stage".
-- PokeAPI renamed `evolution_details.base_form`/`evolved_form` to `required_pokemon_form`/
-  `evolved_pokemon_form`. A raw chain read anywhere must go through `canonicalizeEvolutionChain`
-  (the repository does; the generator does), or a fresh fetch silently loses all regional gating.
-  Check a live response before trusting a field name in a "verified live" comment.
+- PokeAPI's evolution schema drifts under us (2026: `base_form`/`evolved_form` renamed to
+  `required_pokemon_form`/`evolved_pokemon_form`; their URLs now `/pokemon-form/{id}`, a different id space
+  from `/pokemon/`; cosmetic and default forms named in them; one entry per game, `is_default` on the current
+  method). Every raw chain read goes through `canonicalizeEvolutionChain` (repository and generator do), no id
+  is parsed from a form URL, and a field is trusted only after checking a live response.
 
 ## Cache
 
@@ -151,5 +152,7 @@ directions before calling such a fix done.
 
 To debug a `normalize.ts` discrepancy, do not hand-trace or eval-probe: write a
 standalone script (`bun run /path/to/script.ts`) importing the real source file by
-absolute path, run it against live-fetched PokeAPI data or the plugin's cached JSON, and
-add temporary `console.error` instrumentation in the source, then revert.
+absolute path, run it against live PokeAPI data (curl is denied here: dump it through
+`plugin.repository.client` in a `pokedex-test-vault` eval) or the plugin's cached JSON, and
+add temporary `console.error` instrumentation in the source, then revert. Chain shapes as
+served 2026-11 are in `__fixtures__/evolution-chains-2026-11.json`.

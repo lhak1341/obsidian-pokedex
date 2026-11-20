@@ -1,0 +1,5141 @@
+{
+ "pumpkaboo": {
+  "id": 365,
+  "chain": {
+   "species": {
+    "name": "pumpkaboo",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/710/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "gourgeist",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/711/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "trade",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/2/"
+       },
+       "required_pokemon_form": {
+        "name": "pumpkaboo-average",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/710/"
+       },
+       "evolved_pokemon_form": {
+        "name": "gourgeist-average",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/711/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "trade",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/2/"
+       },
+       "required_pokemon_form": {
+        "name": "pumpkaboo-small",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10126/"
+       },
+       "evolved_pokemon_form": {
+        "name": "gourgeist-small",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10129/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "trade",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/2/"
+       },
+       "required_pokemon_form": {
+        "name": "pumpkaboo-large",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10127/"
+       },
+       "evolved_pokemon_form": {
+        "name": "gourgeist-large",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10130/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "trade",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/2/"
+       },
+       "required_pokemon_form": {
+        "name": "pumpkaboo-super",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10128/"
+       },
+       "evolved_pokemon_form": {
+        "name": "gourgeist-super",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10131/"
+       }
+      }
+     ],
+     "evolves_to": []
+    }
+   ]
+  }
+ },
+ "burmy": {
+  "id": 213,
+  "chain": {
+   "species": {
+    "name": "burmy",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/412/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "wormadam",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/413/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "diamond-pearl",
+        "url": "https://pokeapi.co/api/v2/version-group/8/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "gender": 1,
+       "min_level": 20,
+       "required_pokemon_form": {
+        "name": "burmy-plant",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/412/"
+       },
+       "evolved_pokemon_form": {
+        "name": "wormadam-plant",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/413/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "diamond-pearl",
+        "url": "https://pokeapi.co/api/v2/version-group/8/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "gender": 1,
+       "min_level": 20,
+       "required_pokemon_form": {
+        "name": "burmy-sandy",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10034/"
+       },
+       "evolved_pokemon_form": {
+        "name": "wormadam-sandy",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10036/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "diamond-pearl",
+        "url": "https://pokeapi.co/api/v2/version-group/8/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "gender": 1,
+       "min_level": 20,
+       "required_pokemon_form": {
+        "name": "burmy-trash",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10035/"
+       },
+       "evolved_pokemon_form": {
+        "name": "wormadam-trash",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10037/"
+       }
+      }
+     ],
+     "evolves_to": []
+    },
+    {
+     "species": {
+      "name": "mothim",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/414/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "diamond-pearl",
+        "url": "https://pokeapi.co/api/v2/version-group/8/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "gender": 2,
+       "min_level": 20
+      }
+     ],
+     "evolves_to": []
+    }
+   ]
+  }
+ },
+ "scatterbug": {
+  "id": 342,
+  "chain": {
+   "species": {
+    "name": "scatterbug",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/664/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "spewpa",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/665/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-icy-snow",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/664/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-icy-snow",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/665/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-polar",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10271/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-polar",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10290/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-tundra",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10272/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-tundra",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10291/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-continental",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10273/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-continental",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10292/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-garden",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10274/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-garden",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10293/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-elegant",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10275/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-elegant",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10294/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-meadow",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10276/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-meadow",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10295/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-modern",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10277/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-modern",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10296/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-marine",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10278/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-marine",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10297/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-archipelago",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10279/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-archipelago",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10298/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-high-plains",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10280/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-high-plains",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10299/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-sandstorm",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10281/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-sandstorm",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10300/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-river",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10282/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-river",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10301/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-monsoon",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10283/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-monsoon",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10302/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-savanna",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10284/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-savanna",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10303/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-sun",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10285/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-sun",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10304/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-ocean",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10286/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-ocean",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10305/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-jungle",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10287/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-jungle",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10306/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-fancy",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10288/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-fancy",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10307/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 9,
+       "required_pokemon_form": {
+        "name": "scatterbug-poke-ball",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10289/"
+       },
+       "evolved_pokemon_form": {
+        "name": "spewpa-poke-ball",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10308/"
+       }
+      }
+     ],
+     "evolves_to": [
+      {
+       "species": {
+        "name": "vivillon",
+        "url": "https://pokeapi.co/api/v2/pokemon-species/666/"
+       },
+       "evolution_details": [
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-icy-snow",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/665/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-icy-snow",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10086/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-polar",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10290/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-polar",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10087/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-tundra",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10291/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-tundra",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10088/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-continental",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10292/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-continental",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10089/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-garden",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10293/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-garden",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10090/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-elegant",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10294/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-elegant",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10091/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-meadow",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10295/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-meadow",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/666/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-modern",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10296/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-modern",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10092/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-marine",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10297/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-marine",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10093/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-archipelago",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10298/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-archipelago",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10094/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-high-plains",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10299/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-high-plains",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10095/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-sandstorm",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10300/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-sandstorm",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10096/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-river",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10301/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-river",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10097/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-monsoon",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10302/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-monsoon",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10098/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-savanna",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10303/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-savanna",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10099/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-sun",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10304/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-sun",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10100/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-ocean",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10305/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-ocean",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10101/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-jungle",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10306/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-jungle",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10102/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-fancy",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10307/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-fancy",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10161/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 12,
+         "required_pokemon_form": {
+          "name": "spewpa-poke-ball",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10308/"
+         },
+         "evolved_pokemon_form": {
+          "name": "vivillon-poke-ball",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10162/"
+         }
+        }
+       ],
+       "evolves_to": []
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "milcery": {
+  "id": 452,
+  "chain": {
+   "species": {
+    "name": "milcery",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/868/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "alcremie",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/869/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "strawberry-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1167/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-vanilla-cream-strawberry-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/869/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "strawberry-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1167/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-ruby-cream-strawberry-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10346/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "strawberry-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1167/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-matcha-cream-strawberry-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10347/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "strawberry-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1167/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-mint-cream-strawberry-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10348/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "strawberry-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1167/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-lemon-cream-strawberry-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10349/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "strawberry-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1167/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-salted-cream-strawberry-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10350/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "strawberry-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1167/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-ruby-swirl-strawberry-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10351/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "strawberry-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1167/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-caramel-swirl-strawberry-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10352/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "strawberry-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1167/"
+       },
+       "time_of_day": "dusk",
+       "condition_expression": {
+        "expression": "SPIN_SEC 10 >=",
+        "variables": [
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-rainbow-swirl-strawberry-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10353/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "berry-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1169/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-vanilla-cream-berry-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10449/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "berry-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1169/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-ruby-cream-berry-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10450/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "berry-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1169/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-matcha-cream-berry-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10451/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "berry-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1169/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-mint-cream-berry-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10452/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "berry-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1169/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-lemon-cream-berry-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10453/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "berry-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1169/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-salted-cream-berry-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10454/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "berry-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1169/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-ruby-swirl-berry-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10455/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "berry-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1169/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-caramel-swirl-berry-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10456/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "berry-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1169/"
+       },
+       "time_of_day": "dusk",
+       "condition_expression": {
+        "expression": "SPIN_SEC 10 >=",
+        "variables": [
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-rainbow-swirl-berry-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10457/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "love-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1168/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-vanilla-cream-love-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10458/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "love-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1168/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-ruby-cream-love-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10459/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "love-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1168/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-matcha-cream-love-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10460/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "love-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1168/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-mint-cream-love-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10461/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "love-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1168/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-lemon-cream-love-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10462/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "love-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1168/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-salted-cream-love-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10463/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "love-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1168/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-ruby-swirl-love-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10464/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "love-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1168/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-caramel-swirl-love-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10465/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "love-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1168/"
+       },
+       "time_of_day": "dusk",
+       "condition_expression": {
+        "expression": "SPIN_SEC 10 >=",
+        "variables": [
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-rainbow-swirl-love-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10466/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "star-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1172/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-vanilla-cream-star-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10467/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "star-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1172/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-ruby-cream-star-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10468/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "star-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1172/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-matcha-cream-star-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10469/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "star-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1172/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-mint-cream-star-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10470/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "star-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1172/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-lemon-cream-star-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10471/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "star-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1172/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-salted-cream-star-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10472/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "star-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1172/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-ruby-swirl-star-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10473/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "star-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1172/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-caramel-swirl-star-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10474/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "star-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1172/"
+       },
+       "time_of_day": "dusk",
+       "condition_expression": {
+        "expression": "SPIN_SEC 10 >=",
+        "variables": [
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-rainbow-swirl-star-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10475/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "clover-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1170/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-vanilla-cream-clover-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10476/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "clover-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1170/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-ruby-cream-clover-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10477/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "clover-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1170/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-matcha-cream-clover-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10478/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "clover-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1170/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-mint-cream-clover-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10479/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "clover-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1170/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-lemon-cream-clover-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10480/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "clover-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1170/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-salted-cream-clover-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10481/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "clover-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1170/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-ruby-swirl-clover-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10482/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "clover-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1170/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-caramel-swirl-clover-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10483/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "clover-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1170/"
+       },
+       "time_of_day": "dusk",
+       "condition_expression": {
+        "expression": "SPIN_SEC 10 >=",
+        "variables": [
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-rainbow-swirl-clover-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10484/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "flower-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1171/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-vanilla-cream-flower-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10485/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "flower-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1171/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-ruby-cream-flower-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10486/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "flower-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1171/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-matcha-cream-flower-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10487/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "flower-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1171/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-mint-cream-flower-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10488/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "flower-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1171/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-lemon-cream-flower-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10489/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "flower-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1171/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-salted-cream-flower-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10490/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "flower-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1171/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-ruby-swirl-flower-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10491/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "flower-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1171/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-caramel-swirl-flower-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10492/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "flower-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1171/"
+       },
+       "time_of_day": "dusk",
+       "condition_expression": {
+        "expression": "SPIN_SEC 10 >=",
+        "variables": [
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-rainbow-swirl-flower-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10493/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "ribbon-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1173/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-vanilla-cream-ribbon-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10494/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "ribbon-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1173/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-ruby-cream-ribbon-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10495/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "ribbon-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1173/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-matcha-cream-ribbon-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10496/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "ribbon-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1173/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-mint-cream-ribbon-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10497/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "ribbon-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1173/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-lemon-cream-ribbon-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10498/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "ribbon-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1173/"
+       },
+       "time_of_day": "night",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 < &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-salted-cream-ribbon-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10499/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "ribbon-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1173/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 1 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-ruby-swirl-ribbon-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10500/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "ribbon-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1173/"
+       },
+       "time_of_day": "day",
+       "condition_expression": {
+        "expression": "SPIN_DIR 0 == SPIN_SEC 5 >= &&",
+        "variables": [
+         {
+          "name": "spin-direction",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/3/"
+         },
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-caramel-swirl-ribbon-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10501/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "spin",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/5/"
+       },
+       "held_item": {
+        "name": "ribbon-sweet",
+        "url": "https://pokeapi.co/api/v2/item/1173/"
+       },
+       "time_of_day": "dusk",
+       "condition_expression": {
+        "expression": "SPIN_SEC 10 >=",
+        "variables": [
+         {
+          "name": "spin-duration",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/4/"
+         }
+        ]
+       },
+       "evolved_pokemon_form": {
+        "name": "alcremie-rainbow-swirl-ribbon-sweet",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10502/"
+       }
+      }
+     ],
+     "evolves_to": []
+    }
+   ]
+  }
+ },
+ "sinistea": {
+  "id": 449,
+  "chain": {
+   "species": {
+    "name": "sinistea",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/854/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "polteageist",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/855/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "item": {
+        "name": "cracked-pot",
+        "url": "https://pokeapi.co/api/v2/item/1311/"
+       },
+       "trigger": {
+        "name": "use-item",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+       },
+       "required_pokemon_form": {
+        "name": "sinistea-phony",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/854/"
+       },
+       "evolved_pokemon_form": {
+        "name": "polteageist-phony",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/855/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "item": {
+        "name": "chipped-pot",
+        "url": "https://pokeapi.co/api/v2/item/1312/"
+       },
+       "trigger": {
+        "name": "use-item",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+       },
+       "required_pokemon_form": {
+        "name": "sinistea-antique",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10344/"
+       },
+       "evolved_pokemon_form": {
+        "name": "polteageist-antique",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10345/"
+       }
+      }
+     ],
+     "evolves_to": []
+    }
+   ]
+  }
+ },
+ "rockruff": {
+  "id": 383,
+  "chain": {
+   "species": {
+    "name": "rockruff",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/744/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "lycanroc",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/745/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "sun-moon",
+        "url": "https://pokeapi.co/api/v2/version-group/17/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 25,
+       "time_of_day": "day",
+       "required_pokemon_form": {
+        "name": "rockruff",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/744/"
+       },
+       "evolved_pokemon_form": {
+        "name": "lycanroc-midday",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/745/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sun-moon",
+        "url": "https://pokeapi.co/api/v2/version-group/17/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 25,
+       "time_of_day": "night",
+       "required_pokemon_form": {
+        "name": "rockruff",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/744/"
+       },
+       "evolved_pokemon_form": {
+        "name": "lycanroc-midnight",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10228/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sun-moon",
+        "url": "https://pokeapi.co/api/v2/version-group/17/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 25,
+       "time_of_day": "dusk",
+       "required_pokemon_form": {
+        "name": "rockruff-own-tempo",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10310/"
+       },
+       "evolved_pokemon_form": {
+        "name": "lycanroc-dusk",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10311/"
+       }
+      }
+     ],
+     "evolves_to": []
+    }
+   ]
+  }
+ },
+ "kubfu": {
+  "id": 470,
+  "chain": {
+   "species": {
+    "name": "kubfu",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/891/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "urshifu",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/892/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "the-isle-of-armor",
+        "url": "https://pokeapi.co/api/v2/version-group/21/"
+       },
+       "is_default": false,
+       "trigger": {
+        "name": "tower-of-darkness",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/6/"
+       },
+       "evolved_pokemon_form": {
+        "name": "urshifu-single-strike",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/892/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "the-isle-of-armor",
+        "url": "https://pokeapi.co/api/v2/version-group/21/"
+       },
+       "is_default": false,
+       "trigger": {
+        "name": "tower-of-waters",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/7/"
+       },
+       "evolved_pokemon_form": {
+        "name": "urshifu-rapid-strike",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10360/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "scarlet-violet",
+        "url": "https://pokeapi.co/api/v2/version-group/25/"
+       },
+       "is_default": true,
+       "item": {
+        "name": "scroll-of-darkness",
+        "url": "https://pokeapi.co/api/v2/item/1675/"
+       },
+       "trigger": {
+        "name": "use-item",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+       },
+       "evolved_pokemon_form": {
+        "name": "urshifu-single-strike",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/892/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "scarlet-violet",
+        "url": "https://pokeapi.co/api/v2/version-group/25/"
+       },
+       "is_default": true,
+       "item": {
+        "name": "scroll-of-waters",
+        "url": "https://pokeapi.co/api/v2/item/1676/"
+       },
+       "trigger": {
+        "name": "use-item",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+       },
+       "evolved_pokemon_form": {
+        "name": "urshifu-rapid-strike",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10360/"
+       }
+      }
+     ],
+     "evolves_to": []
+    }
+   ]
+  }
+ },
+ "toxel": {
+  "id": 446,
+  "chain": {
+   "is_baby": true,
+   "species": {
+    "name": "toxel",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/848/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "toxtricity",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/849/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 30,
+       "allowed_natures": [
+        {
+         "name": "hardy",
+         "url": "https://pokeapi.co/api/v2/nature/1/"
+        },
+        {
+         "name": "docile",
+         "url": "https://pokeapi.co/api/v2/nature/7/"
+        },
+        {
+         "name": "hasty",
+         "url": "https://pokeapi.co/api/v2/nature/10/"
+        },
+        {
+         "name": "adamant",
+         "url": "https://pokeapi.co/api/v2/nature/11/"
+        },
+        {
+         "name": "impish",
+         "url": "https://pokeapi.co/api/v2/nature/12/"
+        },
+        {
+         "name": "rash",
+         "url": "https://pokeapi.co/api/v2/nature/15/"
+        },
+        {
+         "name": "jolly",
+         "url": "https://pokeapi.co/api/v2/nature/16/"
+        },
+        {
+         "name": "naughty",
+         "url": "https://pokeapi.co/api/v2/nature/17/"
+        },
+        {
+         "name": "lax",
+         "url": "https://pokeapi.co/api/v2/nature/18/"
+        },
+        {
+         "name": "quirky",
+         "url": "https://pokeapi.co/api/v2/nature/19/"
+        },
+        {
+         "name": "naive",
+         "url": "https://pokeapi.co/api/v2/nature/20/"
+        },
+        {
+         "name": "brave",
+         "url": "https://pokeapi.co/api/v2/nature/21/"
+        },
+        {
+         "name": "sassy",
+         "url": "https://pokeapi.co/api/v2/nature/24/"
+        }
+       ],
+       "evolved_pokemon_form": {
+        "name": "toxtricity-amped",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/849/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 30,
+       "allowed_natures": [
+        {
+         "name": "bold",
+         "url": "https://pokeapi.co/api/v2/nature/2/"
+        },
+        {
+         "name": "modest",
+         "url": "https://pokeapi.co/api/v2/nature/3/"
+        },
+        {
+         "name": "calm",
+         "url": "https://pokeapi.co/api/v2/nature/4/"
+        },
+        {
+         "name": "timid",
+         "url": "https://pokeapi.co/api/v2/nature/5/"
+        },
+        {
+         "name": "lonely",
+         "url": "https://pokeapi.co/api/v2/nature/6/"
+        },
+        {
+         "name": "mild",
+         "url": "https://pokeapi.co/api/v2/nature/8/"
+        },
+        {
+         "name": "gentle",
+         "url": "https://pokeapi.co/api/v2/nature/9/"
+        },
+        {
+         "name": "bashful",
+         "url": "https://pokeapi.co/api/v2/nature/13/"
+        },
+        {
+         "name": "careful",
+         "url": "https://pokeapi.co/api/v2/nature/14/"
+        },
+        {
+         "name": "relaxed",
+         "url": "https://pokeapi.co/api/v2/nature/22/"
+        },
+        {
+         "name": "quiet",
+         "url": "https://pokeapi.co/api/v2/nature/23/"
+        },
+        {
+         "name": "serious",
+         "url": "https://pokeapi.co/api/v2/nature/25/"
+        }
+       ],
+       "evolved_pokemon_form": {
+        "name": "toxtricity-low-key",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10343/"
+       }
+      }
+     ],
+     "evolves_to": []
+    }
+   ]
+  }
+ },
+ "basculin": {
+  "id": 280,
+  "chain": {
+   "species": {
+    "name": "basculin",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/550/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "basculegion",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/902/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "legends-arceus",
+        "url": "https://pokeapi.co/api/v2/version-group/24/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "recoil-damage",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/13/"
+       },
+       "gender": 2,
+       "min_damage_taken": 294,
+       "required_pokemon_form": {
+        "name": "basculin-white-striped",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10416/"
+       },
+       "evolved_pokemon_form": {
+        "name": "basculegion-male",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/902/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "legends-arceus",
+        "url": "https://pokeapi.co/api/v2/version-group/24/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "recoil-damage",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/13/"
+       },
+       "gender": 1,
+       "min_damage_taken": 294,
+       "required_pokemon_form": {
+        "name": "basculin-white-striped",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10416/"
+       },
+       "evolved_pokemon_form": {
+        "name": "basculegion-female",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10417/"
+       }
+      }
+     ],
+     "evolves_to": []
+    }
+   ]
+  }
+ },
+ "espurr": {
+  "id": 348,
+  "chain": {
+   "species": {
+    "name": "espurr",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/677/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "meowstic",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/678/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "gender": 2,
+       "min_level": 25,
+       "evolved_pokemon_form": {
+        "name": "meowstic-male",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/678/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "gender": 1,
+       "min_level": 25,
+       "evolved_pokemon_form": {
+        "name": "meowstic-female",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10124/"
+       }
+      }
+     ],
+     "evolves_to": []
+    }
+   ]
+  }
+ },
+ "poltchageist": {
+  "id": 539,
+  "chain": {
+   "species": {
+    "name": "poltchageist",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/1012/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "sinistcha",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/1013/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "the-teal-mask",
+        "url": "https://pokeapi.co/api/v2/version-group/26/"
+       },
+       "is_default": true,
+       "item": {
+        "name": "unremarkable-teacup",
+        "url": "https://pokeapi.co/api/v2/item/2110/"
+       },
+       "trigger": {
+        "name": "use-item",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+       },
+       "required_pokemon_form": {
+        "name": "poltchageist-counterfeit",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/1012/"
+       },
+       "evolved_pokemon_form": {
+        "name": "sinistcha-unremarkable",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/1013/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "the-teal-mask",
+        "url": "https://pokeapi.co/api/v2/version-group/26/"
+       },
+       "is_default": true,
+       "item": {
+        "name": "masterpiece-teacup",
+        "url": "https://pokeapi.co/api/v2/item/2111/"
+       },
+       "trigger": {
+        "name": "use-item",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+       },
+       "required_pokemon_form": {
+        "name": "poltchageist-artisan",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10447/"
+       },
+       "evolved_pokemon_form": {
+        "name": "sinistcha-masterpiece",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10448/"
+       }
+      }
+     ],
+     "evolves_to": []
+    }
+   ]
+  }
+ },
+ "cyndaquil": {
+  "id": 80,
+  "chain": {
+   "species": {
+    "name": "cyndaquil",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/155/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "quilava",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/156/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "gold-silver",
+        "url": "https://pokeapi.co/api/v2/version-group/3/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 14
+      },
+      {
+       "version_group": {
+        "name": "legends-arceus",
+        "url": "https://pokeapi.co/api/v2/version-group/24/"
+       },
+       "is_default": false,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 17,
+       "region": {
+        "name": "hisui",
+        "url": "https://pokeapi.co/api/v2/region/9/"
+       }
+      }
+     ],
+     "evolves_to": [
+      {
+       "species": {
+        "name": "typhlosion",
+        "url": "https://pokeapi.co/api/v2/pokemon-species/157/"
+       },
+       "evolution_details": [
+        {
+         "version_group": {
+          "name": "gold-silver",
+          "url": "https://pokeapi.co/api/v2/version-group/3/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 36
+        },
+        {
+         "version_group": {
+          "name": "legends-arceus",
+          "url": "https://pokeapi.co/api/v2/version-group/24/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 36,
+         "region": {
+          "name": "hisui",
+          "url": "https://pokeapi.co/api/v2/region/9/"
+         },
+         "evolved_pokemon_form": {
+          "name": "typhlosion-hisui",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10402/"
+         }
+        }
+       ],
+       "evolves_to": []
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "magnemite": {
+  "id": 34,
+  "chain": {
+   "species": {
+    "name": "magnemite",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/81/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "magneton",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/82/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "red-blue",
+        "url": "https://pokeapi.co/api/v2/version-group/1/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 30
+      }
+     ],
+     "evolves_to": [
+      {
+       "species": {
+        "name": "magnezone",
+        "url": "https://pokeapi.co/api/v2/pokemon-species/462/"
+       },
+       "evolution_details": [
+        {
+         "version_group": {
+          "name": "diamond-pearl",
+          "url": "https://pokeapi.co/api/v2/version-group/8/"
+         },
+         "is_default": false,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "location": {
+          "name": "mt-coronet",
+          "url": "https://pokeapi.co/api/v2/location/10/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "black-white",
+          "url": "https://pokeapi.co/api/v2/version-group/11/"
+         },
+         "is_default": false,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "location": {
+          "name": "chargestone-cave",
+          "url": "https://pokeapi.co/api/v2/location/379/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": false,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "location": {
+          "name": "kalos-route-13",
+          "url": "https://pokeapi.co/api/v2/location/629/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "sun-moon",
+          "url": "https://pokeapi.co/api/v2/version-group/17/"
+         },
+         "is_default": false,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "location": {
+          "name": "blush-mountain",
+          "url": "https://pokeapi.co/api/v2/location/771/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "sun-moon",
+          "url": "https://pokeapi.co/api/v2/version-group/17/"
+         },
+         "is_default": false,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "location": {
+          "name": "vast-poni-canyon",
+          "url": "https://pokeapi.co/api/v2/location/789/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "sword-shield",
+          "url": "https://pokeapi.co/api/v2/version-group/20/"
+         },
+         "is_default": true,
+         "item": {
+          "name": "thunder-stone",
+          "url": "https://pokeapi.co/api/v2/item/83/"
+         },
+         "trigger": {
+          "name": "use-item",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "omega-ruby-alpha-sapphire",
+          "url": "https://pokeapi.co/api/v2/version-group/16/"
+         },
+         "is_default": false,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "location": {
+          "name": "new-mauville",
+          "url": "https://pokeapi.co/api/v2/location/446/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "brilliant-diamond-shining-pearl",
+          "url": "https://pokeapi.co/api/v2/version-group/23/"
+         },
+         "is_default": false,
+         "item": {
+          "name": "thunder-stone",
+          "url": "https://pokeapi.co/api/v2/item/83/"
+         },
+         "trigger": {
+          "name": "use-item",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "brilliant-diamond-shining-pearl",
+          "url": "https://pokeapi.co/api/v2/version-group/23/"
+         },
+         "is_default": false,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "location": {
+          "name": "mt-coronet",
+          "url": "https://pokeapi.co/api/v2/location/10/"
+         }
+        }
+       ],
+       "evolves_to": []
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "crabrawler": {
+  "id": 380,
+  "chain": {
+   "species": {
+    "name": "crabrawler",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/739/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "crabominable",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/740/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "sun-moon",
+        "url": "https://pokeapi.co/api/v2/version-group/17/"
+       },
+       "is_default": false,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "location": {
+        "name": "mount-lanakila",
+        "url": "https://pokeapi.co/api/v2/location/775/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "scarlet-violet",
+        "url": "https://pokeapi.co/api/v2/version-group/25/"
+       },
+       "is_default": true,
+       "item": {
+        "name": "ice-stone",
+        "url": "https://pokeapi.co/api/v2/item/885/"
+       },
+       "trigger": {
+        "name": "use-item",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+       }
+      }
+     ],
+     "evolves_to": []
+    }
+   ]
+  }
+ },
+ "mime-jr": {
+  "id": 57,
+  "baby_trigger_item": {
+   "name": "odd-incense",
+   "url": "https://pokeapi.co/api/v2/item/291/"
+  },
+  "chain": {
+   "is_baby": true,
+   "species": {
+    "name": "mime-jr",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/439/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "mr-mime",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/122/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "diamond-pearl",
+        "url": "https://pokeapi.co/api/v2/version-group/8/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "known_move": {
+        "name": "mimic",
+        "url": "https://pokeapi.co/api/v2/move/102/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "known_move": {
+        "name": "mimic",
+        "url": "https://pokeapi.co/api/v2/move/102/"
+       },
+       "region": {
+        "name": "galar",
+        "url": "https://pokeapi.co/api/v2/region/8/"
+       },
+       "evolved_pokemon_form": {
+        "name": "mr-mime-galar",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10327/"
+       }
+      }
+     ],
+     "evolves_to": [
+      {
+       "species": {
+        "name": "mr-rime",
+        "url": "https://pokeapi.co/api/v2/pokemon-species/866/"
+       },
+       "evolution_details": [
+        {
+         "version_group": {
+          "name": "sword-shield",
+          "url": "https://pokeapi.co/api/v2/version-group/20/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 42,
+         "required_pokemon_form": {
+          "name": "mr-mime-galar",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10327/"
+         }
+        }
+       ],
+       "evolves_to": []
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "eevee": {
+  "id": 67,
+  "chain": {
+   "species": {
+    "name": "eevee",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/133/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "vaporeon",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/134/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "red-blue",
+        "url": "https://pokeapi.co/api/v2/version-group/1/"
+       },
+       "is_default": true,
+       "item": {
+        "name": "water-stone",
+        "url": "https://pokeapi.co/api/v2/item/84/"
+       },
+       "trigger": {
+        "name": "use-item",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+       },
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      }
+     ],
+     "evolves_to": []
+    },
+    {
+     "species": {
+      "name": "jolteon",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/135/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "red-blue",
+        "url": "https://pokeapi.co/api/v2/version-group/1/"
+       },
+       "is_default": true,
+       "item": {
+        "name": "thunder-stone",
+        "url": "https://pokeapi.co/api/v2/item/83/"
+       },
+       "trigger": {
+        "name": "use-item",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+       },
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      }
+     ],
+     "evolves_to": []
+    },
+    {
+     "species": {
+      "name": "flareon",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/136/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "red-blue",
+        "url": "https://pokeapi.co/api/v2/version-group/1/"
+       },
+       "is_default": true,
+       "item": {
+        "name": "fire-stone",
+        "url": "https://pokeapi.co/api/v2/item/82/"
+       },
+       "trigger": {
+        "name": "use-item",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+       },
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      }
+     ],
+     "evolves_to": []
+    },
+    {
+     "species": {
+      "name": "espeon",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/196/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "gold-silver",
+        "url": "https://pokeapi.co/api/v2/version-group/3/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_happiness": 160,
+       "time_of_day": "day",
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      }
+     ],
+     "evolves_to": []
+    },
+    {
+     "species": {
+      "name": "umbreon",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/197/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "gold-silver",
+        "url": "https://pokeapi.co/api/v2/version-group/3/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_happiness": 160,
+       "time_of_day": "night",
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      }
+     ],
+     "evolves_to": []
+    },
+    {
+     "species": {
+      "name": "leafeon",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/470/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "diamond-pearl",
+        "url": "https://pokeapi.co/api/v2/version-group/8/"
+       },
+       "is_default": false,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "location": {
+        "name": "eterna-forest",
+        "url": "https://pokeapi.co/api/v2/location/8/"
+       },
+       "near_special_rock": true,
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "black-white",
+        "url": "https://pokeapi.co/api/v2/version-group/11/"
+       },
+       "is_default": false,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "location": {
+        "name": "pinwheel-forest",
+        "url": "https://pokeapi.co/api/v2/location/375/"
+       },
+       "near_special_rock": true,
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": false,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "location": {
+        "name": "kalos-route-20",
+        "url": "https://pokeapi.co/api/v2/location/650/"
+       },
+       "near_special_rock": true,
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "item": {
+        "name": "leaf-stone",
+        "url": "https://pokeapi.co/api/v2/item/85/"
+       },
+       "trigger": {
+        "name": "use-item",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+       },
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "omega-ruby-alpha-sapphire",
+        "url": "https://pokeapi.co/api/v2/version-group/16/"
+       },
+       "is_default": false,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "location": {
+        "name": "petalburg-woods",
+        "url": "https://pokeapi.co/api/v2/location/438/"
+       },
+       "near_special_rock": true,
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sun-moon",
+        "url": "https://pokeapi.co/api/v2/version-group/17/"
+       },
+       "is_default": false,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "location": {
+        "name": "lush-jungle",
+        "url": "https://pokeapi.co/api/v2/location/750/"
+       },
+       "near_special_rock": true,
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "brilliant-diamond-shining-pearl",
+        "url": "https://pokeapi.co/api/v2/version-group/23/"
+       },
+       "is_default": false,
+       "item": {
+        "name": "leaf-stone",
+        "url": "https://pokeapi.co/api/v2/item/85/"
+       },
+       "trigger": {
+        "name": "use-item",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+       },
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "brilliant-diamond-shining-pearl",
+        "url": "https://pokeapi.co/api/v2/version-group/23/"
+       },
+       "is_default": false,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "location": {
+        "name": "eterna-forest",
+        "url": "https://pokeapi.co/api/v2/location/8/"
+       },
+       "near_special_rock": true,
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      }
+     ],
+     "evolves_to": []
+    },
+    {
+     "species": {
+      "name": "glaceon",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/471/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "diamond-pearl",
+        "url": "https://pokeapi.co/api/v2/version-group/8/"
+       },
+       "is_default": false,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "location": {
+        "name": "sinnoh-route-217",
+        "url": "https://pokeapi.co/api/v2/location/48/"
+       },
+       "near_special_rock": true,
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "black-white",
+        "url": "https://pokeapi.co/api/v2/version-group/11/"
+       },
+       "is_default": false,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "location": {
+        "name": "twist-mountain",
+        "url": "https://pokeapi.co/api/v2/location/380/"
+       },
+       "near_special_rock": true,
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": false,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "location": {
+        "name": "frost-cavern",
+        "url": "https://pokeapi.co/api/v2/location/640/"
+       },
+       "near_special_rock": true,
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "item": {
+        "name": "ice-stone",
+        "url": "https://pokeapi.co/api/v2/item/885/"
+       },
+       "trigger": {
+        "name": "use-item",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+       },
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "omega-ruby-alpha-sapphire",
+        "url": "https://pokeapi.co/api/v2/version-group/16/"
+       },
+       "is_default": false,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "location": {
+        "name": "shoal-cave",
+        "url": "https://pokeapi.co/api/v2/location/445/"
+       },
+       "near_special_rock": true,
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sun-moon",
+        "url": "https://pokeapi.co/api/v2/version-group/17/"
+       },
+       "is_default": false,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "location": {
+        "name": "mount-lanakila",
+        "url": "https://pokeapi.co/api/v2/location/775/"
+       },
+       "near_special_rock": true,
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "brilliant-diamond-shining-pearl",
+        "url": "https://pokeapi.co/api/v2/version-group/23/"
+       },
+       "is_default": false,
+       "item": {
+        "name": "ice-stone",
+        "url": "https://pokeapi.co/api/v2/item/885/"
+       },
+       "trigger": {
+        "name": "use-item",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+       },
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "brilliant-diamond-shining-pearl",
+        "url": "https://pokeapi.co/api/v2/version-group/23/"
+       },
+       "is_default": false,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "location": {
+        "name": "sinnoh-route-217",
+        "url": "https://pokeapi.co/api/v2/location/48/"
+       },
+       "near_special_rock": true,
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      }
+     ],
+     "evolves_to": []
+    },
+    {
+     "species": {
+      "name": "sylveon",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/700/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": false,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "known_move_type": {
+        "name": "fairy",
+        "url": "https://pokeapi.co/api/v2/type/18/"
+       },
+       "min_affection": 2,
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "known_move_type": {
+        "name": "fairy",
+        "url": "https://pokeapi.co/api/v2/type/18/"
+       },
+       "min_happiness": 160,
+       "required_pokemon_form": {
+        "name": "eevee",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/133/"
+       }
+      }
+     ],
+     "evolves_to": []
+    }
+   ]
+  }
+ },
+ "pichu": {
+  "id": 10,
+  "chain": {
+   "is_baby": true,
+   "species": {
+    "name": "pichu",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/172/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "pikachu",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/25/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "gold-silver",
+        "url": "https://pokeapi.co/api/v2/version-group/3/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_happiness": 220
+      }
+     ],
+     "evolves_to": [
+      {
+       "species": {
+        "name": "raichu",
+        "url": "https://pokeapi.co/api/v2/pokemon-species/26/"
+       },
+       "evolution_details": [
+        {
+         "version_group": {
+          "name": "red-blue",
+          "url": "https://pokeapi.co/api/v2/version-group/1/"
+         },
+         "is_default": true,
+         "item": {
+          "name": "thunder-stone",
+          "url": "https://pokeapi.co/api/v2/item/83/"
+         },
+         "trigger": {
+          "name": "use-item",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+         },
+         "required_pokemon_form": {
+          "name": "pikachu",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/25/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "sun-moon",
+          "url": "https://pokeapi.co/api/v2/version-group/17/"
+         },
+         "is_default": true,
+         "item": {
+          "name": "thunder-stone",
+          "url": "https://pokeapi.co/api/v2/item/83/"
+         },
+         "trigger": {
+          "name": "use-item",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+         },
+         "region": {
+          "name": "alola",
+          "url": "https://pokeapi.co/api/v2/region/7/"
+         },
+         "required_pokemon_form": {
+          "name": "pikachu",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/25/"
+         },
+         "evolved_pokemon_form": {
+          "name": "raichu-alola",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10202/"
+         }
+        }
+       ],
+       "evolves_to": []
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "meowth": {
+  "id": 22,
+  "chain": {
+   "species": {
+    "name": "meowth",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/52/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "persian",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/53/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "red-blue",
+        "url": "https://pokeapi.co/api/v2/version-group/1/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 28
+      },
+      {
+       "version_group": {
+        "name": "sun-moon",
+        "url": "https://pokeapi.co/api/v2/version-group/17/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_happiness": 160,
+       "required_pokemon_form": {
+        "name": "meowth-alola",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10209/"
+       },
+       "evolved_pokemon_form": {
+        "name": "persian-alola",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10210/"
+       }
+      }
+     ],
+     "evolves_to": []
+    },
+    {
+     "species": {
+      "name": "perrserker",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/863/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 28,
+       "required_pokemon_form": {
+        "name": "meowth-galar",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10320/"
+       }
+      }
+     ],
+     "evolves_to": []
+    }
+   ]
+  }
+ },
+ "flabebe": {
+  "id": 344,
+  "chain": {
+   "species": {
+    "name": "flabebe",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/669/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "floette",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/670/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 19,
+       "required_pokemon_form": {
+        "name": "flabebe-red",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/669/"
+       },
+       "evolved_pokemon_form": {
+        "name": "floette-red",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/670/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 19,
+       "required_pokemon_form": {
+        "name": "flabebe-yellow",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10103/"
+       },
+       "evolved_pokemon_form": {
+        "name": "floette-yellow",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10107/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 19,
+       "required_pokemon_form": {
+        "name": "flabebe-orange",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10104/"
+       },
+       "evolved_pokemon_form": {
+        "name": "floette-orange",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10108/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 19,
+       "required_pokemon_form": {
+        "name": "flabebe-blue",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10105/"
+       },
+       "evolved_pokemon_form": {
+        "name": "floette-blue",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10109/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 19,
+       "required_pokemon_form": {
+        "name": "flabebe-white",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10106/"
+       },
+       "evolved_pokemon_form": {
+        "name": "floette-white",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10110/"
+       }
+      }
+     ],
+     "evolves_to": [
+      {
+       "species": {
+        "name": "florges",
+        "url": "https://pokeapi.co/api/v2/pokemon-species/671/"
+       },
+       "evolution_details": [
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "item": {
+          "name": "shiny-stone",
+          "url": "https://pokeapi.co/api/v2/item/107/"
+         },
+         "trigger": {
+          "name": "use-item",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+         },
+         "required_pokemon_form": {
+          "name": "floette-red",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/670/"
+         },
+         "evolved_pokemon_form": {
+          "name": "florges-red",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/671/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "item": {
+          "name": "shiny-stone",
+          "url": "https://pokeapi.co/api/v2/item/107/"
+         },
+         "trigger": {
+          "name": "use-item",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+         },
+         "required_pokemon_form": {
+          "name": "floette-yellow",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10107/"
+         },
+         "evolved_pokemon_form": {
+          "name": "florges-yellow",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10111/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "item": {
+          "name": "shiny-stone",
+          "url": "https://pokeapi.co/api/v2/item/107/"
+         },
+         "trigger": {
+          "name": "use-item",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+         },
+         "required_pokemon_form": {
+          "name": "floette-orange",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10108/"
+         },
+         "evolved_pokemon_form": {
+          "name": "florges-orange",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10112/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "item": {
+          "name": "shiny-stone",
+          "url": "https://pokeapi.co/api/v2/item/107/"
+         },
+         "trigger": {
+          "name": "use-item",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+         },
+         "required_pokemon_form": {
+          "name": "floette-blue",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10109/"
+         },
+         "evolved_pokemon_form": {
+          "name": "florges-blue",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10113/"
+         }
+        },
+        {
+         "version_group": {
+          "name": "x-y",
+          "url": "https://pokeapi.co/api/v2/version-group/15/"
+         },
+         "is_default": true,
+         "item": {
+          "name": "shiny-stone",
+          "url": "https://pokeapi.co/api/v2/item/107/"
+         },
+         "trigger": {
+          "name": "use-item",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+         },
+         "required_pokemon_form": {
+          "name": "floette-white",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10110/"
+         },
+         "evolved_pokemon_form": {
+          "name": "florges-white",
+          "url": "https://pokeapi.co/api/v2/pokemon-form/10114/"
+         }
+        }
+       ],
+       "evolves_to": []
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "farfetchd": {
+  "id": 35,
+  "chain": {
+   "species": {
+    "name": "farfetchd",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/83/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "sirfetchd",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/865/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "sword-shield",
+        "url": "https://pokeapi.co/api/v2/version-group/20/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "three-critical-hits",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/8/"
+       },
+       "required_pokemon_form": {
+        "name": "farfetchd-galar",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10325/"
+       }
+      }
+     ],
+     "evolves_to": []
+    }
+   ]
+  }
+ },
+ "exeggcute": {
+  "id": 45,
+  "chain": {
+   "species": {
+    "name": "exeggcute",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/102/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "exeggutor",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/103/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "red-blue",
+        "url": "https://pokeapi.co/api/v2/version-group/1/"
+       },
+       "is_default": true,
+       "item": {
+        "name": "leaf-stone",
+        "url": "https://pokeapi.co/api/v2/item/85/"
+       },
+       "trigger": {
+        "name": "use-item",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+       }
+      },
+      {
+       "version_group": {
+        "name": "sun-moon",
+        "url": "https://pokeapi.co/api/v2/version-group/17/"
+       },
+       "is_default": true,
+       "item": {
+        "name": "leaf-stone",
+        "url": "https://pokeapi.co/api/v2/item/85/"
+       },
+       "trigger": {
+        "name": "use-item",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/3/"
+       },
+       "region": {
+        "name": "alola",
+        "url": "https://pokeapi.co/api/v2/region/7/"
+       },
+       "evolved_pokemon_form": {
+        "name": "exeggutor-alola",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10216/"
+       }
+      }
+     ],
+     "evolves_to": []
+    }
+   ]
+  }
+ }
+}

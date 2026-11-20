@@ -15,7 +15,9 @@ import {
 	deriveGigantamaxForms,
 	deriveMegaForms,
 	deriveRegionalForms,
+	evolutionChainPredatesDefaults,
 	normalizeEvolutionChainForViewed,
+	resolveEvolutionVarietyIds,
 	normalizeMoveDetail,
 	sortBySlot,
 	toEntry,
@@ -293,6 +295,7 @@ export class PokedexRepository {
 			// Heals a chain cached in PokeAPI's renamed format (see
 			// RawEvolutionChainLink.evolution_details.required_pokemon_form).
 			canonicalizeEvolutionChain,
+			evolutionChainPredatesDefaults,
 		);
 	}
 
@@ -881,11 +884,22 @@ export class PokedexRepository {
 			const rawChain = await this.getOrFetchEvolutionChain(species.evolution_chain.url);
 			// Which regional variety (if any) the chain is scoped to is worked
 			// out inside normalizeEvolutionChainForViewed — see its comment.
-			evolutionChain = normalizeEvolutionChainForViewed(rawChain.chain, {
-				id,
-				pokemonName: pokemon.name,
-				speciesName: species.name,
-			});
+			evolutionChain = await resolveEvolutionVarietyIds(
+				normalizeEvolutionChainForViewed(rawChain.chain, {
+					id,
+					pokemonName: pokemon.name,
+					speciesName: species.name,
+				}),
+				// From the species' own variety list (usually cached by table
+				// load), so a cosmetic form name ("vivillon-polar", no pokemon of
+				// its own) is a miss rather than a 404 fetch.
+				async (name, dexNumber) => {
+					const variety = (await this.getOrFetchSpecies(dexNumber)).varieties.find(
+						(v) => v.pokemon.name === name,
+					);
+					return variety ? Number(/\/(\d+)\/?$/.exec(variety.pokemon.url)?.[1]) || null : null;
+				},
+			);
 		} catch {
 			evolutionChain = null; // non-fatal: detail view still renders without it
 		}
