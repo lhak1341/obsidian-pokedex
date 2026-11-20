@@ -47,7 +47,10 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   `--lk-space-4` padding edge, so rows show through above it: stick at `calc(-1 * var(--lk-space-4))` and fill that
   band (`.detail-tabs-bar`); that fill reaches up into whatever sits above it at rest, so the header stacks above the bar. Card
   view's derivations (tile, grid, the tap panel's placement, columns and chips) are pure in `utils/cardView.ts`; a tile
-  tap opens `CardPanel.svelte` (open id held in `CardGrid`), whose held item uses TableScreen's `itemPopover`.
+  tap opens `CardPanel.svelte` (open id held in `CardGrid`), whose held item uses TableScreen's `itemPopover`. Card view draws
+  only its Card window (CONTEXT.md, ADR-0016): a tile outside it has no DOM, so a live probe over `.card-tile` sees
+  the slice, not every row (scroll the tile into view first), and a new per-tile height difference must reach
+  `isTallCardRow` or the spacers drift.
 - Fields (`utils/fields.ts`, `FIELDS`) are `{ render, title? }` text Fields, both called with the Active Gen, or
   `{ custom: CustomCell }` Fields the layout draws itself (held items, EV yield: more than a string). A value that only
   needs Active Gen scoping is a text Field, not a custom one. The table's geometry per Field is `TABLE_GEOMETRY`
@@ -66,7 +69,9 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   the app a settings copy (`applySettings`); only a new generation scope reloads rows, in place, through
   `PokedexLoadState.setScope`, which keeps `loading` off so the table (filters, sort) and detail screen stay mounted. So a
   screen's `onDestroy` runs only when the leaf closes or `onOpen` fires again; TableScreen also stays mounted under
-  `display:none`, so an "after unmount" bug needs the view swapped (`docs/live-verification.md`) to trigger.
+  `display:none`, so an "after unmount" bug needs the view swapped (`docs/live-verification.md`) to trigger, and every
+  size read inside it (`bind:clientWidth`, a `ResizeObserver`, a rect) gets 0 while the detail screen shows: ignore the
+  0 or freeze, as CardGrid's width and Card window do.
 
 Adding a generation stales cached Moves/Flavor Text and needs a checklist walk — see
 `docs/multi-gen-expansion-plan.md`'s Recipe section, not a bespoke fix here.

@@ -90,6 +90,10 @@ The up-to-four images a Pokemon (or a Mega/Gigantamax variety) can own: `sprite`
 
 The browse screen showing each Pokemon as a card instead of a table row. Same rows, filters, sort, favourites and Active Gen scoping as the table; only the presentation differs. The table is the other layout of the same browse screen, not a separate screen.
 
+## Card window
+
+The tiles Card view actually draws: the ones in the viewport plus one viewport above and below, in whole grid rows. The rest of the list is the grid's padding, sized exactly from the two measured grid row heights (tall when a tile in the row has a form line) and the open tap panel, so the scroll offset always means the same place. Computed by `cardWindow` (`src/utils/cardView.ts`) and drawn by `CardGrid.svelte`; ADR-0016. The table has no window: it draws every row (ADR-0014).
+
 ## Narrow pane
 
 A Pokédex pane narrower than 600px, judged by the pane's own width, not the device (a phone, a split iPad pane, a thin desktop sidebar all count). Narrow and wide panes each remember their own choice of table or Card view; a narrow pane starts in Card view, a wide one in the table. Choosing a layout in one never changes the other, so picking cards on a phone leaves the desktop's table alone.

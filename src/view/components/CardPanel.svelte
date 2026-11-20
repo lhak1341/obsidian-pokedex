@@ -10,6 +10,7 @@
 	import FavoriteToggle from "./FavoriteToggle.svelte";
 	import type { InfoTargetProps } from "../infoPopover.svelte";
 	import Icon from "./Icon.svelte";
+	import { untrack } from "svelte";
 
 	// Card view's tap panel (CONTEXT.md, "Card view"): every chosen Field of
 	// one Pokemon with its exact value, drawn under the tapped tile's grid row.
@@ -17,8 +18,11 @@
 	// Favourites are PokedexApp's (ADR-0012), so the asterisk only asks. The
 	// held item's Info popover is TableScreen's, so its box (with the rarity)
 	// is the table's own and draws over this panel.
-	let { id, row, stats, chips, barHeight, activeGen, favorite, onToggleFavorite, onOpen, heldItemTarget }: {
+	let { id, grow, row, stats, chips, barHeight, activeGen, favorite, onToggleFavorite, onOpen, heldItemTarget }: {
 		id: string;
+		// Play the grow-in motion: a tap does; a remount as the panel's row
+		// scrolls back into the Card window doesn't. Read once, at mount.
+		grow: boolean;
 		row: PokedexTableRow;
 		stats: PanelStats;
 		chips: Field[];
@@ -31,11 +35,12 @@
 		heldItemTarget: (item: HeldItemForGen) => InfoTargetProps;
 	} = $props();
 
+	const still = !untrack(() => grow);
 	const typeA = $derived(row.types[0]);
 	const typeB = $derived(row.types[1] ?? row.types[0]);
 </script>
 
-<div class="card-panel" {id} role="region" aria-label="{formatPokemonDisplayName(row)} details">
+<div class="card-panel" class:still {id} role="region" aria-label="{formatPokemonDisplayName(row)} details">
 	<div class="panel-clip">
 		<div class="panel-body" style:--pkdx-wash-a={TYPE_COLORS[typeA]} style:--pkdx-wash-b={TYPE_COLORS[typeB]}>
 			<div class="panel-contents">
@@ -114,6 +119,10 @@
 			grid-template-rows: 0fr;
 			margin-top: calc(-1 * var(--pkdx-row-gap));
 		}
+	}
+	.card-panel.still,
+	.card-panel.still .panel-contents {
+		animation: none;
 	}
 	.panel-clip {
 		min-height: 0;

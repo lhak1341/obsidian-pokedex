@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { makeRow } from "../data/__fixtures__/rows";
 import type { StatBlock } from "../data/types";
-import { cardGrid, fitSprite, panelChips, panelPlacement, panelStats, sortChips, statStrip, tileCorners } from "./cardView";
+import {
+	cardGrid, cardWindow, type CardWindowInput, fitSprite, isTallCardRow, panelChips, panelPlacement, panelStats, sortChips,
+	statStrip, tileCorners,
+} from "./cardView";
 
 const stats = (overrides: Partial<StatBlock>): StatBlock => ({
 	hp: 50, attack: 50, defense: 50, specialAttack: 50, specialDefense: 50, speed: 50, ...overrides,
@@ -122,6 +125,87 @@ describe("panelPlacement", () => {
 		[16, 4, 18, 4, 17],
 	])("index %i with %i columns of %i tiles opens under row %i, after tile %i", (index, columns, count, row, afterIndex) => {
 		expect(panelPlacement(index, columns, count)).toEqual({ row, afterIndex });
+	});
+});
+
+describe("cardWindow", () => {
+	// 100 tiles in 4 columns: 25 grid rows of 100px with 10px gaps, so row r
+	// starts at 110r and the grid is 25 * 100 + 24 * 10 = 2740px tall.
+	const plainRows = Array.from({ length: 100 }, (_, i) => makeRow({ id: i + 1 }));
+	const base: CardWindowInput = {
+		rows: plainRows,
+		columns: 4,
+		rowHeight: { plain: 100, tall: 120 },
+		rowGap: 10,
+		panel: null,
+		scrollTop: 0,
+		viewportHeight: 300,
+	};
+	const withForm = (index: number) =>
+		plainRows.map((r, i) => (i === index ? { ...r, formLabel: "Alolan" } : r));
+
+	it("draws the viewport and one viewport below it at the top", () => {
+		// Rows starting above 0 + 2 * 300: rows 0-5 (row 5 starts at 550).
+		expect(cardWindow(base)).toEqual({ start: 0, end: 24, padTop: 0, padBottom: 2740 - 650 });
+	});
+
+	it("draws one viewport above and below the viewport, in whole grid rows", () => {
+		// Viewport 1100-1400: rows ending below 800 (row 7, 770-870) through rows
+		// starting above 1700 (row 15, 1650-1750).
+		expect(cardWindow({ ...base, scrollTop: 1100 })).toEqual({
+			start: 28,
+			end: 64,
+			padTop: 770,
+			padBottom: 2740 - 1750,
+		});
+	});
+
+	it("keeps the grid's full height: spacers plus drawn rows add up to it", () => {
+		for (const scrollTop of [-200, 0, 333, 1100, 2400, 2740, 9000]) {
+			const w = cardWindow({ ...base, scrollTop });
+			const drawnRows = (w.end - w.start) / 4;
+			const drawn = drawnRows * 100 + (drawnRows - 1) * 10;
+			expect(w.padTop + drawn + w.padBottom).toBe(2740);
+		}
+	});
+
+	it("counts a grid row with a form line at the tall height, in the spacer above it", () => {
+		// Tile 2 (row 0) has a form line: every row after it starts 20px lower.
+		const w = cardWindow({ ...base, rows: withForm(2), scrollTop: 1100 });
+		expect(w.padTop).toBe(790);
+		expect(w.start).toBe(28);
+		expect(w.padBottom).toBe(2760 - 1770);
+	});
+
+	it("counts the open panel's room under its own grid row", () => {
+		const w = cardWindow({ ...base, panel: { gridRow: 3, height: 200 }, scrollTop: 1300 });
+		// Row 3 ends at 330 + 100 + 200; row 7 starts at 970, 1300 - 300 = 1000.
+		expect(w.start).toBe(28);
+		expect(w.padTop).toBe(970);
+		const below = cardWindow({ ...base, panel: { gridRow: 20, height: 200 } });
+		expect(below.padBottom).toBe(2940 - 650);
+	});
+
+	it("ends the last window at the last tile on a short final row", () => {
+		const w = cardWindow({ ...base, rows: plainRows.slice(0, 98), scrollTop: 2400 });
+		expect(w.end).toBe(98);
+		expect(w.padBottom).toBe(0);
+	});
+
+	it("still draws the last row when scrolled past the grid", () => {
+		const w = cardWindow({ ...base, scrollTop: 9000 });
+		expect(w).toEqual({ start: 96, end: 100, padTop: 2640, padBottom: 0 });
+	});
+
+	it("draws nothing for no rows", () => {
+		expect(cardWindow({ ...base, rows: [] })).toEqual({ start: 0, end: 0, padTop: 0, padBottom: 0 });
+	});
+});
+
+describe("isTallCardRow", () => {
+	it("is tall when any tile in the grid row has a form line", () => {
+		const rows = Array.from({ length: 10 }, (_, i) => makeRow({ id: i + 1, formLabel: i === 5 ? "Galarian" : null }));
+		expect([0, 1, 2].map((r) => isTallCardRow(rows, 4, r))).toEqual([false, true, false]);
 	});
 });
 

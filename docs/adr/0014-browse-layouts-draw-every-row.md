@@ -1,5 +1,7 @@
 # Browse layouts draw every row, unwindowed
 
+**Card view part superseded by ADR-0016** (Card view draws a window). The table decision below stands.
+
 The browse screen draws every filtered row: the table one `<tr>` per row (`TableScreen.svelte`'s `{#each visibleRows}`), Card view one tile per row (`CardGrid.svelte`), whose effect also decodes every tile's sprite box (`imageBounds.ts`'s `contentBounds`). An architecture review (2026-11-20, performance, candidate 2) proposed one pure visible-window module (scroll position → row slice plus spacer heights) for both layouts, measuring a 7.3 s Card view mount and 25.5k DOM nodes for 1,082 rows.
 
 **Decision:** neither layout is windowed.

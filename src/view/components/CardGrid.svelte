@@ -5,8 +5,8 @@
 	import type { PokedexRepository } from "../../data/PokedexRepository";
 	import type { PokedexTableRow } from "../../data/types";
 	import {
-		CARD_GRID_GAP, cardGrid, type ContentBounds, fitSprite, panelChips, panelPlacement, panelStats, sortChips,
-		type SpritePlacement, statStrip, tileCorners,
+		CARD_GRID_GAP, cardGrid, cardWindow, type ContentBounds, fitSprite, isTallCardRow, panelChips, panelPlacement,
+		panelStats, sortChips, type SpritePlacement, statStrip, tileCorners,
 	} from "../../utils/cardView";
 	import { formatEvYield, STAT_LABEL_BY_KEY } from "../../utils/fields";
 	import { formatDexNumber, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
@@ -46,6 +46,7 @@
 		heldItemTarget: (item: HeldItemForGen) => InfoTargetProps;
 	} = $props();
 
+	let gridEl = $state<HTMLDivElement | undefined>();
 	let gridWidth = $state(0);
 	const grid = $derived(cardGrid(gridWidth));
 	const corners = $derived(tileCorners(visibleFields));
@@ -78,10 +79,157 @@
 		const scroller = tile.closest<HTMLElement>(".pokedex-view");
 		const before = tile.getBoundingClientRect().top;
 		openId = openId === id ? null : id;
+		// A tap grows the panel; a remount (its row scrolled back into the
+		// Card window) shows it at full height.
+		grown.id = null;
+		panelHeight = 0;
 		await tick();
+		grown.id = openId;
 		const shift = tile.getBoundingClientRect().top - before;
 		if (scroller && shift !== 0) scroller.scrollTop += shift;
 	}
+
+	// The Card window (CONTEXT.md, cardWindow): only the tiles near the
+	// viewport are drawn; the grid's padding stands in for the rest. Its
+	// inputs are read from the scroller (.pokedex-view, which scrolls the whole
+	// browse screen) and from drawn tiles, and frozen while the table screen
+	// is hidden (the detail screen owns the scroller then, and the grid
+	// measures 0): the window keeps its last slice until the table shows
+	// again and back-to-list restores the scroll offset.
+	let scrollTop = $state(0);
+	let viewportHeight = $state(0);
+	// Measured grid row heights, null until a row of that kind is drawn. The
+	// estimates only serve the first draw of a fresh mount, which starts at
+	// the top, so the switch to measured heights moves nothing on screen.
+	let plainHeight = $state<number | null>(null);
+	let tallHeight = $state<number | null>(null);
+	// The room the open panel adds under its grid row, kept while the panel's
+	// row is outside the window so the spacer below it doesn't jump.
+	let panelHeight = $state(0);
+	// The id whose panel has already grown: a plain note, not state, read
+	// once by each mounted panel (CardPanel snapshots its `grow`).
+	const grown: { id: number | null } = { id: null };
+	// Two lines of tile text at the kit's sizes, the stat strip and the gaps:
+	// only for the first draw (above).
+	const ESTIMATED_TILE_TEXT = 40;
+	const ESTIMATED_FORM_LINE = 13;
+	const rowHeight = $derived.by(() => {
+		const plain = plainHeight ?? grid.tileWidth + ESTIMATED_TILE_TEXT;
+		return { plain, tall: tallHeight ?? plain + ESTIMATED_FORM_LINE };
+	});
+	const win = $derived(
+		cardWindow({
+			rows,
+			columns: grid.columns,
+			rowHeight,
+			rowGap: CARD_GRID_GAP * 2,
+			panel: panelAfter < 0 ? null : { gridRow: Math.floor(panelAfter / grid.columns), height: panelHeight },
+			scrollTop,
+			viewportHeight,
+		}),
+	);
+	// Primitives, so a scroll that keeps the same slice re-renders nothing.
+	const winStart = $derived(win.start);
+	const winEnd = $derived(win.end);
+	const drawn = $derived(rows.slice(winStart, winEnd));
+
+	function isShown(el: HTMLElement): boolean {
+		return el.getClientRects().length > 0;
+	}
+
+	// Reads the scroll offset and viewport, relative to the grid's top edge.
+	function readScroll() {
+		const el = gridEl;
+		const scroller = el?.closest<HTMLElement>(".pokedex-view");
+		if (!el || !scroller || !isShown(el)) return;
+		scrollTop = scroller.getBoundingClientRect().top - el.getBoundingClientRect().top;
+		viewportHeight = scroller.clientHeight;
+	}
+
+	// Reads the drawn rows' heights (a tile is stretched to its grid row's
+	// height) and the open panel's room.
+	function measure() {
+		const el = gridEl;
+		if (!el || !isShown(el)) return;
+		const columns = grid.columns;
+		const start = winStart;
+		const tiles = el.querySelectorAll<HTMLElement>(":scope > .card-tile");
+		for (let k = 0; k < tiles.length; k += columns) {
+			const h = tiles[k].getBoundingClientRect().height;
+			if (h <= 0) continue;
+			const tall = isTallCardRow(rows, columns, Math.floor((start + k) / columns));
+			if (tall && tallHeight !== h) tallHeight = h;
+			if (!tall && plainHeight !== h) plainHeight = h;
+		}
+		const panel = el.querySelector<HTMLElement>(":scope > .card-panel");
+		if (panel) {
+			const h = panel.getBoundingClientRect().height + CARD_GRID_GAP;
+			if (h !== panelHeight) panelHeight = h;
+		}
+	}
+
+	// The grid's width, ignoring the 0 it reports while hidden, so a trip to
+	// the detail screen re-lays nothing out.
+	$effect(() => {
+		const el = gridEl;
+		if (!el) return;
+		const ro = new ResizeObserver(() => {
+			if (el.clientWidth > 0) gridWidth = el.clientWidth;
+		});
+		ro.observe(el);
+		return () => ro.disconnect();
+	});
+
+	// Scroll and viewport. Coalesced to a frame. The browse screen above the
+	// grid (FilterBar's inline Filters panel) can move the grid without a
+	// scroll, so the screen's own size changes re-read too.
+	$effect(() => {
+		const el = gridEl;
+		const scroller = el?.closest<HTMLElement>(".pokedex-view");
+		if (!el || !scroller) return;
+		let frame = 0;
+		const schedule = () => {
+			if (frame) return;
+			frame = requestAnimationFrame(() => {
+				frame = 0;
+				readScroll();
+			});
+		};
+		scroller.addEventListener("scroll", schedule, { passive: true });
+		const ro = new ResizeObserver(schedule);
+		ro.observe(scroller);
+		if (el.parentElement) ro.observe(el.parentElement);
+		readScroll();
+		return () => {
+			scroller.removeEventListener("scroll", schedule);
+			ro.disconnect();
+			cancelAnimationFrame(frame);
+		};
+	});
+
+	// Drawn rows and the panel are watched for size, so a font, Fields or
+	// width change re-measures them wherever it comes from. Measured a frame
+	// later: a write from inside the observer re-lays the grid out in the same
+	// frame, which Chromium reports as an undelivered ResizeObserver loop.
+	$effect(() => {
+		const el = gridEl;
+		void drawn;
+		void openIndex;
+		if (!el) return;
+		let frame = 0;
+		const ro = new ResizeObserver(() => {
+			if (frame) return;
+			frame = requestAnimationFrame(() => {
+				frame = 0;
+				measure();
+			});
+		});
+		for (const child of el.children) ro.observe(child);
+		return () => {
+			ro.disconnect();
+			cancelAnimationFrame(frame);
+		};
+	});
 
 	// Each sprite's opaque box, by URL, so the tile can centre the content
 	// rather than the canvas. Decoded once per cache path (contentBounds'
@@ -135,13 +283,16 @@
 
 <div
 	class="card-grid"
-	bind:clientWidth={gridWidth}
+	bind:this={gridEl}
+	style:padding-top="{win.padTop}px"
+	style:padding-bottom="{win.padBottom}px"
 	style:grid-template-columns="repeat({grid.columns}, minmax(0, 1fr))"
 	style:gap="{CARD_GRID_GAP * 2}px {CARD_GRID_GAP}px"
 	style:--pkdx-row-gap="{CARD_GRID_GAP * 2}px"
 	style:--pkdx-panel-gap="{CARD_GRID_GAP}px"
 >
-	{#each rows as row, i (row.id)}
+	{#each drawn as row, k (row.id)}
+		{@const i = winStart + k}
 		{@const [typeA, typeB = typeA] = row.types}
 		<div
 			class="card-tile"
@@ -208,6 +359,7 @@
 			{#key open.id}
 				<CardPanel
 					id={panelId}
+					grow={grown.id !== open.id}
 					row={open}
 					stats={panelStatCols}
 					chips={panelFieldChips}

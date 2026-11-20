@@ -86,6 +86,83 @@ export function panelPlacement(index: number, columns: number, count: number): {
 	return { row, afterIndex: Math.min(count - 1, (row + 1) * columns - 1) };
 }
 
+// A grid row is tall when any tile in it has a form line under its name: CSS
+// stretches every tile in a grid row to the tallest, so the row's height is
+// one of two kinds, read from the rows rather than drawn.
+export function isTallCardRow(rows: readonly Pick<PokedexTableRow, "formLabel">[], columns: number, gridRow: number): boolean {
+	const end = Math.min(rows.length, (gridRow + 1) * columns);
+	for (let i = gridRow * columns; i < end; i++) {
+		if (rows[i].formLabel) return true;
+	}
+	return false;
+}
+
+export interface CardWindowInput {
+	rows: readonly Pick<PokedexTableRow, "formLabel">[];
+	columns: number;
+	// The two grid row heights (isTallCardRow), measured from drawn tiles.
+	rowHeight: { plain: number; tall: number };
+	rowGap: number;
+	// The open tap panel: the grid row it sits under and the room it adds
+	// below that row (its own height plus the panel gap).
+	panel: { gridRow: number; height: number } | null;
+	// How far the scroller's top edge is past the grid's top edge: negative
+	// while the grid starts lower down the screen.
+	scrollTop: number;
+	viewportHeight: number;
+}
+
+export interface CardWindow {
+	// Tiles [start, end) are drawn: always whole grid rows.
+	start: number;
+	end: number;
+	// The undrawn rows' height above and below the drawn ones, gaps included,
+	// so the grid keeps its full height and every scroll offset its meaning.
+	padTop: number;
+	padBottom: number;
+}
+
+// The Card window (CONTEXT.md): which tiles to draw for a scroll position.
+// The viewport plus one viewport above and below, in whole grid rows. The
+// spacers are exact sums of the row heights, never estimates, so a restored
+// scroll offset and the tapped-tile correction land where they did before.
+export function cardWindow(input: CardWindowInput): CardWindow {
+	const { rows, rowHeight, rowGap, panel, scrollTop, viewportHeight } = input;
+	const columns = Math.max(1, input.columns);
+	const gridRows = Math.ceil(rows.length / columns);
+	if (gridRows === 0) return { start: 0, end: 0, padTop: 0, padBottom: 0 };
+
+	const from = scrollTop - viewportHeight;
+	const to = scrollTop + 2 * viewportHeight;
+	// Walk the rows top to bottom: `first` is the first row ending below
+	// `from`, `last` the last row starting above `to` (at least `first`).
+	let first = -1;
+	let last = -1;
+	let padTop = 0;
+	let drawnBottom = 0;
+	let bottom = 0;
+	for (let r = 0; r < gridRows; r++) {
+		const top = r === 0 ? 0 : bottom + rowGap;
+		bottom =
+			top + (isTallCardRow(rows, columns, r) ? rowHeight.tall : rowHeight.plain) +
+			(panel?.gridRow === r ? panel.height : 0);
+		if (first < 0 && (bottom > from || r === gridRows - 1)) {
+			first = r;
+			padTop = top;
+		}
+		if (r === first || (first >= 0 && last === r - 1 && top < to)) {
+			last = r;
+			drawnBottom = bottom;
+		}
+	}
+	return {
+		start: first * columns,
+		end: Math.min(rows.length, (last + 1) * columns),
+		padTop,
+		padBottom: bottom - drawnBottom,
+	};
+}
+
 // Five or six stats stretch across the panel as the tile's columns scaled up.
 // Four or fewer keep a fixed narrow width, aligned left, so two stats do not
 // become flat slabs.

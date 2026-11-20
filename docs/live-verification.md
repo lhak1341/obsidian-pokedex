@@ -113,7 +113,16 @@ time out (clear `.notice` before checking one shows); `dev:mobile` is global, tu
   setting `plugin.repository` to it before the leaf swap (restore in a `finally`, swap again), then with one of its
   callbacks changed (rows held to the end, progress only). That split found the 24 s load was per-update rendering, not
   row count (1.7 s repository, 1.85 s rows handed over once). Each fresh repository leaves its sprite blob URLs live
-  until a window reload.
+  until a window reload. After the load, time each action (sort, clear search, favourites-only off) on all rows and on a
+  subset (favourites-only) at `obsidian vault=pokedex-test-vault dev:cdp method=Emulation.setCPUThrottlingRate 'params={"rate":4}'`
+  (a phone stand-in, not a measurement; set `rate` 1 after), and split each slow frame with
+  `PerformanceObserver({type:'long-animation-frame'})` (`scripts[].duration` vs `styleAndLayoutStart`): that found
+  ADR-0016's per-tile cost, half script, half style/layout. Let a reload's background sprite decode settle first
+  (inferred: a run a minute after one doubled a sort's time).
+- A windowed list (the Card window) is proved by its invariants, not by eye: at many offsets, a tile still drawn after
+  a scroll moved by exactly the scroll delta (no jump), and the list's total height stays constant over a full walk. A
+  hit-test for empty viewport (`elementFromPoint`) lands in the grid's column and row gaps, so sample inside a column
+  and count a point as empty only when no tile is within a gap of it.
 - A cold measurement reloads the plugin (`disablePlugin`/`enablePlugin`) after emptying every Pokédex leaf: a leaf swap keeps module memos (`contentBounds`) and the repository's mem caches, and a leaf left open starts its own load, which warms them (and runs any cache self-heal) before the probe. Time what the user sees, a full first screen, not the last off-screen item: Card view's 7.3 s "all measured" was 0.4 s to a usable screen (ADR-0014).
 - A Narrow pane is a leaf width, and both screens read the leaf: PokedexApp's ResizeObserver and the `pane` container
   (`styles.src.css`) that every Narrow pane query uses (`@container pane (width < 600px)`, pinned by
