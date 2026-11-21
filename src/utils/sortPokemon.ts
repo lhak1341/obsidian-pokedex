@@ -1,4 +1,5 @@
-import type { PokedexTableRow, StatBlock } from "../data/types";
+import type { StatBlock } from "../data/types";
+import type { ActiveGenRow } from "./activeGenScope";
 import { totalStat } from "./stats";
 
 export type SortColumn =
@@ -25,7 +26,7 @@ export function nextSort(sort: SortState, column: SortColumn): SortState {
 	return { column, direction: "asc" };
 }
 
-function valueOf(row: PokedexTableRow, column: SortColumn): number | string {
+function valueOf(row: ActiveGenRow, column: SortColumn): number | string {
 	switch (column) {
 		case "id": return row.dexNumber;
 		case "name": return row.name;
@@ -39,10 +40,10 @@ function valueOf(row: PokedexTableRow, column: SortColumn): number | string {
 }
 
 export function sortPokemon(
-	rows: PokedexTableRow[],
+	rows: ActiveGenRow[],
 	column: SortColumn,
 	direction: SortDirection,
-): PokedexTableRow[] {
+): ActiveGenRow[] {
 	const sign = direction === "asc" ? 1 : -1;
 	return [...rows].sort((a, b) => {
 		// "No." (dexNumber) needs a tiebreaker: a regional-form row shares its

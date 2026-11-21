@@ -12,7 +12,7 @@
 	import { formatDexNumber, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import type { SortColumn, SortState } from "../../utils/sortPokemon";
 	import { totalStat } from "../../utils/stats";
-	import type { HeldItemForGen } from "../../utils/heldItemGen";
+	import type { ActiveGenRow, HeldItemForGen } from "../../utils/activeGenScope";
 	import { contentBounds } from "../imageBounds";
 	import type { FavoriteMenu } from "../favoriteMenu";
 	import type { InfoTargetProps } from "../infoPopover.svelte";
@@ -28,15 +28,14 @@
 	// keeps its asterisk toggle. A tile tap opens the tap panel; the panel's
 	// "Open ›" opens the detail screen (onSelect).
 	let {
-		rows, visibleFields, favoriteIds, sort, repository, activeGen, onSort, onSelect, onToggleFavorite, favoriteMenu,
+		rows, visibleFields, favoriteIds, sort, repository, onSort, onSelect, onToggleFavorite, favoriteMenu,
 		heldItemTarget,
 	}: {
-		rows: PokedexTableRow[];
+		rows: ActiveGenRow[];
 		visibleFields: ReadonlySet<string>;
 		favoriteIds: ReadonlySet<number>;
 		sort: SortState;
 		repository: PokedexRepository;
-		activeGen: number;
 		onSort: (column: SortColumn) => void;
 		onSelect: (id: number) => void;
 		onToggleFavorite: (id: number) => void;
@@ -262,7 +261,7 @@
 	}
 
 	// One dot per EV point, in its stat's colour.
-	function evDots(row: PokedexTableRow): string[] {
+	function evDots(row: ActiveGenRow): string[] {
 		return row.evYield.flatMap((y) => Array<string>(y.amount).fill(STAT_COLORS[y.stat]));
 	}
 </script>
@@ -364,7 +363,6 @@
 					stats={panelStatCols}
 					chips={panelFieldChips}
 					barHeight={strip.height}
-					{activeGen}
 					favorite={favoriteIds.has(open.id)}
 					onToggleFavorite={() => onToggleFavorite(open.id)}
 					onOpen={() => onSelect(open.id)}

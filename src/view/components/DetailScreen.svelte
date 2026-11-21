@@ -28,10 +28,9 @@
 	import { describeEncounters } from "../../utils/encounters";
 	import { resolvePortrait } from "../../utils/portrait";
 	import { portraitRenderFor } from "../../data/imageSet";
-	import { filterHeldItemsForGen } from "../../utils/heldItemGen";
+	import { scopeToActiveGen } from "../../utils/activeGenScope";
 	import { formatDexNumber, formatHeight, formatPokemonDisplayName, formatWeight } from "../../utils/pokemonDisplay";
 	import { romanNumeral } from "../../utils/romanNumeral";
-	import { resolveStatsForGen } from "../../utils/stats";
 	import { shownDetailTab, tabsForBand, type DetailBand, type DetailTab } from "../../utils/detailBand";
 	import { VarietyToggleState, type VarietyToggleSnapshot } from "../VarietyToggleState";
 
@@ -343,8 +342,11 @@
 			<button onclick={retry}>Retry</button>
 		{:else if entryLoad.entry}
 			{@const entry = entryLoad.entry}
-			{@const activeHeldItems = filterHeldItemsForGen(entry.heldItemsAllGens, activeGen)}
-			{@const encounters = describeEncounters(entry.encounterLocationsAllGens, activeGen)}
+			<!-- The Active Gen's stats, held items and capture locations
+			(activeGenScope.ts): the same scoping the table's rows get. -->
+			{@const scopedEntry = scopeToActiveGen(entry, activeGen)}
+			{@const activeHeldItems = scopedEntry.heldItems}
+			{@const encounters = describeEncounters(scopedEntry.encounterLocations)}
 			<!-- Each group is a snippet, so the phone tabs (#32), the rail
 			(#33) and the three columns lay out the same panels without a second
 			copy of any. -->
@@ -431,9 +433,9 @@
 					<!-- Mega stats are PokeAPI's current value for that variety
 					already — no historical divergence is possible (Mega Evolution
 					has only ever existed since its Gen 6 introduction), so unlike
-					the base species this skips resolveStatsForGen's Active Gen
-					override lookup entirely. -->
-					<StatBars stats={activeMegaData ? activeMegaData.stats : resolveStatsForGen(entry.stats, entry.id, activeGen)} />
+					the base species this skips the Active Gen stat overlay
+					(scopeToActiveGen) entirely. -->
+					<StatBars stats={activeMegaData ? activeMegaData.stats : scopedEntry.stats} />
 				</section>
 			{/snippet}
 

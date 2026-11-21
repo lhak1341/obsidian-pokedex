@@ -57,8 +57,8 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `CacheStore`/`IndexedDbCacheStor
   (`src/data/__fixtures__/rows.ts`), never a literal. Adding a required field is one edit
   there: `tsc` fails the factory's return type until it is added. A plain row derives
   `generationId` from the dex number; a regional-form row (`id !== dexNumber`) must be made
-  with `makeRegionalFormRow`, which takes its generation explicitly. `sortPokemon.test.ts` and
-  `quickJump.test.ts` keep positional `row(...)` wrappers over `makeRow`.
+  with `makeRegionalFormRow`, which takes its generation explicitly. A row a layout, Field, filter or
+  sort receives is an Active Gen row: build it with `makeActiveGenRow(overrides, activeGen)`.
 - A regional-form or evolution-chain bug reported against one Pokemon is usually a whole
   category. Chains already group by shape (Muk-shaped, Yamask-shaped, Corsola-shaped,
   Mime-Jr-shaped, Obstagoon-shaped) — check `normalize.ts`'s shape comments for siblings

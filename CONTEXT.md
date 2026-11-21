@@ -66,18 +66,22 @@ PokeAPI renamed `base_form` -> `required_pokemon_form` and `evolved_form` -> `ev
 
 ## Active Gen scoping
 
-Generation-tagged row data (wild held items, capture locations) is stored for every supported generation and shown for the Active Gen only. The unscoped fields are named `heldItemsAllGens` and `encounterLocationsAllGens`, so reading one without scoping is visible at the call site.
+Generation-tagged row data (wild held items, capture locations) is stored for every supported generation and shown for the Active Gen only. One step does the scoping: `scopeToActiveGen(row, activeGen)` in `src/utils/activeGenScope.ts`, which turns a row into an **Active Gen row**.
 
-Held items are scoped by `filterHeldItemsForGen` (`src/utils/heldItemGen.ts`). Capture locations go through one module, `describeEncounters(locations, activeGen)` in `src/utils/encounters.ts`, which returns everything the UI shows from a single scoped list: `summary` (the Capture Field's text), `tooltip` (its hover title), `groups` (detail page lines) and `showRegion`. `showRegion` is the one rule for "a line needs its region header": more than one distinct region, not merely more than one line (a single-region Pokemon with a wild line and a trade line has two lines and one region). The helpers inside `encounters.ts` are exported only for their own regression tests (Mirage Tower, compass/bike slugs); callers use `describeEncounters`.
+Capture locations are then formatted by one module, `describeEncounters(row.encounterLocations)` in `src/utils/encounters.ts`, which returns everything the UI shows from the scoped list: `summary` (the Capture Field's text), `tooltip` (its hover title), `groups` (detail page lines) and `showRegion`. `showRegion` is the one rule for "a line needs its region header": more than one distinct region, not merely more than one line (a single-region Pokemon with a wild line and a trade line has two lines and one region). The helpers inside `encounters.ts` are exported only for their own regression tests (Mirage Tower, compass/bike slugs); callers use `describeEncounters`.
 
-Base stats are scoped too, but by overlay rather than filter: `resolveStatsForGen` (`src/utils/stats.ts`) patches a finite list of buffed species (`STAT_OVERRIDES`) back to their pre-buff values. The detail page calls it per entry; the browse table calls `scopeRowsToGen` once over its rows in `TableScreen.svelte`, so stat columns, Total, stat sort and the stat-range filter read the Active Gen's numbers. `row.stats` on a `PokedexTableRow` is always the latest-game line; only the `scopedRows` derived in `TableScreen` is scoped.
+Base stats are scoped by overlay rather than filter: `resolveStatsForGen` (`src/utils/stats.ts`) patches a finite list of buffed species (`STAT_OVERRIDES`) back to their pre-buff values. `row.stats` on a `PokedexTableRow` is always the latest-game line; on an Active Gen row it is the Active Gen's.
 
 Not the same as Generation fallback: that rule picks a different generation's tabs when the Active Gen has no data; Active Gen scoping just filters.
+
+## Active Gen row
+
+A row scoped to the Active Gen (`ActiveGenRow`, or `ActiveGen<T>` for a `PokedexEntry`): `stats` overlaid, and `heldItems` / `encounterLocations` in place of the `*AllGens` fields, holding the Active Gen's entries only. It has no `*AllGens` field, so a layout, Field, filter or sort that reads unscoped data fails typecheck. The browse screen scopes its rows once (`scopedRows` in `TableScreen.svelte`) and the table, Card view, Fields, Quirks, Traits, filter and sort all take Active Gen rows; the detail page scopes its entry once (`scopedEntry`). Memoized per source row, so the same row at the same Active Gen is the same object across streamed updates.
 
 
 ## Quirk and Trait
 
-The two checkbox groups in FilterBar. Each option is one entry in `src/utils/quirksAndTraits.ts` (`QUIRKS`, `TRAITS`) carrying its key, label, icon and `matches(row, ctx)` predicate, so an option cannot exist without its predicate. `filterPokemon` only decides how a selection combines: **Quirks** are OR'd (a personal shortlist that can overlap on one Pokemon: "pickup OR holds an item"), **Traits** are AND'd (independent yes/no properties of the Pokemon: "Baby AND Fossil"). `ctx` carries Active Gen; `held-item` uses it (see Active Gen scoping), the rest ignore it. A selected key with no entry matches nothing. `quirksAndTraits.test.ts` fails if an entry has no fixture row that matches it.
+The two checkbox groups in FilterBar. Each option is one entry in `src/utils/quirksAndTraits.ts` (`QUIRKS`, `TRAITS`) carrying its key, label, icon and `matches(row)` predicate, so an option cannot exist without its predicate. `filterPokemon` only decides how a selection combines: **Quirks** are OR'd (a personal shortlist that can overlap on one Pokemon: "pickup OR holds an item"), **Traits** are AND'd (independent yes/no properties of the Pokemon: "Baby AND Fossil"). Each takes an Active Gen row, so `held-item` sees only the Active Gen's items. A selected key with no entry matches nothing. `quirksAndTraits.test.ts` fails if an entry has no fixture row that matches it.
 
 
 ## Image set

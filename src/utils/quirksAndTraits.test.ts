@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
 import type { PokedexTableRow } from "../data/types";
 import { type FlagDef, QUIRKS, TRAITS } from "./quirksAndTraits";
-import { makeRow } from "../data/__fixtures__/rows";
+import { makeActiveGenRow } from "../data/__fixtures__/rows";
+import type { ActiveGenRow } from "./activeGenScope";
+
+// Rows viewed at Active Gen 3, the generation GEN_3_ITEM is tagged with.
+const makeRow = (overrides: Partial<PokedexTableRow>): ActiveGenRow => makeActiveGenRow(overrides, 3);
 
 const GEN_3_ITEM = [{ name: "silver-powder", rarities: [{ value: 50, generationId: 3 }] }];
 
 // One row that must match, and one that must not, per flag key. A key added to
 // QUIRKS/TRAITS without an entry here fails the coverage test below, so a
 // filter option can't ship with no test at all.
-const FIXTURES: Record<string, { hit: PokedexTableRow; miss: PokedexTableRow }> = {
+const FIXTURES: Record<string, { hit: ActiveGenRow; miss: ActiveGenRow }> = {
 	"held-item": { hit: makeRow({ heldItemsAllGens: GEN_3_ITEM }), miss: makeRow({ heldItemsAllGens: [] }) },
 	"compound-eyes": { hit: makeRow({ abilityNames: ["compound-eyes"] }), miss: makeRow({ abilityNames: ["overgrow"] }) },
 	pickup: { hit: makeRow({ abilityNames: ["pickup"] }), miss: makeRow({ abilityNames: ["overgrow"] }) },
@@ -44,15 +48,14 @@ describe("QUIRKS and TRAITS", () => {
 	for (const def of ALL) {
 		it(`${def.key}: matches its hit row and not its miss row`, () => {
 			const fixture = FIXTURES[def.key];
-			expect(def.matches(fixture.hit, { activeGen: 3 })).toBe(true);
-			expect(def.matches(fixture.miss, { activeGen: 3 })).toBe(false);
+			expect(def.matches(fixture.hit)).toBe(true);
+			expect(def.matches(fixture.miss)).toBe(false);
 		});
 	}
 
 	it("held-item only counts items from the Active Gen", () => {
 		const held = QUIRKS.find((q) => q.key === "held-item");
-		const row3 = makeRow({ heldItemsAllGens: GEN_3_ITEM });
-		expect(held?.matches(row3, { activeGen: 3 })).toBe(true);
-		expect(held?.matches(row3, { activeGen: 4 })).toBe(false);
+		expect(held?.matches(makeActiveGenRow({ heldItemsAllGens: GEN_3_ITEM }, 3))).toBe(true);
+		expect(held?.matches(makeActiveGenRow({ heldItemsAllGens: GEN_3_ITEM }, 4))).toBe(false);
 	});
 });

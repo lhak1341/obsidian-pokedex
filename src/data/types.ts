@@ -42,7 +42,7 @@ export interface RawPokemon {
 	// normalizeHeldItemDetails, filtered to FLAVOR_TEXT_VERSION_GROUPS and
 	// tagged per-rarity with its generation via VERSION_TO_GENERATION — the
 	// Active Gen scoping itself happens later, at display time (see
-	// utils/heldItemGen.ts), not here.
+	// utils/activeGenScope.ts), not here.
 	held_items: {
 		item: NamedApiResource;
 		version_details: { rarity: number; version: NamedApiResource }[];
@@ -381,7 +381,7 @@ export interface PokedexTableRow {
 	// with its generation) — the raw form both PokedexTableRow and
 	// PokedexEntry (via inheritance, not redeclared there) need, since the
 	// UI-layer Active Gen scoping happens at display time via
-	// utils/heldItemGen.ts's filterHeldItemsForGen, not at normalize time.
+	// utils/activeGenScope.ts's scopeToActiveGen, not at normalize time.
 	// Each distinct (rarity %, generation) pair is its own entry — almost
 	// always one per item (a drop % rarely differs across a generation's own
 	// games), a list for the rare case it does; see normalizeHeldItemDetails.
@@ -397,8 +397,8 @@ export interface PokedexTableRow {
 	// Pokemon never found in the wild (starter, evolve-only, legendary/
 	// mythical, gift) AND for any regional-form row (v1 scope gap, documented
 	// in the generator script). Kept unfiltered by Active Gen here, same
-	// reasoning/shape as heldItemsAllGens above — scope down via
-	// utils/encounters.ts's filterEncounterLocationsForGen at display time.
+	// reasoning/shape as heldItemsAllGens above — scoped by
+	// utils/activeGenScope.ts's scopeToActiveGen at display time.
 	// `method` is non-null when this "location" isn't a wild encounter at all
 	// but an NPC hand-off — "trade" (Jynx: trade a Poliwhirl in Cerulean
 	// City, `tradeFor` names the species being traded away), "gift" (a
@@ -422,8 +422,8 @@ export interface PokedexTableRow {
 	// Traits filter fields — cheap booleans derived from data already fetched
 	// at table-load time (species/pokemon), no extra fetch. Fossil and held-
 	// item aren't duplicated here: fossil checks FOSSIL_IDS.has(dexNumber)
-	// directly (curated list, same as before), held-item checks
-	// heldItemsAllGens.length > 0 directly — see TRAITS in utils/quirksAndTraits.ts.
+	// directly (curated list, same as before), held-item checks the Active Gen
+	// row's `heldItems` — see QUIRKS/TRAITS in utils/quirksAndTraits.ts.
 	isBaby: boolean;
 	canMegaEvolve: boolean;
 	canGigantamax: boolean;

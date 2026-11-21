@@ -979,8 +979,8 @@ export function trimFlavorTextEntries(
 // different number. Each rarity is also tagged with its generation (via
 // VERSION_TO_GENERATION) — this function itself stays Active-Gen-agnostic
 // (every in-scope generation's rarities come back together), the same
-// design as normalizeMoves/extractFlavorTexts; filterHeldItemsForGen
-// (utils/heldItemGen.ts) does the actual Active Gen scoping, at display
+// design as normalizeMoves/extractFlavorTexts; scopeToActiveGen
+// (utils/activeGenScope.ts) does the actual Active Gen scoping, at display
 // time. An item with no version_details left after filtering is dropped
 // entirely.
 export function normalizeHeldItemDetails(

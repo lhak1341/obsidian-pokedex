@@ -16,13 +16,13 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   one progress or streamed-row update per `UPDATE_INTERVAL_MS`: each update re-runs every `TableScreen` derived, and an
   update per callback took a cache-served load from 1.85 s to 24 s. `PokedexApp` holds it in `$state.raw`, since a deep
   `$state` wraps every assignment in a new proxy.
-- Active Gen data is unscoped at its source and scoped once before anything shows it, so a new reader takes the scoped
-  form. Stats: `scopeRowsToGen` (`utils/stats.ts`), applied once as `TableScreen`'s `scopedRows` (`row.stats` is
-  latest-game). Held items and encounters: `heldItemsAllGens`/`encounterLocationsAllGens` carry every generation, the
-  "AllGens" name being the guard, scoped by `filterHeldItemsForGen` (`utils/heldItemGen.ts`) or `describeEncounters`
-  (`utils/encounters.ts`); missed independently for the table cell, its tooltip, the detail page and the Quirks filter
-  in one session. `filterPokemon`'s `FilterContext.activeGen` is required (no any-generation fallback), and a Field's
-  `render(row, activeGen)`/`title` take it too, so the Capture Field scopes its locations in `fields.ts` for both layouts.
+- Active Gen data is unscoped at its source and scoped once before anything shows it: `scopeToActiveGen`
+  (`utils/activeGenScope.ts`) makes an Active Gen row (CONTEXT.md), as `TableScreen`'s `scopedRows` and
+  `DetailScreen`'s `scopedEntry`. The type is the guard: `ActiveGenRow` has no `*AllGens` field, and layouts, Fields
+  (`render(row)`), Quirks/Traits, `filterPokemon` and `sortPokemon` take it, so an unscoped read fails typecheck (the
+  name alone was missed for the table cell, its tooltip, the detail page and the Quirks filter in one session). The
+  memo keeps a row's scoped object identical across streamed updates; a new reader takes the scoped row, never
+  `PokedexTableRow`.
 - Every open Pokédex leaf mounts its own app, so a `window`/`document` listener in a component fires once per leaf, background tabs included (←/→ stepped every leaf, probed live). Keys go through Leaf hotkeys (CONTEXT.md: `PokedexView`'s one gated listener, `leafHotkeyListener.test.ts` pins it); any other global listener must check the event is its own leaf's (`infoPopover`'s Escape attaches only while its popover is open).
 - Saved preferences are never a local copy. Favourites, the Fields selection and the layout per width class live in
   `PokedexPlugin.preferences` (`utils/localPreferences.ts`, ADR-0012), one holder shared by every open Pokédex leaf;

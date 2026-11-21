@@ -1,57 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { makeRow } from "../data/__fixtures__/rows";
+import type { PokedexTableRow } from "../data/types";
+import { scopeToActiveGen } from "./activeGenScope";
 import {
-	describeEncounters, filterEncounterLocationsForGen, formatEncounterLocationsPlain, formatLocationName,
-	groupEncounterLocations, summarizeAcquisitionMethods,
+	describeEncounters, formatEncounterLocationsPlain, formatLocationName, groupEncounterLocations,
+	summarizeAcquisitionMethods,
 } from "./encounters";
-
-describe("filterEncounterLocationsForGen", () => {
-	it("keeps only locations from the active generation, sorted, carrying their region and method", () => {
-		const locations = [
-			{ name: "route-1-area", generationId: 1, region: "kanto", method: null, tradeFor: null },
-			{ name: "viridian-forest-area", generationId: 1, region: "kanto", method: null, tradeFor: null },
-			{ name: "kanto-route-1-area", generationId: 7, region: "kanto", method: null, tradeFor: null },
-		];
-		expect(filterEncounterLocationsForGen(locations, 1)).toEqual([
-			{ name: "route-1-area", region: "kanto", method: null, tradeFor: null },
-			{ name: "viridian-forest-area", region: "kanto", method: null, tradeFor: null },
-		]);
-		expect(filterEncounterLocationsForGen(locations, 7))
-			.toEqual([{ name: "kanto-route-1-area", region: "kanto", method: null, tradeFor: null }]);
-	});
-
-	it("carries method/tradeFor through for an NPC-trade spot (Jynx: trade a Poliwhirl in Cerulean City)", () => {
-		const locations = [
-			{ name: "cerulean-city-area", generationId: 3, region: "kanto", method: "trade" as const, tradeFor: "poliwhirl" },
-		];
-		expect(filterEncounterLocationsForGen(locations, 3))
-			.toEqual([{ name: "cerulean-city-area", region: "kanto", method: "trade", tradeFor: "poliwhirl" }]);
-	});
-
-	it("carries method through for a gift/egg spot", () => {
-		const locations = [
-			{ name: "pallet-town-area", generationId: 3, region: "kanto", method: "gift" as const, tradeFor: null },
-		];
-		expect(filterEncounterLocationsForGen(locations, 3))
-			.toEqual([{ name: "pallet-town-area", region: "kanto", method: "gift", tradeFor: null }]);
-	});
-
-	it("dedupes a location repeated across multiple games of the same generation", () => {
-		const locations = [
-			{ name: "route-1-area", generationId: 1, region: "kanto", method: null, tradeFor: null },
-			{ name: "route-1-area", generationId: 1, region: "kanto", method: null, tradeFor: null },
-		];
-		expect(filterEncounterLocationsForGen(locations, 1))
-			.toEqual([{ name: "route-1-area", region: "kanto", method: null, tradeFor: null }]);
-	});
-
-	it("returns an empty list for a generation with no wild encounters", () => {
-		expect(filterEncounterLocationsForGen(
-			[{ name: "route-1-area", generationId: 1, region: "kanto", method: null, tradeFor: null }],
-			3,
-		)).toEqual([]);
-		expect(filterEncounterLocationsForGen([], 1)).toEqual([]);
-	});
-});
 
 describe("formatLocationName", () => {
 	it("fully capitalizes a floor code instead of just its first letter", () => {
@@ -84,8 +38,8 @@ describe("formatLocationName", () => {
 	});
 });
 
-// Test helper matching ActiveEncounterLocation's shape (filterEncounterLocationsForGen's
-// output) — region/method/tradeFor default to null (the common wild, single-region case).
+// Test helper matching ActiveEncounterLocation's shape (an Active Gen row's
+// `encounterLocations`) — region/method/tradeFor default to null (the common wild, single-region case).
 function loc(
 	name: string,
 	region: string | null = null,
@@ -235,23 +189,25 @@ describe("describeEncounters", () => {
 		method: "trade" | "gift" | "egg" | null = null,
 		tradeFor: string | null = null,
 	) => ({ name, generationId, region, method, tradeFor });
+	// The Active Gen's locations, as a scoped row hands them to describeEncounters.
+	const at = (activeGen: number, locations: PokedexTableRow["encounterLocationsAllGens"]) =>
+		scopeToActiveGen(makeRow({ encounterLocationsAllGens: locations }), activeGen).encounterLocations;
 
 	it("is empty, with blank text, when nothing is available in the Active Gen", () => {
-		expect(describeEncounters([], 1)).toEqual({ isEmpty: true, summary: "", tooltip: "", groups: [], showRegion: false });
-		const outOfGen = describeEncounters([raw("route-1-area", 3)], 1);
+		expect(describeEncounters([])).toEqual({ isEmpty: true, summary: "", tooltip: "", groups: [], showRegion: false });
+		const outOfGen = describeEncounters(at(1, [raw("route-1-area", 3)]));
 		expect(outOfGen.isEmpty).toBe(true);
 	});
 
 	it("scopes to the Active Gen, so the same locations read differently per generation", () => {
 		const locations = [raw("route-1-area", 1), raw("kanto-route-1-area", 7, "kanto", "gift")];
-		expect(describeEncounters(locations, 1).summary).toBe("Wild");
-		expect(describeEncounters(locations, 7).summary).toBe("Gift");
+		expect(describeEncounters(at(1, locations)).summary).toBe("Wild");
+		expect(describeEncounters(at(7, locations)).summary).toBe("Gift");
 	});
 
 	it("builds the cell summary, tooltip and detail lines from one scoped list", () => {
 		const view = describeEncounters(
-			[raw("route-1-area", 1), raw("cerulean-city-area", 1, "kanto", "trade", "poliwhirl")],
-			1,
+			at(1, [raw("route-1-area", 1), raw("cerulean-city-area", 1, "kanto", "trade", "poliwhirl")]),
 		);
 		expect(view.isEmpty).toBe(false);
 		expect(view.summary).toBe("Wild, Trade");
@@ -266,8 +222,7 @@ describe("describeEncounters", () => {
 
 	it("shows region headers only when more than one distinct region is present", () => {
 		const view = describeEncounters(
-			[raw("route-1-area", 3, "kanto"), raw("hoenn-route-101-area", 3, "hoenn")],
-			3,
+			at(3, [raw("route-1-area", 3, "kanto"), raw("hoenn-route-101-area", 3, "hoenn")]),
 		);
 		expect(view.showRegion).toBe(true);
 		expect(view.tooltip).toBe("Kanto: Route 1\nHoenn: Route 101");

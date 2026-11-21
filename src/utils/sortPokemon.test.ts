@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { PokedexTableRow } from "../data/types";
 import { nextSort, sortPokemon } from "./sortPokemon";
-import { makeRow } from "../data/__fixtures__/rows";
+import { makeActiveGenRow } from "../data/__fixtures__/rows";
+import type { ActiveGenRow } from "./activeGenScope";
 
-function row(id: number, name: string, speed: number, overrides: Partial<PokedexTableRow> = {}): PokedexTableRow {
-	return makeRow({
+function row(id: number, name: string, speed: number, overrides: Partial<PokedexTableRow> = {}): ActiveGenRow {
+	return makeActiveGenRow({
 		id,
 		name,
 		types: [],

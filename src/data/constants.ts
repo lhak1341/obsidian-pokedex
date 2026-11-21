@@ -178,7 +178,7 @@ export const FLAVOR_TEXT_VERSION_GROUPS: string[] = Object.values(FLAVOR_TEXT_TA
 // hand-curated table so it can't drift from it. Used by
 // normalizeHeldItemDetails to tag each held-item rarity with a generation,
 // so the UI can filter a Pokemon's held items down to just the versions in
-// the user's Active Gen (see utils/heldItemGen.ts) — the same reason this
+// the user's Active Gen (see utils/activeGenScope.ts) — the same reason this
 // table starts at Gen 3, not Gen 1: PokeAPI's held-item/flavor-text/move
 // data for Gens 1-2 isn't tracked by this app at all (no "red"/"gold"/
 // "silver" entries here), so Active Gen 1 or 2 legitimately shows no held

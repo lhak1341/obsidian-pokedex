@@ -1,5 +1,6 @@
 import { resolveGenerationId } from "../constants";
 import type { PokedexTableRow } from "../types";
+import { type ActiveGenRow, scopeToActiveGen } from "../../utils/activeGenScope";
 
 // The one place a PokedexTableRow literal is spelled out for tests, so a new
 // required field is a single edit here (tsc fails the return type until it is
@@ -45,4 +46,12 @@ export function makeRegionalFormRow(
 	form: { id: number; generationId: number; formLabel: string; name?: string },
 ): PokedexTableRow {
 	return { ...base, ...form, name: form.name ?? `${form.formLabel.toLowerCase()} ${base.name}` };
+}
+
+// A row as every layout, Field, filter and sort receives it: scoped to an
+// Active Gen (activeGenScope.ts). Overrides are the unscoped row's, so a test
+// states a row's every-generation data and the generation it is viewed at.
+// The default, 9, overlays no stats and suits a test that ignores Active Gen.
+export function makeActiveGenRow(overrides: Partial<PokedexTableRow> = {}, activeGen = 9): ActiveGenRow {
+	return scopeToActiveGen(makeRow(overrides), activeGen);
 }

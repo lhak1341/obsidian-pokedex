@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { STAT_COLORS, TYPE_COLORS } from "../../data/constants";
-	import type { PokedexTableRow, StatBlock } from "../../data/types";
+	import type { StatBlock } from "../../data/types";
 	import type { PanelStats } from "../../utils/cardView";
 	import { type Field, formatEvYield, STAT_LABEL_BY_KEY, unhandledCustomCell } from "../../utils/fields";
-	import { filterHeldItemsForGen, type HeldItemForGen } from "../../utils/heldItemGen";
+	import type { ActiveGenRow, HeldItemForGen } from "../../utils/activeGenScope";
 	import { formatItemName, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { totalStat } from "../../utils/stats";
 	import EvChips from "./EvChips.svelte";
@@ -18,17 +18,16 @@
 	// Favourites are PokedexApp's (ADR-0012), so the asterisk only asks. The
 	// held item's Info popover is TableScreen's, so its box (with the rarity)
 	// is the table's own and draws over this panel.
-	let { id, grow, row, stats, chips, barHeight, activeGen, favorite, onToggleFavorite, onOpen, heldItemTarget }: {
+	let { id, grow, row, stats, chips, barHeight, favorite, onToggleFavorite, onOpen, heldItemTarget }: {
 		id: string;
 		// Play the grow-in motion: a tap does; a remount as the panel's row
 		// scrolls back into the Card window doesn't. Read once, at mount.
 		grow: boolean;
-		row: PokedexTableRow;
+		row: ActiveGenRow;
 		stats: PanelStats;
 		chips: Field[];
 		// 0..1, relative per stat among the shown rows, as on the tile.
-		barHeight: (row: PokedexTableRow, stat: keyof StatBlock) => number;
-		activeGen: number;
+		barHeight: (row: ActiveGenRow, stat: keyof StatBlock) => number;
 		favorite: boolean;
 		onToggleFavorite: () => void;
 		onOpen: () => void;
@@ -78,15 +77,14 @@
 								{#if field.custom === "ev"}
 									<span title={formatEvYield(row)}><EvChips evYield={row.evYield} /></span>
 								{:else if field.custom === "heldItems"}
-									{@const items = filterHeldItemsForGen(row.heldItemsAllGens, activeGen)}
-									{#each items as item, i (item.name)}
+									{#each row.heldItems as item, i (item.name)}
 										{#if i > 0}<span class="chip-sep">,</span>{/if}
 										<span class="held-item-name pkdx-info-target" {...heldItemTarget(item)}>{formatItemName(item.name)}</span>
 									{:else}
 										<span class="chip-empty">None</span>
 									{/each}
 								{:else if field.custom === undefined}
-									<span class="chip-value" title={field.title?.(row, activeGen)}>{field.render(row, activeGen)}</span>
+									<span class="chip-value" title={field.title?.(row)}>{field.render(row)}</span>
 								{:else}
 									{unhandledCustomCell(field.custom)}
 								{/if}

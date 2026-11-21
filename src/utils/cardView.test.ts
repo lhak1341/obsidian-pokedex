@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeRow } from "../data/__fixtures__/rows";
+import { makeActiveGenRow } from "../data/__fixtures__/rows";
 import type { StatBlock } from "../data/types";
 import {
 	cardGrid, cardWindow, type CardWindowInput, fitSprite, isTallCardRow, panelChips, panelPlacement, panelStats, sortChips,
@@ -21,13 +21,13 @@ describe("tileCorners", () => {
 
 describe("statStrip", () => {
 	it("draws the chosen stats in stat order, never Total or another Field", () => {
-		const strip = statStrip([makeRow()], new Set(["speed", "total", "hp", "catchRate", "attack"]));
+		const strip = statStrip([makeActiveGenRow()], new Set(["speed", "total", "hp", "catchRate", "attack"]));
 		expect(strip.stats).toEqual(["hp", "attack", "speed"]);
 	});
 
 	it("draws each bar relative to that stat's maximum among the shown rows", () => {
-		const a = makeRow({ id: 1, stats: stats({ hp: 50, speed: 30 }) });
-		const b = makeRow({ id: 2, stats: stats({ hp: 100, speed: 120 }) });
+		const a = makeActiveGenRow({ id: 1, stats: stats({ hp: 50, speed: 30 }) });
+		const b = makeActiveGenRow({ id: 2, stats: stats({ hp: 100, speed: 120 }) });
 		const strip = statStrip([a, b], new Set(["hp", "speed"]));
 		expect(strip.height(a, "hp")).toBe(0.5);
 		expect(strip.height(b, "hp")).toBe(1);
@@ -36,7 +36,7 @@ describe("statStrip", () => {
 	});
 
 	it("draws a zero-height bar, not NaN, when no shown row has the stat above 0", () => {
-		const a = makeRow({ stats: stats({ hp: 0 }) });
+		const a = makeActiveGenRow({ stats: stats({ hp: 0 }) });
 		expect(statStrip([a], new Set(["hp"])).height(a, "hp")).toBe(0);
 	});
 
@@ -46,7 +46,7 @@ describe("statStrip", () => {
 		[["hp", "attack", "defense", "specialAttack", "speed"], false],
 		[["hp", "attack", "defense", "specialAttack", "specialDefense", "speed"], false],
 	])("prints the values under %j: %s (dropped above four stats)", (chosen, showValues) => {
-		expect(statStrip([makeRow()], new Set(chosen)).showValues).toBe(showValues);
+		expect(statStrip([makeActiveGenRow()], new Set(chosen)).showValues).toBe(showValues);
 	});
 });
 
@@ -131,7 +131,7 @@ describe("panelPlacement", () => {
 describe("cardWindow", () => {
 	// 100 tiles in 4 columns: 25 grid rows of 100px with 10px gaps, so row r
 	// starts at 110r and the grid is 25 * 100 + 24 * 10 = 2740px tall.
-	const plainRows = Array.from({ length: 100 }, (_, i) => makeRow({ id: i + 1 }));
+	const plainRows = Array.from({ length: 100 }, (_, i) => makeActiveGenRow({ id: i + 1 }));
 	const base: CardWindowInput = {
 		rows: plainRows,
 		columns: 4,
@@ -204,7 +204,7 @@ describe("cardWindow", () => {
 
 describe("isTallCardRow", () => {
 	it("is tall when any tile in the grid row has a form line", () => {
-		const rows = Array.from({ length: 10 }, (_, i) => makeRow({ id: i + 1, formLabel: i === 5 ? "Galarian" : null }));
+		const rows = Array.from({ length: 10 }, (_, i) => makeActiveGenRow({ id: i + 1, formLabel: i === 5 ? "Galarian" : null }));
 		expect([0, 1, 2].map((r) => isTallCardRow(rows, 4, r))).toEqual([false, true, false]);
 	});
 });

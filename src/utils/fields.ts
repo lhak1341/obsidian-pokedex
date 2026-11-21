@@ -1,5 +1,6 @@
 import { STAT_COLUMNS } from "../data/constants";
 import type { PokedexTableRow, StatBlock } from "../data/types";
+import type { ActiveGenRow } from "./activeGenScope";
 import type { SortColumn, SortState } from "./sortPokemon";
 import { describeEncounters } from "./encounters";
 import { formatHeight, formatWeight } from "./pokemonDisplay";
@@ -18,7 +19,7 @@ export const STAT_LABEL_BY_KEY = new Map(STAT_COLUMNS.map((c) => [c.key, c.label
 
 // The EV yield as one string — the chip cell's hover tooltip. The cell body
 // itself is drawn by EvChips.svelte, so this is not a `render`.
-export function formatEvYield(row: PokedexTableRow): string {
+export function formatEvYield(row: Pick<PokedexTableRow, "evYield">): string {
 	return row.evYield.length === 0
 		? "-"
 		: row.evYield.map((y) => `${y.amount} ${STAT_LABEL_BY_KEY.get(y.stat) ?? y.stat}`).join(", ");
@@ -50,13 +51,11 @@ interface FieldBase {
 	sortKey?: SortColumn;
 }
 
-// A plain-text Field: both layouts' generic cell is `render(row, activeGen)`,
-// with `title(row, activeGen)` as its hover text when the Field has one. Every
-// layout passes the user's Active Gen, so a Field whose data is stored for
-// every generation (Capture, CONTEXT.md "Active Gen scoping") scopes it here,
-// once, where the tests can reach it; the stat-backed Fields ignore it (their
-// rows arrive already scoped by scopeRowsToGen). A template that drops the
-// argument fails `bun run typecheck` (svelte-check reads the templates).
+// A plain-text Field: both layouts' generic cell is `render(row)`, with
+// `title(row)` as its hover text when the Field has one. The row is an
+// ActiveGenRow (CONTEXT.md "Active Gen scoping"), so stats and Capture
+// locations are already the Active Gen's; a Field cannot reach the unscoped
+// `*AllGens` data at all.
 //
 // A `custom` Field has no `render` at all — the layout draws its cell itself
 // because the cell is more than a string: held items are Info popover
@@ -78,8 +77,8 @@ export function unhandledCustomCell(custom: never): string {
 
 export type Field =
 	| (FieldBase & {
-			render: (row: PokedexTableRow, activeGen: number) => string;
-			title?: (row: PokedexTableRow, activeGen: number) => string;
+			render: (row: ActiveGenRow) => string;
+			title?: (row: ActiveGenRow) => string;
 			custom?: undefined;
 	  })
 	| (FieldBase & { custom: CustomCell });
@@ -89,7 +88,7 @@ export const FIELDS: Field[] = [
 		key: col.key,
 		label: col.label,
 		sortKey: col.key,
-		render: (row: PokedexTableRow) => String(row.stats[col.key]),
+		render: (row: ActiveGenRow) => String(row.stats[col.key]),
 	})),
 	{ key: "total", label: "Total", icon: "sigma", sortKey: "total", render: (row) => String(totalStat(row.stats)) },
 	{ key: "ev", label: "EV yield", icon: "dumbbell", custom: "ev" },
@@ -100,11 +99,11 @@ export const FIELDS: Field[] = [
 		icon: "map-pin",
 		// How it is obtained at the Active Gen ("Wild, Trade"), with every
 		// location as the hover text: one describeEncounters result for both.
-		render: (row, activeGen) => {
-			const encounters = describeEncounters(row.encounterLocationsAllGens, activeGen);
+		render: (row) => {
+			const encounters = describeEncounters(row.encounterLocations);
 			return encounters.isEmpty ? "-" : encounters.summary;
 		},
-		title: (row, activeGen) => describeEncounters(row.encounterLocationsAllGens, activeGen).tooltip,
+		title: (row) => describeEncounters(row.encounterLocations).tooltip,
 	},
 	{ key: "catchRate", label: "Catch rate", icon: "target", sortKey: "catchRate", render: (row) => String(row.catchRate) },
 	{

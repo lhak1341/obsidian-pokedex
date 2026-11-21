@@ -1,44 +1,15 @@
-import type { PokedexTableRow } from "../data/types";
+import type { ActiveEncounterLocation } from "./activeGenScope";
 import { formatItemName } from "./pokemonDisplay";
 
 // Wild-encounter / acquisition presentation for one Pokemon at the user's
 // Active Gen. THE INTERFACE IS `describeEncounters` — table cell, table
 // tooltip and the detail page's Capture lines all come from its one result,
-// so the Active Gen scoping, the grouping, and the "does a line need its
-// region header" rule are decided once. The other exports are its internal
-// steps, exported only so encounters.test.ts can pin their formatting
-// regressions (Mirage Tower, compass/bike slugs, trade atoms) directly;
-// production callers import describeEncounters and the types alone.
-// `PokedexTableRow["encounterLocationsAllGens"]` is deliberately named for
-// what it is: every generation's locations, unscoped.
-
-export interface ActiveEncounterLocation {
-	name: string;
-	region: string | null;
-	method: "trade" | "gift" | "egg" | null;
-	tradeFor: string | null;
-}
-
-// Scopes a Pokemon's wild-encounter locations down to just the ones from the
-// user's Active Gen — the reactive counterpart to encounterLocationsAllGens staying
-// Active-Gen-agnostic at normalize time (same split as heldItemGen.ts's
-// filterHeldItemsForGen). Returns deduped, sorted entries (a location's own
-// region/method/tradeFor never vary by generation, so dedup-by-name alone is
-// safe); empty when the Pokemon isn't found in the wild in that generation
-// at all (evolve-only, legendary, or simply absent from ENCOUNTER_LOCATIONS
-// — see its comment).
-export function filterEncounterLocationsForGen(
-	encounterLocationsAllGens: PokedexTableRow["encounterLocationsAllGens"],
-	activeGen: number,
-): ActiveEncounterLocation[] {
-	const byName = new Map<string, ActiveEncounterLocation>();
-	for (const loc of encounterLocationsAllGens) {
-		if (loc.generationId === activeGen) {
-			byName.set(loc.name, { name: loc.name, region: loc.region, method: loc.method, tradeFor: loc.tradeFor });
-		}
-	}
-	return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
-}
+// so the grouping and the "does a line need its region header" rule are
+// decided once. It takes an Active Gen row's `encounterLocations`, already
+// scoped by scopeToActiveGen (activeGenScope.ts). The other exports are its
+// internal steps, exported only so encounters.test.ts can pin their
+// formatting regressions (Mirage Tower, compass/bike slugs, trade atoms)
+// directly; production callers import describeEncounters and the types alone.
 
 // Small connector words ("Cave of Origin", "Lake of Rage", "Ruins of Alph",
 // "Turnback Cave Between Pillars 1 and 2") stay lowercase mid-name under
@@ -168,7 +139,7 @@ function allNumeric(values: string[]): boolean {
 // (route/floor numbers) sorts numerically ("4, 8, 9, 10, 11, 23", not the
 // lexicographic "10, 11, 23, 4, 8, 9"); anything else (e.g. "1f"/"B1f"/
 // "Entrance") keeps arrival order, which is already alphabetical from
-// filterEncounterLocationsForGen. Distinct groups join with "; " (not ", ")
+// scopeToActiveGen (activeGenScope.ts). Distinct groups join with "; " (not ", ")
 // so the group boundary reads as a boundary once commas are already doing
 // double duty joining numbers within a group. Only ever called with wild
 // (mergeable) location text — a trade/gift/egg spot's fully-formatted "Trade
@@ -224,8 +195,8 @@ export interface EncounterLocationGroup {
 	text: string;
 }
 
-// Splits a Pokemon's active-gen wild-encounter locations (as returned by
-// filterEncounterLocationsForGen, each already carrying its own real region
+// Splits a Pokemon's active-gen wild-encounter locations (an Active Gen
+// row's `encounterLocations`, each already carrying its own real region
 // and acquisition method) into display lines, one per region PLUS one extra
 // per non-wild spot in that region — a species with both a wild spawn and a
 // trade/gift/egg source (or several of the latter) gets one line each rather
@@ -308,11 +279,7 @@ export interface EncounterView {
 	showRegion: boolean;
 }
 
-export function describeEncounters(
-	locations: PokedexTableRow["encounterLocationsAllGens"],
-	activeGen: number,
-): EncounterView {
-	const active = filterEncounterLocationsForGen(locations, activeGen);
+export function describeEncounters(active: ActiveEncounterLocation[]): EncounterView {
 	const groups = groupEncounterLocations(active);
 	return {
 		isEmpty: active.length === 0,

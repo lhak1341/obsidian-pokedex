@@ -1,7 +1,8 @@
 import { GENERATIONS } from "../data/constants";
 import type { PokedexTableRow, StatBlock } from "../data/types";
 import { formatPokemonDisplayName } from "./pokemonDisplay";
-import { type FlagContext, type FlagDef, QUIRKS, TRAITS } from "./quirksAndTraits";
+import type { ActiveGenRow } from "./activeGenScope";
+import { type FlagDef, QUIRKS, TRAITS } from "./quirksAndTraits";
 
 export interface StatRange {
 	min: number;
@@ -60,13 +61,13 @@ export const EMPTY_FILTERS: PokedexFilters = {
 // "rattata" still finds both it and the base row. Exact-number search keys
 // off dexNumber (the shared "No. 019"), not `id` (each row's own distinct
 // fetch id) — typing "19" should surface every form at that dex number.
-export function matchesSearch(row: PokedexTableRow, search: string): boolean {
+export function matchesSearch(row: Pick<PokedexTableRow, "name" | "formLabel" | "dexNumber">, search: string): boolean {
 	if (!search.trim()) return true;
 	const needle = search.trim().toLowerCase();
 	return formatPokemonDisplayName(row).toLowerCase().includes(needle) || String(row.dexNumber) === needle;
 }
 
-function matchesTypes(row: PokedexTableRow, types: string[]): boolean {
+function matchesTypes(row: ActiveGenRow, types: string[]): boolean {
 	if (types.length === 0) return true;
 	return types.every((type) => row.types.includes(type));
 }
@@ -98,7 +99,7 @@ export function matchesGenerations(row: Pick<PokedexTableRow, "generationId">, g
 	return generations.includes(row.generationId);
 }
 
-function matchesStatRanges(row: PokedexTableRow, ranges: PokedexFilters["statRanges"]): boolean {
+function matchesStatRanges(row: ActiveGenRow, ranges: PokedexFilters["statRanges"]): boolean {
 	for (const [stat, range] of Object.entries(ranges) as [keyof StatBlock, StatRange][]) {
 		const value = row.stats[stat];
 		if (value < range.min || value > range.max) return false;
@@ -106,58 +107,55 @@ function matchesStatRanges(row: PokedexTableRow, ranges: PokedexFilters["statRan
 	return true;
 }
 
-function matchesAbilities(row: PokedexTableRow, abilities: string[]): boolean {
+function matchesAbilities(row: ActiveGenRow, abilities: string[]): boolean {
 	if (abilities.length === 0) return true;
 	return abilities.some((ability) => row.abilityNames.includes(ability));
 }
 
-function matchesRarities(row: PokedexTableRow, rarities: string[]): boolean {
+function matchesRarities(row: ActiveGenRow, rarities: string[]): boolean {
 	if (rarities.length === 0) return true;
 	return rarities.includes(row.rarity);
 }
 
-function matchesEvStats(row: PokedexTableRow, evStats: string[]): boolean {
+function matchesEvStats(row: ActiveGenRow, evStats: string[]): boolean {
 	if (evStats.length === 0) return true;
 	return row.evYield.some((y) => evStats.includes(y.stat));
 }
 
 // A selected key with no entry in `defs` matches nothing (same as the old
 // switches' `default: return false`).
-function matchesFlag(defs: readonly FlagDef[], key: string, row: PokedexTableRow, ctx: FlagContext): boolean {
-	return defs.find((d) => d.key === key)?.matches(row, ctx) ?? false;
+function matchesFlag(defs: readonly FlagDef[], key: string, row: ActiveGenRow): boolean {
+	return defs.find((d) => d.key === key)?.matches(row) ?? false;
 }
 
-function matchesQuirks(row: PokedexTableRow, quirks: string[], ctx: FlagContext): boolean {
+function matchesQuirks(row: ActiveGenRow, quirks: string[]): boolean {
 	if (quirks.length === 0) return true;
-	return quirks.some((q) => matchesFlag(QUIRKS, q, row, ctx));
+	return quirks.some((q) => matchesFlag(QUIRKS, q, row));
 }
 
-function matchesTraits(row: PokedexTableRow, traits: string[], ctx: FlagContext): boolean {
+function matchesTraits(row: ActiveGenRow, traits: string[]): boolean {
 	if (traits.length === 0) return true;
-	return traits.every((t) => matchesFlag(TRAITS, t, row, ctx));
+	return traits.every((t) => matchesFlag(TRAITS, t, row));
 }
 
-function matchesFavorite(row: PokedexTableRow, favoritesOnly: boolean, favoriteIds: ReadonlySet<number>): boolean {
+function matchesFavorite(row: ActiveGenRow, favoritesOnly: boolean, favoriteIds: ReadonlySet<number>): boolean {
 	if (!favoritesOnly) return true;
 	return favoriteIds.has(row.id);
 }
 
-// Bundled rather than two more positional params — both are "external
-// context not derivable from a PokedexTableRow field alone" (favorites are
-// user state, Active Gen is a setting). favoriteIds is safely omittable (an
-// omitted set matches nothing extra; favoritesOnly still gates it). activeGen
-// is not: every row field that is tagged by generation has to be scoped to
-// it, and an omitted value used to mean "silently skip the scoping".
+// External context not derivable from a row field (favorites are user state).
+// favoriteIds is safely omittable: an omitted set matches nothing extra;
+// favoritesOnly still gates it. Active Gen is not here: rows arrive already
+// scoped to it (ActiveGenRow, activeGenScope.ts).
 export interface FilterContext {
 	favoriteIds?: ReadonlySet<number>;
-	activeGen: number;
 }
 
 export function filterPokemon(
-	rows: PokedexTableRow[],
+	rows: ActiveGenRow[],
 	filters: PokedexFilters,
-	context: FilterContext,
-): PokedexTableRow[] {
+	context: FilterContext = {},
+): ActiveGenRow[] {
 	const favoriteIds = context.favoriteIds ?? new Set<number>();
 	return rows.filter((row) =>
 		matchesSearch(row, filters.search) &&
@@ -167,8 +165,8 @@ export function filterPokemon(
 		matchesAbilities(row, filters.abilities) &&
 		matchesRarities(row, filters.rarities) &&
 		matchesEvStats(row, filters.evStats) &&
-		matchesQuirks(row, filters.quirks, context) &&
-		matchesTraits(row, filters.traits, context) &&
+		matchesQuirks(row, filters.quirks) &&
+		matchesTraits(row, filters.traits) &&
 		matchesFavorite(row, filters.favoritesOnly, favoriteIds)
 	);
 }

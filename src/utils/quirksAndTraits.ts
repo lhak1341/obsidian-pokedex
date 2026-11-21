@@ -1,22 +1,17 @@
 import { FOSSIL_IDS } from "../data/constants";
-import type { PokedexTableRow } from "../data/types";
-import { filterHeldItemsForGen } from "./heldItemGen";
+import type { ActiveGenRow } from "./activeGenScope";
 
 // One entry per Quirk/Trait filter option: what FilterBar renders (key, label,
 // icon) and what filterPokemon evaluates (matches) live together, so a key
 // can't exist in one place without the other. Quirks and Traits differ only in
 // how a selection COMBINES (OR vs AND, decided in filterPokemon), not in what
-// one entry is — so both lists share this shape. `ctx` carries what a row
-// can't answer alone (Active Gen); entries that don't need it ignore it.
-export interface FlagContext {
-	activeGen: number;
-}
-
+// one entry is — so both lists share this shape. A row arrives scoped to
+// the Active Gen (activeGenScope.ts), so every entry answers from the row alone.
 export interface FlagDef {
 	key: string;
 	label: string;
 	icon: string;
-	matches(row: PokedexTableRow, ctx: FlagContext): boolean;
+	matches(row: ActiveGenRow): boolean;
 }
 
 // A personal shortlist of specific traits that can genuinely overlap on one
@@ -29,17 +24,14 @@ export interface FlagDef {
 // holds an item" is a meaningful combined search the way "baby AND fossil"
 // isn't.
 export const QUIRKS: readonly FlagDef[] = [
-	// Scoped to activeGen — same reasoning as the table cell/tooltip (see
-	// heldItemGen.ts): a species whose only held item is from an out-of-scope
-	// generation shouldn't surface under this quirk any more than it shows an
-	// item in the row itself. activeGen is required (no "any generation"
-	// fallback): a caller that forgot it used to get the unscoped union
-	// silently.
+	// Reads the Active Gen's held items: a species whose only held item is
+	// from another generation shouldn't surface under this quirk any more
+	// than it shows an item in the row itself.
 	{
 		key: "held-item",
 		label: "Held Item",
 		icon: "gift",
-		matches: (row, ctx) => filterHeldItemsForGen(row.heldItemsAllGens, ctx.activeGen).length > 0,
+		matches: (row) => row.heldItems.length > 0,
 	},
 	{ key: "compound-eyes", label: "Compound Eyes", icon: "eye", matches: (row) => row.abilityNames.includes("compound-eyes") },
 	{ key: "pickup", label: "Pickup", icon: "boxes", matches: (row) => row.abilityNames.includes("pickup") },

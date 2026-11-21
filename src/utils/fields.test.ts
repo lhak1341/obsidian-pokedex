@@ -3,6 +3,7 @@ import type { PokedexTableRow } from "../data/types";
 import { DEFAULT_VISIBLE_FIELDS, FIELDS, formatEvYield, isStatField, sortAfterFieldsChange } from "./fields";
 import { makeRow } from "../data/__fixtures__/rows";
 import { describeEncounters } from "./encounters";
+import { scopeToActiveGen } from "./activeGenScope";
 
 function textField(key: string) {
 	const field = FIELDS.find((f) => f.key === key);
@@ -12,7 +13,7 @@ function textField(key: string) {
 }
 
 function renderOf(key: string, row: PokedexTableRow, activeGen = 9): string {
-	return textField(key).render(row, activeGen);
+	return textField(key).render(scopeToActiveGen(row, activeGen));
 }
 
 describe("FIELDS", () => {
@@ -35,14 +36,14 @@ describe("FIELDS", () => {
 
 		it("shows '-' and no title at an Active Gen with no locations", () => {
 			expect(renderOf("encounterLocation", row, 1)).toBe("-");
-			expect(textField("encounterLocation").title?.(row, 1)).toBe("");
+			expect(textField("encounterLocation").title?.(scopeToActiveGen(row, 1))).toBe("");
 		});
 
 		it("shows the Active Gen's summary, with its locations as the title", () => {
-			const encounters = describeEncounters(row.encounterLocationsAllGens, 2);
+			const encounters = describeEncounters(scopeToActiveGen(row, 2).encounterLocations);
 			expect(encounters.isEmpty).toBe(false);
 			expect(renderOf("encounterLocation", row, 2)).toBe(encounters.summary);
-			expect(textField("encounterLocation").title?.(row, 2)).toBe(encounters.tooltip);
+			expect(textField("encounterLocation").title?.(scopeToActiveGen(row, 2))).toBe(encounters.tooltip);
 		});
 	});
 

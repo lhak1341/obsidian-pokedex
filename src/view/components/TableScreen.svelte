@@ -2,11 +2,10 @@
 	import type { PokedexRepository } from "../../data/PokedexRepository";
 	import type { PokedexTableRow } from "../../data/types";
 	import { EMPTY_FILTERS, filterPokemon } from "../../utils/filterPokemon";
-	import { filterHeldItemsForGen, type HeldItemForGen } from "../../utils/heldItemGen";
+	import { type HeldItemForGen, scopeRowsToActiveGen } from "../../utils/activeGenScope";
 	import { formatDexNumber, formatItemName, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import type { BrowseLayout } from "../../utils/browseLayout";
 	import { nextSort, sortPokemon, type SortColumn, type SortState } from "../../utils/sortPokemon";
-	import { scopeRowsToGen } from "../../utils/stats";
 	import { FIELDS, formatEvYield, isStatField, sortAfterFieldsChange, unhandledCustomCell } from "../../utils/fields";
 	import { TABLE_COLUMNS, columnWidth, tableFrame } from "../../utils/tableColumns";
 	import { onDestroy, untrack } from "svelte";
@@ -136,12 +135,12 @@
 	const abilityOptions = $derived(
 		[...new Set(rows.flatMap((r) => r.abilityNames))].sort(),
 	);
-	// Stats are scoped to the Active Gen once, here, so the stat columns,
-	// Total, stat sort and stat-range filter below all read the same numbers
-	// the detail page shows — see scopeRowsToGen.
-	const scopedRows = $derived(scopeRowsToGen(rows, activeGen));
+	// Rows are scoped to the Active Gen once, here (activeGenScope.ts), so every
+	// column, the Card view, sort and filters below read the Active Gen's stats,
+	// held items and capture locations — the same ones the detail page shows.
+	const scopedRows = $derived(scopeRowsToActiveGen(rows, activeGen));
 	const visibleRows = $derived(
-		sortPokemon(filterPokemon(scopedRows, filters, { favoriteIds, activeGen }), sort.column, sort.direction),
+		sortPokemon(filterPokemon(scopedRows, filters, { favoriteIds }), sort.column, sort.direction),
 	);
 	const activeColumns = $derived(
 		TABLE_COLUMNS.filter((col) => visibleFieldKeys.has(col.key)),
@@ -274,7 +273,6 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 			{favoriteIds}
 			{sort}
 			{repository}
-			{activeGen}
 			onSort={setSort}
 			{onSelect}
 			{onToggleFavorite}
@@ -369,7 +367,7 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 							{#each activeColumns as col (col.key)}
 								{#if col.custom}
 									{#if col.custom === "heldItems"}
-										{@const genItems = filterHeldItemsForGen(row.heldItemsAllGens, activeGen)}
+										{@const genItems = row.heldItems}
 										<td class="info-target-cell">
 											{#if genItems.length === 0}
 												-
@@ -390,7 +388,7 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 										<td>{unhandledCustomCell(col.custom)}</td>
 									{/if}
 								{:else}
-									<td class:right={col.align === "right"} title={col.title?.(row, activeGen)}>{col.render(row, activeGen)}</td>
+									<td class:right={col.align === "right"} title={col.title?.(row)}>{col.render(row)}</td>
 								{/if}
 							{/each}
 						</tr>

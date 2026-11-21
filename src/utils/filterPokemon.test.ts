@@ -2,18 +2,18 @@ import { describe, expect, it } from "vitest";
 import type { PokedexTableRow } from "../data/types";
 import { EMPTY_FILTERS, type FilterContext, filterPokemon as filterPokemonIn } from "./filterPokemon";
 import { makeRow } from "../data/__fixtures__/rows";
+import { type ActiveGenRow, scopeRowsToActiveGen } from "./activeGenScope";
 
-// activeGen is required by filterPokemon (an omitted one used to mean "skip
-// Active Gen scoping" silently), so tests that don't care about it share
-// this default instead of each passing a context. 3 is the generation the
-// held-item fixtures below are tagged with; a test about scoping passes its
-// own.
+// filterPokemon takes rows already scoped to an Active Gen (ActiveGenRow).
+// Tests keep stating unscoped rows and scope them here; 3 is the generation
+// the held-item fixtures below are tagged with, and a test about scoping
+// passes its own.
 function filterPokemon(
 	rows: PokedexTableRow[],
 	filters: Parameters<typeof filterPokemonIn>[1],
-	context: Partial<FilterContext> = {},
-): PokedexTableRow[] {
-	return filterPokemonIn(rows, filters, { activeGen: 3, ...context });
+	{ activeGen = 3, ...context }: FilterContext & { activeGen?: number } = {},
+): ActiveGenRow[] {
+	return filterPokemonIn(scopeRowsToActiveGen(rows, activeGen), filters, context);
 }
 
 const rows: PokedexTableRow[] = [

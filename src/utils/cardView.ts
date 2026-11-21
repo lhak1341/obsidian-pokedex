@@ -1,4 +1,5 @@
 import type { PokedexTableRow, StatBlock } from "../data/types";
+import type { ActiveGenRow } from "./activeGenScope";
 import { type Field, FIELDS, isStatField } from "./fields";
 import type { SortColumn } from "./sortPokemon";
 
@@ -27,12 +28,12 @@ export interface StatStrip {
 	stats: (keyof StatBlock)[];
 	showValues: boolean;
 	// 0..1: the row's stat against that stat's maximum among `rows`.
-	height: (row: PokedexTableRow, stat: keyof StatBlock) => number;
+	height: (row: ActiveGenRow, stat: keyof StatBlock) => number;
 }
 
 // `rows` are the rows shown (filtered, Active Gen scoped), so a bar compares
 // against its own stat among what is on screen, not a fixed ceiling.
-export function statStrip(rows: readonly PokedexTableRow[], visibleFields: ReadonlySet<string>): StatStrip {
+export function statStrip(rows: readonly ActiveGenRow[], visibleFields: ReadonlySet<string>): StatStrip {
 	const stats = chosenStats(visibleFields);
 	const max = new Map<keyof StatBlock, number>();
 	for (const stat of stats) {
