@@ -7,6 +7,10 @@ time out (clear `.notice` before checking one shows); `dev:mobile` is global, tu
 
 ## Setting up
 
+- Any CLI call can hang with no error (the first `eval` after a window reload, `dev:screenshot`, `dev:cdp`) and macOS
+  has no `timeout`: guard each as `perl -e 'alarm 30; exec @ARGV' obsidian …` on the `obsidian` process itself (an
+  alarm on a wrapper script kills the script while its child holds the pipe open), and send a throwaway `eval` after
+  each reload before the real one.
 - Focus first: `getLeavesOfType('pokedex-view')` + `setActiveLeaf(leaf, {focus:true})`. For a genuinely fresh Svelte
   mount, swap the same leaf's view: `setViewState({type:'empty'})`, then `setViewState({type:'pokedex-view',active:true})`.
   Detaching breaks emulated mobile (`docs/mobile-verification.md` step 5). A setting changed in memory shows after
@@ -135,13 +139,14 @@ time out (clear `.notice` before checking one shows); `dev:mobile` is global, tu
   hit-test for empty viewport (`elementFromPoint`) lands in the grid's column and row gaps, so sample inside a column
   and count a point as empty only when no tile is within a gap of it.
 - A cold measurement reloads the plugin (`disablePlugin`/`enablePlugin`) after emptying every Pokédex leaf: a leaf swap keeps module memos (`contentBounds`) and the repository's mem caches, and a leaf left open starts its own load, which warms them (and runs any cache self-heal) before the probe. Time what the user sees, a full first screen, not the last off-screen item: Card view's 7.3 s "all measured" was 0.4 s to a usable screen (ADR-0014).
-- A Narrow pane is a leaf width, and both screens read the leaf: PokedexApp's ResizeObserver and the `pane` container
-  (`styles.src.css`) that every Narrow pane query uses (`@container pane (width < 600px)`, pinned by
-  `src/view/paneBreakpoint.test.ts`). So drive it by the leaf: `leaf.view.containerEl.style.width = '390px'` (clear it
-  after) switches both screens, measured identical at 599/600 (#31). Inside the leaf, padding and the scrollbar gutter
+- A Narrow pane (600) and the detail bands (phone below 760, three columns from 1100) are leaf widths, and both
+  screens read the leaf: PokedexApp's ResizeObserver and the `pane` container (`styles.src.css`) that every leaf-width
+  query uses (`@container pane (width < 760px)` for the phone hero, pinned by `src/view/paneBreakpoint.test.ts`). So
+  drive it by the leaf: `leaf.view.containerEl.style.width = '390px'` (clear it after) switches both screens; a
+  600-759px leaf is the wide table with the phone detail screen. Inside the leaf, padding and the scrollbar gutter
   take ~71px on desktop (12px `.view-content` + 16px `.pokedex-view` a side + a 15px gutter; less where scrollbars
   overlay), so a 390px leaf leaves the detail screen 319px. Setting `.pokedex-view`'s width instead moves only the
-  inner `detail` container (its one query is Base stats beside Abilities at 1100px) and never a `pane` query.
+  section containers (`moves`, `paired`, `capture`, `evo`) and never a `pane` query.
 - Phone-width design needs no emulator: inject a throwaway overlay into the live `pokedex-view` leaf inside a
   fixed-width column (any width), take row
   order/filter/sort from the table DOM and raw records from `plugin.repository.pokemonMemCache` (by id, all 6 stats) /

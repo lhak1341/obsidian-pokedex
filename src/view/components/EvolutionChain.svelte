@@ -252,4 +252,20 @@ pair their branches. -->
 	.split-labels .evo-label {
 		flex-direction: column;
 	}
+	/* Three 72px cards and two 10px gaps take 236px, and a 320px leaf's tree
+	is 223px, so a three-stage chain wrapped into a triangle even with
+	compact cards. Under 240px of tree they shrink a step (three stages:
+	~192px). The tree reads the floor and gap back from computed style. */
+	@container evo (width < 240px) {
+		.compact {
+			gap: 6px;
+		}
+		.compact > .evo-card {
+			--pkdx-evo-card-floor: 60px;
+		}
+		.compact .evo-sprite {
+			width: 56px;
+			height: 56px;
+		}
+	}
 </style>

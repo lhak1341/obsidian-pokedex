@@ -52,7 +52,8 @@
 	.type-badge.compact {
 		padding: 2px 7px;
 		margin-right: 0;
-		font-size: 0.5em;
+		/* Evolution cards only. 0.5em drew 6.5px text. */
+		font-size: 0.72em;
 	}
 	.type-badge-icon {
 		display: inline-flex;

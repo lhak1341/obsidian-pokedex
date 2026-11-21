@@ -1,83 +1,56 @@
 <script lang="ts">
 	import { ringFill } from "../../utils/ring";
 
-	// Catch rate and hatch counter on the phone layout's Capture & Breeding
-	// (#32): a 56px ring in the bar's colour, value in the centre, label
-	// below. BarRow stays the bars' grid cells; this is its own component.
+	// Catch rate and hatch counter in Capture & Breeding: a 44px ring in the
+	// bars' colour. From a 540px panel (DetailScreen's `capture` container)
+	// the label and "value / max" sit beside the ring; below that the value
+	// moves into the dial and the label under it, so four items still fit
+	// one line. GenderRing.svelte draws the same shape with two arcs.
 	let { label, value, max }: { label: string; value: number; max: number } = $props();
 
-	const SIZE = 56;
+	const SIZE = 44;
 	const STROKE = 5;
 	const RADIUS = (SIZE - STROKE) / 2;
 	const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 	const filled = $derived(ringFill(value, max) * CIRCUMFERENCE);
 </script>
 
-<div class="ring" style:width="{SIZE}px">
+<div class="ring">
 	<div class="ring-dial" style:width="{SIZE}px" style:height="{SIZE}px">
 		<svg width={SIZE} height={SIZE} viewBox="0 0 {SIZE} {SIZE}" aria-hidden="true">
 			<circle class="ring-track" cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} stroke-width={STROKE} />
-			<!-- Starts at 12 o'clock and runs clockwise. A round cap on an empty
-			arc would still draw a dot, so a zero fill draws nothing. -->
 			{#if filled > 0}
-				<circle
-					class="ring-fill"
-					cx={SIZE / 2}
-					cy={SIZE / 2}
-					r={RADIUS}
-					stroke-width={STROKE}
-					stroke-dasharray="{filled} {CIRCUMFERENCE}"
-					transform="rotate(-90 {SIZE / 2} {SIZE / 2})"
-				/>
+				<circle class="ring-fill" cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} stroke-width={STROKE}
+					stroke-dasharray="{filled} {CIRCUMFERENCE}" transform="rotate(-90 {SIZE / 2} {SIZE / 2})" />
 			{/if}
 		</svg>
-		<span class="ring-value">{value}</span>
+		<span class="ring-value in-dial">{value}</span>
 	</div>
-	<span class="ring-label">{label}</span>
+	<div class="ring-text">
+		<span class="ring-label">{label}</span>
+		<span class="ring-value beside">{value}<span class="ring-max">&thinsp;/&thinsp;{max}</span></span>
+	</div>
 </div>
 
 <style>
-	.ring {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 4px;
-		/* Its width (inline, SIZE) is the dial's own, so two rings sit side by
-		side in a 360px pane's Stats column (115px inside); each label wraps
-		under its ring ("Hatch / counter"). */
+	.ring { display: flex; align-items: center; gap: 10px; }
+	.ring-dial { position: relative; flex: none; }
+	.ring-dial svg { display: block; }
+	.ring-track { fill: none; stroke: var(--lk-border); }
+	.ring-fill { fill: none; stroke: var(--lk-accent); stroke-linecap: round; }
+	.ring-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+	.ring-label { font-weight: 600; color: var(--lk-text-muted); font-size: 0.78em; line-height: 1.2; }
+	.ring-value { font-family: var(--lk-font-code); font-weight: 600; color: var(--lk-text); }
+	.ring-value.beside { font-size: 0.95em; }
+	.ring-max { color: var(--lk-text-muted); font-weight: 400; font-size: 0.85em; }
+	.ring-value.in-dial {
+		display: none; position: absolute; inset: 0;
+		align-items: center; justify-content: center; font-size: 0.8em;
 	}
-	.ring-dial {
-		position: relative;
-	}
-	.ring-dial svg {
-		display: block;
-	}
-	.ring-track {
-		fill: none;
-		stroke: var(--lk-border);
-	}
-	/* The bars' colour: BarRow's default, which Capture & Breeding uses. */
-	.ring-fill {
-		fill: none;
-		stroke: var(--lk-accent);
-		stroke-linecap: round;
-	}
-	.ring-value {
-		position: absolute;
-		inset: 0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-family: var(--lk-font-code);
-		font-size: 0.85em;
-		font-weight: 600;
-		color: var(--lk-text);
-	}
-	.ring-label {
-		font-weight: 600;
-		color: var(--lk-text-muted);
-		font-size: 0.78em;
-		line-height: 1.2;
-		text-align: center;
+	@container capture (width < 540px) {
+		.ring { flex-direction: column; gap: 4px; width: 64px; }
+		.ring-text { align-items: center; text-align: center; }
+		.ring-value.in-dial { display: flex; }
+		.ring-value.beside { display: none; }
 	}
 </style>

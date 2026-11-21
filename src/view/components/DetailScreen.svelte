@@ -7,7 +7,6 @@
 	import type { PokedexRepository } from "../../data/PokedexRepository";
 	import type { MoveDetail, PokedexTableRow, PluginSettings } from "../../data/types";
 	import AbilitiesPanel from "./AbilitiesPanel.svelte";
-	import BarRow from "./BarRow.svelte";
 	import EvChips from "./EvChips.svelte";
 	import FavoriteToggle from "./FavoriteToggle.svelte";
 	import { DetailLoadState, type DetailEntrySnapshot } from "../DetailLoadState";
@@ -21,6 +20,7 @@
 	import MoveBrowser from "./MoveBrowser.svelte";
 	import PortraitPanel from "./PortraitPanel.svelte";
 	import QuickSearch from "./QuickSearch.svelte";
+	import GenderRing from "./GenderRing.svelte";
 	import Ring from "./Ring.svelte";
 	import RegionalFormNav from "./RegionalFormNav.svelte";
 	import StatBars from "./StatBars.svelte";
@@ -53,7 +53,7 @@
 		useTypeIcons: boolean;
 		activeGen: number;
 		// From the leaf width (PokedexApp's ResizeObserver, the same leaf the
-		// `pane` container queries read): the phone tabs below 600px (#32), the
+		// `pane` container queries read): the phone tabs below 760px (#32), the
 		// identity rail to 1100px (#33), three columns from there.
 		band: DetailBand;
 		isFavorite: boolean;
@@ -95,7 +95,7 @@
 
 	// The phone (#32) and rail (#33) tabs. One selection across both bands:
 	// shownDetailTab shows it where the band has it, else the band's first tab
-	// (so Moves survives a resize across 600, and Stats comes back after a
+	// (so Moves survives a resize across 760, and Stats comes back after a
 	// visit to the rail). Not reset in startLoad, so prev/next keeps the tab
 	// (compare Stats down the dex); leaving for the list unmounts this screen,
 	// so a fresh visit opens on the first tab.
@@ -163,7 +163,7 @@
 	});
 	let portraitScale = $state(1);
 	// A touch held on the portrait (#31; PortraitPanel runs the hold): below
-	// 600px the identity overlay fades with the toggles.
+	// a 760px leaf the identity overlay fades with the toggles.
 	let artPreview = $state(false);
 	// contentScale's memo is keyed by cache path, which only the repository
 	// can recover from a blob URL (see imageBounds.ts). An evicted URL has no
@@ -346,8 +346,8 @@
 			(#33) and the three columns lay out the same panels without a second
 			copy of any. -->
 			{#snippet hero()}
-				<!-- The phone hero (#31): below 600px the number, name, asterisk
-				and types sit over the portrait's bottom edge. From 600px .hero is
+				<!-- The phone hero (#31): below a 760px leaf the number, name,
+				asterisk and types sit over the portrait's bottom edge. From 760 .hero is
 				display: contents, so the rail and the identity column stack the
 				square portrait, then the name block. -->
 				<div class="hero" class:art-preview={artPreview}>
@@ -444,8 +444,10 @@
 				</section>
 			{/snippet}
 
-			<!-- Rings on the phone layout (#32), bars in the three columns. -->
-			{#snippet capture(rings: boolean)}
+			<!-- Encounters and held items as text, then one line of gender, catch
+			rate and hatch counter rings and the egg groups (the CSS below lays
+			that line out by the panel's own width). -->
+			{#snippet capture()}
 				<section class="panel capture-panel">
 					<h3 class="section-heading">Capture & Breeding</h3>
 					{#if !encounters.isEmpty}
@@ -468,36 +470,15 @@
 							/>
 						</p>
 					{/if}
-					{#if malePct === null || femalePct === null}
-						<p class="breeding-line">Genderless</p>
-					{:else}
-						<div class="gender-bar">
-							<div class="gender-fill-male" style:width="{malePct}%"></div>
-							<div class="gender-fill-female" style:width="{femalePct}%"></div>
+					<div class="breeding-rings">
+						<div class="cap-item cap-gender"><GenderRing {malePct} {femalePct} /></div>
+						<div class="cap-item cap-catch"><Ring label="Catch rate" value={entry.catchRate} max={MAX_CATCH_RATE} /></div>
+						<div class="cap-item cap-hatch"><Ring label="Hatch counter" value={entry.hatchCounter} max={MAX_HATCH_COUNTER} /></div>
+						<div class="cap-item egg-groups">
+							<span class="egg-groups-label">Egg groups</span>
+							<span class="egg-group">{entry.eggGroups.join(", ") || "None"}</span>
 						</div>
-						<div class="gender-labels">
-							<span class="gender-male">
-								<Icon name="mars" size={13} strokeWidth={2.5} />
-								{malePct}%
-							</span>
-							<span class="gender-female">
-								{femalePct}%
-								<Icon name="venus" size={13} strokeWidth={2.5} />
-							</span>
-						</div>
-					{/if}
-					{#if rings}
-						<div class="breeding-rings">
-							<Ring label="Catch rate" value={entry.catchRate} max={MAX_CATCH_RATE} />
-							<Ring label="Hatch counter" value={entry.hatchCounter} max={MAX_HATCH_COUNTER} />
-						</div>
-					{:else}
-						<div class="breeding-bars">
-							<BarRow label="Catch rate" value={entry.catchRate} max={MAX_CATCH_RATE} />
-							<BarRow label="Hatch counter" value={entry.hatchCounter} max={MAX_HATCH_COUNTER} />
-						</div>
-					{/if}
-					<p class="breeding-line">Egg groups: {entry.eggGroups.join(", ") || "None"}</p>
+					</div>
 				</section>
 			{/snippet}
 
@@ -526,25 +507,31 @@
 				</div>
 			{/snippet}
 
-			<!-- Base stats beside Capture & Breeding, rings in place of bars:
-			the phone's Stats tab and the rail's Overview. -->
-			{#snippet pairedStats()}
-				<div class="paired-stats">
-					{@render baseStats()}
-					{@render capture(true)}
+			<!-- Base stats beside Abilities (60/40), then Capture & Breeding: the
+			rail's Overview and the three columns' middle column. The phone's
+			Stats tab leaves Abilities out (it is on About there). -->
+			{#snippet pairedStats(withAbilities: boolean)}
+				<div class="stats-group">
+					<div class="paired-stats-wrap">
+						<div class="paired-stats">
+							{@render baseStats()}
+							{#if withAbilities}{@render abilities()}{/if}
+						</div>
+					</div>
+					<div class="capture-wrap">{@render capture()}</div>
 				</div>
 			{/snippet}
 
 			{#if band === "phone"}
-				<!-- Phone layout (#32), in a Narrow pane: the hero, then one group
+				<!-- Phone layout (#32), below a 760px leaf: the hero, then one group
 				at a time under a sticky segmented control. -->
 				<div class="detail-phone" style:--pkdx-accent={accentColor}>
 					{@render hero()}
 					{@render tabBar()}
 					<div class="detail-tab-body">
 						{#if shownTab === "about"}
-							{@render flavor()}
 							{@render facts()}
+							{@render flavor()}
 							{@render abilities()}
 						{:else if shownTab === "evolution"}
 							{#if entry.evolutionChain}
@@ -553,14 +540,14 @@
 								<p class="phone-empty">Doesn't evolve.</p>
 							{/if}
 						{:else if shownTab === "stats"}
-							{@render pairedStats()}
+							{@render pairedStats(false)}
 						{:else if shownTab === "moves"}
 							{@render moves()}
 						{/if}
 					</div>
 				</div>
 			{:else if band === "rail"}
-				<!-- Rail layout (#33), a 600-1100px leaf (tablets, splits): a sticky
+				<!-- Rail layout (#33), a 760-1100px leaf (tablets, splits): a sticky
 				232px identity rail, and Overview · Moves tabs beside it. The hero is
 				display: contents here, so the portrait is a plain square. -->
 				<div class="detail-rail" style:--pkdx-accent={accentColor}>
@@ -574,8 +561,7 @@
 						<div class="detail-tab-body">
 							{#if shownTab === "overview"}
 								{@render evolution(false)}
-								{@render abilities()}
-								{@render pairedStats()}
+								{@render pairedStats(true)}
 							{:else if shownTab === "moves"}
 								{@render moves()}
 							{/if}
@@ -595,12 +581,7 @@
 					<div class="core-col">
 						{@render evolution(false)}
 
-						<div class="stats-abilities-row">
-							{@render baseStats()}
-							{@render abilities()}
-						</div>
-
-						{@render capture(false)}
+						{@render pairedStats(true)}
 					</div>
 
 					<div class="moves-col">
@@ -623,13 +604,7 @@
 
 <style>
 	.detail-screen {
-		/* Named container so the query below targets this pane's own resized
-		width, not the Obsidian window's — a sidebar-docked pane and a
-		maximized ultrawide pane both need the right layout independent of
-		how big the window itself is. */
-		container-name: detail;
-		container-type: inline-size;
-		/* Also the Info popover's positioning root (see InfoPopoverBox.svelte):
+		/* The Info popover's positioning root (see InfoPopoverBox.svelte):
 		Obsidian's .workspace-leaf has `contain: strict`, which (like a
 		transform) makes it the containing block for any `position: fixed`
 		descendant — so a fixed popover positioned from a viewport-relative
@@ -724,7 +699,7 @@
 	band; the `pane` container is the leaf, styles.src.css): Back to list and
 	Quick check on one row, prev/next across the full width under them, so
 	neighbour names keep their full length. 780 is its own breakpoint, not the
-	rail's 600: one row of "#740 Crabominable" either side fits from there. */
+	rail's 760: one row of "#740 Crabominable" either side fits from there. */
 	@container pane (width < 780px) {
 		.detail-header {
 			display: grid;
@@ -760,7 +735,7 @@
 		}
 	}
 	/* The phone's tighter nav (#31). */
-	@container pane (width < 600px) {
+	@container pane (width < 760px) {
 		.dex-nav {
 			column-gap: 4px;
 		}
@@ -808,7 +783,7 @@
 	below the box. .name-block becomes display: contents so its children are
 	the grid's items. The overlay passes presses through to the portrait (its
 	hold) except on the favourite asterisk. */
-	@container pane (width < 600px) {
+	@container pane (width < 760px) {
 		.hero {
 			display: grid;
 			grid-template-columns: minmax(0, 1fr) auto;
@@ -861,9 +836,18 @@
 		.hero.art-preview .name-line :global(.favorite-toggle) {
 			pointer-events: none;
 		}
-		/* No hover-to-enlarge below 600px; touch has the hold. */
+		/* No hover-to-enlarge in the phone hero; touch has the hold. */
 		.portrait-preview {
 			display: none;
+		}
+	}
+
+	/* Below a 420px leaf the hero's type badges stack, so a two-type badge
+	row no longer covers the name (Grass over "Venusaur" at 320). */
+	@container pane (width < 420px) {
+		.hero .type-row {
+			flex-direction: column;
+			align-items: flex-end;
 		}
 	}
 
@@ -877,11 +861,6 @@
 		margin: 0 auto;
 	}
 	.identity-col, .core-col, .moves-col {
-		display: flex;
-		flex-direction: column;
-		gap: 20px;
-	}
-	.stats-abilities-row {
 		display: flex;
 		flex-direction: column;
 		gap: 20px;
@@ -908,21 +887,6 @@
 	.identity-col {
 		position: sticky;
 		top: 0;
-	}
-
-	/* A higher breakpoint than the three-column switch: core-col is ~357px
-	wide at a 920px container, too cramped to fit stat bars and the ability
-	list side by side without wrapping. Kept as it was when three columns
-	started at that 920px container; from a 1100px leaf they now start nearer
-	a 1030px one, so this still waits for real breathing room. */
-	@container detail (min-width: 1100px) {
-		.stats-abilities-row {
-			flex-direction: row;
-		}
-		.stats-panel, .abilities-panel {
-			flex: 1;
-			min-width: 0;
-		}
 	}
 
 	/* Hover-to-enlarge, same shape as TableScreen's .sprite-preview: fixed
@@ -1053,53 +1017,11 @@
 	.capture-locations li {
 		margin: 0;
 	}
-	.gender-bar {
-		display: flex;
-		height: 8px;
-		border-radius: 4px;
-		overflow: hidden;
-		background: var(--lk-border);
-	}
-	.gender-fill-male {
-		background: var(--lk-blue);
-	}
-	.gender-fill-female {
-		background: var(--lk-pink);
-	}
-	.gender-labels {
-		display: flex;
-		justify-content: space-between;
-		font-size: 0.85em;
-		margin-top: 4px;
-		margin-bottom: 6px;
-	}
-	.gender-male,
-	.gender-female {
-		display: flex;
-		align-items: center;
-		gap: 3px;
-		font-family: var(--lk-font-code);
-	}
-	.gender-male {
-		color: var(--lk-blue);
-	}
-	.gender-female {
-		color: var(--lk-pink);
-	}
-	.breeding-bars {
-		display: grid;
-		grid-template-columns: auto 34px 1fr;
-		align-items: center;
-		row-gap: 4px;
-		column-gap: 6px;
-		margin-top: 10px;
-	}
-
 	.error {
 		color: var(--lk-danger);
 	}
 
-	/* Phone layout (#32). Rendered only in a Narrow pane (the `band` prop),
+	/* Phone layout (#32). Rendered only below a 760px leaf (the `band` prop),
 	so these need no container query. */
 	.detail-phone {
 		display: flex;
@@ -1181,22 +1103,96 @@
 		gap: 4px;
 		padding: 2px 6px 2px 5px;
 	}
-	/* A 360px pane's Stats column leaves the two percentages touching. */
-	.detail-phone .gender-labels {
-		gap: 6px;
+	/* pairedStats: its parts join the column's own flex gap. Both containers
+	answer a component's own width (paneBreakpoint.test.ts lists them): the
+	middle column is 337px at a 1100px leaf and 829px in the rail at 900, so
+	no leaf width stands for either. */
+	.stats-group {
+		display: contents;
+	}
+	.paired-stats-wrap {
+		container: paired / inline-size;
+	}
+	.capture-wrap {
+		container: capture / inline-size;
 	}
 	.paired-stats {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		display: flex;
 		gap: 8px;
-		align-items: start;
+		align-items: stretch;
 	}
+	/* Base stats keeps most of the width but never dwarfs Abilities. */
+	.paired-stats > :global(.stats-panel) {
+		flex: 3 1 0;
+		min-width: 0;
+	}
+	.paired-stats > .abilities-panel {
+		flex: 2 1 0;
+		min-width: 0;
+	}
+	/* Capture's four items on one line: each ring's label beside it from a
+	540px panel (Ring.svelte, GenderRing.svelte), under it below that, and a
+	2x2 grid below 360px with gender and egg groups first. Under their labels
+	the four take ~312px with egg groups wrapping at 96px, so a 1100px leaf's
+	371px panel (323px inside) keeps one line. Items on one line
+	share a height, so their rings line up whatever their labels wrap to
+	(Gender's runs to three lines). */
 	.breeding-rings {
 		display: flex;
-		flex-wrap: wrap;
-		justify-content: space-around;
-		gap: 8px 2px;
-		margin: 10px 0 8px;
+		justify-content: space-between;
+		align-items: stretch;
+		gap: 12px 16px;
+		margin: 10px 0 4px;
+	}
+	.cap-item {
+		display: flex;
+	}
+	.cap-item > :global(.ring) {
+		flex: 1;
+	}
+	.egg-groups {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: 1px;
+	}
+	.egg-groups-label {
+		font-weight: 600;
+		color: var(--lk-text-muted);
+		font-size: 0.78em;
+	}
+	.egg-group {
+		text-transform: capitalize;
+		font-size: 0.95em;
+	}
+	@container paired (width < 360px) {
+		.paired-stats {
+			flex-direction: column;
+		}
+	}
+	@container capture (width < 540px) {
+		.breeding-rings {
+			justify-content: space-around;
+			gap: 12px 8px;
+		}
+		.egg-groups {
+			align-items: center;
+			text-align: center;
+			max-width: 96px;
+		}
+	}
+	@container capture (width < 360px) {
+		.breeding-rings {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			justify-items: center;
+			align-items: stretch;
+			row-gap: 16px;
+		}
+		.cap-gender { order: 1; }
+		.egg-groups { order: 2; }
+		.cap-catch { order: 3; }
+		.cap-hatch { order: 4; }
 	}
 	/* A move table wider than the phone or the rail's tab column scrolls
 	inside its panel, never the page. The Info popover is positioned from
@@ -1206,7 +1202,7 @@
 		overflow-x: auto;
 	}
 
-	/* Rail layout (#33). Rendered only in a 600-1100px leaf (the `band`
+	/* Rail layout (#33). Rendered only in a 760-1100px leaf (the `band`
 	prop). The rail sticks like the three columns' identity column; the tab
 	bar beside it sticks at the scroller's edge (.detail-tabs-bar). */
 	.detail-rail {

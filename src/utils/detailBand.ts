@@ -1,19 +1,29 @@
 // The detail screen has three bands by Pokedex leaf width (#18): the phone
-// tabs in a Narrow pane, a sticky identity rail with two tabs up to 1100px,
-// and three columns from there. The phone band is the narrow width class, by
-// construction; PokedexApp reads both through paneWidth.ts. CSS never
-// re-derives a band.
-import { widthClass } from "./browseLayout";
+// tabs below 760px, a sticky identity rail with two tabs up to 1100px, and
+// three columns from there. PokedexApp reads the band and the browse width
+// class through paneWidth.ts. CSS never re-derives a band.
+//
+// The phone band reaches past the Narrow pane (600): from 600 to 760 the
+// rail's 232px identity column left the tab column narrower (239px) than the
+// whole phone column at 390 (293px), so stat bars shrank to ~20px and the
+// move table dropped to one-letter headers one pixel after the phone band
+// gave them room. Browse keeps switching at 600, so a 600-759px leaf shows
+// the wide table but the phone detail screen.
 
+export const DETAIL_PHONE_MAX_WIDTH = 760;
 export const DETAIL_COLUMNS_MIN_WIDTH = 1100;
 // The header's one CSS-only breakpoint: two rows below a 780px leaf, one from
 // 780 (`@container pane (width < 780px)`, pinned by paneBreakpoint.test.ts).
 export const DETAIL_HEADER_ONE_ROW_MIN_WIDTH = 780;
+// The phone hero's type badges stack below a 420px leaf
+// (`@container pane (width < 420px)`, pinned by paneBreakpoint.test.ts): two
+// badges in a row covered the name at 320 (Grass over "Venusaur").
+export const DETAIL_HERO_TYPES_STACK_MAX_WIDTH = 420;
 
 export type DetailBand = "phone" | "rail" | "columns";
 
 export function detailBand(width: number): DetailBand {
-	if (widthClass(width) === "narrow") return "phone";
+	if (width < DETAIL_PHONE_MAX_WIDTH) return "phone";
 	return width < DETAIL_COLUMNS_MIN_WIDTH ? "rail" : "columns";
 }
 

@@ -60,8 +60,6 @@ Touch in emulation:
   `new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true })`. That does not
   produce the browser's compatibility mouse events after a tap, so any check about them
   (popover flicker) is iPhone-only.
-- Wrap every CLI call in a guard (`perl -e 'alarm 30; exec @ARGV' obsidian …`): there is
-  no `timeout` on macOS, and a hung `dev:cdp` otherwise holds the shell for 120 s.
 
 ## iPhone (human, real vault)
 

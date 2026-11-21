@@ -3,7 +3,7 @@
 	import type { EvolutionNode } from "../../data/types";
 	import EvolutionChain from "./EvolutionChain.svelte";
 
-	let { chain, onSelect, sprites, types, useTypeIcons, compact = false }: {
+	let { chain, onSelect, sprites, types, useTypeIcons, compact: compactProp = false }: {
 		chain: EvolutionNode;
 		onSelect: (id: number) => void;
 		sprites: Record<number, string | null>;
@@ -13,6 +13,19 @@
 	} = $props();
 
 	let containerEl: HTMLDivElement | undefined;
+	// Full-size cards fall back to the compact (phone) cards when the chain
+	// doesn't fit one row of its container. Wrapping instead put the later
+	// stages on a second line, and the centre-to-centre connector then drew a
+	// linear chain as a triangle (Venusaur's in a 337px column at a 1100px
+	// leaf). A chain that can pair its branches (Eevee) counts as fitting only
+	// paired: unpaired, its eight full-size cards stacked ~2400px tall in that
+	// column, where compact ones pair as on the phone. The full-size width is
+	// read only while full-size cards show and kept while compact ones do, so
+	// switching never changes the reading and the choice can't flip back and
+	// forth.
+	let autoCompact = $state(false);
+	let fullSizeWidth = 0;
+	const compact = $derived(compactProp || autoCompact);
 	let lines = $state<{ x1: number; y1: number; x2: number; y2: number }[]>([]);
 	// Phone layout only: whether every card shows "#032" and the name on
 	// separate lines. One decision for the whole chain, so the numbers and
@@ -169,6 +182,17 @@
 
 	function measure() {
 		if (!containerEl) return;
+		if (!compactProp) {
+			const root = rootNode();
+			const pairs = !!containerEl.querySelector(".can-pair");
+			if (!autoCompact && root) fullSizeWidth = inlineWidth(root, pairs, false);
+			const fits = fullSizeWidth <= containerEl.clientWidth;
+			if (autoCompact === fits) {
+				autoCompact = !fits;
+				void tick().then(measure);
+				return;
+			}
+		}
 		const paired = branchesFitPaired();
 		const split = labelsNeedSplit(paired);
 		const tallest = tallestMethod(paired);
@@ -252,6 +276,8 @@
 <style>
 	.evo-tree {
 		position: relative;
+		/* EvolutionChain's smallest compact cards answer this width. */
+		container: evo / inline-size;
 	}
 	.evo-lines {
 		position: absolute;

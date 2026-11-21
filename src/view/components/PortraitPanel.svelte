@@ -22,7 +22,7 @@
 	// and portraitUri itself (it owns every input) and hands them down;
 	// portraitScale is async, so it is surfaced back via $bindable; onHoverPortrait/onLeavePortrait
 	// forward the raw hover events up for the same reason. artPreview (a touch
-	// held on the portrait, #31) is bound back up too: below 600px the
+	// held on the portrait, #31) is bound back up too: below a 760px leaf the
 	// identity overlay DetailScreen draws over this box fades with it.
 	let {
 		entry,
@@ -121,7 +121,7 @@ that would otherwise open it, and touch has the hold instead. -->
 		draggable="false"
 		style:transform="scale({portraitScale})"
 	/>
-	<!-- Below 600px the identity overlay sits on this fade (CSS shows it
+	<!-- Below a 760px leaf the identity overlay sits on this fade (CSS shows it
 	there only). -->
 	<div class="portrait-fade"></div>
 	{#if hasShiny}
@@ -201,11 +201,11 @@ that would otherwise open it, and touch has the hold instead. -->
 		pointer-events: none;
 	}
 
-	/* Phone hero (#31), in a Narrow pane (the `pane` container, the leaf): full
+	/* Phone hero (#31), below a 760px leaf (the `pane` container): full
 	width, 250px tall, the art in its upper part above DetailScreen's identity
 	overlay, which sits on a fade into the panel colour. Mega X/Y move to the
 	top-left; Gigantamax sits beside the shiny toggle top-right. */
-	@container pane (width < 600px) {
+	@container pane (width < 760px) {
 		.portrait-panel {
 			align-items: flex-start;
 			max-width: none;

@@ -1,15 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { DETAIL_COLUMNS_MIN_WIDTH, detailBand, shownDetailTab, tabsForBand } from "./detailBand";
+import { DETAIL_COLUMNS_MIN_WIDTH, DETAIL_PHONE_MAX_WIDTH, detailBand, shownDetailTab, tabsForBand } from "./detailBand";
 import { NARROW_PANE_MAX_WIDTH } from "./browseLayout";
 
 describe("detailBand", () => {
-	it("is the phone layout in a Narrow pane", () => {
+	it("is the phone layout below 760", () => {
+		expect(DETAIL_PHONE_MAX_WIDTH).toBe(760);
 		expect(detailBand(390)).toBe("phone");
-		expect(detailBand(NARROW_PANE_MAX_WIDTH - 1)).toBe("phone");
+		expect(detailBand(DETAIL_PHONE_MAX_WIDTH - 1)).toBe("phone");
 	});
 
-	it("is the rail from 600 up to 1100", () => {
-		expect(detailBand(NARROW_PANE_MAX_WIDTH)).toBe("rail");
+	// A 600px rail left its tab column 239px, narrower than the phone's 293px.
+	it("stays the phone layout past the Narrow pane, where browse goes wide", () => {
+		expect(detailBand(NARROW_PANE_MAX_WIDTH)).toBe("phone");
+		expect(detailBand(700)).toBe("phone");
+	});
+
+	it("is the rail from 760 up to 1100", () => {
+		expect(detailBand(DETAIL_PHONE_MAX_WIDTH)).toBe("rail");
 		expect(detailBand(768)).toBe("rail");
 		expect(detailBand(1024)).toBe("rail");
 		expect(detailBand(DETAIL_COLUMNS_MIN_WIDTH - 1)).toBe("rail");

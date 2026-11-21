@@ -27,6 +27,10 @@
 	overflow: auto;
 	scrollbar-gutter: stable;
 	padding: var(--lk-space-4);
+	/* Obsidian's phone nav bar floats over the view. --view-bottom-spacing is
+	its height plus the bottom safe area there and 0 elsewhere; Bases pads its
+	own containers with it the same way. */
+	padding-bottom: calc(var(--lk-space-4) + var(--view-bottom-spacing, 0px));
 	font-family: var(--lk-font-label);
 }
 

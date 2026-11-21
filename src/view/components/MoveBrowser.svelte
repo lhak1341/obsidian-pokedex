@@ -91,7 +91,7 @@
 
 <!-- The section's own width, not the pane's, decides the narrow form: the
 Moves panel is a tab of the whole screen on the phone, a tab beside the
-identity rail from 600px and a column from 1100px. -->
+identity rail from 760px and a column from 1100px. -->
 <div class="move-browser">
 	<div class="moves-heading-row">
 		<h3 class="section-heading">Moves (G{shownGen}{shownGen !== activeGen ? ` · no G${activeGen} data` : ""})</h3>
@@ -281,9 +281,6 @@ identity rail from 600px and a column from 1100px. -->
 		padding: 2px 8px;
 		text-transform: capitalize;
 	}
-	/* The name is the Info popover target: its tap area (styles.src.css,
-	.pkdx-info-target::before) reaches past the row and the cell clips it, so
-	it spans the row's height at the name's own width, as in TableScreen. */
 	/* Numbers as Base Stats draws them (BarRow's .bar-value). */
 	.move-table td.num {
 		font-family: var(--lk-font-code);
@@ -297,9 +294,9 @@ identity rail from 600px and a column from 1100px. -->
 	.type-narrow {
 		display: none;
 	}
-	/* Narrow: a 390px phone pane leaves the section 293px and a 600px leaf's
-	Moves tab 239px, where the full table (368px) ran past the panel and hid
-	Pow, Acc and PP. */
+	/* Narrow: a 390px phone pane leaves the section 293px and a 1100px leaf's
+	third column 337px, where the full table (368px) ran past the panel and
+	hid Pow, Acc and PP. */
 	@container moves (width < 400px) {
 		.move-version-tabs .move-tab {
 			padding: 4px 6px;
@@ -320,7 +317,8 @@ identity rail from 600px and a column from 1100px. -->
 			display: inline;
 		}
 	}
-	/* Narrowest: the 600px leaf's Moves tab (239px) still ran 8px over.
+	/* Narrowest: a 320px phone pane leaves 223px; the old 600px rail's 239px
+	Moves tab still ran 8px over.
 	Headers drop to a letter (L, T, P, A; PP stays), so the numbers set the
 	column widths. */
 	@container moves (width < 280px) {
@@ -341,6 +339,9 @@ identity rail from 600px and a column from 1100px. -->
 			background-color: color-mix(in srgb, var(--lk-text) 7%, transparent);
 		}
 	}
+	/* The name is the Info popover target: its tap area (styles.src.css,
+	.pkdx-info-target::before) reaches past the row and the cell clips it, so
+	it spans the row's height at the name's own width, as in TableScreen. */
 	.move-name-cell {
 		--pkdx-tap-pad-y: 64px;
 		overflow: hidden;
