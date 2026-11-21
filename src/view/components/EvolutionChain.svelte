@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { describeEvolutionRequirement } from "../../data/normalize";
 	import type { EvolutionNode } from "../../data/types";
+	import { canPairBranches } from "../../utils/evolutionLayout";
 	import { formatDexNumber, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import EvolutionChain from "./EvolutionChain.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 
-	let { node, onSelect, sprites, types, useTypeIcons, evolveLabel, compact = false, splitLabels = false }: {
+	let { node, onSelect, sprites, types, useTypeIcons, evolveLabel, compact = false, splitLabels = false, pairBranches = false, inPairedRow = false, stageWidths = [], depth = 0 }: {
 		node: EvolutionNode;
 		onSelect: (id: number) => void;
 		// Keyed by dex id. Evolution partners are always within the same
@@ -30,16 +31,37 @@
 		// Compact only: put every card's number and name on separate lines.
 		// EvolutionTree decides it for the whole chain (see its splitLabels).
 		splitLabels?: boolean;
+		// The widest card's width at each stage, by depth from the root:
+		// EvolutionTree measures it (see its stageWidths) so siblings share
+		// one width and their sprites one centre line.
+		stageWidths?: number[];
+		depth?: number;
+		// Lay out a node's evolutions two to a row where canPairBranches
+		// allows it. EvolutionTree decides it for the whole chain (see its
+		// pairBranches): only when the paired chain fits the pane.
+		pairBranches?: boolean;
+		// Set by the parent when it lays this node out two to a row: the
+		// method then wraps under the sprite (.in-paired-row below).
+		inPairedRow?: boolean;
 	} = $props();
+
+	const canPair = $derived(canPairBranches(node));
 
 </script>
 
-<div class="evo-node" class:compact class:split-labels={splitLabels}>
+<!-- can-pair: EvolutionTree's width sum reads it to know which nodes would
+pair their branches. -->
+<div class="evo-node" class:compact class:split-labels={splitLabels} class:can-pair={canPair} class:in-paired-row={inPairedRow}>
 	<!-- data-evo-id: the connecting lines are drawn by EvolutionTree (the
 	wrapper that mounts this component), which measures card centers by this
 	attribute rather than this component tracking its own position — it has
 	no way to know where its parent or siblings ended up. -->
-	<button class="evo-card" data-evo-id={node.id} onclick={() => onSelect(node.id)}>
+	<button
+		class="evo-card"
+		data-evo-id={node.id}
+		style:--pkdx-evo-stage-width={stageWidths[depth] ? `${stageWidths[depth]}px` : null}
+		onclick={() => onSelect(node.id)}
+	>
 		{#if sprites[node.id]}
 			<img src={sprites[node.id]} alt={formatPokemonDisplayName(node)} class="evo-sprite" />
 		{/if}
@@ -64,7 +86,7 @@
 	</button>
 
 	{#if node.children.length > 0}
-		<div class="evo-children">
+		<div class="evo-children" class:paired={pairBranches && canPair}>
 			{#each node.children as child (child.id)}
 				<div class="evo-branch">
 					<EvolutionChain
@@ -76,6 +98,10 @@
 						evolveLabel={describeEvolutionRequirement(child)}
 						{compact}
 						{splitLabels}
+						{stageWidths}
+						{pairBranches}
+						inPairedRow={pairBranches && canPair}
+						depth={depth + 1}
 					/>
 				</div>
 			{/each}
@@ -108,6 +134,7 @@
 		border-radius: var(--lk-radius-m);
 		cursor: pointer;
 		flex-shrink: 0;
+		min-width: var(--pkdx-evo-stage-width, 0);
 		/* Above the SVG connector lines EvolutionTree draws behind this whole
 		layout, and above its own background on hover. */
 		position: relative;
@@ -149,6 +176,19 @@
 		flex-direction: column;
 		gap: 10px;
 	}
+	/* Two to a row, with the same gap between the columns as between a card
+	and its evolutions, which EvolutionTree's width sum assumes. A paired
+	card's method wraps under its sprite, as on the phone
+	(.in-paired-row below), or Sylveon's "Friendship (Fairy Move)" alone
+	widens both columns past a 402px panel. */
+	.evo-children.paired {
+		display: grid;
+		grid-template-columns: auto auto;
+		column-gap: 28px;
+	}
+	.compact > .evo-children.paired {
+		column-gap: 10px;
+	}
 	.evo-branch {
 		display: flex;
 		flex-wrap: wrap;
@@ -174,7 +214,8 @@
 		gap: 10px;
 	}
 	.compact > .evo-card {
-		min-width: 72px;
+		--pkdx-evo-card-floor: 72px;
+		min-width: max(var(--pkdx-evo-card-floor), var(--pkdx-evo-stage-width, 0px));
 		padding: 2px;
 	}
 	.compact .evo-sprite {
@@ -182,11 +223,13 @@
 		height: 64px;
 	}
 	.compact .evo-method,
-	.compact .evo-types {
+	.compact .evo-types,
+	.in-paired-row > .evo-card > .evo-method {
 		contain: inline-size;
 		align-self: stretch;
 	}
-	.compact .evo-method {
+	.compact .evo-method,
+	.in-paired-row > .evo-card > .evo-method {
 		white-space: normal;
 		text-align: center;
 		overflow-wrap: anywhere;

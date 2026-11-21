@@ -27,8 +27,13 @@ time out (clear `.notice` before checking one shows); `dev:mobile` is global, tu
   window back hidden, and a hidden window runs no ResizeObserver, so a leaf width set inline moves every `pane` query but
   not the JS width class or detail band (#33: a 768px leaf drew three columns). Re-run mobile-verification step 2's
   `show()` after each reload and return the mounted layout with each read. The running code and its log can be older than your
-  change: after copying a build, `plugin:reload` and return a new symbol's `typeof` (a reopened window ran the old build), and
+  change: after copying a build, `plugin:reload` and return a new symbol's `typeof` (a reopened window ran the old build);
+  `plugin:reload` keeps every component's injected `<style id="svelte-…">`, so a CSS edit runs new JS against old rules
+  (remove `style[id^=svelte-]` first, or disable/enable), and
   read a `dev:errors` entry's timestamp before diagnosing it (a 404 from an earlier session's eval probe read as a plugin bug).
+- A check in the real vault runs in the user's own window: an open modal covers the leaf, so `dev:screenshot` showed
+  Settings, not the view (check `document.querySelector('.modal-container')` before a shot), and each `setViewState`
+  or inline width is something they see: clear the width in a `finally` and leave the leaf where it was.
 - Narrow-pane width budget: a 390px leaf leaves the browse content 319px (12px `.view-content` + 16px `.pokedex-view`
   padding a side, and a 15px scrollbar gutter that `dev:mobile` keeps). `.pokedex-view` (not `.workspace-leaf-content`
   or `.table-wrap`, which merely wrap it) is the scroll container. A real Narrow pane needs no emulation:

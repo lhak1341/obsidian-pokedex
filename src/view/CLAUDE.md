@@ -38,7 +38,9 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
   through `nextSort`, and an effect resets the sort through `sortAfterFieldsChange` whichever leaf unchose the Field.
   `PokedexApp` picks the layout per width class (`utils/browseLayout.ts`) from a `ResizeObserver` on the leaf; CSS reads
   the same leaf as the `pane` container, so a Narrow pane query is `@container pane (width < 600px)`, never a width
-  converted to an inner container (`paneBreakpoint.test.ts`). The detail screen's three bands (phone tabs below 600,
+  converted to an inner container (`paneBreakpoint.test.ts`). A component that must fit its own width, which the
+  bands make non-monotonic in the leaf's (MoveBrowser's `moves`: 239px at a 600px leaf, 337px at 1100), queries its own
+  container and is listed in that test's `COMPONENT_WIDTH_CONTAINERS`. The detail screen's three bands (phone tabs below 600,
   #32; identity rail with Overview · Moves to 1100, #33; three columns from 1100) are a JS branch on the same leaf width
   (`DetailScreen`'s `band` prop, `utils/detailBand.ts`), since the tab sets differ; one selected tab is shown where the
   band has it (`shownDetailTab`). Each group is a `{#snippet}` every branch renders, so a panel is never written twice.

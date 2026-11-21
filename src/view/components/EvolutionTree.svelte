@@ -20,7 +20,7 @@
 	// the pane that way (compact cards grow past 72px to fit their label),
 	// all split when it doesn't.
 	let splitLabels = $state(false);
-	// Phone layout only: the tallest method text in the chain ("Trade
+	// Phone layout, and paired branches: the tallest method text in the chain ("Trade
 	// holding Metal Coat" wraps to three lines in a 72px card, "Lv. 16" takes
 	// one). Every card reserves this much above its label, so the labels
 	// share rows however differently the methods wrap. 0 until measured.
@@ -31,36 +31,91 @@
 	// (Oddish and Gloom level with the middle of Vileplume/Bellossom)
 	// without a one-type card's sprite dropping out of line.
 	let typesHeight = $state(0);
+	// Both layouts: the widest card's natural width at each stage (index =
+	// depth from the root), given to every card at that stage as a minimum.
+	// Siblings stack in one column left-aligned, and a card centres its
+	// sprite, so a wider sibling ("Thunder Stone (In Alola)" under Alolan
+	// Raichu, the name "Galarian Mr-Mime") put its sprite up to 13px right of
+	// the others'. [] until measured.
+	let stageWidths = $state<number[]>([]);
+	// Both layouts: whether nodes with many final evolutions (Eevee; see
+	// canPairBranches) lay them out two to a row. Only when the chain fits the
+	// pane that way, with the labels on one line; otherwise one column, as
+	// before, and the phone layout's split decision is made for that.
+	let pairBranches = $state(false);
 
 	const px = (v: string) => parseFloat(v) || 0;
 
-	// The width `nodeEl`'s subtree takes with every label on one line: its
-	// card, then the gap, then its widest child branch (siblings stack).
-	// Built from the number/name spans' own widths, which are max-content in
-	// both modes (EvolutionChain's .compact .evo-label), so the answer is the
-	// same whichever mode is showing and the decision never flips back.
-	function inlineWidth(nodeEl: HTMLElement): number {
-		const card = nodeEl.querySelector<HTMLElement>(":scope > .evo-card");
-		const label = card?.querySelector<HTMLElement>(".evo-label");
-		const num = label?.querySelector<HTMLElement>(".evo-num");
-		const name = label?.querySelector<HTMLElement>(".evo-name");
-		if (!card || !label || !num || !name) return 0;
-		const cardStyle = getComputedStyle(card);
+	const childNodes = (nodeEl: HTMLElement) => [
+		...nodeEl.querySelectorAll<HTMLElement>(":scope > .evo-children > .evo-branch > .evo-node"),
+	];
+
+	// A card's width without its stage minimum: the widest of its own parts
+	// plus padding, never below the phone layout's floor
+	// (--pkdx-evo-card-floor). Read from the parts, never the card, so
+	// applying the result doesn't change the next reading. Each part is
+	// shrink-to-fit in the card's centred column, except a method that wraps
+	// under the sprite (the phone layout's, and a paired card's: see
+	// EvolutionChain) and the phone layout's badge row, which stretch to the
+	// card (contain: inline-size) and so never set its width.
+	// `inlineLabel` (phone) takes the number and name as if on one line, from the
+	// spans' own widths, which are max-content in both modes (EvolutionChain's
+	// .compact .evo-label), so the split decision reads the same whichever
+	// mode is showing and never flips back. Otherwise the label as shown.
+	function cardWidth(card: HTMLElement, methodWraps: boolean, inlineLabel: boolean): number {
+		const width = (sel: string) => card.querySelector<HTMLElement>(sel)?.getBoundingClientRect().width ?? 0;
+		const label = card.querySelector<HTMLElement>(".evo-label");
+		// Desktop never splits, and its label is inline text whose space has no
+		// column-gap to read, so it takes the label's own box.
 		const labelWidth =
-			num.getBoundingClientRect().width + px(getComputedStyle(label).columnGap) + name.getBoundingClientRect().width;
-		const cardWidth = Math.max(
-			px(cardStyle.minWidth),
-			labelWidth + px(cardStyle.paddingLeft) + px(cardStyle.paddingRight),
+			inlineLabel && compact && label
+				? width(".evo-num") + px(getComputedStyle(label).columnGap) + width(".evo-name")
+				: width(".evo-label");
+		const parts = [width(".evo-sprite"), labelWidth];
+		if (!methodWraps) parts.push(width(".evo-method-text"));
+		if (!compact) parts.push(width(".evo-types"));
+		const style = getComputedStyle(card);
+		return Math.max(
+			px(style.getPropertyValue("--pkdx-evo-card-floor")),
+			Math.ceil(Math.max(...parts) + px(style.paddingLeft) + px(style.paddingRight)),
 		);
-		const children = [...nodeEl.querySelectorAll<HTMLElement>(":scope > .evo-children > .evo-branch > .evo-node")];
-		if (children.length === 0) return cardWidth;
-		return cardWidth + px(getComputedStyle(nodeEl).columnGap) + Math.max(...children.map(inlineWidth));
 	}
 
-	function labelsNeedSplit(): boolean {
-		if (!containerEl || !compact) return false;
-		const root = containerEl.querySelector<HTMLElement>(":scope > .evo-node");
-		return root !== null && inlineWidth(root) > containerEl.clientWidth;
+	// Whether the cards under `nodeEl` wrap their method: always on the
+	// phone, and under a node that pairs its branches.
+	const methodsWrapUnder = (nodeEl: HTMLElement, paired: boolean) =>
+		compact || (paired && nodeEl.classList.contains("can-pair"));
+
+	// The width `nodeEl`'s subtree takes with every label on one line: its
+	// card, then the gap, then its widest child branch (siblings stack), or
+	// two of them side by side when `paired` and the node can pair them.
+	function inlineWidth(nodeEl: HTMLElement, paired: boolean, methodWraps = compact): number {
+		const card = nodeEl.querySelector<HTMLElement>(":scope > .evo-card");
+		if (!card) return 0;
+		const own = cardWidth(card, methodWraps, true);
+		const children = childNodes(nodeEl);
+		if (children.length === 0) return own;
+		const wraps = methodsWrapUnder(nodeEl, paired);
+		const gap = px(getComputedStyle(nodeEl).columnGap);
+		const widest = Math.max(...children.map((child) => inlineWidth(child, paired, wraps)));
+		const branches = paired && nodeEl.classList.contains("can-pair") ? 2 * widest + gap : widest;
+		return own + gap + branches;
+	}
+
+	function rootNode(): HTMLElement | null {
+		return containerEl?.querySelector<HTMLElement>(":scope > .evo-node") ?? null;
+	}
+
+	function branchesFitPaired(): boolean {
+		const root = rootNode();
+		if (!containerEl || !root || !containerEl.querySelector(".can-pair")) return false;
+		return inlineWidth(root, true) <= containerEl.clientWidth;
+	}
+
+	function labelsNeedSplit(paired: boolean): boolean {
+		const root = rootNode();
+		if (!containerEl || !compact || !root) return false;
+		return inlineWidth(root, paired) > containerEl.clientWidth;
 	}
 
 	// A straight line from center to center is the only shape that's both
@@ -79,8 +134,8 @@
 	// Read off the inner text span, whose box is its lines' own height
 	// whatever min-height the outer .evo-method has been given, so applying
 	// the result never changes the next reading.
-	function tallestMethod(): number {
-		if (!containerEl || !compact) return 0;
+	function tallestMethod(paired: boolean): number {
+		if (!containerEl || !(compact || paired)) return 0;
 		const heights = [...containerEl.querySelectorAll<HTMLElement>(".evo-method-text")].map(
 			(el) => el.getBoundingClientRect().height,
 		);
@@ -100,17 +155,41 @@
 		return Math.ceil(Math.max(0, ...heights));
 	}
 
+	function widestPerStage(paired: boolean): number[] {
+		const widths: number[] = [];
+		const walk = (nodeEl: HTMLElement, depth: number, methodWraps: boolean) => {
+			const card = nodeEl.querySelector<HTMLElement>(":scope > .evo-card");
+			if (card) widths[depth] = Math.max(widths[depth] ?? 0, cardWidth(card, methodWraps, false));
+			for (const child of childNodes(nodeEl)) walk(child, depth + 1, methodsWrapUnder(nodeEl, paired));
+		};
+		const root = rootNode();
+		if (root) walk(root, 0, compact);
+		return widths;
+	}
+
 	function measure() {
 		if (!containerEl) return;
-		const split = labelsNeedSplit();
-		const tallest = tallestMethod();
+		const paired = branchesFitPaired();
+		const split = labelsNeedSplit(paired);
+		const tallest = tallestMethod(paired);
 		const types = tallestTypes();
-		if (split !== splitLabels || tallest !== methodHeight || types !== typesHeight) {
-			// Re-measure once the cards have re-laid out: all three change
-			// their height, so the sprite centres the lines join move.
+		const stages = widestPerStage(paired);
+		const stagesChanged = stages.length !== stageWidths.length || stages.some((w, i) => w !== stageWidths[i]);
+		if (
+			paired !== pairBranches ||
+			split !== splitLabels ||
+			tallest !== methodHeight ||
+			types !== typesHeight ||
+			stagesChanged
+		) {
+			// Re-measure once the cards have re-laid out: all five move the
+			// sprite centres the lines join (the split also changes the
+			// labels' widths, so the stage widths follow it).
+			pairBranches = paired;
 			splitLabels = split;
 			methodHeight = tallest;
 			typesHeight = types;
+			if (stagesChanged) stageWidths = stages;
 			void tick().then(measure);
 			return;
 		}
@@ -159,7 +238,7 @@
 <div
 	class="evo-tree"
 	bind:this={containerEl}
-	style:--pkdx-evo-method-height={compact && methodHeight > 0 ? `${methodHeight}px` : null}
+	style:--pkdx-evo-method-height={(compact || pairBranches) && methodHeight > 0 ? `${methodHeight}px` : null}
 	style:--pkdx-evo-types-height={compact && typesHeight > 0 ? `${typesHeight}px` : null}
 >
 	<svg class="evo-lines">
@@ -167,7 +246,7 @@
 			<line x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} />
 		{/each}
 	</svg>
-	<EvolutionChain node={chain} {onSelect} {sprites} {types} {useTypeIcons} {compact} {splitLabels} />
+	<EvolutionChain node={chain} {onSelect} {sprites} {types} {useTypeIcons} {compact} {splitLabels} {pairBranches} {stageWidths} />
 </div>
 
 <style>

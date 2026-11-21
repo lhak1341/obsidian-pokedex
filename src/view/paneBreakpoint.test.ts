@@ -24,6 +24,12 @@ const queries = components.flatMap(({ file, source }) =>
 );
 // A query that applies below a width: `width < N`, `width <= N` or `max-width: N`.
 const isNarrow = (condition: string) => /^width\s*<|max-width/.test(condition);
+// Containers that answer a component's own width, which no leaf width
+// stands for, so they are not a converted Narrow pane threshold. MoveBrowser's
+// `moves`: the Moves section is 239px in a 600px leaf (a tab beside the
+// identity rail), 439px at 800px, then 337px at 1100px (a third column), so
+// "is the table too narrow" is not monotonic in the leaf width.
+const COMPONENT_WIDTH_CONTAINERS: Record<string, string> = { moves: "MoveBrowser.svelte" };
 
 describe("narrow pane breakpoint", () => {
 	it("is declared on the leaf the ResizeObserver measures", () => {
@@ -51,7 +57,9 @@ describe("narrow pane breakpoint", () => {
 	});
 
 	it("no narrow query is written against an inner container", () => {
-		const inner = queries.filter((q) => q.name !== "pane" && isNarrow(q.condition));
+		const inner = queries.filter(
+			(q) => q.name !== "pane" && isNarrow(q.condition) && COMPONENT_WIDTH_CONTAINERS[q.name] !== q.file,
+		);
 		expect(inner.map((q) => `${q.file}: @container ${q.name} (${q.condition})`)).toEqual([]);
 	});
 });
