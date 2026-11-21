@@ -65,7 +65,10 @@ time out (clear `.notice` before checking one shows); `dev:mobile` is global, tu
   22 ms against a real 153 ms). Click `.detail-screen .back-button` and check `hidden-screen` is gone in the same eval
   as the probe.
 - Names are capitalized by CSS `text-transform`: `.textContent` is the raw lowercase value (`"ivysaur"`), so match
-  lowercase. Open a detail page by clicking the row's `.name-cell`. Toggle `aria-label`s flip with state ("Show shiny
+  lowercase. Open a detail page by clicking the row's `.name-cell`, or without the table by
+  `leaf.view.setState({screen:'detail', pokemonId}, {history:false})` (a remount per id). The phone band (leaf < 760) mounts
+  only the selected tab's panel, so a panel probe there reads `null` until it clicks the `.detail-screen .detail-tab` by
+  text (`.evo-tree` came back null at 600 and 390). Toggle `aria-label`s flip with state ("Show shiny
   sprite" / "Show normal sprite", "Show Mega X form" / "Show base Mega X form"), so find a button by its current label
   or the click throws.
 - FilterBar's Type/Gen/Ability/Stats/Rarity/EV/Quirks dropdowns are native `<details>`/`<summary>`, not JS popovers:
@@ -118,8 +121,14 @@ time out (clear `.notice` before checking one shows); `dev:mobile` is global, tu
   `JSON.stringify((await plugin.repository.getTableRows({start:1,end:1025})).rows)` with each `spriteDataUri`
   replaced by `plugin.repository.imagePathOf(it)` (blob URLs differ per load; a warm cache keeps it offline).
   Layout: dump every element's rect relative to the screen at several leaf widths and diff the lists, skipping only
-  the wrapper elements the change adds (#31: 4 species × 4 widths, 0 diffs).
+  the wrapper elements the change adds (#31: 4 species × 4 widths, 0 diffs). Compare a `className` as a sorted token set:
+  removing one `class:` directive reorders the others' tokens (the only diff in 70 EvolutionTree cases).
   Run both builds in one window state: `dev:mobile` changes the leaf width and base font (16px emulated, 15px desktop), so an emulated baseline never matches a desktop run of the same build.
+- Real-number fixtures for a pure module a component feeds DOM readings (`evolutionReadings.json`): bundle it
+  (`./node_modules/.bin/esbuild <file>.ts --bundle --format=iife --global-name=EL`), prepend the bundle to the eval code,
+  run its loop on the live DOM with a reader copied from the component and an apply that sets the same classes and custom
+  properties the component renders, and record each reading against the layout it was taken under. Keep a case only if
+  its final layout equals what the real component drew at that width.
 - A slowdown is located by timing one load at each layer and subtracting, in-app (`performance.now()` plus
   `PerformanceObserver({type:'longtask'})`, read once): the repository alone (a fresh
   `new plugin.repository.constructor(client, plugin.cache)`, the `src/data/CLAUDE.md` recipe), then through the UI by

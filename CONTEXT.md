@@ -64,6 +64,12 @@ All three are written by one pass of `scripts/generate-evolution-stages.ts`, whi
 
 PokeAPI renamed `base_form` -> `required_pokemon_form` and `evolved_form` -> `evolved_pokemon_form` on `evolution_details`. `canonicalizeEvolutionChain` copies the new names onto the old ones at the repository seam (`getOrFetchEvolutionChain`, fresh fetch and cache read), so every reader keeps using `base_form`/`evolved_form`.
 
+## Evolution layout
+
+How the detail screen's evolution tree draws one chain in the width it has: compact (phone) cards or full-size ones, a node's final evolutions two to a row (paired branches, see `canPairBranches`), every compact label split onto two lines or none, and the stage widths and method/badge heights every card reserves so siblings and labels line up. Compact cards are forced on the phone band; elsewhere the tree falls back to them when the full-size chain doesn't fit one row.
+
+Decided by `settleEvolutionLayout` (`src/utils/evolutionLayout.ts`, tested in `evolutionLayout.test.ts`, partly on readings captured live): `EvolutionTree.svelte` hands it a reader of the cards' part widths and heights and an apply that re-renders, and the loop reads, decides and applies until a reading changes nothing. Every reading depends on the layout shown, so the full-size width is read only while full-size cards show and kept while compact ones do: the choice never flips back and forth. A newer run (another chain, sprites arriving, a resize) stops an older one. The connector lines are drawn after it settles, by the component.
+
 ## Active Gen scoping
 
 Generation-tagged row data (wild held items, capture locations) is stored for every supported generation and shown for the Active Gen only. One step does the scoping: `scopeToActiveGen(row, activeGen)` in `src/utils/activeGenScope.ts`, which turns a row into an **Active Gen row**.

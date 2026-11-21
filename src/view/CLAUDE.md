@@ -64,8 +64,9 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
 - `vitest.config.ts` has no Svelte plugin or jsdom, so a `.svelte.ts` rune module (`infoPopover.svelte.ts`,
   `quickJumpDropdown.svelte.ts`) can't be tested (the Info popover's pin rules are therefore `utils/infoPopoverPin.ts`;
   press and hold's are `utils/pressHold.ts`). Put the branching in `utils/`, and give a DOM-bound module its DOM piece
-  as a parameter so a test passes a fake: `resolvePortraitScale(…, measure)` takes DetailScreen's `measurePortrait`; the
-  press bindings (`favoriteMenu.ts`, `portraitPress.ts`) take a `PressWatch` and `openMenu` (fakes in `view/__fixtures__/`:
+  as a parameter so a test passes a fake: `resolvePortraitScale(…, measure)` takes DetailScreen's `measurePortrait`;
+  `settleEvolutionLayout(…, read, apply)` takes EvolutionTree's card reader and re-render (CONTEXT.md "Evolution
+  layout"); the press bindings (`favoriteMenu.ts`, `portraitPress.ts`) take a `PressWatch` and `openMenu` (fakes in `view/__fixtures__/`:
   plain-object events cast `as unknown as PointerEvent`, `vi.stubGlobal` for an `instanceof Element`; ADR-0013 keeps
   them two bindings). The decode's memo is `contentBounds = memoizeByCachePath(decode)` (`imageBounds.ts`, read by
   `contentScale` and Card view's `fitSprite`). ADR-0003 covers adding jsdom itself.

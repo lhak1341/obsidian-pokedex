@@ -29,16 +29,17 @@
 		// three-stage chain fits one row of a 390px pane.
 		compact?: boolean;
 		// Compact only: put every card's number and name on separate lines.
-		// EvolutionTree decides it for the whole chain (see its splitLabels).
+		// The Evolution layout decides it for the whole chain (`EvolutionLayout`
+		// in utils/evolutionLayout.ts).
 		splitLabels?: boolean;
 		// The widest card's width at each stage, by depth from the root:
-		// EvolutionTree measures it (see its stageWidths) so siblings share
+		// EvolutionTree measures it (`EvolutionLayout.stageWidths`) so siblings share
 		// one width and their sprites one centre line.
 		stageWidths?: number[];
 		depth?: number;
 		// Lay out a node's evolutions two to a row where canPairBranches
-		// allows it. EvolutionTree decides it for the whole chain (see its
-		// pairBranches): only when the paired chain fits the pane.
+		// allows it. The Evolution layout decides it for the whole chain
+		// (`EvolutionLayout.pairBranches`): only when the paired chain fits the pane.
 		pairBranches?: boolean;
 		// Set by the parent when it lays this node out two to a row: the
 		// method then wraps under the sprite (.in-paired-row below).
@@ -49,9 +50,7 @@
 
 </script>
 
-<!-- can-pair: EvolutionTree's width sum reads it to know which nodes would
-pair their branches. -->
-<div class="evo-node" class:compact class:split-labels={splitLabels} class:can-pair={canPair} class:in-paired-row={inPairedRow}>
+<div class="evo-node" class:compact class:split-labels={splitLabels} class:in-paired-row={inPairedRow}>
 	<!-- data-evo-id: the connecting lines are drawn by EvolutionTree (the
 	wrapper that mounts this component), which measures card centers by this
 	attribute rather than this component tracking its own position — it has
@@ -177,7 +176,7 @@ pair their branches. -->
 		gap: 10px;
 	}
 	/* Two to a row, with the same gap between the columns as between a card
-	and its evolutions, which EvolutionTree's width sum assumes. A paired
+	and its evolutions, which the Evolution layout's width sum assumes. A paired
 	card's method wraps under its sprite, as on the phone
 	(.in-paired-row below), or Sylveon's "Friendship (Fairy Move)" alone
 	widens both columns past a 402px panel. */

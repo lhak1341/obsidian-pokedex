@@ -1,0 +1,2245 @@
+{
+	"venusaur-1100": {
+		"compactProp": false,
+		"chain": {
+			"id": 1,
+			"children": [
+				{
+					"id": 2,
+					"children": [
+						{
+							"id": 3,
+							"children": []
+						}
+					]
+				}
+			]
+		},
+		"settled": {
+			"autoCompact": true,
+			"pairBranches": false,
+			"splitLabels": false,
+			"methodHeight": 13,
+			"typesHeight": 33,
+			"stageWidths": [
+				80,
+				72,
+				79
+			]
+		},
+		"readings": [
+			{
+				"layout": {
+					"autoCompact": false,
+					"pairBranches": false,
+					"splitLabels": false,
+					"methodHeight": 0,
+					"typesHeight": 0,
+					"stageWidths": []
+				},
+				"reading": {
+					"containerWidth": 337,
+					"cards": {
+						"1": {
+							"sprite": 92,
+							"label": 75.9296875,
+							"num": 24.3125,
+							"name": 48.6484375,
+							"labelGap": 0,
+							"method": 2.890625,
+							"types": 90.125,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"2": {
+							"sprite": 92,
+							"label": 63.71875,
+							"num": 25.7265625,
+							"name": 35.0234375,
+							"labelGap": 0,
+							"method": 31.453125,
+							"types": 90.125,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"3": {
+							"sprite": 92,
+							"label": 74.4609375,
+							"num": 25.9609375,
+							"name": 45.53125,
+							"labelGap": 0,
+							"method": 32.7265625,
+							"types": 90.125,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						}
+					}
+				}
+			},
+			{
+				"layout": {
+					"autoCompact": true,
+					"pairBranches": false,
+					"splitLabels": false,
+					"methodHeight": 0,
+					"typesHeight": 0,
+					"stageWidths": []
+				},
+				"reading": {
+					"containerWidth": 337,
+					"cards": {
+						"1": {
+							"sprite": 64,
+							"label": 76,
+							"num": 24.3125,
+							"name": 48.6484375,
+							"labelGap": 3.042,
+							"method": 2.890625,
+							"types": 76,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"2": {
+							"sprite": 64,
+							"label": 63.7890625,
+							"num": 25.7265625,
+							"name": 35.0234375,
+							"labelGap": 3.042,
+							"method": 31.453125,
+							"types": 68,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"3": {
+							"sprite": 64,
+							"label": 74.53125,
+							"num": 25.9609375,
+							"name": 45.53125,
+							"labelGap": 3.042,
+							"method": 32.7265625,
+							"types": 74.53125,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						}
+					}
+				}
+			},
+			{
+				"layout": {
+					"autoCompact": true,
+					"pairBranches": false,
+					"splitLabels": false,
+					"methodHeight": 13,
+					"typesHeight": 33,
+					"stageWidths": [
+						80,
+						72,
+						79
+					]
+				},
+				"reading": {
+					"containerWidth": 337,
+					"cards": {
+						"1": {
+							"sprite": 64,
+							"label": 76,
+							"num": 24.3125,
+							"name": 48.6484375,
+							"labelGap": 3.042,
+							"method": 2.890625,
+							"types": 76,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"2": {
+							"sprite": 64,
+							"label": 63.7890625,
+							"num": 25.7265625,
+							"name": 35.0234375,
+							"labelGap": 3.042,
+							"method": 31.453125,
+							"types": 68,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"3": {
+							"sprite": 64,
+							"label": 74.53125,
+							"num": 25.9609375,
+							"name": 45.53125,
+							"labelGap": 3.042,
+							"method": 32.7265625,
+							"types": 75,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						}
+					}
+				}
+			}
+		]
+	},
+	"venusaur-320": {
+		"compactProp": true,
+		"chain": {
+			"id": 1,
+			"children": [
+				{
+					"id": 2,
+					"children": [
+						{
+							"id": 3,
+							"children": []
+						}
+					]
+				}
+			]
+		},
+		"settled": {
+			"autoCompact": false,
+			"pairBranches": false,
+			"splitLabels": true,
+			"methodHeight": 13,
+			"typesHeight": 33,
+			"stageWidths": [
+				60,
+				60,
+				60
+			]
+		},
+		"readings": [
+			{
+				"layout": {
+					"autoCompact": false,
+					"pairBranches": false,
+					"splitLabels": false,
+					"methodHeight": 0,
+					"typesHeight": 0,
+					"stageWidths": []
+				},
+				"reading": {
+					"containerWidth": 223,
+					"cards": {
+						"1": {
+							"sprite": 56,
+							"label": 76,
+							"num": 24.3125,
+							"name": 48.6484375,
+							"labelGap": 3.042,
+							"method": 2.890625,
+							"types": 76,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"2": {
+							"sprite": 56,
+							"label": 63.7890625,
+							"num": 25.7265625,
+							"name": 35.0234375,
+							"labelGap": 3.042,
+							"method": 31.453125,
+							"types": 63.7890625,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"3": {
+							"sprite": 56,
+							"label": 74.53125,
+							"num": 25.9609375,
+							"name": 45.53125,
+							"labelGap": 3.042,
+							"method": 32.7265625,
+							"types": 74.53125,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						}
+					}
+				}
+			},
+			{
+				"layout": {
+					"autoCompact": false,
+					"pairBranches": false,
+					"splitLabels": true,
+					"methodHeight": 13,
+					"typesHeight": 33,
+					"stageWidths": [
+						80,
+						68,
+						79
+					]
+				},
+				"reading": {
+					"containerWidth": 223,
+					"cards": {
+						"1": {
+							"sprite": 56,
+							"label": 48.6484375,
+							"num": 24.3125,
+							"name": 48.6484375,
+							"labelGap": 3.042,
+							"method": 2.890625,
+							"types": 76,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"2": {
+							"sprite": 56,
+							"label": 35.0234375,
+							"num": 25.7265625,
+							"name": 35.0234375,
+							"labelGap": 3.042,
+							"method": 31.453125,
+							"types": 64,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"3": {
+							"sprite": 56,
+							"label": 45.53125,
+							"num": 25.9609375,
+							"name": 45.53125,
+							"labelGap": 3.042,
+							"method": 32.7265625,
+							"types": 75,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						}
+					}
+				}
+			},
+			{
+				"layout": {
+					"autoCompact": false,
+					"pairBranches": false,
+					"splitLabels": true,
+					"methodHeight": 13,
+					"typesHeight": 33,
+					"stageWidths": [
+						60,
+						60,
+						60
+					]
+				},
+				"reading": {
+					"containerWidth": 223,
+					"cards": {
+						"1": {
+							"sprite": 56,
+							"label": 48.6484375,
+							"num": 24.3125,
+							"name": 48.6484375,
+							"labelGap": 3.042,
+							"method": 2.890625,
+							"types": 56,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"2": {
+							"sprite": 56,
+							"label": 35.0234375,
+							"num": 25.7265625,
+							"name": 35.0234375,
+							"labelGap": 3.042,
+							"method": 31.453125,
+							"types": 56,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"3": {
+							"sprite": 56,
+							"label": 45.53125,
+							"num": 25.9609375,
+							"name": 45.53125,
+							"labelGap": 3.042,
+							"method": 32.7265625,
+							"types": 56,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						}
+					}
+				}
+			}
+		]
+	},
+	"eevee-1400": {
+		"compactProp": false,
+		"chain": {
+			"id": 133,
+			"children": [
+				{
+					"id": 134,
+					"children": []
+				},
+				{
+					"id": 135,
+					"children": []
+				},
+				{
+					"id": 136,
+					"children": []
+				},
+				{
+					"id": 196,
+					"children": []
+				},
+				{
+					"id": 197,
+					"children": []
+				},
+				{
+					"id": 470,
+					"children": []
+				},
+				{
+					"id": 471,
+					"children": []
+				},
+				{
+					"id": 700,
+					"children": []
+				}
+			]
+		},
+		"settled": {
+			"autoCompact": false,
+			"pairBranches": true,
+			"splitLabels": false,
+			"methodHeight": 26,
+			"typesHeight": 0,
+			"stageWidths": [
+				100,
+				100
+			]
+		},
+		"readings": [
+			{
+				"layout": {
+					"autoCompact": false,
+					"pairBranches": false,
+					"splitLabels": false,
+					"methodHeight": 0,
+					"typesHeight": 0,
+					"stageWidths": []
+				},
+				"reading": {
+					"containerWidth": 402,
+					"cards": {
+						"133": {
+							"sprite": 92,
+							"label": 56.390625,
+							"num": 24.25,
+							"name": 29.171875,
+							"labelGap": 0,
+							"method": 2.890625,
+							"types": 48.234375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"134": {
+							"sprite": 92,
+							"label": 73.8046875,
+							"num": 24.421875,
+							"name": 46.4140625,
+							"labelGap": 0,
+							"method": 68.1796875,
+							"types": 42.0234375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"135": {
+							"sprite": 92,
+							"label": 63.234375,
+							"num": 24.1640625,
+							"name": 36.1015625,
+							"labelGap": 0,
+							"method": 81.984375,
+							"types": 50.1484375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"136": {
+							"sprite": 92,
+							"label": 63.4765625,
+							"num": 24.3515625,
+							"name": 36.15625,
+							"labelGap": 0,
+							"method": 56.375,
+							"types": 31.984375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"196": {
+							"sprite": 92,
+							"label": 63.3203125,
+							"num": 24.4453125,
+							"name": 35.90625,
+							"labelGap": 0,
+							"method": 92.4296875,
+							"types": 50.5078125,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"197": {
+							"sprite": 92,
+							"label": 71.2578125,
+							"num": 23.5703125,
+							"name": 44.71875,
+							"labelGap": 0,
+							"method": 101.640625,
+							"types": 36.2421875,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"470": {
+							"sprite": 92,
+							"label": 67.0078125,
+							"num": 25.21875,
+							"name": 38.8203125,
+							"labelGap": 0,
+							"method": 59.21875,
+							"types": 41.3046875,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"471": {
+							"sprite": 92,
+							"label": 66.5390625,
+							"num": 23.6875,
+							"name": 39.8828125,
+							"labelGap": 0,
+							"method": 51.9140625,
+							"types": 28.2109375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"700": {
+							"sprite": 92,
+							"label": 66.5078125,
+							"num": 25.234375,
+							"name": 38.3046875,
+							"labelGap": 0,
+							"method": 131.1484375,
+							"types": 37.359375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						}
+					}
+				}
+			},
+			{
+				"layout": {
+					"autoCompact": false,
+					"pairBranches": true,
+					"splitLabels": false,
+					"methodHeight": 13,
+					"typesHeight": 0,
+					"stageWidths": [
+						100,
+						100
+					]
+				},
+				"reading": {
+					"containerWidth": 402,
+					"cards": {
+						"133": {
+							"sprite": 92,
+							"label": 56.390625,
+							"num": 24.25,
+							"name": 29.171875,
+							"labelGap": 0,
+							"method": 2.890625,
+							"types": 48.234375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"134": {
+							"sprite": 92,
+							"label": 73.8046875,
+							"num": 24.421875,
+							"name": 46.4140625,
+							"labelGap": 0,
+							"method": 68.1796875,
+							"types": 42.0234375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"135": {
+							"sprite": 92,
+							"label": 63.234375,
+							"num": 24.1640625,
+							"name": 36.1015625,
+							"labelGap": 0,
+							"method": 81.984375,
+							"types": 50.1484375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"136": {
+							"sprite": 92,
+							"label": 63.4765625,
+							"num": 24.3515625,
+							"name": 36.15625,
+							"labelGap": 0,
+							"method": 56.375,
+							"types": 31.984375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"196": {
+							"sprite": 92,
+							"label": 63.3203125,
+							"num": 24.4453125,
+							"name": 35.90625,
+							"labelGap": 0,
+							"method": 58.9296875,
+							"types": 50.5078125,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"197": {
+							"sprite": 92,
+							"label": 71.2578125,
+							"num": 23.5703125,
+							"name": 44.71875,
+							"labelGap": 0,
+							"method": 58.9296875,
+							"types": 36.2421875,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"470": {
+							"sprite": 92,
+							"label": 67.0078125,
+							"num": 25.21875,
+							"name": 38.8203125,
+							"labelGap": 0,
+							"method": 59.21875,
+							"types": 41.3046875,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"471": {
+							"sprite": 92,
+							"label": 66.5390625,
+							"num": 23.6875,
+							"name": 39.8828125,
+							"labelGap": 0,
+							"method": 51.9140625,
+							"types": 28.2109375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"700": {
+							"sprite": 92,
+							"label": 66.5078125,
+							"num": 25.234375,
+							"name": 38.3046875,
+							"labelGap": 0,
+							"method": 69.34375,
+							"types": 37.359375,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						}
+					}
+				}
+			},
+			{
+				"layout": {
+					"autoCompact": false,
+					"pairBranches": true,
+					"splitLabels": false,
+					"methodHeight": 26,
+					"typesHeight": 0,
+					"stageWidths": [
+						100,
+						100
+					]
+				},
+				"reading": {
+					"containerWidth": 402,
+					"cards": {
+						"133": {
+							"sprite": 92,
+							"label": 56.390625,
+							"num": 24.25,
+							"name": 29.171875,
+							"labelGap": 0,
+							"method": 2.890625,
+							"types": 48.234375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"134": {
+							"sprite": 92,
+							"label": 73.8046875,
+							"num": 24.421875,
+							"name": 46.4140625,
+							"labelGap": 0,
+							"method": 68.1796875,
+							"types": 42.0234375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"135": {
+							"sprite": 92,
+							"label": 63.234375,
+							"num": 24.1640625,
+							"name": 36.1015625,
+							"labelGap": 0,
+							"method": 81.984375,
+							"types": 50.1484375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"136": {
+							"sprite": 92,
+							"label": 63.4765625,
+							"num": 24.3515625,
+							"name": 36.15625,
+							"labelGap": 0,
+							"method": 56.375,
+							"types": 31.984375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"196": {
+							"sprite": 92,
+							"label": 63.3203125,
+							"num": 24.4453125,
+							"name": 35.90625,
+							"labelGap": 0,
+							"method": 58.9296875,
+							"types": 50.5078125,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"197": {
+							"sprite": 92,
+							"label": 71.2578125,
+							"num": 23.5703125,
+							"name": 44.71875,
+							"labelGap": 0,
+							"method": 58.9296875,
+							"types": 36.2421875,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"470": {
+							"sprite": 92,
+							"label": 67.0078125,
+							"num": 25.21875,
+							"name": 38.8203125,
+							"labelGap": 0,
+							"method": 59.21875,
+							"types": 41.3046875,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"471": {
+							"sprite": 92,
+							"label": 66.5390625,
+							"num": 23.6875,
+							"name": 39.8828125,
+							"labelGap": 0,
+							"method": 51.9140625,
+							"types": 28.2109375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"700": {
+							"sprite": 92,
+							"label": 66.5078125,
+							"num": 25.234375,
+							"name": 38.3046875,
+							"labelGap": 0,
+							"method": 69.34375,
+							"types": 37.359375,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						}
+					}
+				}
+			}
+		]
+	},
+	"eevee-1100": {
+		"compactProp": false,
+		"chain": {
+			"id": 133,
+			"children": [
+				{
+					"id": 134,
+					"children": []
+				},
+				{
+					"id": 135,
+					"children": []
+				},
+				{
+					"id": 136,
+					"children": []
+				},
+				{
+					"id": 196,
+					"children": []
+				},
+				{
+					"id": 197,
+					"children": []
+				},
+				{
+					"id": 470,
+					"children": []
+				},
+				{
+					"id": 471,
+					"children": []
+				},
+				{
+					"id": 700,
+					"children": []
+				}
+			]
+		},
+		"settled": {
+			"autoCompact": true,
+			"pairBranches": true,
+			"splitLabels": false,
+			"methodHeight": 26,
+			"typesHeight": 15,
+			"stageWidths": [
+				72,
+				78
+			]
+		},
+		"readings": [
+			{
+				"layout": {
+					"autoCompact": false,
+					"pairBranches": false,
+					"splitLabels": false,
+					"methodHeight": 0,
+					"typesHeight": 0,
+					"stageWidths": []
+				},
+				"reading": {
+					"containerWidth": 337,
+					"cards": {
+						"133": {
+							"sprite": 92,
+							"label": 56.390625,
+							"num": 24.25,
+							"name": 29.171875,
+							"labelGap": 0,
+							"method": 2.890625,
+							"types": 48.234375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"134": {
+							"sprite": 92,
+							"label": 73.8046875,
+							"num": 24.421875,
+							"name": 46.4140625,
+							"labelGap": 0,
+							"method": 68.1796875,
+							"types": 42.0234375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"135": {
+							"sprite": 92,
+							"label": 63.234375,
+							"num": 24.1640625,
+							"name": 36.1015625,
+							"labelGap": 0,
+							"method": 81.984375,
+							"types": 50.1484375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"136": {
+							"sprite": 92,
+							"label": 63.4765625,
+							"num": 24.3515625,
+							"name": 36.15625,
+							"labelGap": 0,
+							"method": 56.375,
+							"types": 31.984375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"196": {
+							"sprite": 92,
+							"label": 63.3203125,
+							"num": 24.4453125,
+							"name": 35.90625,
+							"labelGap": 0,
+							"method": 92.4296875,
+							"types": 50.5078125,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"197": {
+							"sprite": 92,
+							"label": 71.2578125,
+							"num": 23.5703125,
+							"name": 44.71875,
+							"labelGap": 0,
+							"method": 101.640625,
+							"types": 36.2421875,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"470": {
+							"sprite": 92,
+							"label": 67.0078125,
+							"num": 25.21875,
+							"name": 38.8203125,
+							"labelGap": 0,
+							"method": 59.21875,
+							"types": 41.3046875,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"471": {
+							"sprite": 92,
+							"label": 66.5390625,
+							"num": 23.6875,
+							"name": 39.8828125,
+							"labelGap": 0,
+							"method": 51.9140625,
+							"types": 28.2109375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"700": {
+							"sprite": 92,
+							"label": 66.5078125,
+							"num": 25.234375,
+							"name": 38.3046875,
+							"labelGap": 0,
+							"method": 131.1484375,
+							"types": 37.359375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						}
+					}
+				}
+			},
+			{
+				"layout": {
+					"autoCompact": true,
+					"pairBranches": false,
+					"splitLabels": false,
+					"methodHeight": 0,
+					"typesHeight": 0,
+					"stageWidths": []
+				},
+				"reading": {
+					"containerWidth": 337,
+					"cards": {
+						"133": {
+							"sprite": 64,
+							"label": 56.4609375,
+							"num": 24.25,
+							"name": 29.171875,
+							"labelGap": 3.042,
+							"method": 2.890625,
+							"types": 68,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"134": {
+							"sprite": 64,
+							"label": 73.875,
+							"num": 24.421875,
+							"name": 46.4140625,
+							"labelGap": 3.042,
+							"method": 68.1796875,
+							"types": 73.875,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"135": {
+							"sprite": 64,
+							"label": 63.3046875,
+							"num": 24.1640625,
+							"name": 36.1015625,
+							"labelGap": 3.042,
+							"method": 46.734375,
+							"types": 68,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"136": {
+							"sprite": 64,
+							"label": 63.546875,
+							"num": 24.3515625,
+							"name": 36.15625,
+							"labelGap": 3.042,
+							"method": 56.375,
+							"types": 68,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"196": {
+							"sprite": 64,
+							"label": 63.390625,
+							"num": 24.4453125,
+							"name": 35.90625,
+							"labelGap": 3.042,
+							"method": 58.9296875,
+							"types": 68,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"197": {
+							"sprite": 64,
+							"label": 71.328125,
+							"num": 23.5703125,
+							"name": 44.71875,
+							"labelGap": 3.042,
+							"method": 58.9296875,
+							"types": 71.328125,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"470": {
+							"sprite": 64,
+							"label": 67.078125,
+							"num": 25.21875,
+							"name": 38.8203125,
+							"labelGap": 3.042,
+							"method": 59.21875,
+							"types": 68,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"471": {
+							"sprite": 64,
+							"label": 66.609375,
+							"num": 23.6875,
+							"name": 39.8828125,
+							"labelGap": 3.042,
+							"method": 51.9140625,
+							"types": 68,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"700": {
+							"sprite": 64,
+							"label": 66.578125,
+							"num": 25.234375,
+							"name": 38.3046875,
+							"labelGap": 3.042,
+							"method": 58.9296875,
+							"types": 68,
+							"methodHeight": 38.109375,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						}
+					}
+				}
+			},
+			{
+				"layout": {
+					"autoCompact": true,
+					"pairBranches": true,
+					"splitLabels": false,
+					"methodHeight": 39,
+					"typesHeight": 15,
+					"stageWidths": [
+						72,
+						78
+					]
+				},
+				"reading": {
+					"containerWidth": 337,
+					"cards": {
+						"133": {
+							"sprite": 64,
+							"label": 56.4609375,
+							"num": 24.25,
+							"name": 29.171875,
+							"labelGap": 3.042,
+							"method": 2.890625,
+							"types": 68,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"134": {
+							"sprite": 64,
+							"label": 73.875,
+							"num": 24.421875,
+							"name": 46.4140625,
+							"labelGap": 3.042,
+							"method": 68.1796875,
+							"types": 74,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"135": {
+							"sprite": 64,
+							"label": 63.3046875,
+							"num": 24.1640625,
+							"name": 36.1015625,
+							"labelGap": 3.042,
+							"method": 46.734375,
+							"types": 74,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"136": {
+							"sprite": 64,
+							"label": 63.546875,
+							"num": 24.3515625,
+							"name": 36.15625,
+							"labelGap": 3.042,
+							"method": 56.375,
+							"types": 74,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"196": {
+							"sprite": 64,
+							"label": 63.390625,
+							"num": 24.4453125,
+							"name": 35.90625,
+							"labelGap": 3.042,
+							"method": 58.9296875,
+							"types": 74,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"197": {
+							"sprite": 64,
+							"label": 71.328125,
+							"num": 23.5703125,
+							"name": 44.71875,
+							"labelGap": 3.042,
+							"method": 58.9296875,
+							"types": 74,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"470": {
+							"sprite": 64,
+							"label": 67.078125,
+							"num": 25.21875,
+							"name": 38.8203125,
+							"labelGap": 3.042,
+							"method": 59.21875,
+							"types": 74,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"471": {
+							"sprite": 64,
+							"label": 66.609375,
+							"num": 23.6875,
+							"name": 39.8828125,
+							"labelGap": 3.042,
+							"method": 51.9140625,
+							"types": 74,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"700": {
+							"sprite": 64,
+							"label": 66.578125,
+							"num": 25.234375,
+							"name": 38.3046875,
+							"labelGap": 3.042,
+							"method": 69.34375,
+							"types": 74,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						}
+					}
+				}
+			},
+			{
+				"layout": {
+					"autoCompact": true,
+					"pairBranches": true,
+					"splitLabels": false,
+					"methodHeight": 26,
+					"typesHeight": 15,
+					"stageWidths": [
+						72,
+						78
+					]
+				},
+				"reading": {
+					"containerWidth": 337,
+					"cards": {
+						"133": {
+							"sprite": 64,
+							"label": 56.4609375,
+							"num": 24.25,
+							"name": 29.171875,
+							"labelGap": 3.042,
+							"method": 2.890625,
+							"types": 68,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"134": {
+							"sprite": 64,
+							"label": 73.875,
+							"num": 24.421875,
+							"name": 46.4140625,
+							"labelGap": 3.042,
+							"method": 68.1796875,
+							"types": 74,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"135": {
+							"sprite": 64,
+							"label": 63.3046875,
+							"num": 24.1640625,
+							"name": 36.1015625,
+							"labelGap": 3.042,
+							"method": 46.734375,
+							"types": 74,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"136": {
+							"sprite": 64,
+							"label": 63.546875,
+							"num": 24.3515625,
+							"name": 36.15625,
+							"labelGap": 3.042,
+							"method": 56.375,
+							"types": 74,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"196": {
+							"sprite": 64,
+							"label": 63.390625,
+							"num": 24.4453125,
+							"name": 35.90625,
+							"labelGap": 3.042,
+							"method": 58.9296875,
+							"types": 74,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"197": {
+							"sprite": 64,
+							"label": 71.328125,
+							"num": 23.5703125,
+							"name": 44.71875,
+							"labelGap": 3.042,
+							"method": 58.9296875,
+							"types": 74,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"470": {
+							"sprite": 64,
+							"label": 67.078125,
+							"num": 25.21875,
+							"name": 38.8203125,
+							"labelGap": 3.042,
+							"method": 59.21875,
+							"types": 74,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"471": {
+							"sprite": 64,
+							"label": 66.609375,
+							"num": 23.6875,
+							"name": 39.8828125,
+							"labelGap": 3.042,
+							"method": 51.9140625,
+							"types": 74,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						},
+						"700": {
+							"sprite": 64,
+							"label": 66.578125,
+							"num": 25.234375,
+							"name": 38.3046875,
+							"labelGap": 3.042,
+							"method": 69.34375,
+							"types": 74,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 72,
+							"nodeGap": 10
+						}
+					}
+				}
+			}
+		]
+	},
+	"alolan-raichu-1400": {
+		"compactProp": false,
+		"chain": {
+			"id": 172,
+			"children": [
+				{
+					"id": 25,
+					"children": [
+						{
+							"id": 10100,
+							"children": []
+						}
+					]
+				}
+			]
+		},
+		"settled": {
+			"autoCompact": false,
+			"pairBranches": false,
+			"splitLabels": false,
+			"methodHeight": 0,
+			"typesHeight": 0,
+			"stageWidths": [
+				100,
+				100,
+				144
+			]
+		},
+		"readings": [
+			{
+				"layout": {
+					"autoCompact": false,
+					"pairBranches": false,
+					"splitLabels": false,
+					"methodHeight": 0,
+					"typesHeight": 0,
+					"stageWidths": []
+				},
+				"reading": {
+					"containerWidth": 402,
+					"cards": {
+						"25": {
+							"sprite": 92,
+							"label": 66.8125,
+							"num": 25.609375,
+							"name": 38.234375,
+							"labelGap": 0,
+							"method": 58.9296875,
+							"types": 50.1484375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"172": {
+							"sprite": 92,
+							"label": 53.4609375,
+							"num": 23.4296875,
+							"name": 27.0625,
+							"labelGap": 0,
+							"method": 2.890625,
+							"types": 50.1484375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"10100": {
+							"sprite": 92,
+							"label": 94.8046875,
+							"num": 25.796875,
+							"name": 66.0390625,
+							"labelGap": 0,
+							"method": 135.7109375,
+							"types": 103.65625,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						}
+					}
+				}
+			},
+			{
+				"layout": {
+					"autoCompact": false,
+					"pairBranches": false,
+					"splitLabels": false,
+					"methodHeight": 0,
+					"typesHeight": 0,
+					"stageWidths": [
+						100,
+						100,
+						144
+					]
+				},
+				"reading": {
+					"containerWidth": 402,
+					"cards": {
+						"25": {
+							"sprite": 92,
+							"label": 66.8125,
+							"num": 25.609375,
+							"name": 38.234375,
+							"labelGap": 0,
+							"method": 58.9296875,
+							"types": 50.1484375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"172": {
+							"sprite": 92,
+							"label": 53.4609375,
+							"num": 23.4296875,
+							"name": 27.0625,
+							"labelGap": 0,
+							"method": 2.890625,
+							"types": 50.1484375,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"10100": {
+							"sprite": 92,
+							"label": 94.8046875,
+							"num": 25.796875,
+							"name": 66.0390625,
+							"labelGap": 0,
+							"method": 135.7109375,
+							"types": 103.65625,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						}
+					}
+				}
+			}
+		]
+	},
+	"oddish-1400": {
+		"compactProp": false,
+		"chain": {
+			"id": 43,
+			"children": [
+				{
+					"id": 44,
+					"children": [
+						{
+							"id": 45,
+							"children": []
+						},
+						{
+							"id": 182,
+							"children": []
+						}
+					]
+				}
+			]
+		},
+		"settled": {
+			"autoCompact": false,
+			"pairBranches": false,
+			"splitLabels": false,
+			"methodHeight": 0,
+			"typesHeight": 0,
+			"stageWidths": [
+				100,
+				100,
+				100
+			]
+		},
+		"readings": [
+			{
+				"layout": {
+					"autoCompact": false,
+					"pairBranches": false,
+					"splitLabels": false,
+					"methodHeight": 0,
+					"typesHeight": 0,
+					"stageWidths": []
+				},
+				"reading": {
+					"containerWidth": 402,
+					"cards": {
+						"43": {
+							"sprite": 92,
+							"label": 63.796875,
+							"num": 26.1015625,
+							"name": 34.7265625,
+							"labelGap": 0,
+							"method": 2.890625,
+							"types": 90.125,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"44": {
+							"sprite": 92,
+							"label": 60.7421875,
+							"num": 26.2734375,
+							"name": 31.5,
+							"labelGap": 0,
+							"method": 31.0078125,
+							"types": 90.125,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"45": {
+							"sprite": 92,
+							"label": 76.9609375,
+							"num": 26.015625,
+							"name": 47.9765625,
+							"labelGap": 0,
+							"method": 59.21875,
+							"types": 90.125,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"182": {
+							"sprite": 92,
+							"label": 77.0078125,
+							"num": 24.1328125,
+							"name": 49.90625,
+							"labelGap": 0,
+							"method": 56.5390625,
+							"types": 41.3046875,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						}
+					}
+				}
+			},
+			{
+				"layout": {
+					"autoCompact": false,
+					"pairBranches": false,
+					"splitLabels": false,
+					"methodHeight": 0,
+					"typesHeight": 0,
+					"stageWidths": [
+						100,
+						100,
+						100
+					]
+				},
+				"reading": {
+					"containerWidth": 402,
+					"cards": {
+						"43": {
+							"sprite": 92,
+							"label": 63.796875,
+							"num": 26.1015625,
+							"name": 34.7265625,
+							"labelGap": 0,
+							"method": 2.890625,
+							"types": 90.125,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"44": {
+							"sprite": 92,
+							"label": 60.7421875,
+							"num": 26.2734375,
+							"name": 31.5,
+							"labelGap": 0,
+							"method": 31.0078125,
+							"types": 90.125,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"45": {
+							"sprite": 92,
+							"label": 76.9609375,
+							"num": 26.015625,
+							"name": 47.9765625,
+							"labelGap": 0,
+							"method": 59.21875,
+							"types": 90.125,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						},
+						"182": {
+							"sprite": 92,
+							"label": 77.0078125,
+							"num": 24.1328125,
+							"name": 49.90625,
+							"labelGap": 0,
+							"method": 56.5390625,
+							"types": 41.3046875,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 8,
+							"floor": 0,
+							"nodeGap": 28
+						}
+					}
+				}
+			}
+		]
+	},
+	"wurmple-320": {
+		"compactProp": true,
+		"chain": {
+			"id": 265,
+			"children": [
+				{
+					"id": 266,
+					"children": [
+						{
+							"id": 267,
+							"children": []
+						}
+					]
+				},
+				{
+					"id": 268,
+					"children": [
+						{
+							"id": 269,
+							"children": []
+						}
+					]
+				}
+			]
+		},
+		"settled": {
+			"autoCompact": false,
+			"pairBranches": false,
+			"splitLabels": true,
+			"methodHeight": 39,
+			"typesHeight": 33,
+			"stageWidths": [
+				60,
+				60,
+				60
+			]
+		},
+		"readings": [
+			{
+				"layout": {
+					"autoCompact": false,
+					"pairBranches": false,
+					"splitLabels": false,
+					"methodHeight": 0,
+					"typesHeight": 0,
+					"stageWidths": []
+				},
+				"reading": {
+					"containerWidth": 223,
+					"cards": {
+						"265": {
+							"sprite": 56,
+							"label": 72.3125,
+							"num": 25.6796875,
+							"name": 43.59375,
+							"labelGap": 3.042,
+							"method": 2.890625,
+							"types": 72.3125,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"266": {
+							"sprite": 56,
+							"label": 64.7890625,
+							"num": 25.8671875,
+							"name": 35.8828125,
+							"labelGap": 3.042,
+							"method": 58.8046875,
+							"types": 64.7890625,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"267": {
+							"sprite": 56,
+							"label": 71.1171875,
+							"num": 25.1796875,
+							"name": 42.8984375,
+							"labelGap": 3.042,
+							"method": 31.4609375,
+							"types": 71.1171875,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"268": {
+							"sprite": 56,
+							"label": 71.4296875,
+							"num": 25.8828125,
+							"name": 42.5078125,
+							"labelGap": 3.042,
+							"method": 58.8046875,
+							"types": 71.4296875,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"269": {
+							"sprite": 56,
+							"label": 62.7890625,
+							"num": 25.8671875,
+							"name": 33.8828125,
+							"labelGap": 3.042,
+							"method": 31.4609375,
+							"types": 62.7890625,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						}
+					}
+				}
+			},
+			{
+				"layout": {
+					"autoCompact": false,
+					"pairBranches": false,
+					"splitLabels": true,
+					"methodHeight": 26,
+					"typesHeight": 33,
+					"stageWidths": [
+						77,
+						76,
+						76
+					]
+				},
+				"reading": {
+					"containerWidth": 223,
+					"cards": {
+						"265": {
+							"sprite": 56,
+							"label": 43.59375,
+							"num": 25.6796875,
+							"name": 43.59375,
+							"labelGap": 3.042,
+							"method": 2.890625,
+							"types": 73,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"266": {
+							"sprite": 56,
+							"label": 35.8828125,
+							"num": 25.8671875,
+							"name": 35.8828125,
+							"labelGap": 3.042,
+							"method": 58.8046875,
+							"types": 72,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"267": {
+							"sprite": 56,
+							"label": 42.8984375,
+							"num": 25.1796875,
+							"name": 42.8984375,
+							"labelGap": 3.042,
+							"method": 31.4609375,
+							"types": 72,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"268": {
+							"sprite": 56,
+							"label": 42.5078125,
+							"num": 25.8828125,
+							"name": 42.5078125,
+							"labelGap": 3.042,
+							"method": 58.8046875,
+							"types": 72,
+							"methodHeight": 25.5546875,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"269": {
+							"sprite": 56,
+							"label": 33.8828125,
+							"num": 25.8671875,
+							"name": 33.8828125,
+							"labelGap": 3.042,
+							"method": 31.4609375,
+							"types": 72,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						}
+					}
+				}
+			},
+			{
+				"layout": {
+					"autoCompact": false,
+					"pairBranches": false,
+					"splitLabels": true,
+					"methodHeight": 26,
+					"typesHeight": 33,
+					"stageWidths": [
+						60,
+						60,
+						60
+					]
+				},
+				"reading": {
+					"containerWidth": 223,
+					"cards": {
+						"265": {
+							"sprite": 56,
+							"label": 43.59375,
+							"num": 25.6796875,
+							"name": 43.59375,
+							"labelGap": 3.042,
+							"method": 2.890625,
+							"types": 56,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"266": {
+							"sprite": 56,
+							"label": 35.8828125,
+							"num": 25.8671875,
+							"name": 35.8828125,
+							"labelGap": 3.042,
+							"method": 46.4375,
+							"types": 56,
+							"methodHeight": 38.109375,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"267": {
+							"sprite": 56,
+							"label": 42.8984375,
+							"num": 25.1796875,
+							"name": 42.8984375,
+							"labelGap": 3.042,
+							"method": 31.4609375,
+							"types": 56,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"268": {
+							"sprite": 56,
+							"label": 42.5078125,
+							"num": 25.8828125,
+							"name": 42.5078125,
+							"labelGap": 3.042,
+							"method": 46.4375,
+							"types": 56,
+							"methodHeight": 38.109375,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"269": {
+							"sprite": 56,
+							"label": 33.8828125,
+							"num": 25.8671875,
+							"name": 33.8828125,
+							"labelGap": 3.042,
+							"method": 31.4609375,
+							"types": 56,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						}
+					}
+				}
+			},
+			{
+				"layout": {
+					"autoCompact": false,
+					"pairBranches": false,
+					"splitLabels": true,
+					"methodHeight": 39,
+					"typesHeight": 33,
+					"stageWidths": [
+						60,
+						60,
+						60
+					]
+				},
+				"reading": {
+					"containerWidth": 223,
+					"cards": {
+						"265": {
+							"sprite": 56,
+							"label": 43.59375,
+							"num": 25.6796875,
+							"name": 43.59375,
+							"labelGap": 3.042,
+							"method": 2.890625,
+							"types": 56,
+							"methodHeight": 13,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"266": {
+							"sprite": 56,
+							"label": 35.8828125,
+							"num": 25.8671875,
+							"name": 35.8828125,
+							"labelGap": 3.042,
+							"method": 46.4375,
+							"types": 56,
+							"methodHeight": 38.109375,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"267": {
+							"sprite": 56,
+							"label": 42.8984375,
+							"num": 25.1796875,
+							"name": 42.8984375,
+							"labelGap": 3.042,
+							"method": 31.4609375,
+							"types": 56,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"268": {
+							"sprite": 56,
+							"label": 42.5078125,
+							"num": 25.8828125,
+							"name": 42.5078125,
+							"labelGap": 3.042,
+							"method": 46.4375,
+							"types": 56,
+							"methodHeight": 38.109375,
+							"typesHeight": 15,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						},
+						"269": {
+							"sprite": 56,
+							"label": 33.8828125,
+							"num": 25.8671875,
+							"name": 33.8828125,
+							"labelGap": 3.042,
+							"method": 31.4609375,
+							"types": 56,
+							"methodHeight": 13,
+							"typesHeight": 33,
+							"padding": 4,
+							"floor": 60,
+							"nodeGap": 6
+						}
+					}
+				}
+			}
+		]
+	}
+}
