@@ -1,4 +1,5 @@
 import type { Generation } from "../data/constants";
+import type { PortraitRender } from "../data/imageSet";
 import type { PokedexRepository } from "../data/PokedexRepository";
 
 // The 4 repository methods the Settings tab's per-generation cache/refresh/
@@ -20,9 +21,13 @@ export type GenerationCacheRepository = Pick<
 export class GenerationCacheController {
 	status: { cached: number; total: number } | null = null;
 
+	// `render` is read on every call, not captured: a Sprite style switch
+	// changes which large images count as cached (see getCacheStatus) and
+	// which ones a run stores, with the settings tab still open.
 	constructor(
 		private repository: GenerationCacheRepository,
 		private generation: Generation,
+		private render: () => PortraitRender,
 	) {}
 
 	// No status yet fetched defaults to "cache" (download icon), same as the
@@ -34,7 +39,7 @@ export class GenerationCacheController {
 	}
 
 	async refreshStatus(): Promise<void> {
-		this.status = await this.repository.getCacheStatus(this.generation);
+		this.status = await this.repository.getCacheStatus(this.generation, this.render());
 	}
 
 	async run(
@@ -42,9 +47,9 @@ export class GenerationCacheController {
 		isCancelled?: () => boolean,
 	): Promise<void> {
 		if (this.actionKind === "refresh") {
-			await this.repository.refreshRange(this.generation, onProgress, isCancelled);
+			await this.repository.refreshRange(this.generation, this.render(), onProgress, isCancelled);
 		} else {
-			await this.repository.cacheRange(this.generation, onProgress, isCancelled);
+			await this.repository.cacheRange(this.generation, this.render(), onProgress, isCancelled);
 		}
 		await this.refreshStatus();
 	}

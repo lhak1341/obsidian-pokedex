@@ -27,7 +27,7 @@
 	import TypeBadge from "./TypeBadge.svelte";
 	import { describeEncounters } from "../../utils/encounters";
 	import { resolvePortrait } from "../../utils/portrait";
-	import { portraitRenderFor, type PortraitRender } from "../../data/imageSet";
+	import { portraitRenderFor } from "../../data/imageSet";
 	import { filterHeldItemsForGen } from "../../utils/heldItemGen";
 	import { formatDexNumber, formatHeight, formatPokemonDisplayName, formatWeight } from "../../utils/pokemonDisplay";
 	import { romanNumeral } from "../../utils/romanNumeral";
@@ -143,11 +143,14 @@
 			? varietySnapshot.gigantamaxFormCache[varietySnapshot.activeGigantamaxKey] ?? null
 			: null,
 	);
+	// Which large render the detail screen loads (artwork or HOME): passed
+	// with every load and select, never set on the repository.
+	const portraitRender = $derived(portraitRenderFor(spriteStyle));
 	function selectMegaForm(key: string | null) {
-		varietyToggle.selectMega(key, mirrorVariety);
+		varietyToggle.selectMega(key, portraitRender, mirrorVariety);
 	}
 	function selectGigantamaxForm(key: string | null) {
-		varietyToggle.selectGigantamax(key, mirrorVariety);
+		varietyToggle.selectGigantamax(key, portraitRender, mirrorVariety);
 	}
 
 	// Image resolution (base/Mega/Gigantamax, shiny toggle) and the
@@ -221,7 +224,10 @@
 		artPreview = false;
 		varietyToggle.resetSelection();
 		mirrorVariety();
-		const result = loadState.load(currentId, mirror, () => {
+		// Untracked: startLoad runs inside the id effect, and a render switch
+		// is the effect below (new images, not a whole new load).
+		const render = untrack(() => portraitRender);
+		const result = loadState.load(currentId, render, mirror, () => {
 			moveDetails = loadState.moveDetails;
 		});
 		// The synchronous prefix of load() (up to its first await) has
@@ -243,19 +249,16 @@
 		startLoad(id);
 	});
 
-	// A style switch between artwork and HOME changes which large render the
-	// repository serves (PokedexPlugin.saveSettings sets it first), so the open
-	// entry and selected form ask again. Null until the first run, which only
-	// records the render the load above already used.
-	let renderShown: PortraitRender | null = null;
+	// A style switch between artwork and HOME: the open entry and the
+	// selected form ask again in the new render, and each state class drops
+	// whatever it still had in flight for the old one. Both ignore the render
+	// they already have, so the first run (and "sprite" ⇄ artwork, the same
+	// render) asks nothing.
 	$effect(() => {
-		const render = portraitRenderFor(spriteStyle);
-		const previous = renderShown;
-		renderShown = render;
-		if (previous === null || previous === render) return;
+		const render = portraitRender;
 		untrack(() => {
-			void loadState.reloadImages(mirror);
-			varietyToggle.reselect(mirrorVariety);
+			void loadState.setRender(render, mirror);
+			varietyToggle.reselect(render, mirrorVariety);
 		});
 	});
 

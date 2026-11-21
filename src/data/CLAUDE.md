@@ -99,7 +99,9 @@ may keep a detail's URLs across calls: `VarietyToggleState` re-asks on every sel
 `mega-forms/`/`gigantamax-forms/` store an image-free `VarietyFormSource` (ADR-0002 addendum),
 and `cacheRange` stores extras bytes without making URLs. `*DataUri` fields now hold blob URLs;
 `imagePathOf(url)` gives the cache path (`contentBounds`' memo key, `imageBounds.ts`). The large portrait is one
-render, artwork or HOME (`spriteStyle`, set on the repository by `setPortraitRender`): `largeImageSuffixes` picks
+render, artwork or HOME (`spriteStyle`), passed as the `render` argument of every call that loads or counts it, never held
+on the repository: a render held there once let an artwork answer in flight overwrite the HOME one after a switch
+(`DetailLoadState`/`VarietyToggleState` drop the older request). `largeImageSuffixes` picks
 `artwork`/`shiny-artwork` or `home`/`shiny-home`, both filling `artworkDataUri`/`shinyArtworkDataUri` under their own
 paths, and only the chosen one is fetched or offline-cached; `getCacheStatus` counts that one. A budget test's budget must
 fit every image its assertion needs live at once: one `getEntryExtras` or form load is 3

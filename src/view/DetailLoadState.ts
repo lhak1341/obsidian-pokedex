@@ -1,4 +1,5 @@
 import { collectChainIds } from "../data/normalize";
+import type { PortraitRender } from "../data/imageSet";
 import type { PokedexRepository } from "../data/PokedexRepository";
 import type { MoveDetail, PokedexEntry } from "../data/types";
 
@@ -17,6 +18,13 @@ import type { MoveDetail, PokedexEntry } from "../data/types";
 // clobber newer state. A retry is just calling `load(id)` again — there's
 // no separate retry() method like PokedexLoadState's, since a failed
 // detail load has no partial-success set to narrow a retry down to.
+//
+// The large render (artwork or HOME) is part of what a load asks for, and a
+// Sprite style switch is `setRender`: a newer extras request for the open
+// entry that supersedes the extras stage of any load still in flight (its own
+// counter, so the move details that load is streaming keep landing). Nothing
+// about the render lives on the repository, so an answer for the old render
+// is dropped here, never shown.
 export interface DetailEntrySnapshot {
 	entry: PokedexEntry | null;
 	loading: boolean;
@@ -43,6 +51,10 @@ export class DetailLoadState {
 	cancelled = false;
 
 	private generation = 0;
+	// Bumped by load() and by setRender(): only the newest extras request (the
+	// large images, evolution chain and its sprites) writes its answer.
+	private extrasGeneration = 0;
+	private render: PortraitRender = "official-artwork";
 
 	constructor(private repository: PokedexRepository) {}
 
@@ -50,18 +62,22 @@ export class DetailLoadState {
 		this.cancelled = true;
 	}
 
-	// A spriteStyle switch to the other large render (repository.setPortraitRender
-	// already applied): asks for the open entry's images again. The images
-	// shown stay until the new ones land, and a load() of another entry since
-	// (a newer generation) drops the answer.
-	async reloadImages(onUpdate?: () => void): Promise<void> {
+	// A Sprite style switch. With an entry showing, its extras are asked for
+	// again in the new render: the images shown stay until the new ones land,
+	// and any extras request still in flight (load()'s, or an earlier switch's)
+	// is dropped. Before the core lands, the load in flight reads the new
+	// render when it reaches its extras stage. A failure keeps what shows.
+	async setRender(render: PortraitRender, onUpdate?: () => void): Promise<void> {
+		if (render === this.render) return;
+		this.render = render;
 		const entry = this.entry;
 		if (!entry) return;
 		const gen = this.generation;
-		const { artworkDataUri, shinyDataUri, shinyArtworkDataUri } = await this.repository.getEntryExtras(entry.id);
-		if (this.cancelled || gen !== this.generation || this.entry === null) return;
-		this.entry = { ...this.entry, artworkDataUri, shinyDataUri, shinyArtworkDataUri };
-		onUpdate?.();
+		try {
+			await this.loadExtras(entry.id, () => this.cancelled || gen !== this.generation, onUpdate);
+		} catch {
+			// the entry and its previous images stay
+		}
 	}
 
 	// Wholesale-refresh shape (unlike PokedexLoadState, which is
@@ -86,11 +102,13 @@ export class DetailLoadState {
 	// should render each as it settles, not wait for the whole movepool.
 	async load(
 		id: number,
+		render: PortraitRender,
 		onUpdate?: () => void,
 		onMoveDetail?: (name: string, detail: MoveDetail) => void,
 	): Promise<void> {
 		const gen = ++this.generation;
 		const stale = () => this.cancelled || gen !== this.generation;
+		this.render = render;
 
 		this.entry = null;
 		this.loading = true;
@@ -115,8 +133,26 @@ export class DetailLoadState {
 				onMoveDetail?.(name, detail);
 			});
 
-			const extras = await this.repository.getEntryExtras(id);
+			await this.loadExtras(id, stale, onUpdate);
+		} catch (err) {
 			if (stale()) return;
+			this.error = err instanceof Error ? err.message : String(err);
+			this.loading = false;
+			onUpdate?.();
+		}
+	}
+
+	// The extras stage, shared by load() and setRender(): the large images in
+	// the render current when it starts, the evolution chain, then the chain's
+	// sprites. `superseded` is the caller's own check (an id change); a newer
+	// extras request supersedes this one too. A failure is thrown to the
+	// caller only while this request is current.
+	private async loadExtras(id: number, superseded: () => boolean, onUpdate?: () => void): Promise<void> {
+		const extrasGen = ++this.extrasGeneration;
+		const stale = () => superseded() || extrasGen !== this.extrasGeneration;
+		try {
+			const extras = await this.repository.getEntryExtras(id, this.render);
+			if (stale() || this.entry === null) return;
 			this.entry = { ...this.entry, ...extras };
 			onUpdate?.();
 
@@ -132,10 +168,9 @@ export class DetailLoadState {
 			);
 			onUpdate?.();
 		} catch (err) {
+			// A superseded request's failure is not this entry's error.
 			if (stale()) return;
-			this.error = err instanceof Error ? err.message : String(err);
-			this.loading = false;
-			onUpdate?.();
+			throw err;
 		}
 	}
 }

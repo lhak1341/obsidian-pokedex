@@ -1,6 +1,5 @@
 import { Notice, Plugin } from "obsidian";
 import { IndexedDbCacheStore } from "./data/IndexedDbCacheStore";
-import { portraitRenderFor } from "./data/imageSet";
 import { deleteLegacyDiskCache, LEGACY_CACHE_NOTICE, legacyDiskCacheDirs } from "./data/legacyDiskCache";
 import { PokeApiClient } from "./data/PokeApiClient";
 import { PokedexRepository } from "./data/PokedexRepository";
@@ -23,8 +22,6 @@ export default class PokedexPlugin extends Plugin {
 
 		this.cache = IndexedDbCacheStore.forVault(this.app);
 		this.repository = new PokedexRepository(new PokeApiClient(), this.cache);
-		this.repository.setPortraitRender(portraitRenderFor(this.settings.spriteStyle));
-
 		// After layout, so deleting a large synced folder never delays startup.
 		this.app.workspace.onLayoutReady(() => void this.removeSyncedCache());
 
@@ -59,7 +56,6 @@ export default class PokedexPlugin extends Plugin {
 
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
-		this.repository.setPortraitRender(portraitRenderFor(this.settings.spriteStyle));
 		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_POKEDEX)) {
 			if (leaf.view instanceof PokedexView) leaf.view.refresh();
 		}

@@ -1,3 +1,4 @@
+import type { PortraitRender } from "../data/imageSet";
 import type { PokedexRepository } from "../data/PokedexRepository";
 import type { GigantamaxFormDetail, MegaFormDetail } from "../data/types";
 
@@ -23,6 +24,11 @@ export class VarietyToggleState {
 	activeGigantamaxKey: string | null = null;
 	megaFormCache: Record<string, MegaFormDetail> = {};
 	gigantamaxFormCache: Record<string, GigantamaxFormDetail> = {};
+	// Per variety key, only the newest request's answer is stored, so a form
+	// asked for in the old render never lands after a Sprite style switch's
+	// newer request. Keyed, not one counter: an answer for another form
+	// (Mega, then G-Max before it landed) is still a valid cache fill.
+	private requests = new Map<string, number>();
 
 	constructor(private repository: PokedexRepository) {}
 
@@ -56,14 +62,16 @@ export class VarietyToggleState {
 	// are blob URLs the repository's LRU may have evicted (and revoked) since,
 	// and a revoked URL never loads. The repository answers from memory, so
 	// this costs no fetch; the cached detail shows until the fresh one lands.
-	selectMega(key: string | null, onUpdate?: () => void): void {
+	selectMega(key: string | null, render: PortraitRender, onUpdate?: () => void): void {
 		this.activeMegaKey = key;
 		if (key) this.activeGigantamaxKey = null;
+		const request = key ? this.nextRequest(key) : 0;
 		onUpdate?.();
 		if (key) {
 			this.repository
-				.getMegaForm(key)
+				.getMegaForm(key, render)
 				.then((detail) => {
+					if (request !== this.requests.get(key)) return;
 					this.megaFormCache = { ...this.megaFormCache, [key]: detail };
 					onUpdate?.();
 				})
@@ -71,25 +79,34 @@ export class VarietyToggleState {
 		}
 	}
 
-	// A spriteStyle switch: the selected form asks again for its images in
-	// the new render (the repository answers from memory for everything else).
-	reselect(onUpdate?: () => void): void {
-		if (this.activeMegaKey) this.selectMega(this.activeMegaKey, onUpdate);
-		else if (this.activeGigantamaxKey) this.selectGigantamax(this.activeGigantamaxKey, onUpdate);
+	// A Sprite style switch: the selected form asks again for its images in
+	// the new render (the repository answers from memory for everything else),
+	// superseding any select still in flight.
+	reselect(render: PortraitRender, onUpdate?: () => void): void {
+		if (this.activeMegaKey) this.selectMega(this.activeMegaKey, render, onUpdate);
+		else if (this.activeGigantamaxKey) this.selectGigantamax(this.activeGigantamaxKey, render, onUpdate);
 	}
 
-	selectGigantamax(key: string | null, onUpdate?: () => void): void {
+	selectGigantamax(key: string | null, render: PortraitRender, onUpdate?: () => void): void {
 		this.activeGigantamaxKey = key;
 		if (key) this.activeMegaKey = null;
+		const request = key ? this.nextRequest(key) : 0;
 		onUpdate?.();
 		if (key) {
 			this.repository
-				.getGigantamaxForm(key)
+				.getGigantamaxForm(key, render)
 				.then((detail) => {
+					if (request !== this.requests.get(key)) return;
 					this.gigantamaxFormCache = { ...this.gigantamaxFormCache, [key]: detail };
 					onUpdate?.();
 				})
 				.catch(() => undefined);
 		}
+	}
+
+	private nextRequest(key: string): number {
+		const request = (this.requests.get(key) ?? 0) + 1;
+		this.requests.set(key, request);
+		return request;
 	}
 }

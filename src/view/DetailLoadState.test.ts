@@ -21,56 +21,139 @@ describe("DetailLoadState", () => {
 		const { loadState } = makeLoadState();
 		expect(loadState.loading).toBe(true);
 
-		await loadState.load(1);
+		await loadState.load(1, "official-artwork");
 
 		expect(loadState.loading).toBe(false);
 		expect(loadState.entry?.id).toBe(1);
 		expect(loadState.error).toBeNull();
 	});
 
-	it("reloadImages() swaps in the render the repository now serves, keeping the rest of the entry", async () => {
+	it("setRender() swaps in the new render's images, keeping the rest of the entry", async () => {
 		const { repository, loadState } = makeLoadState();
-		await loadState.load(1);
+		await loadState.load(1, "official-artwork");
 		const before = loadState.entry!;
 		expect(repository.imagePathOf(before.artworkDataUri!)).toBe("images/1-artwork.png");
 		let updates = 0;
 
-		repository.setPortraitRender("home");
-		await loadState.reloadImages(() => updates++);
+		await loadState.setRender("home", () => updates++);
 
 		expect(repository.imagePathOf(loadState.entry!.artworkDataUri!)).toBe("images/1-home.png");
 		expect(repository.imagePathOf(loadState.entry!.shinyArtworkDataUri!)).toBe("images/1-shiny-home.png");
-		expect(loadState.entry!.evolutionChain).toBe(before.evolutionChain);
-		expect(updates).toBe(1);
+		expect(loadState.entry!.evolutionChain).toEqual(before.evolutionChain);
+		expect(updates).toBeGreaterThan(0);
 	});
 
-	it("reloadImages() drops its answer once another entry has started loading", async () => {
+	it("setRender() with the render already loaded asks for nothing", async () => {
 		const { repository, loadState } = makeLoadState();
-		await loadState.load(1);
-		repository.setPortraitRender("home");
+		await loadState.load(1, "home");
+		const getEntryExtras = vi.spyOn(repository, "getEntryExtras");
+
+		await loadState.setRender("home");
+
+		expect(getEntryExtras).not.toHaveBeenCalled();
+	});
+
+	it("setRender() drops its answer once another entry has started loading", async () => {
+		const { repository, loadState } = makeLoadState();
+		await loadState.load(1, "official-artwork");
 
 		// Holds entry 1's answer until entry 2 has loaded, so it lands late.
 		const getEntryExtras = repository.getEntryExtras.bind(repository);
 		let release!: () => void;
 		const held = new Promise<void>((resolve) => (release = resolve));
-		vi.spyOn(repository, "getEntryExtras").mockImplementation(async (id) => {
+		vi.spyOn(repository, "getEntryExtras").mockImplementation(async (id, render) => {
 			if (id === 1) await held;
-			return getEntryExtras(id);
+			return getEntryExtras(id, render);
 		});
 
-		const reload = loadState.reloadImages();
-		await loadState.load(2);
+		const switched = loadState.setRender("home");
+		await loadState.load(2, "home");
 		release();
-		await reload;
+		await switched;
 
 		expect(loadState.entry!.id).toBe(2);
 		expect(repository.imagePathOf(loadState.entry!.artworkDataUri!)).toBe("images/2-home.png");
 	});
 
+	// The race a render on the repository used to lose: load()'s extras, asked
+	// for in artwork, landed after the switch's HOME ones and overwrote them.
+	it("a render switch while load()'s extras are in flight leaves the new render", async () => {
+		const { repository, loadState } = makeLoadState();
+		const getEntryExtras = repository.getEntryExtras.bind(repository);
+		let release!: () => void;
+		const held = new Promise<void>((resolve) => (release = resolve));
+		vi.spyOn(repository, "getEntryExtras").mockImplementation(async (id, render) => {
+			const answer = getEntryExtras(id, render);
+			if (render === "official-artwork") await held;
+			return answer;
+		});
+
+		const load = loadState.load(1, "official-artwork");
+		await tick();
+		await loadState.setRender("home");
+		release();
+		await load;
+
+		expect(repository.imagePathOf(loadState.entry!.artworkDataUri!)).toBe("images/1-home.png");
+		expect(loadState.error).toBeNull();
+	});
+
+	it("a superseded extras request that fails is not the entry's error", async () => {
+		const { repository, loadState } = makeLoadState();
+		const getEntryExtras = repository.getEntryExtras.bind(repository);
+		let release!: () => void;
+		const held = new Promise<void>((resolve) => (release = resolve));
+		vi.spyOn(repository, "getEntryExtras").mockImplementation(async (id, render) => {
+			if (render === "official-artwork") {
+				await held;
+				throw new Error("network down");
+			}
+			return getEntryExtras(id, render);
+		});
+
+		const load = loadState.load(1, "official-artwork");
+		await tick();
+		await loadState.setRender("home");
+		release();
+		await load;
+
+		expect(loadState.error).toBeNull();
+		expect(repository.imagePathOf(loadState.entry!.artworkDataUri!)).toBe("images/1-home.png");
+	});
+
+	it("a render switch before the core lands is the render the load's extras ask for", async () => {
+		const { repository, loadState } = makeLoadState();
+		const getEntryExtras = vi.spyOn(repository, "getEntryExtras");
+
+		const load = loadState.load(1, "official-artwork");
+		await loadState.setRender("home");
+		await load;
+
+		expect(getEntryExtras.mock.calls.map(([, render]) => render)).toEqual(["home"]);
+		expect(repository.imagePathOf(loadState.entry!.artworkDataUri!)).toBe("images/1-home.png");
+	});
+
+	it("a render switch mid-load keeps the load's move details landing", async () => {
+		const { repository, loadState } = makeLoadState();
+		const getMoveDetailsForMoves = repository.getMoveDetailsForMoves.bind(repository);
+		let release!: () => void;
+		const held = new Promise<void>((resolve) => (release = resolve));
+		vi.spyOn(repository, "getMoveDetailsForMoves").mockImplementation(async (names, onDetail) => {
+			await held;
+			return getMoveDetailsForMoves(names, onDetail);
+		});
+		const seen: string[] = [];
+
+		await loadState.load(1, "official-artwork", undefined, (name) => seen.push(name));
+		await loadState.setRender("home");
+		release();
+		await vi.waitFor(() => expect(seen.length).toBeGreaterThan(0));
+	});
+
 	it("load() merges evolution chain and sprites once extras resolve", async () => {
 		const { loadState } = makeLoadState();
 
-		await loadState.load(1);
+		await loadState.load(1, "official-artwork");
 
 		expect(loadState.entry?.evolutionChain?.name).toBe("bulbasaur");
 		const chainIds = [1, loadState.entry!.evolutionChain!.children[0].id];
@@ -81,7 +164,7 @@ describe("DetailLoadState", () => {
 		const { loadState } = makeLoadState();
 		const seen: string[] = [];
 
-		await loadState.load(1, undefined, (name) => seen.push(name));
+		await loadState.load(1, "official-artwork", undefined, (name) => seen.push(name));
 		await tick();
 
 		expect(seen.length).toBeGreaterThan(0);
@@ -91,12 +174,12 @@ describe("DetailLoadState", () => {
 	it("moveDetails is not reset by a later load() — accumulates across entries", async () => {
 		const { loadState } = makeLoadState();
 
-		await loadState.load(1);
+		await loadState.load(1, "official-artwork");
 		await tick();
 		const afterFirst = Object.keys(loadState.moveDetails).length;
 		expect(afterFirst).toBeGreaterThan(0);
 
-		await loadState.load(1);
+		await loadState.load(1, "official-artwork");
 		await tick();
 
 		expect(Object.keys(loadState.moveDetails).length).toBe(afterFirst);
@@ -106,14 +189,14 @@ describe("DetailLoadState", () => {
 		const { client, loadState } = makeLoadState();
 		client.failIds.add(1);
 
-		await loadState.load(1);
+		await loadState.load(1, "official-artwork");
 
 		expect(loadState.error).not.toBeNull();
 		expect(loadState.entry).toBeNull();
 		expect(loadState.loading).toBe(false);
 
 		client.failIds.delete(1);
-		await loadState.load(1);
+		await loadState.load(1, "official-artwork");
 
 		expect(loadState.error).toBeNull();
 		expect(loadState.entry?.id).toBe(1);
@@ -127,8 +210,8 @@ describe("DetailLoadState", () => {
 		});
 		client.fetchPokemon.mockImplementationOnce(() => pending);
 
-		const firstLoad = loadState.load(1);
-		const secondLoad = loadState.load(3);
+		const firstLoad = loadState.load(1, "official-artwork");
+		const secondLoad = loadState.load(3, "official-artwork");
 		resolveFirst({ ...(bulbasaur as unknown as RawPokemon), id: 1 });
 		await Promise.all([firstLoad, secondLoad]);
 
@@ -139,7 +222,7 @@ describe("DetailLoadState", () => {
 		const { loadState } = makeLoadState();
 		loadState.cancel();
 
-		await loadState.load(1);
+		await loadState.load(1, "official-artwork");
 
 		expect(loadState.loading).toBe(true);
 		expect(loadState.entry).toBeNull();

@@ -1,5 +1,6 @@
 import { Notice, PluginSettingTab, Setting, type ButtonComponent, type SettingDefinitionItem } from "obsidian";
 import { DEFAULT_ENABLED_GENERATIONS, GENERATIONS } from "./data/constants";
+import { portraitRenderFor } from "./data/imageSet";
 import { DEFAULT_LAYOUT_BY_WIDTH_CLASS } from "./utils/browseLayout";
 import { DEFAULT_VISIBLE_FIELDS } from "./utils/fields";
 import { addFontRoleSetting, DEFAULT_FONT_ROLE_SETTINGS, type FontRole } from "@lhak/style/obsidian-helpers";
@@ -46,6 +47,10 @@ export class PokedexSettingTab extends PluginSettingTab {
 	// button: clearRange has no isCancelled hook, since it's a bounded local
 	// disk sweep, not a network fetch loop.
 	private cancelActiveRuns: (() => void)[] = [];
+	// Each generation's status re-read, for a Sprite style switch: which large
+	// images count as cached depends on the render (see getCacheStatus), so
+	// "151/151" for artwork reads 0/151 for HOME.
+	private refreshCacheStatuses: (() => void)[] = [];
 
 	hide(): void {
 		for (const cancel of this.cancelActiveRuns) cancel();
@@ -56,6 +61,7 @@ export class PokedexSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 		this.cancelActiveRuns = [];
+		this.refreshCacheStatuses = [];
 
 		new Setting(containerEl).setName("Generations").setHeading();
 		const generationItems = containerEl.createDiv("setting-group").createDiv("setting-items");
@@ -66,7 +72,9 @@ export class PokedexSettingTab extends PluginSettingTab {
 
 			let actionButton: ButtonComponent | undefined;
 			let deleteButton: ButtonComponent | undefined;
-			const controller = new GenerationCacheController(this.plugin.repository, gen);
+			const controller = new GenerationCacheController(this.plugin.repository, gen, () =>
+				portraitRenderFor(this.plugin.settings.spriteStyle),
+			);
 			let cancelled = false;
 			this.cancelActiveRuns.push(() => {
 				cancelled = true;
@@ -91,6 +99,7 @@ export class PokedexSettingTab extends PluginSettingTab {
 				applyDesc();
 			};
 			void refreshCacheDesc();
+			this.refreshCacheStatuses.push(() => void refreshCacheDesc());
 
 			// Shared disable-during-run bookkeeping for both buttons below —
 			// this is presentation state (ButtonComponent.setDisabled), which is
@@ -179,6 +188,7 @@ export class PokedexSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.spriteStyle = value as PluginSettings["spriteStyle"];
 						await this.plugin.saveSettings();
+						for (const refresh of this.refreshCacheStatuses) refresh();
 					})
 			);
 

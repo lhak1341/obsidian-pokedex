@@ -135,9 +135,6 @@ export class PokedexRepository {
 	// per call so its image URLs are always live ones.
 	private megaFormMemCache = new Map<string, VarietyFormSource>();
 	private gigantamaxFormMemCache = new Map<string, VarietyFormSource>();
-	// Which large render detail screens load and cacheRange stores (the
-	// plugin sets it from spriteStyle): only that one, never both.
-	private portraitRender: PortraitRender = "official-artwork";
 	// A regional form's own Pokédex text, keyed by its pokemon-form name.
 	private formFlavorTextMemCache = new Map<string, RawPokemonForm>();
 	// In-flight dedup for getOrFetch, keyed by disk cache path (globally
@@ -479,9 +476,10 @@ export class PokedexRepository {
 		memCache: Map<string, VarietyFormSource>,
 		cachePathFor: (varietyKey: string) => string,
 		normalize: (source: VarietyFormSource, images: ImageBundle) => T,
+		render: PortraitRender,
 	): Promise<T> {
 		const source = await this.getOrFetchVarietyFormSource(varietyKey, memCache, cachePathFor(varietyKey));
-		const images = await this.fetchImages(varietyKey, source.sprites, ["sprite", ...largeImageSuffixes(this.portraitRender)]);
+		const images = await this.fetchImages(varietyKey, source.sprites, ["sprite", ...largeImageSuffixes(render)]);
 		return normalize(source, images);
 	}
 
@@ -508,23 +506,26 @@ export class PokedexRepository {
 	// as ability/item descriptions above. `varietyKey` (e.g.
 	// "charizard-mega-x") is a PokeAPI pokemon name, never a numeric id, so it
 	// can't collide with the `pokemon/{id}.json` cache getOrFetchPokemon uses.
-	// Set from spriteStyle at load and on every settings save. A detail already
-	// open asks again (DetailLoadState.reloadImages) to get the new render.
-	setPortraitRender(render: PortraitRender): void {
-		this.portraitRender = render;
-	}
-
-	async getMegaForm(varietyKey: string): Promise<MegaFormDetail> {
-		return this.fetchVarietyForm(varietyKey, this.megaFormMemCache, megaFormPath, toMegaFormDetail);
+	//
+	// `render` (from spriteStyle, like every large-image read below) is which
+	// large render to load: only that one, never both. It is an argument, not
+	// repository state, so a request made before a style switch keeps the
+	// render it asked for and its caller can tell the answer is stale.
+	async getMegaForm(varietyKey: string, render: PortraitRender): Promise<MegaFormDetail> {
+		return this.fetchVarietyForm(varietyKey, this.megaFormMemCache, megaFormPath, toMegaFormDetail, render);
 	}
 
 	// Same lazy fetch-on-click shape as getMegaForm. Cached separately from
 	// mega-forms/ since a variety name is never shared between the two (a
 	// species' Gigantamax key always ends "-gmax", Mega always
 	// "-mega"/"-mega-x/-y").
-	async getGigantamaxForm(varietyKey: string): Promise<GigantamaxFormDetail> {
-		return this.fetchVarietyForm(varietyKey, this.gigantamaxFormMemCache, gigantamaxFormPath, (_pokemon, images) =>
-			toGigantamaxFormDetail(images),
+	async getGigantamaxForm(varietyKey: string, render: PortraitRender): Promise<GigantamaxFormDetail> {
+		return this.fetchVarietyForm(
+			varietyKey,
+			this.gigantamaxFormMemCache,
+			gigantamaxFormPath,
+			(_pokemon, images) => toGigantamaxFormDetail(images),
+			render,
 		);
 	}
 
@@ -553,8 +554,8 @@ export class PokedexRepository {
 	// first) to tell a genuine cache miss apart from a species with no
 	// official-artwork render at all (rare, but real — nothing to cache
 	// there, so it shouldn't block "fully cached").
-	private async isExtrasCached(id: number): Promise<boolean> {
-		const [large] = largeImageSuffixes(this.portraitRender);
+	private async isExtrasCached(id: number, render: PortraitRender): Promise<boolean> {
+		const [large] = largeImageSuffixes(render);
 		if (this.imageMemCache.has(imagePath(id, large))) return true;
 		if (await this.cache.exists(imagePath(id, large))) return true;
 		const pokemon = await this.getOrFetchPokemon(id);
@@ -574,11 +575,11 @@ export class PokedexRepository {
 	// this counter ever reflecting it. Counting variants here would need a
 	// second, honest total the same way cacheRange's extras phase reports
 	// one (see its own comment) — not done since nothing currently reads it.
-	async getCacheStatus(generation: Generation): Promise<{ cached: number; total: number }> {
+	async getCacheStatus(generation: Generation, render: PortraitRender): Promise<{ cached: number; total: number }> {
 		const ids = Array.from({ length: generation.end - generation.start + 1 }, (_, i) => generation.start + i);
 		let cached = 0;
 		await mapWithConcurrency(ids, DISK_READ_CONCURRENCY, async (id) => {
-			return (await this.isIdCached(id)) && (await this.isExtrasCached(id));
+			return (await this.isIdCached(id)) && (await this.isExtrasCached(id, render));
 		}, (result) => {
 			if ("value" in result && result.value) cached++;
 		});
@@ -769,6 +770,7 @@ export class PokedexRepository {
 	// represent without lying about one phase or the other.
 	async cacheRange(
 		generation: Generation,
+		render: PortraitRender,
 		onProgress?: (loaded: number, total: number) => void,
 		isCancelled?: () => boolean,
 		onRow?: (row: PokedexTableRow) => void,
@@ -783,7 +785,7 @@ export class PokedexRepository {
 		await mapWithConcurrency(
 			result.rows.map((r) => r.id),
 			FETCH_CONCURRENCY,
-			(id) => this.prefetchEntryExtras(id),
+			(id) => this.prefetchEntryExtras(id, render),
 			() => {
 				extrasLoaded++;
 				onProgress?.(extrasLoaded, extrasTotal);
@@ -799,12 +801,13 @@ export class PokedexRepository {
 	// the cache instead of short-circuited by it, and covering extras too.
 	async refreshRange(
 		generation: Generation,
+		render: PortraitRender,
 		onProgress?: (loaded: number, total: number) => void,
 		isCancelled?: () => boolean,
 		onRow?: (row: PokedexTableRow) => void,
 	): Promise<TableLoadResult> {
 		await this.clearRange(generation);
-		return this.cacheRange(generation, onProgress, isCancelled, onRow);
+		return this.cacheRange(generation, render, onProgress, isCancelled, onRow);
 	}
 
 	// Fetches/caches table rows (pokemon + species, for catch rate/hatch
@@ -930,6 +933,7 @@ export class PokedexRepository {
 
 	async getEntryExtras(
 		id: number,
+		render: PortraitRender,
 	): Promise<Pick<PokedexEntry, "artworkDataUri" | "shinyDataUri" | "shinyArtworkDataUri" | "evolutionChain">> {
 		const pokemon = await this.getOrFetchPokemon(id);
 		const species = await this.getOrFetchSpecies(this.speciesIdFromPokemon(pokemon));
@@ -960,7 +964,7 @@ export class PokedexRepository {
 		// Each image fetch is caught independently — a dropped connection on
 		// just the shiny sprite, say, shouldn't take the artwork (or the rest
 		// of the already-rendered core view) down with it.
-		const images = await this.fetchImages(id, pokemon.sprites, largeImageSuffixes(this.portraitRender));
+		const images = await this.fetchImages(id, pokemon.sprites, largeImageSuffixes(render));
 		const { artwork: artworkDataUri, shiny: shinyDataUri, shinyArtwork: shinyArtworkDataUri } = images;
 
 		return { artworkDataUri, shinyDataUri, shinyArtworkDataUri, evolutionChain };
@@ -972,7 +976,7 @@ export class PokedexRepository {
 	// revoking the open detail screen's portrait URLs on the way and creating
 	// a blob URL per image that nothing shows. An image already in memory or
 	// the store is skipped, so this never re-downloads.
-	private async prefetchEntryExtras(id: number): Promise<void> {
+	private async prefetchEntryExtras(id: number, render: PortraitRender): Promise<void> {
 		const pokemon = await this.getOrFetchPokemon(id);
 		const species = await this.getOrFetchSpecies(this.speciesIdFromPokemon(pokemon));
 		await this.flavorTextsFor(pokemon, species, {});
@@ -982,7 +986,7 @@ export class PokedexRepository {
 			// same as getEntryExtras: a missing chain doesn't block the images
 		}
 		await Promise.all(
-			imageRequests(id, pokemon.sprites, largeImageSuffixes(this.portraitRender)).map(({ url, relPath }) =>
+			imageRequests(id, pokemon.sprites, largeImageSuffixes(render)).map(({ url, relPath }) =>
 				this.storeImage(url, relPath).catch(() => undefined),
 			),
 		);
