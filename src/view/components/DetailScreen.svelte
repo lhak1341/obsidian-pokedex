@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Notice } from "obsidian";
-	import { getContext, onDestroy, onMount } from "svelte";
+	import { getContext, onDestroy, onMount, untrack } from "svelte";
 	import { TYPE_COLORS } from "../../data/constants";
 	import { getAdjacentDexEntries } from "../../utils/dexNav";
 	import { nextEvolutionLevels } from "../../data/normalize";
@@ -27,6 +27,7 @@
 	import TypeBadge from "./TypeBadge.svelte";
 	import { describeEncounters } from "../../utils/encounters";
 	import { resolvePortrait } from "../../utils/portrait";
+	import { portraitRenderFor, type PortraitRender } from "../../data/imageSet";
 	import { filterHeldItemsForGen } from "../../utils/heldItemGen";
 	import { formatDexNumber, formatHeight, formatPokemonDisplayName, formatWeight } from "../../utils/pokemonDisplay";
 	import { romanNumeral } from "../../utils/romanNumeral";
@@ -240,6 +241,22 @@
 
 	$effect(() => {
 		startLoad(id);
+	});
+
+	// A style switch between artwork and HOME changes which large render the
+	// repository serves (PokedexPlugin.saveSettings sets it first), so the open
+	// entry and selected form ask again. Null until the first run, which only
+	// records the render the load above already used.
+	let renderShown: PortraitRender | null = null;
+	$effect(() => {
+		const render = portraitRenderFor(spriteStyle);
+		const previous = renderShown;
+		renderShown = render;
+		if (previous === null || previous === render) return;
+		untrack(() => {
+			void loadState.reloadImages(mirror);
+			varietyToggle.reselect(mirrorVariety);
+		});
 	});
 
 	function retry() {

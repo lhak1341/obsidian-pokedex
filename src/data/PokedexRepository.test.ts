@@ -4,7 +4,7 @@ import bulbasaurSpecies from "./__fixtures__/bulbasaur-species.json";
 import { FakePokeApiClient, MemoryCacheStore, RecordingObjectUrls } from "./__fixtures__/fakes";
 import { PokedexRepository } from "./PokedexRepository";
 import { MOVE_VERSION_GROUPS } from "./constants";
-import { hasPokeApiMoves } from "./normalize";
+import { toStoredPokemon } from "./normalize";
 import type { MegaFormDetail, RawPokemon, RawSpecies, StoredPokemon } from "./types";
 
 function makeRepository(imageBudgetBytes?: number) {
@@ -56,51 +56,48 @@ describe("PokedexRepository", () => {
 		expect(readJsonSpy).not.toHaveBeenCalled();
 	});
 
-	it("writes a fetched pokemon in the stored move shape, not PokeAPI's", async () => {
+	it("writes a fetched pokemon in the stored move shape, marked with the version groups it kept", async () => {
 		const { cache, repository } = makeRepository();
 
 		await repository.getTableRows({ start: 1, end: 1 });
 
 		const written = await cache.readJson<StoredPokemon>("pokemon/1.json");
 		expect(written?.moves.length).toBeGreaterThan(0);
-		expect(hasPokeApiMoves(written!)).toBe(false);
+		expect(written?.moves.every((m) => !("version_group_details" in m))).toBe(true);
+		expect(written?.moveVersionGroups).toEqual(MOVE_VERSION_GROUPS);
 	});
 
-	it("rewrites a pokemon.json cached in PokeAPI's move shape on first read, without refetching", async () => {
-		// Two generations of old record: the untrimmed fixture (out-of-scope
-		// groups such as solar-beam's black-white still in it), and one cut to
-		// the version groups but still PokeAPI-shaped (the trim that predated
-		// toStoredPokemon).
-		const raw = bulbasaur as unknown as RawPokemon;
-		const versionTrimmed = {
-			...raw,
-			moves: raw.moves
-				.map((m) => ({
-					...m,
-					version_group_details: m.version_group_details.filter((d) => MOVE_VERSION_GROUPS.includes(d.version_group.name)),
-				}))
-				.filter((m) => m.version_group_details.length > 0),
-		};
-		const fresh = makeRepository();
-		const [expectedRow] = (await fresh.repository.getTableRows({ start: 1, end: 1 })).rows;
+	it("serves a pokemon.json cut to the current version groups without refetching", async () => {
+		const { client, cache, repository } = makeRepository();
+		await cache.writeJson("pokemon/1.json", toStoredPokemon(bulbasaur));
 
-		for (const old of [raw, versionTrimmed]) {
+		await repository.getTableRows({ start: 1, end: 1 });
+
+		expect(client.fetchPokemon).not.toHaveBeenCalled();
+	});
+
+	// A record cut before legends-za/champions were tabs lacks their moves,
+	// and so does one still in PokeAPI's move shape or written before the
+	// marker: none can be repaired from disk, so each is refetched.
+	it("refetches a pokemon.json cut to fewer version groups, or written before the marker", async () => {
+		const raw = bulbasaur as unknown as RawPokemon;
+		const { moveVersionGroups: _kept, ...unmarked } = toStoredPokemon(raw);
+		const olderCut = toStoredPokemon(raw, MOVE_VERSION_GROUPS.filter((g) => g !== "legends-za"));
+		for (const old of [raw, unmarked, olderCut]) {
 			const { client, cache, repository } = makeRepository();
 			await cache.writeJson("pokemon/1.json", old);
 
-			const { rows } = await repository.getTableRows({ start: 1, end: 1 });
+			await repository.getTableRows({ start: 1, end: 1 });
 
-			expect(client.fetchPokemon).not.toHaveBeenCalled();
-			const migrated = await cache.readJson<StoredPokemon>("pokemon/1.json");
-			expect(hasPokeApiMoves(migrated!)).toBe(false);
-			expect(migrated?.moves.some((m) => m.name === "solar-beam")).toBe(false);
-			expect({ ...rows[0], spriteDataUri: null }).toEqual({ ...expectedRow, spriteDataUri: null });
+			expect(client.fetchPokemon).toHaveBeenCalledTimes(1);
+			const rewritten = await cache.readJson<StoredPokemon>("pokemon/1.json");
+			expect(rewritten?.moveVersionGroups).toEqual(MOVE_VERSION_GROUPS);
 		}
 	});
 
 	it("refetches a pokemon.json cached before held_items existed instead of crashing on undefined", async () => {
 		const { client, cache, repository } = makeRepository();
-		const { held_items: _heldItems, ...withoutHeldItems } = bulbasaur as unknown as RawPokemon;
+		const { held_items: _heldItems, ...withoutHeldItems } = toStoredPokemon(bulbasaur);
 		await cache.writeJson("pokemon/1.json", withoutHeldItems);
 
 		const result = await repository.getTableRows({ start: 1, end: 1 });
@@ -180,12 +177,12 @@ describe("PokedexRepository", () => {
 			],
 		};
 		await cache.writeJson("species/19.json", rattataSpecies);
-		await cache.writeJson("pokemon/19.json", {
+		await cache.writeJson("pokemon/19.json", toStoredPokemon({
 			...(bulbasaur as unknown as RawPokemon),
 			id: 19,
 			name: "rattata",
 			species: { name: "rattata", url: "" },
-		});
+		}));
 		client.variantPokemon.set("rattata-alola", {
 			...(bulbasaur as unknown as RawPokemon),
 			id: 10091,
@@ -217,12 +214,12 @@ describe("PokedexRepository", () => {
 			],
 		};
 		await cache.writeJson("species/19.json", rattataSpecies);
-		await cache.writeJson("pokemon/19.json", {
+		await cache.writeJson("pokemon/19.json", toStoredPokemon({
 			...(bulbasaur as unknown as RawPokemon),
 			id: 19,
 			name: "rattata",
 			species: { name: "rattata", url: "" },
-		});
+		}));
 		// No client.variantPokemon entry set for "rattata-alola" -> the fake
 		// throws when fetchPokemon is called with that name.
 
@@ -255,14 +252,67 @@ describe("PokedexRepository", () => {
 		});
 		return Promise.all([
 			cache.writeJson("species/19.json", rattataSpecies),
-			cache.writeJson("pokemon/19.json", {
+			cache.writeJson("pokemon/19.json", toStoredPokemon({
 				...(bulbasaur as unknown as RawPokemon),
 				id: 19,
 				name: "rattata",
 				species: { name: "rattata", url: "" },
-			}),
+			})),
 		]).then(() => undefined);
 	}
+
+	// Alolan Rattata as the detail screen reaches it: by numeric id, its
+	// species linked by URL (speciesIdFromPokemon).
+	async function setUpAlolanRattataDetail(client: FakePokeApiClient, cache: MemoryCacheStore) {
+		await setUpRattataWithAlolanForm(client, cache);
+		await cache.writeJson("pokemon/10091.json", toStoredPokemon({
+			...(bulbasaur as unknown as RawPokemon),
+			id: 10091,
+			name: "rattata-alola",
+			species: { name: "rattata", url: "https://pokeapi.co/api/v2/pokemon-species/19/" },
+		}));
+		client.formFlavorTexts.set("rattata-alola", [
+			{ flavor_text: "Alolan\ntext.", language: { name: "en", url: "" }, version: { name: "sun", url: "" } },
+			{ flavor_text: "Texte.", language: { name: "fr", url: "" }, version: { name: "sun", url: "" } },
+		]);
+	}
+
+	it("gives a regional row its form's own Pokédex text where PokeAPI has it, the species' elsewhere", async () => {
+		const { client, cache, repository } = makeRepository();
+		await setUpAlolanRattataDetail(client, cache);
+		const speciesTexts = (await repository.getEntryCore(19)).flavorTexts;
+
+		const alolan = await repository.getEntryCore(10091);
+
+		expect(alolan.flavorTexts["sun-moon"]).toBe("Alolan text.");
+		expect(alolan.flavorTexts.firered).toBe(speciesTexts.firered);
+		expect(client.fetchPokemonForm).toHaveBeenCalledTimes(1);
+		expect(client.fetchPokemonForm).toHaveBeenCalledWith("rattata-alola");
+		expect(await cache.readJson("pokemon-forms/rattata-alola.json")).toEqual({
+			flavor_text_entries: [{ flavor_text: "Alolan\ntext.", language: { name: "en", url: "" }, version: { name: "sun", url: "" } }],
+		});
+	});
+
+	it("keeps the species' text when the form fetch fails", async () => {
+		const { client, cache, repository } = makeRepository();
+		await setUpAlolanRattataDetail(client, cache);
+		client.failForms = true;
+
+		const alolan = await repository.getEntryCore(10091);
+
+		expect(alolan.flavorTexts).toEqual((await repository.getEntryCore(19)).flavorTexts);
+	});
+
+	it("caches a regional row's form text with its extras, and clearRange evicts it with the variant", async () => {
+		const { client, cache, repository } = makeRepository();
+		await setUpAlolanRattataDetail(client, cache);
+		await repository.cacheRange({ id: 1, name: "Test Gen 1", start: 19, end: 19 });
+		expect(await cache.readJson("pokemon-forms/rattata-alola.json")).not.toBeNull();
+
+		await repository.clearRange({ id: 7, name: "Test Gen 7", start: 722, end: 809 });
+
+		expect(await cache.readJson("pokemon-forms/rattata-alola.json")).toBeNull();
+	});
 
 	it("cacheRange also prefetches extras for a discovered regional-form row, not just the range's own ids", async () => {
 		const { client, cache, repository } = makeRepository();
@@ -397,7 +447,7 @@ describe("PokedexRepository", () => {
 		const { cache, repository } = makeRepository();
 		const withoutArtwork = structuredClone(bulbasaur) as unknown as RawPokemon;
 		if (withoutArtwork.sprites.other) delete withoutArtwork.sprites.other["official-artwork"];
-		await cache.writeJson("pokemon/1.json", withoutArtwork);
+		await cache.writeJson("pokemon/1.json", toStoredPokemon(withoutArtwork));
 		await cache.writeJson("species/1.json", bulbasaurSpecies);
 
 		const status = await repository.getCacheStatus({ id: 1, name: "Test Gen", start: 1, end: 1 });
@@ -629,7 +679,7 @@ describe("PokedexRepository", () => {
 			],
 			abilities: [{ ability: { name: "blaze", url: "" }, is_hidden: false, slot: 1 }],
 			stats: (bulbasaur as unknown as RawPokemon).stats,
-			sprites: { front_default: null, front_shiny: null },
+			sprites: { front_default: null, front_shiny: null, other: { "official-artwork": undefined, home: null } },
 		});
 
 		const first = await repository.getMegaForm("charizard-mega-x");
@@ -640,6 +690,55 @@ describe("PokedexRepository", () => {
 		const readJsonSpy = vi.spyOn(cache, "readJson");
 		await repository.getMegaForm("charizard-mega-x");
 		expect(readJsonSpy).not.toHaveBeenCalled();
+	});
+
+	it("refetches a Mega form cached before HOME renders were kept", async () => {
+		const { cache, client, repository } = makeRepository();
+		client.variantPokemon.set("charizard-mega-x", { ...(bulbasaur as unknown as RawPokemon) });
+		await cache.writeJson("mega-forms/charizard-mega-x.json", {
+			types: [], abilities: [], stats: [], sprites: { front_default: null, front_shiny: null },
+		});
+
+		await repository.getMegaForm("charizard-mega-x");
+
+		expect(client.fetchPokemon).toHaveBeenCalledTimes(1);
+	});
+
+	it("loads and caches only the chosen render: HOME images replace artwork in a detail and its forms", async () => {
+		const { cache, client, repository } = makeRepository();
+		const raw = bulbasaur as unknown as RawPokemon;
+		const home = { front_default: "home.png", front_shiny: "home-shiny.png" };
+		client.fetchPokemon.mockImplementation(async (idOrName: number | string) =>
+			typeof idOrName === "string"
+				? { ...raw, name: idOrName, sprites: { ...raw.sprites, other: { ...raw.sprites.other, home } } }
+				: { ...raw, id: idOrName, sprites: { ...raw.sprites, other: { ...raw.sprites.other, home } } },
+		);
+		repository.setPortraitRender("home");
+
+		const extras = await repository.getEntryExtras(1);
+		await repository.getMegaForm("charizard-mega-x");
+		await repository.cacheRange({ id: 1, name: "Test Gen", start: 2, end: 2 });
+
+		expect(repository.imagePathOf(extras.artworkDataUri!)).toBe("images/1-home.png");
+		expect(repository.imagePathOf(extras.shinyArtworkDataUri!)).toBe("images/1-shiny-home.png");
+		for (const key of [1, 2, "charizard-mega-x"]) {
+			expect(await cache.exists(`images/${key}-home.png`)).toBe(true);
+			expect(await cache.exists(`images/${key}-artwork.png`)).toBe(false);
+		}
+		const urls = client.fetchImageBinary.mock.calls.map(([url]) => url);
+		expect(urls).toContain("home.png");
+		expect(urls).not.toContain(raw.sprites.other?.["official-artwork"]?.front_default);
+	});
+
+	it("counts an id as cached only once the chosen render is stored", async () => {
+		const { repository } = makeRepository();
+		const gen = { id: 1, name: "Test Gen", start: 1, end: 1 };
+		await repository.cacheRange(gen);
+		expect(await repository.getCacheStatus(gen)).toEqual({ cached: 1, total: 1 });
+
+		repository.setPortraitRender("home");
+
+		expect(await repository.getCacheStatus(gen)).toEqual({ cached: 0, total: 1 });
 	});
 
 	it("getGigantamaxForm fetches on a cache miss, normalizes, and writes through to disk", async () => {
@@ -696,7 +795,7 @@ describe("PokedexRepository", () => {
 	});
 
 	// A species with a Mega and a Gigantamax variety, cached the way a detail-
-	// screen visit leaves it. "venusaur-mega" must be in MEGA_VARIETY_KEYS.
+	// screen visit leaves it.
 	async function setUpVenusaurWithVarietyForms(client: FakePokeApiClient, cache: MemoryCacheStore, repository: PokedexRepository) {
 		const venusaurSpecies: RawSpecies = {
 			...bulbasaurSpecies,
@@ -712,12 +811,12 @@ describe("PokedexRepository", () => {
 			client.variantPokemon.set(name, { ...(bulbasaur as unknown as RawPokemon), id: 10000, name });
 		}
 		await cache.writeJson("species/3.json", venusaurSpecies);
-		await cache.writeJson("pokemon/3.json", {
+		await cache.writeJson("pokemon/3.json", toStoredPokemon({
 			...(bulbasaur as unknown as RawPokemon),
 			id: 3,
 			name: "venusaur",
 			species: { name: "venusaur", url: "" },
-		});
+		}));
 		await repository.getMegaForm("venusaur-mega");
 		await repository.getGigantamaxForm("venusaur-gmax");
 	}

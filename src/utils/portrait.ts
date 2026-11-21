@@ -4,14 +4,20 @@ import type { PluginSettings, PortraitImageSource } from "../data/types";
 // "official-artwork" but that particular render has no shiny artwork on
 // PokeAPI (rare, but happens) — still a visible shiny swap, just not
 // artwork-styled.
+// "home" reads the same large-render fields: the repository fills them with
+// whichever render the style asked for (imageSet.ts, largeImageSuffixes).
+function isLargeRender(style: PluginSettings["spriteStyle"]): boolean {
+	return style !== "sprite";
+}
+
 function shinyPortrait(source: PortraitImageSource, style: PluginSettings["spriteStyle"]): string | null {
-	return style === "official-artwork"
+	return isLargeRender(style)
 		? source.shinyArtworkDataUri ?? source.shinyDataUri ?? null
 		: source.shinyDataUri ?? null;
 }
 
 function basePortrait(source: PortraitImageSource, style: PluginSettings["spriteStyle"]): string | null {
-	return (style === "official-artwork" ? source.artworkDataUri : source.spriteDataUri) ??
+	return (isLargeRender(style) ? source.artworkDataUri : source.spriteDataUri) ??
 		source.spriteDataUri ??
 		null;
 }
@@ -47,7 +53,7 @@ export async function resolvePortraitScale(args: {
 	measure: (dataUri: string) => Promise<number>;
 }): Promise<number | null> {
 	const { style, baseUri, currentUri, measure } = args;
-	if (style !== "official-artwork" || !baseUri || !currentUri || baseUri === currentUri) return 1;
+	if (!isLargeRender(style) || !baseUri || !currentUri || baseUri === currentUri) return 1;
 	const [baseFill, currentFill] = await Promise.all([measure(baseUri), measure(currentUri)]);
 	if (currentFill <= 0) return null;
 	return Math.min(baseFill / currentFill, 1);

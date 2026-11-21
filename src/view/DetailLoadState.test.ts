@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { FakePokeApiClient, MemoryCacheStore } from "../data/__fixtures__/fakes";
 import { PokedexRepository } from "../data/PokedexRepository";
 import type { RawPokemon } from "../data/types";
@@ -26,6 +26,45 @@ describe("DetailLoadState", () => {
 		expect(loadState.loading).toBe(false);
 		expect(loadState.entry?.id).toBe(1);
 		expect(loadState.error).toBeNull();
+	});
+
+	it("reloadImages() swaps in the render the repository now serves, keeping the rest of the entry", async () => {
+		const { repository, loadState } = makeLoadState();
+		await loadState.load(1);
+		const before = loadState.entry!;
+		expect(repository.imagePathOf(before.artworkDataUri!)).toBe("images/1-artwork.png");
+		let updates = 0;
+
+		repository.setPortraitRender("home");
+		await loadState.reloadImages(() => updates++);
+
+		expect(repository.imagePathOf(loadState.entry!.artworkDataUri!)).toBe("images/1-home.png");
+		expect(repository.imagePathOf(loadState.entry!.shinyArtworkDataUri!)).toBe("images/1-shiny-home.png");
+		expect(loadState.entry!.evolutionChain).toBe(before.evolutionChain);
+		expect(updates).toBe(1);
+	});
+
+	it("reloadImages() drops its answer once another entry has started loading", async () => {
+		const { repository, loadState } = makeLoadState();
+		await loadState.load(1);
+		repository.setPortraitRender("home");
+
+		// Holds entry 1's answer until entry 2 has loaded, so it lands late.
+		const getEntryExtras = repository.getEntryExtras.bind(repository);
+		let release!: () => void;
+		const held = new Promise<void>((resolve) => (release = resolve));
+		vi.spyOn(repository, "getEntryExtras").mockImplementation(async (id) => {
+			if (id === 1) await held;
+			return getEntryExtras(id);
+		});
+
+		const reload = loadState.reloadImages();
+		await loadState.load(2);
+		release();
+		await reload;
+
+		expect(loadState.entry!.id).toBe(2);
+		expect(repository.imagePathOf(loadState.entry!.artworkDataUri!)).toBe("images/2-home.png");
 	});
 
 	it("load() merges evolution chain and sprites once extras resolve", async () => {

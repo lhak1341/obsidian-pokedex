@@ -71,6 +71,13 @@ export class VarietyToggleState {
 		}
 	}
 
+	// A spriteStyle switch: the selected form asks again for its images in
+	// the new render (the repository answers from memory for everything else).
+	reselect(onUpdate?: () => void): void {
+		if (this.activeMegaKey) this.selectMega(this.activeMegaKey, onUpdate);
+		else if (this.activeGigantamaxKey) this.selectGigantamax(this.activeGigantamaxKey, onUpdate);
+	}
+
 	selectGigantamax(key: string | null, onUpdate?: () => void): void {
 		this.activeGigantamaxKey = key;
 		if (key) this.activeMegaKey = null;

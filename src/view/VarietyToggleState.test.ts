@@ -96,6 +96,30 @@ describe("VarietyToggleState", () => {
 		expect(toggle.megaFormCache["charizard-mega-x"]).toBeUndefined();
 	});
 
+	it("reselect() asks again for the selected form only, in the render the repository now serves", async () => {
+		const { client, repository, toggle } = makeState();
+		client.variantPokemon.set("charizard-mega-x", { ...(bulbasaur as unknown as RawPokemon) });
+		toggle.selectMega("charizard-mega-x");
+		await tick();
+		expect(repository.imagePathOf(toggle.megaFormCache["charizard-mega-x"].artworkDataUri!)).toBe(
+			"images/charizard-mega-x-artwork.png",
+		);
+
+		repository.setPortraitRender("home");
+		toggle.reselect();
+		await tick();
+
+		expect(repository.imagePathOf(toggle.megaFormCache["charizard-mega-x"].artworkDataUri!)).toBe(
+			"images/charizard-mega-x-home.png",
+		);
+	});
+
+	it("reselect() with nothing selected asks the repository for nothing", () => {
+		const { client, toggle } = makeState();
+		toggle.reselect();
+		expect(client.fetchPokemon).not.toHaveBeenCalled();
+	});
+
 	it("resetSelection clears both keys but leaves both caches untouched", async () => {
 		const { client, toggle } = makeState();
 		client.variantPokemon.set("charizard-mega-x", { ...(bulbasaur as unknown as RawPokemon) });

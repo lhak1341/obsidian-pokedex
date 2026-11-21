@@ -5,7 +5,6 @@ import {
 	FLAVOR_TEXT_TABS_BY_GEN,
 	FLAVOR_TEXT_VERSION_GROUPS,
 	IS_FINAL_EVOLUTION_STAGE,
-	MEGA_VARIETY_KEYS,
 	MOVE_DESCRIPTION_VERSION_GROUPS,
 	MOVE_VERSION_GROUPS,
 	REGIONAL_FORMS,
@@ -114,15 +113,20 @@ export function toStoredPokemon(raw: RawPokemon, versionGroups: readonly string[
 		}
 		if (details.length > 0) moves.push({ name: entry.move.name, details });
 	}
-	return { ...raw, moves };
+	return { ...raw, moves, moveVersionGroups: [...versionGroups] };
 }
 
-// A cached record written before toStoredPokemon existed still carries
-// PokeAPI's move shape (trimmed to the version groups or not). The repository
-// rewrites it through toStoredPokemon on first read rather than refetching.
-export function hasPokeApiMoves(cached: StoredPokemon | RawPokemon): cached is RawPokemon {
-	const moves: readonly object[] = cached.moves;
-	return moves.some((m) => "version_group_details" in m);
+// Whether a cached record's moves were cut to a narrower set of version
+// groups than the tabs now read (a game added since it was written, as
+// legends-za and champions were), or predate the marker altogether (a record
+// still in PokeAPI's move shape, or toStoredPokemon's first version). Either
+// way the missing groups are not on disk, so only a refetch restores them.
+export function storedMovesAreStale(
+	cached: StoredPokemon | Omit<StoredPokemon, "moveVersionGroups"> | RawPokemon,
+	versionGroups: readonly string[] = MOVE_VERSION_GROUPS,
+): boolean {
+	const kept = "moveVersionGroups" in cached ? cached.moveVersionGroups : undefined;
+	return !kept || versionGroups.some((group) => !kept.includes(group));
 }
 
 export function normalizeMoveDetail(raw: RawMove): MoveDetail {
@@ -449,6 +453,8 @@ function buildEvolutionNode(
 		minAffection: detail?.min_affection ?? null,
 		partyType: detail?.party_type?.name ?? null,
 		needsMultiplayer: detail?.needs_multiplayer ?? false,
+		allowedNatures: detail?.allowed_natures?.map((n) => n.name) ?? [],
+		chancePercent: detail?.condition_expression?.percentage_chance ?? null,
 		children,
 	};
 }
@@ -475,32 +481,63 @@ export function normalizeEvolutionChain(
 	return buildEvolutionNode(link, idFromUrl(link.species.url), undefined, undefined, undefined, context);
 }
 
+// A species' varieties as the repository reads them from species.varieties:
+// each pokemon's name and id. The default variety's id is the species id.
+export interface SpeciesVariety {
+	name: string;
+	id: number;
+}
+
 // Replaces each placeholder id varietyIdFromForm left (a node carrying
-// `varietyName`) with that variety's real pokemon id, from `idOf`, which
-// looks the name up among the node's species' varieties. Null (or a failed
-// lookup) keeps the species' default id: the name is a cosmetic form with no
-// pokemon of its own ("vivillon-polar", "alcremie-ruby-cream-...") or the
-// lookup failed, and the card then shows the plain form, never an unrelated
-// pokemon.
+// `varietyName`) with that variety's real pokemon id, looked up by name among
+// `varietiesOf(dexNumber)`. A miss (or a failed lookup) keeps the species'
+// default id: the name is a cosmetic form with no pokemon of its own
+// ("vivillon-polar", "alcremie-ruby-cream-...") or the lookup failed, and the
+// card then shows the plain form, never an unrelated pokemon.
 //
 // Siblings that end on the same id are then merged, keeping the first: one
 // card per pokemon. The 20 Vivillon patterns or 63 Alcremie decorations all
 // land on the species id, while a real variety keeps its own card (Lycanroc
 // Midnight, Wormadam Sandy, Meowstic female). The view keys cards by id, so
-// this also keeps the keys unique.
+// this also keeps the keys unique. Siblings left sharing a species are then
+// told apart by labelSiblingVarieties.
 export async function resolveEvolutionVarietyIds(
 	node: EvolutionNode,
-	idOf: (varietyName: string, dexNumber: number) => Promise<number | null>,
+	varietiesOf: (dexNumber: number) => Promise<SpeciesVariety[]>,
 ): Promise<EvolutionNode> {
-	const resolved = await Promise.all(node.children.map((c) => resolveEvolutionVarietyIds(c, idOf)));
+	const lookup = (dexNumber: number) => varietiesOf(dexNumber).catch((): SpeciesVariety[] => []);
+	const resolved = await Promise.all(node.children.map((c) => resolveEvolutionVarietyIds(c, varietiesOf)));
 	const children: EvolutionNode[] = [];
 	for (const child of resolved) {
 		if (!children.some((c) => c.id === child.id)) children.push(child);
 	}
-	if (node.varietyName === undefined) return { ...node, children };
+	const labelled = await labelSiblingVarieties(children, lookup);
+	if (node.varietyName === undefined) return { ...node, children: labelled };
 	const { varietyName, ...rest } = node;
-	const id = (await idOf(varietyName, node.dexNumber).catch(() => null)) ?? node.id;
-	return { ...rest, id, children };
+	const id = (await lookup(node.dexNumber)).find((v) => v.name === varietyName)?.id ?? node.id;
+	return { ...rest, id, children: labelled };
+}
+
+// Sibling cards of one species with no regional label read the same ("#745
+// Lycanroc" three times), so each takes its variety's own suffix as its
+// label: "midday"/"midnight"/"dusk" Lycanroc, "plant"/"sandy"/"trash"
+// Wormadam, "low key" Toxtricity (the view capitalizes it, as it does the
+// name). A regional label is kept, and a default variety named after its
+// species gets none, so Raichu beside Alolan Raichu reads as before. A lone
+// card is already distinct: Darmanitan stays "Darmanitan", not "Standard".
+async function labelSiblingVarieties(
+	children: EvolutionNode[],
+	varietiesOf: (dexNumber: number) => Promise<SpeciesVariety[]>,
+): Promise<EvolutionNode[]> {
+	const shared = new Set(children.map((c) => c.dexNumber).filter((dex, i, all) => all.indexOf(dex) !== i));
+	if (shared.size === 0) return children;
+	const varieties = new Map(await Promise.all([...shared].map(async (dex) => [dex, await varietiesOf(dex)] as const)));
+	return children.map((child) => {
+		if (child.formLabel !== null || !shared.has(child.dexNumber)) return child;
+		const name = varieties.get(child.dexNumber)?.find((v) => v.id === child.id)?.name;
+		const suffix = name === undefined ? undefined : extractFormSuffix(name, child.name);
+		return suffix ? { ...child, formLabel: suffix.replace(/-/g, " ") } : child;
+	});
 }
 
 // The entry PokedexRepository.getEntryExtras uses: given a species' raw chain
@@ -789,6 +826,12 @@ function capitalize(word: string): string {
 	return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
+// "low key" -> "Low Key": a form label is lowercase, capitalized by CSS where
+// it is a card name, but here it sits inside a plain method label.
+function titleCase(words: string): string {
+	return words.split(" ").map(capitalize).join(" ");
+}
+
 export function describeEvolutionRequirement(node: EvolutionNode): string {
 	let base = "";
 	if (node.minLevel) base = `Lv. ${node.minLevel}`;
@@ -837,6 +880,19 @@ export function describeEvolutionRequirement(node: EvolutionNode): string {
 		base = base ? `${base} (${type} type in party)` : `${type} type in party`;
 	}
 
+	// Toxtricity: Amped and Low Key are the same level, split by nature. The
+	// card's own label (labelSiblingVarieties) names the side.
+	if (node.allowedNatures.length > 0) {
+		const side = node.formLabel ? `${titleCase(node.formLabel)} nature` : "Certain natures";
+		base = base ? `${base} (${side})` : side;
+	}
+	// Silcoon/Cascoon (50%), Maushold Family of Three (1%): a hidden roll
+	// decides, so the same level reads as a chance.
+	if (node.chancePercent !== null) {
+		const chance = `${node.chancePercent}% chance`;
+		base = base ? `${base} (${chance})` : chance;
+	}
+
 	if (node.needsOverworldRain) base = base ? `${base} (Rain)` : "Rain";
 	if (node.turnUpsideDown) base = base ? `${base} (Upside-down)` : "Upside-down";
 	if (node.needsMultiplayer) base = base ? `${base} (Multiplayer)` : "Multiplayer";
@@ -871,7 +927,7 @@ export function describeEvolutionRequirement(node: EvolutionNode): string {
 // has no diamond-pearl entry). DetailScreen's version cycler filters this
 // map's keys down to whichever generation is currently active.
 export function extractFlavorTexts(
-	species: RawSpecies,
+	species: Pick<RawSpecies, "flavor_text_entries">,
 	tabs: readonly {
 		key: string;
 		versions: readonly string[];
@@ -889,6 +945,16 @@ export function extractFlavorTexts(
 		}
 	}
 	return texts;
+}
+
+// A regional form's Pokédex text where its pokemon-form has some for a tab,
+// else the species' (shared with the base form): Alolan Rattata reads its own
+// Sun/Moon entry but Rattata's FireRed one, the only text that game has.
+export function withFormFlavorTexts(
+	speciesTexts: Record<string, string>,
+	formEntries: RawSpecies["flavor_text_entries"],
+): Record<string, string> {
+	return { ...speciesTexts, ...extractFlavorTexts({ flavor_text_entries: formEntries }) };
 }
 
 // PokeAPI's `flavor_text_entries` carries every language and every game the
@@ -964,31 +1030,31 @@ export function deriveRegionalForms(
 	});
 }
 
-// Mega/Gigantamax varieties show up in species.varieties as extra
-// non-default entries named "{species}-mega", "{species}-mega-x/-y", or
-// "{species}-gmax" (verified live against several species' varieties — no
-// PokeAPI field marks "is this a Mega" directly without an extra
-// pokemon-form fetch per candidate, but the naming convention is exact and
-// stable). Filtered to "-mega" only — see deriveGigantamaxForms below for
-// Gigantamax. Gated on `pokemon.name === species.name` (the viewed row being
-// the species' own default/base variety) since Mega Evolution only ever
-// attaches to the base form — caught live as a real bug: Galarian Slowbro
-// was inheriting Slowbro's own Mega Evolution just because both rows share
-// one `species` record, even though only Kantonian Slowbro can actually Mega
-// Evolve in-game. Every curated `MEGA_VARIETY_KEYS` entry is itself always
-// `{base-species-name}-mega...`, never a regional-form-prefixed variant, so
-// this check alone is sufficient — no regional form needs its own entry.
+// Mega varieties show up in species.varieties as extra non-default entries
+// named "{variety}-mega" or "{variety}-mega-x/-y/-z", where {variety} is the
+// pokemon that Mega Evolves: usually the species' own name, but the default
+// variety's name where the species has several (Meowstic: "meowstic-male-mega"
+// and "meowstic-female-mega"; Tatsugiri: one per form). Matched against the
+// viewed row's own name, like deriveGigantamaxForms below, so a row offers
+// only its own Megas, and a regional form never inherits the base form's
+// (Galarian Slowbro is "slowbro-galar"; only Kantonian Slowbro Mega Evolves).
+//
+// The name is trusted without a pokemon-form fetch per candidate: verified
+// live 2026-11-21 (full /pokemon?limit=2000 scan) that every one of the 96
+// "-mega" varieties has `is_mega: true` on its pokemon-form, a held-item
+// trigger, and a version group of x-y, omega-ruby-alpha-sapphire or
+// mega-dimension (Legends: Z-A's DLC). The 48 Z-A Megas were once on PokeAPI
+// ahead of the games and were filtered out as non-canon; that allowlist was
+// dropped once they shipped.
 export function deriveMegaForms(pokemon: Pick<StoredPokemon, "name">, species: RawSpecies): MegaFormSummary[] {
-	if (pokemon.name !== species.name) return [];
-	const prefix = `${species.name}-mega`;
-	return species.varieties
-		.filter((v) => v.pokemon.name.startsWith(prefix) && MEGA_VARIETY_KEYS.has(v.pokemon.name))
-		.map((v) => {
-			const suffix = v.pokemon.name.slice(prefix.length);
-			const label = suffix === "-x" ? "Mega X" : suffix === "-y" ? "Mega Y" : "Mega";
-			return { key: v.pokemon.name, label };
-		});
+	const prefix = `${pokemon.name}-mega`;
+	return species.varieties.flatMap((v) => {
+		const label = v.pokemon.name.startsWith(prefix) ? MEGA_SUFFIX_LABELS.get(v.pokemon.name.slice(prefix.length)) : undefined;
+		return label ? [{ key: v.pokemon.name, label }] : [];
+	});
 }
+
+const MEGA_SUFFIX_LABELS = new Map([["", "Mega"], ["-x", "Mega X"], ["-y", "Mega Y"], ["-z", "Mega Z"]]);
 
 // Unlike Mega, matched against the CURRENTLY VIEWED variety's own name
 // (`pokemon.name`), not the bare species name — verified live that a

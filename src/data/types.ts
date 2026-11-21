@@ -23,6 +23,8 @@ export interface RawPokemon {
 		back_shiny: string | null;
 		other?: {
 			"official-artwork"?: { front_default: string | null; front_shiny: string | null };
+			// Pokémon HOME's 512px render, for every form, Mega and Gigantamax.
+			home?: { front_default: string | null; front_shiny: string | null } | null;
 		};
 	};
 	species: NamedApiResource;
@@ -62,8 +64,10 @@ export interface StoredMove {
 // normalize function that reads a pokemon takes this, not RawPokemon, which is
 // only what PokeApiClient returns. Reading a new move field means extending
 // StoredMove AND adding an isStale check (src/data/CLAUDE.md): records already
-// cached lack it.
-export type StoredPokemon = Omit<RawPokemon, "moves"> & { moves: StoredMove[] };
+// cached lack it. `moveVersionGroups` is the set `moves` was cut to, so a
+// version group added to MOVE_VERSION_GROUPS later refetches a record that
+// lacks it (storedMovesAreStale) instead of leaving its tab empty.
+export type StoredPokemon = Omit<RawPokemon, "moves"> & { moves: StoredMove[]; moveVersionGroups: string[] };
 
 export interface RawSpecies {
 	id: number;
@@ -168,8 +172,22 @@ export interface RawEvolutionChainLink {
 		known_move_type?: NamedApiResource | null;
 		min_affection?: number | null;
 		party_type?: NamedApiResource | null;
+		// Toxtricity: the natures that give this outcome (Amped or Low Key).
+		allowed_natures?: NamedApiResource[];
+		// A hidden-value roll, as an expression over the pokemon's personality
+		// or encryption constant: Wurmple's Silcoon/Cascoon split (50%),
+		// Tandemaus/Dunsparce's rare form (1%), Alcremie's spins (no chance).
+		// Only `percentage_chance` is read.
+		condition_expression?: { expression: string; percentage_chance: number | null } | null;
 	}[];
 	evolves_to: RawEvolutionChainLink[];
+}
+
+// A /pokemon-form/{name} response, only the part read: a form's own Pokédex
+// text, which PokeAPI has for Gen 7 forms (Alolan Rattata: Sun/Moon, USUM,
+// Let's Go) and none of the later regional ones yet (2026-11).
+export interface RawPokemonForm {
+	flavor_text_entries: RawSpecies["flavor_text_entries"];
 }
 
 export interface RawEvolutionChain {
@@ -221,8 +239,10 @@ export interface EvolutionNode {
 	// buildEvolutionNode in normalize.ts.
 	dexNumber: number;
 	name: string;
-	// Human label for a regional-form node ("Alolan"), null for a default
-	// one — mirrors PokedexTableRow.formLabel; see formatPokemonDisplayName.
+	// Human label for a regional-form node ("Alolan"), or, once
+	// resolveEvolutionVarietyIds has run, the variety suffix that tells
+	// siblings of one species apart ("midnight" Lycanroc); else null.
+	// Composes like PokedexTableRow.formLabel: see formatPokemonDisplayName.
 	formLabel: string | null;
 	minLevel: number | null;
 	trigger: string | null;
@@ -261,6 +281,12 @@ export interface EvolutionNode {
 	minAffection: number | null;
 	partyType: string | null;
 	needsMultiplayer: boolean;
+	// Toxtricity's nature split (RawEvolutionChainLink allowed_natures);
+	// empty when any nature evolves.
+	allowedNatures: string[];
+	// The odds of a hidden-value roll (condition_expression), null when the
+	// evolution has none or PokeAPI gives no odds (Alcremie's spins).
+	chancePercent: number | null;
 	children: EvolutionNode[];
 }
 
@@ -497,7 +523,7 @@ export interface MegaFormDetail extends PortraitImageSource {
 // @lhak/style font-role settings.
 export interface PluginSettings extends FontRoleSettings {
 	enabledGenerations: number[];
-	spriteStyle: "official-artwork" | "sprite";
+	spriteStyle: "official-artwork" | "home" | "sprite";
 	gridDensity: "compact" | "comfortable";
 	defaultSortColumn: "id" | "name";
 	// Field keys (src/utils/fields.ts) the user has chosen to show. Was

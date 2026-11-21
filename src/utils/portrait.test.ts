@@ -14,6 +14,13 @@ describe("resolvePortrait", () => {
 		expect(resolvePortrait(full, "official-artwork", false)).toBe("artwork");
 	});
 
+	// The repository fills the large-render fields with the HOME render for
+	// this style (imageSet.ts), so it reads them as artwork style does.
+	it("uses the large-render fields for HOME style, shiny included", () => {
+		expect(resolvePortrait(full, "home", false)).toBe("artwork");
+		expect(resolvePortrait(full, "home", true)).toBe("shiny-artwork");
+	});
+
 	it("uses sprite for sprite style, not shiny", () => {
 		expect(resolvePortrait(full, "sprite", false)).toBe("sprite");
 	});

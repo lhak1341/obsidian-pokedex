@@ -3,7 +3,7 @@ import { vi } from "vitest";
 import type { CacheStore } from "../CacheStore";
 import type { ObjectUrls } from "../ImageMemory";
 import { PokeApiClient } from "../PokeApiClient";
-import type { RawAbility, RawEvolutionChain, RawMove, RawPokemon, RawSpecies } from "../types";
+import type { RawAbility, RawEvolutionChain, RawMove, RawPokemon, RawPokemonForm, RawSpecies } from "../types";
 import bulbasaurChain from "./bulbasaur-evolution-chain.json";
 import bulbasaurSpecies from "./bulbasaur-species.json";
 import bulbasaur from "./bulbasaur.json";
@@ -115,6 +115,16 @@ export class FakePokeApiClient extends PokeApiClient {
 		return { ...bulbasaurSpecies, id };
 	});
 
+	// Pokédex text per pokemon-form name; a name not set has none, as every
+	// form but the Gen 7 ones does on PokeAPI.
+	formFlavorTexts = new Map<string, RawPokemonForm["flavor_text_entries"]>();
+	failForms = false;
+
+	fetchPokemonForm = vi.fn(async (name: string): Promise<RawPokemonForm> => {
+		if (this.failForms) throw new Error(`fake failure fetching pokemon-form ${name}`);
+		return { flavor_text_entries: this.formFlavorTexts.get(name) ?? [] };
+	});
+
 	fetchEvolutionChain = vi.fn(async (): Promise<RawEvolutionChain> => {
 		if (this.failEvolutionChain) throw new Error("fake failure fetching evolution chain");
 		return bulbasaurChain as unknown as RawEvolutionChain;
@@ -123,7 +133,7 @@ export class FakePokeApiClient extends PokeApiClient {
 	// Bytes per fetched image; the image-memory budget tests raise it.
 	imageSize = 4;
 
-	fetchImageBinary = vi.fn(async (): Promise<ArrayBuffer> => {
+	fetchImageBinary = vi.fn(async (_url: string): Promise<ArrayBuffer> => {
 		if (this.failImage) throw new Error("fake failure fetching image");
 		return new ArrayBuffer(this.imageSize);
 	});

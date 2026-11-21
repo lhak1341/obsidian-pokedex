@@ -66,11 +66,19 @@ export const MOVE_VERSION_TABS_BY_GEN: Record<number, readonly { key: string; la
 	// version group needs adding here — the DLC evolution-chain entries that
 	// do cite "the-teal-mask"/"the-indigo-disk" (see RawEvolutionChainLink)
 	// only date which game update introduced that evolution method, an
-	// unrelated concern. Also verified live that PokeAPI hosts a "champions"
-	// version-group tagged generation-ix with empty move_learn_methods/
-	// regions — non-canon/test data, same "don't trust a plausible-looking
-	// PokeAPI entry" lesson as MEGA_VARIETY_KEYS — deliberately excluded.
-	9: [{ key: "scarlet-violet", label: "S/V" }],
+	// unrelated concern.
+	//
+	// Legends: Z-A ("legends-za", level-up/machine/reminder) and Pokemon
+	// Champions ("champions", every move under the "train" method) are
+	// generation-ix version groups of their own, and the only groups the
+	// Megas added in 2025-26 have moves under (verified live 2026-11-21:
+	// raichu-mega-x has exactly these two). "mega-dimension" (Z-A's DLC)
+	// carries no moves, so it is not a tab.
+	9: [
+		{ key: "scarlet-violet", label: "S/V" },
+		{ key: "legends-za", label: "Legends: Z-A" },
+		{ key: "champions", label: "Champions" },
+	],
 };
 
 // Every version group any tab above reads, across every supported
@@ -215,35 +223,6 @@ export const FOSSIL_IDS = new Set([
 	564, 565, 566, 567,
 	696, 697, 698, 699,
 	880, 881, 882, 883,
-]);
-
-// PokeAPI's species.varieties naming convention ("{species}-mega"/"-mega-x"/
-// "-mega-y") is NOT a reliable signal for "has an official in-game Mega
-// Evolution" — verified live (full /pokemon?limit=2000 scan) that it hosts
-// 94 "-mega"-suffixed varieties, only 48 of which are real Gen 6-7 Mega
-// Evolutions; the other 46 are non-canon/fan content PokeAPI happens to also
-// host (e.g. "raichu-mega-x", "starmie-mega", "dragonite-mega", even
-// "baxcalibur-mega" for a Gen 9 Pokemon that predates any real Mega
-// mechanic). deriveMegaForms filters candidates against this curated
-// allowlist of the real 48 (by variety key) rather than trusting the naming
-// pattern alone — same FOSSIL_IDS-style curation, needed because PokeAPI has
-// no "is this an official game mechanic" flag either. This exact set is
-// stable (Mega Evolution hasn't gained a new entry since Gen 7 ORAS/USUM,
-// and isn't expected to as of Gen 8/9's Dynamax/Terastallization focus) —
-// re-verify only if a future generation ever reintroduces Mega.
-export const MEGA_VARIETY_KEYS = new Set([
-	"venusaur-mega", "charizard-mega-x", "charizard-mega-y", "blastoise-mega",
-	"alakazam-mega", "gengar-mega", "kangaskhan-mega", "pinsir-mega",
-	"gyarados-mega", "aerodactyl-mega", "mewtwo-mega-x", "mewtwo-mega-y",
-	"ampharos-mega", "scizor-mega", "heracross-mega", "houndoom-mega",
-	"tyranitar-mega", "blaziken-mega", "gardevoir-mega", "mawile-mega",
-	"aggron-mega", "medicham-mega", "manectric-mega", "banette-mega",
-	"absol-mega", "garchomp-mega", "lucario-mega", "abomasnow-mega",
-	"latias-mega", "latios-mega", "swampert-mega", "sceptile-mega",
-	"sableye-mega", "altaria-mega", "gallade-mega", "audino-mega",
-	"sharpedo-mega", "slowbro-mega", "steelix-mega", "pidgeot-mega",
-	"glalie-mega", "diancie-mega", "metagross-mega", "rayquaza-mega",
-	"camerupt-mega", "lopunny-mega", "salamence-mega", "beedrill-mega",
 ]);
 
 export const GENERATIONS = [

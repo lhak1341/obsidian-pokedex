@@ -25,10 +25,11 @@ Scoped to `PokeApiClient`, `PokedexRepository`, `CacheStore`/`IndexedDbCacheStor
 - The pokemon cache (store and mem) holds `StoredPokemon`, not `RawPokemon`: `toStoredPokemon` cuts moves to
   `MOVE_VERSION_GROUPS` and to `StoredMove`'s three fields (145 → ~38 MB over 1,025 pokemon), a projection only, so no
   normalize rule lives in the cache. `RawPokemon` is only what `PokeApiClient` returns and fixtures hold; normalize
-  functions take `StoredPokemon` (tests: `toStoredPokemon(fixture)`). A record still in PokeAPI's move shape is
-  rewritten on first read (`hasPokeApiMoves`, the `migrate` step). Reading a new move field means extending
-  `StoredMove` and adding an `isStale` check, since cached records lack it. A cached finished row was rejected
-  (ADR-0015).
+  functions take `StoredPokemon` (tests: `toStoredPokemon(fixture)`, and seed a test cache with that, never a raw
+  fixture). Each record lists the groups it was cut to (`moveVersionGroups`); `storedMovesAreStale` refetches one that
+  lacks a group now in `MOVE_VERSION_GROUPS`, or the list itself, so adding a game's tab needs no cache clear. Reading
+  a new move field means extending `StoredMove` and adding an `isStale` check, since cached records lack it. A cached
+  finished row was rejected (ADR-0015).
 - For a per-row derived value needing more than the already-fetched pokemon+species
   response and stable until the next generation ships (e.g. evolution-family depth), do not
   add a runtime fetch. Generate a static lookup table via `scripts/generate-*.ts`, reusing
@@ -97,7 +98,10 @@ table rows, the hover preview and dex nav keep sprite URLs for the whole view mo
 may keep a detail's URLs across calls: `VarietyToggleState` re-asks on every select,
 `mega-forms/`/`gigantamax-forms/` store an image-free `VarietyFormSource` (ADR-0002 addendum),
 and `cacheRange` stores extras bytes without making URLs. `*DataUri` fields now hold blob URLs;
-`imagePathOf(url)` gives the cache path (`contentBounds`' memo key, `imageBounds.ts`). A budget test's budget must
+`imagePathOf(url)` gives the cache path (`contentBounds`' memo key, `imageBounds.ts`). The large portrait is one
+render, artwork or HOME (`spriteStyle`, set on the repository by `setPortraitRender`): `largeImageSuffixes` picks
+`artwork`/`shiny-artwork` or `home`/`shiny-home`, both filling `artworkDataUri`/`shinyArtworkDataUri` under their own
+paths, and only the chosen one is fetched or offline-cached; `getCacheStatus` counts that one. A budget test's budget must
 fit every image its assertion needs live at once: one `getEntryExtras` or form load is 3
 budgeted images in parallel, so a smaller budget evicts inside the call.
 
@@ -113,7 +117,9 @@ Regional forms have two distinct cache keys: the detail view fetches by numeric 
 (`pokemon/10229.json` for Hisuian Growlithe) while table load's
 `deriveRegionalForms`/`getOrFetchPokemonVariant` writes the name-keyed one
 (`pokemon/growlithe-hisui.json`). `cacheRange` prefetches both unconditionally.
-`clearRange` sweeps both, but only when the variant's own
+A regional row's own Pokédex text is a third file, `pokemon-forms/{variety}.json` (`getEntryCore` reads it, the
+extras prefetch caches it); PokeAPI has form text only for Gen 7 forms (2026-11), so the rest store an empty list.
+`clearRange` sweeps all three, but only when the variant's own
 `REGIONAL_FORMS[suffix].generationId` matches the generation being cleared — not its base
 dex number's range, since those diverge (Alolan Rattata is dex #19 but `generationId: 7`).
 Discovery is independent of the range being cleared too — `listCachedSpeciesIds()` lists
@@ -143,7 +149,11 @@ directions before calling such a fix done.
 
 - `GET /pokemon?limit=N` silently truncates when `N` is below the true count (1351 as of
   Gen 8). Pass `limit=2000` or read the response's own `count`. A `limit=1300` scan once
-  hid 46 non-canon fan "-mega" varieties and shipped a real bug.
+  hid 46 "-mega" varieties and shipped a real bug.
+- PokeAPI adds a game's data before the game ships: Legends: Z-A's Megas and the
+  `champions` version group were filtered out as non-canon in 2026-07 and were real by
+  2026-11 (`pokemon-form.is_mega`, populated learnsets). Judge a resource by its data
+  (`is_mega`, `move_learn_methods`, an empty learnset), not by whether the game is out yet.
 - Numbered list resources are **not** contiguous — guessing sequential ids 404s (8 of 541
   evolution chains, confirmed live). Paginate the real list endpoint
   (`/evolution-chain?limit=600`) and use `results[].url`.
@@ -155,4 +165,4 @@ standalone script (`bun run /path/to/script.ts`) importing the real source file 
 absolute path, run it against live PokeAPI data (curl is denied here: dump it through
 `plugin.repository.client` in a `pokedex-test-vault` eval) or the plugin's cached JSON, and
 add temporary `console.error` instrumentation in the source, then revert. Chain shapes as
-served 2026-11 are in `__fixtures__/evolution-chains-2026-11.json`.
+served 2026-11 are in `__fixtures__/evolution-chains-2026-11.json`; add one by dropping null/false/""/[] fields recursively, keeping `evolves_to`/`evolution_details`.

@@ -7,7 +7,7 @@ import type { BrowseLayout, LayoutByWidthClass } from "./browseLayout";
 
 // One Record per closed set, so a new union member without a row fails
 // typecheck here instead of being rejected as "unknown" at load.
-const SPRITE_STYLES: Record<PluginSettings["spriteStyle"], true> = { "official-artwork": true, sprite: true };
+const SPRITE_STYLES: Record<PluginSettings["spriteStyle"], true> = { "official-artwork": true, home: true, sprite: true };
 const GRID_DENSITIES: Record<PluginSettings["gridDensity"], true> = { compact: true, comfortable: true };
 const SORT_COLUMNS: Record<PluginSettings["defaultSortColumn"], true> = { id: true, name: true };
 const BROWSE_LAYOUTS: Record<BrowseLayout, true> = { table: true, card: true };

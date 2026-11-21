@@ -5137,5 +5137,317 @@
     }
    ]
   }
+ },
+ "tandemaus": {
+  "id": 485,
+  "chain": {
+   "species": {
+    "name": "tandemaus",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/924/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "maushold",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/925/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "scarlet-violet",
+        "url": "https://pokeapi.co/api/v2/version-group/25/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "in-battle-level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/10/"
+       },
+       "min_level": 25,
+       "evolved_pokemon_form": {
+        "name": "maushold-family-of-four",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/925/"
+       },
+       "condition_expression": {
+        "expression": "EC 100 % 0 !=",
+        "percentage_chance": 99,
+        "variables": [
+         {
+          "name": "encryption-constant",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/1/"
+         }
+        ]
+       }
+      },
+      {
+       "version_group": {
+        "name": "scarlet-violet",
+        "url": "https://pokeapi.co/api/v2/version-group/25/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "in-battle-level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/10/"
+       },
+       "min_level": 25,
+       "evolved_pokemon_form": {
+        "name": "maushold-family-of-three",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10426/"
+       },
+       "condition_expression": {
+        "expression": "EC 100 % 0 ==",
+        "percentage_chance": 1,
+        "variables": [
+         {
+          "name": "encryption-constant",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/1/"
+         }
+        ]
+       }
+      }
+     ],
+     "evolves_to": []
+    }
+   ]
+  }
+ },
+ "dunsparce": {
+  "id": 103,
+  "chain": {
+   "species": {
+    "name": "dunsparce",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/206/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "dudunsparce",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/982/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "scarlet-violet",
+        "url": "https://pokeapi.co/api/v2/version-group/25/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "known_move": {
+        "name": "hyper-drill",
+        "url": "https://pokeapi.co/api/v2/move/887/"
+       },
+       "evolved_pokemon_form": {
+        "name": "dudunsparce-two-segment",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/982/"
+       },
+       "condition_expression": {
+        "expression": "EC 100 % 0 !=",
+        "percentage_chance": 99,
+        "variables": [
+         {
+          "name": "encryption-constant",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/1/"
+         }
+        ]
+       }
+      },
+      {
+       "version_group": {
+        "name": "scarlet-violet",
+        "url": "https://pokeapi.co/api/v2/version-group/25/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "known_move": {
+        "name": "hyper-drill",
+        "url": "https://pokeapi.co/api/v2/move/887/"
+       },
+       "evolved_pokemon_form": {
+        "name": "dudunsparce-three-segment",
+        "url": "https://pokeapi.co/api/v2/pokemon-form/10424/"
+       },
+       "condition_expression": {
+        "expression": "EC 100 % 0 ==",
+        "percentage_chance": 1,
+        "variables": [
+         {
+          "name": "encryption-constant",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/1/"
+         }
+        ]
+       }
+      }
+     ],
+     "evolves_to": []
+    }
+   ]
+  }
+ },
+ "wurmple": {
+  "id": 135,
+  "chain": {
+   "species": {
+    "name": "wurmple",
+    "url": "https://pokeapi.co/api/v2/pokemon-species/265/"
+   },
+   "evolution_details": [],
+   "evolves_to": [
+    {
+     "species": {
+      "name": "silcoon",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/266/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "ruby-sapphire",
+        "url": "https://pokeapi.co/api/v2/version-group/5/"
+       },
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 7,
+       "condition_expression": {
+        "expression": "PID 16 >> 10 % 4 <=",
+        "percentage_chance": 50,
+        "variables": [
+         {
+          "name": "personality-value",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/2/"
+         }
+        ]
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 7,
+       "condition_expression": {
+        "expression": "EC 16 >> 10 % 4 <=",
+        "percentage_chance": 50,
+        "variables": [
+         {
+          "name": "encryption-constant",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/1/"
+         }
+        ]
+       }
+      }
+     ],
+     "evolves_to": [
+      {
+       "species": {
+        "name": "beautifly",
+        "url": "https://pokeapi.co/api/v2/pokemon-species/267/"
+       },
+       "evolution_details": [
+        {
+         "version_group": {
+          "name": "ruby-sapphire",
+          "url": "https://pokeapi.co/api/v2/version-group/5/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 10
+        }
+       ],
+       "evolves_to": []
+      }
+     ]
+    },
+    {
+     "species": {
+      "name": "cascoon",
+      "url": "https://pokeapi.co/api/v2/pokemon-species/268/"
+     },
+     "evolution_details": [
+      {
+       "version_group": {
+        "name": "ruby-sapphire",
+        "url": "https://pokeapi.co/api/v2/version-group/5/"
+       },
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 7,
+       "condition_expression": {
+        "expression": "PID 16 >> 10 % 5 >=",
+        "percentage_chance": 50,
+        "variables": [
+         {
+          "name": "personality-value",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/2/"
+         }
+        ]
+       }
+      },
+      {
+       "version_group": {
+        "name": "x-y",
+        "url": "https://pokeapi.co/api/v2/version-group/15/"
+       },
+       "is_default": true,
+       "trigger": {
+        "name": "level-up",
+        "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+       },
+       "min_level": 7,
+       "condition_expression": {
+        "expression": "EC 16 >> 10 % 5 >=",
+        "percentage_chance": 50,
+        "variables": [
+         {
+          "name": "encryption-constant",
+          "url": "https://pokeapi.co/api/v2/evolution-variable/1/"
+         }
+        ]
+       }
+      }
+     ],
+     "evolves_to": [
+      {
+       "species": {
+        "name": "dustox",
+        "url": "https://pokeapi.co/api/v2/pokemon-species/269/"
+       },
+       "evolution_details": [
+        {
+         "version_group": {
+          "name": "ruby-sapphire",
+          "url": "https://pokeapi.co/api/v2/version-group/5/"
+         },
+         "is_default": true,
+         "trigger": {
+          "name": "level-up",
+          "url": "https://pokeapi.co/api/v2/evolution-trigger/1/"
+         },
+         "min_level": 10
+        }
+       ],
+       "evolves_to": []
+      }
+     ]
+    }
+   ]
+  }
  }
 }

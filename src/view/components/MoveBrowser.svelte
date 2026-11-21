@@ -24,18 +24,25 @@
 	// the time a row can be hovered.
 	const popover = createInfoPopover(".detail-screen");
 
+	// Keys are PokeAPI move-learn-method names. "reminder" (Scarlet/Violet,
+	// Legends: Z-A: learnable from the move reminder with no level) and
+	// "train" (Pokemon Champions' training menu, the only method that game
+	// has) appear in one or two games each; a method PokeAPI has that is not
+	// listed here (form-change, light-ball-egg, ...) shows no tab.
 	const MOVE_METHOD_TABS = [
 		{ key: "level-up", label: "Level-Up" },
+		{ key: "reminder", label: "Reminder" },
 		{ key: "machine", label: "Machine" },
 		{ key: "egg", label: "Egg" },
 		{ key: "tutor", label: "Tutor" },
+		{ key: "train", label: "Train" },
 	] as const;
 
 	// Not reset on id change (this component instance persists across
 	// Pokemon navigation — see DetailScreen, which doesn't remount this
 	// panel when `id` changes, only when entry itself becomes null) — lets
 	// a user stay on e.g. "Machine" while browsing several Pokemon.
-	let activeMoveMethod = $state<(typeof MOVE_METHOD_TABS)[number]["key"]>("level-up");
+	let activeMoveMethod = $state<string>("level-up");
 	// Remembered raw key (not derived from any one generation's tab set) —
 	// see moveVersionTabs/effectiveMoveVersion below for what happens when a
 	// navigation or Active Gen switch leaves it pointing at a game this
@@ -65,11 +72,21 @@
 	// after a fallback, and null when no generation has moves for this entry.
 	const shownGen = $derived(resolvedMoveVersions.gen ?? activeGen);
 
-	const filteredMoves = $derived(
-		moves.filter((m) => m.learnMethod === activeMoveMethod && m.versionGroup === effectiveMoveVersion),
+	const versionMoves = $derived(moves.filter((m) => m.versionGroup === effectiveMoveVersion));
+	// Only the methods this game teaches this entry anything by, so Champions
+	// (every move under "train") does not open on an empty Level-Up tab. The
+	// remembered method wins when the game has it, else the first one shown.
+	const moveMethodTabs = $derived.by(() => {
+		const methods = new Set(versionMoves.map((m) => m.learnMethod));
+		return MOVE_METHOD_TABS.filter((tab) => methods.has(tab.key));
+	});
+	const effectiveMoveMethod = $derived(
+		moveMethodTabs.some((tab) => tab.key === activeMoveMethod) ? activeMoveMethod : (moveMethodTabs[0]?.key ?? activeMoveMethod),
 	);
 
-	const displayRows = $derived(buildMoveRows(filteredMoves, evolvesAtLevels, activeMoveMethod === "level-up"));
+	const filteredMoves = $derived(versionMoves.filter((m) => m.learnMethod === effectiveMoveMethod));
+
+	const displayRows = $derived(buildMoveRows(filteredMoves, evolvesAtLevels, effectiveMoveMethod === "level-up"));
 </script>
 
 <div class="moves-heading-row">
@@ -91,11 +108,11 @@
 	<p class="text-muted">No move data for this version group.</p>
 {:else}
 	<div class="move-tabs">
-		{#each MOVE_METHOD_TABS as tab (tab.key)}
+		{#each moveMethodTabs as tab (tab.key)}
 			<button
 				type="button"
 				class="move-tab"
-				class:active={activeMoveMethod === tab.key}
+				class:active={effectiveMoveMethod === tab.key}
 				onclick={() => (activeMoveMethod = tab.key)}
 			>
 				{tab.label}
@@ -103,15 +120,13 @@
 		{/each}
 	</div>
 	{#if filteredMoves.length === 0}
-		<p class="text-muted">
-			No moves learned via {MOVE_METHOD_TABS.find((t) => t.key === activeMoveMethod)?.label}.
-		</p>
+		<p class="text-muted">No moves for this game.</p>
 	{:else}
 		<table class="move-table">
 			<thead>
 				<tr>
 					<th>Move</th>
-					{#if activeMoveMethod === "level-up"}<th class="col-right">Level</th>{/if}
+					{#if effectiveMoveMethod === "level-up"}<th class="col-right">Level</th>{/if}
 					<th class="col-center">Type</th>
 					<th class="col-right">Pow</th>
 					<th class="col-right">Acc</th>
@@ -133,7 +148,7 @@
 						{@const detail = moveDetails[move.name]}
 						<tr class:row-shaded={row.moveIndex % 2 === 0}>
 							<td class="move-name-cell"><span class="pkdx-info-target" {...popover.target(move.name)}>{move.name}</span></td>
-							{#if activeMoveMethod === "level-up"}<td class="col-right">{move.levelLearnedAt}</td>{/if}
+							{#if effectiveMoveMethod === "level-up"}<td class="col-right">{move.levelLearnedAt}</td>{/if}
 							<td class="col-center">
 								{#if detail}
 									<TypeBadge type={detail.type} useIcon={useTypeIcons} />

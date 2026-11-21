@@ -6,10 +6,18 @@ import {
 	imagePath,
 	type ImageSuffix,
 	megaFormPath,
+	pokemonFormPath,
 	pokemonPath,
 	speciesPath,
 } from "./cachePaths";
-import { ALL_IMAGE_SUFFIXES, type ImageBundle, type ImageSources, imageRequests } from "./imageSet";
+import {
+	ALL_IMAGE_SUFFIXES,
+	type ImageBundle,
+	type ImageSources,
+	imageRequests,
+	largeImageSuffixes,
+	type PortraitRender,
+} from "./imageSet";
 import {
 	canonicalizeEvolutionChain,
 	deriveGigantamaxForms,
@@ -20,13 +28,15 @@ import {
 	resolveEvolutionVarietyIds,
 	normalizeMoveDetail,
 	sortBySlot,
+	storedMovesAreStale,
+	resolveRegionalFormSuffix,
 	toEntry,
 	toGigantamaxFormDetail,
 	toMegaFormDetail,
 	toTableRow,
-	hasPokeApiMoves,
 	toStoredPokemon,
 	trimFlavorTextEntries,
+	withFormFlavorTexts,
 } from "./normalize";
 import { PokeApiClient } from "./PokeApiClient";
 import { REGIONAL_FORMS, type Generation } from "./constants";
@@ -39,6 +49,7 @@ import type {
 	PokedexEntry,
 	PokedexTableRow,
 	RawEvolutionChain,
+	RawPokemonForm,
 	RawPokemon,
 	RawSpecies,
 	StoredPokemon,
@@ -74,7 +85,6 @@ type VarietyFormSource = Pick<RawPokemon, "types" | "abilities" | "stats"> & {
 
 function toVarietyFormSource(pokemon: RawPokemon): VarietyFormSource {
 	const { front_default, front_shiny, other } = pokemon.sprites;
-	const artwork = other?.["official-artwork"];
 	return {
 		types: pokemon.types,
 		abilities: pokemon.abilities,
@@ -82,13 +92,18 @@ function toVarietyFormSource(pokemon: RawPokemon): VarietyFormSource {
 		sprites: {
 			front_default,
 			front_shiny,
-			other: artwork ? { "official-artwork": artwork } : undefined,
+			other: { "official-artwork": other?.["official-artwork"], home: other?.home ?? null },
 		},
 	};
 }
 
+// `home` is null, not absent, when a form has no HOME render: a record
+// written before the HOME style (no `home` key) is refetched once, or the
+// HOME style would show its artwork forever.
 function isVarietyFormSource(value: unknown): value is VarietyFormSource {
-	return typeof value === "object" && value !== null && "sprites" in value && "types" in value;
+	if (typeof value !== "object" || value === null || !("sprites" in value) || !("types" in value)) return false;
+	const other = (value as VarietyFormSource).sprites.other;
+	return other !== undefined && "home" in other;
 }
 
 // Facade the UI talks to: "give me row/entry data for id X", never worrying
@@ -120,6 +135,11 @@ export class PokedexRepository {
 	// per call so its image URLs are always live ones.
 	private megaFormMemCache = new Map<string, VarietyFormSource>();
 	private gigantamaxFormMemCache = new Map<string, VarietyFormSource>();
+	// Which large render detail screens load and cacheRange stores (the
+	// plugin sets it from spriteStyle): only that one, never both.
+	private portraitRender: PortraitRender = "official-artwork";
+	// A regional form's own Pokédex text, keyed by its pokemon-form name.
+	private formFlavorTextMemCache = new Map<string, RawPokemonForm>();
 	// In-flight dedup for getOrFetch, keyed by disk cache path (globally
 	// unique across every entity type). Without this, two concurrent callers
 	// for the same not-yet-mem-cached key (e.g. two detail-screen loads in
@@ -202,7 +222,7 @@ export class PokedexRepository {
 		}
 	}
 
-	// Shared fetch/migrate/isStale logic behind getOrFetchPokemon (numeric id)
+	// Shared fetch/isStale logic behind getOrFetchPokemon (numeric id)
 	// and getOrFetchPokemonVariant (name) below — both fetch the exact same
 	// /pokemon/{idOrName} shape and need the exact same projection/self-heal
 	// treatment, just keyed differently.
@@ -211,18 +231,15 @@ export class PokedexRepository {
 		// three fields read, before the record is written or held in memory.
 		return toStoredPokemon(await this.client.fetchPokemon(idOrName));
 	}
-	// Self-heals a record cached in PokeAPI's move shape (written before
-	// toStoredPokemon, trimmed to the version groups or not) by rewriting it
-	// the first time it's read, rather than refetching or requiring a clear.
-	private storeCachedPokemon(cached: StoredPokemon): StoredPokemon {
-		return hasPokeApiMoves(cached) ? toStoredPokemon(cached) : cached;
-	}
-	// held_items is new data, not a trim-down of something already on disk
-	// (unlike moves/flavor text above) — same as getMoveDetails' `description`
-	// field, a cache written before it existed can't self-heal via a local
-	// transform and needs a real refetch.
+	// held_items and the version groups moves were cut to are both data a
+	// cached record can lack and no local transform can supply (unlike a
+	// trim-down, see getOrFetchSpecies' flavor-text comment), so either means
+	// a refetch: held_items would otherwise crash on undefined, and a version
+	// group added since (legends-za, champions) would show an empty tab for
+	// every cached pokemon. A record still in PokeAPI's move shape predates the
+	// marker and is refetched the same way.
 	private pokemonIsStale(cached: StoredPokemon): boolean {
-		return !("held_items" in cached);
+		return !("held_items" in cached) || storedMovesAreStale(cached);
 	}
 
 	private async getOrFetchPokemon(id: number): Promise<StoredPokemon> {
@@ -231,7 +248,7 @@ export class PokedexRepository {
 			id,
 			pokemonPath(id),
 			() => this.fetchStoredPokemon(id),
-			(cached) => this.storeCachedPokemon(cached),
+			undefined,
 			(cached) => this.pokemonIsStale(cached),
 		);
 	}
@@ -242,7 +259,7 @@ export class PokedexRepository {
 			name,
 			pokemonPath(name),
 			() => this.fetchStoredPokemon(name),
-			(cached) => this.storeCachedPokemon(cached),
+			undefined,
 			(cached) => this.pokemonIsStale(cached),
 		);
 	}
@@ -283,6 +300,30 @@ export class PokedexRepository {
 					: cached;
 			},
 		);
+	}
+
+	// A regional form's own Pokédex text, trimmed like a species' on the way
+	// in. Only a regional row asks (formFlavorTexts), so one fetch per form,
+	// once; the base row shares its species' text and needs none.
+	private async getOrFetchFormFlavorText(formName: string): Promise<RawPokemonForm> {
+		return this.getOrFetch(this.formFlavorTextMemCache, formName, pokemonFormPath(formName), async () => {
+			const fresh = await this.client.fetchPokemonForm(formName);
+			return { flavor_text_entries: trimFlavorTextEntries(fresh.flavor_text_entries) };
+		});
+	}
+
+	// The entry's Pokédex text: a regional row (Alolan Rattata) reads its form's
+	// own text where PokeAPI has it (withFormFlavorTexts), every other row its
+	// species'. A failed form fetch is not an error: the species' text stands,
+	// as it did before form text was read.
+	private async flavorTextsFor(pokemon: StoredPokemon, species: RawSpecies, speciesTexts: Record<string, string>) {
+		if (resolveRegionalFormSuffix(pokemon, species) === undefined) return speciesTexts;
+		try {
+			const form = await this.getOrFetchFormFlavorText(pokemon.name);
+			return withFormFlavorTexts(speciesTexts, form.flavor_text_entries);
+		} catch {
+			return speciesTexts;
+		}
 	}
 
 	private async getOrFetchEvolutionChain(url: string): Promise<RawEvolutionChain> {
@@ -440,7 +481,7 @@ export class PokedexRepository {
 		normalize: (source: VarietyFormSource, images: ImageBundle) => T,
 	): Promise<T> {
 		const source = await this.getOrFetchVarietyFormSource(varietyKey, memCache, cachePathFor(varietyKey));
-		const images = await this.fetchImages(varietyKey, source.sprites, ALL_IMAGE_SUFFIXES);
+		const images = await this.fetchImages(varietyKey, source.sprites, ["sprite", ...largeImageSuffixes(this.portraitRender)]);
 		return normalize(source, images);
 	}
 
@@ -467,6 +508,12 @@ export class PokedexRepository {
 	// as ability/item descriptions above. `varietyKey` (e.g.
 	// "charizard-mega-x") is a PokeAPI pokemon name, never a numeric id, so it
 	// can't collide with the `pokemon/{id}.json` cache getOrFetchPokemon uses.
+	// Set from spriteStyle at load and on every settings save. A detail already
+	// open asks again (DetailLoadState.reloadImages) to get the new render.
+	setPortraitRender(render: PortraitRender): void {
+		this.portraitRender = render;
+	}
+
 	async getMegaForm(varietyKey: string): Promise<MegaFormDetail> {
 		return this.fetchVarietyForm(varietyKey, this.megaFormMemCache, megaFormPath, toMegaFormDetail);
 	}
@@ -494,9 +541,11 @@ export class PokedexRepository {
 	}
 
 	// Whether opening this id's detail screen would still hit the network —
-	// i.e. whether getEntryExtras(id) (official artwork, shiny, shiny artwork,
-	// evolution chain) has already landed on disk, not just the table-row
-	// core. Checked via the artwork file specifically as a proxy for "extras
+	// i.e. whether getEntryExtras(id) (the chosen render's large image and its
+	// shiny, the shiny sprite, evolution chain) has already landed on disk,
+	// not just the table-row core. A style switch to the other render reads as
+	// uncached until that render is stored. Checked via the large image as a
+	// proxy for "extras
 	// were fetched at least once" (shiny/shinyArtwork/evolutionChain always
 	// land in that same getEntryExtras call, so they arrive together) —
 	// falls back to reading the already-cached pokemon record (never a
@@ -505,10 +554,11 @@ export class PokedexRepository {
 	// official-artwork render at all (rare, but real — nothing to cache
 	// there, so it shouldn't block "fully cached").
 	private async isExtrasCached(id: number): Promise<boolean> {
-		if (this.imageMemCache.has(imagePath(id, "artwork"))) return true;
-		if (await this.cache.exists(imagePath(id, "artwork"))) return true;
+		const [large] = largeImageSuffixes(this.portraitRender);
+		if (this.imageMemCache.has(imagePath(id, large))) return true;
+		if (await this.cache.exists(imagePath(id, large))) return true;
 		const pokemon = await this.getOrFetchPokemon(id);
-		return !pokemon.sprites.other?.["official-artwork"]?.front_default;
+		return !imageRequests(id, pokemon.sprites, [large])[0].url;
 	}
 
 	// Powers the settings page's per-generation cache status (e.g. "142/151
@@ -584,6 +634,8 @@ export class PokedexRepository {
 				// before removing it out from under itself.
 				const cachedVariant = await this.cache.readJson<StoredPokemon>(pokemonPath(form.key));
 				await this.evictPokemonAssets(this.pokemonVariantMemCache, form.key);
+				this.formFlavorTextMemCache.delete(form.key);
+				await this.cache.remove(pokemonFormPath(form.key));
 				if (cachedVariant) {
 					await this.evictPokemonAssets(this.pokemonMemCache, cachedVariant.id);
 				}
@@ -657,6 +709,7 @@ export class PokedexRepository {
 		this.pokemonMemCache.clear();
 		this.pokemonVariantMemCache.clear();
 		this.speciesMemCache.clear();
+		this.formFlavorTextMemCache.clear();
 		this.evolutionChainMemCache.clear();
 		this.imageMemCache.clear();
 		this.abilityDescriptionMemCache.clear();
@@ -871,7 +924,8 @@ export class PokedexRepository {
 		const pokemon = await this.getOrFetchPokemon(id);
 		const species = await this.getOrFetchSpecies(this.speciesIdFromPokemon(pokemon));
 		const sprite = await this.getOrFetchImage(pokemon.sprites.front_default, id, "sprite");
-		return toEntry(pokemon, species, null, { sprite, artwork: null, shiny: null, shinyArtwork: null });
+		const entry = toEntry(pokemon, species, null, { sprite, artwork: null, shiny: null, shinyArtwork: null });
+		return { ...entry, flavorTexts: await this.flavorTextsFor(pokemon, species, entry.flavorTexts) };
 	}
 
 	async getEntryExtras(
@@ -893,12 +947,11 @@ export class PokedexRepository {
 				// From the species' own variety list (usually cached by table
 				// load), so a cosmetic form name ("vivillon-polar", no pokemon of
 				// its own) is a miss rather than a 404 fetch.
-				async (name, dexNumber) => {
-					const variety = (await this.getOrFetchSpecies(dexNumber)).varieties.find(
-						(v) => v.pokemon.name === name,
-					);
-					return variety ? Number(/\/(\d+)\/?$/.exec(variety.pokemon.url)?.[1]) || null : null;
-				},
+				async (dexNumber) =>
+					(await this.getOrFetchSpecies(dexNumber)).varieties.map((v) => ({
+						name: v.pokemon.name,
+						id: Number(/\/(\d+)\/?$/.exec(v.pokemon.url)?.[1]),
+					})),
 			);
 		} catch {
 			evolutionChain = null; // non-fatal: detail view still renders without it
@@ -907,7 +960,7 @@ export class PokedexRepository {
 		// Each image fetch is caught independently — a dropped connection on
 		// just the shiny sprite, say, shouldn't take the artwork (or the rest
 		// of the already-rendered core view) down with it.
-		const images = await this.fetchImages(id, pokemon.sprites, ["artwork", "shiny", "shiny-artwork"]);
+		const images = await this.fetchImages(id, pokemon.sprites, largeImageSuffixes(this.portraitRender));
 		const { artwork: artworkDataUri, shiny: shinyDataUri, shinyArtwork: shinyArtworkDataUri } = images;
 
 		return { artworkDataUri, shinyDataUri, shinyArtworkDataUri, evolutionChain };
@@ -922,13 +975,14 @@ export class PokedexRepository {
 	private async prefetchEntryExtras(id: number): Promise<void> {
 		const pokemon = await this.getOrFetchPokemon(id);
 		const species = await this.getOrFetchSpecies(this.speciesIdFromPokemon(pokemon));
+		await this.flavorTextsFor(pokemon, species, {});
 		try {
 			await this.getOrFetchEvolutionChain(species.evolution_chain.url);
 		} catch {
 			// same as getEntryExtras: a missing chain doesn't block the images
 		}
 		await Promise.all(
-			imageRequests(id, pokemon.sprites, ["artwork", "shiny", "shiny-artwork"]).map(({ url, relPath }) =>
+			imageRequests(id, pokemon.sprites, largeImageSuffixes(this.portraitRender)).map(({ url, relPath }) =>
 				this.storeImage(url, relPath).catch(() => undefined),
 			),
 		);

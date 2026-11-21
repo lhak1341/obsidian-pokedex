@@ -50,6 +50,20 @@ export class DetailLoadState {
 		this.cancelled = true;
 	}
 
+	// A spriteStyle switch to the other large render (repository.setPortraitRender
+	// already applied): asks for the open entry's images again. The images
+	// shown stay until the new ones land, and a load() of another entry since
+	// (a newer generation) drops the answer.
+	async reloadImages(onUpdate?: () => void): Promise<void> {
+		const entry = this.entry;
+		if (!entry) return;
+		const gen = this.generation;
+		const { artworkDataUri, shinyDataUri, shinyArtworkDataUri } = await this.repository.getEntryExtras(entry.id);
+		if (this.cancelled || gen !== this.generation || this.entry === null) return;
+		this.entry = { ...this.entry, artworkDataUri, shinyDataUri, shinyArtworkDataUri };
+		onUpdate?.();
+	}
+
 	// Wholesale-refresh shape (unlike PokedexLoadState, which is
 	// payload-carrying/row-streaming instead) — a Svelte caller re-assigns
 	// its own $state object from this after every onUpdate, since $state

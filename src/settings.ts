@@ -173,6 +173,7 @@ export class PokedexSettingTab extends PluginSettingTab {
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOption("official-artwork", "Official artwork")
+					.addOption("home", "3D model render")
 					.addOption("sprite", "In-game sprite")
 					.setValue(this.plugin.settings.spriteStyle)
 					.onChange(async (value) => {

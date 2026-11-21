@@ -54,6 +54,7 @@ them before publishing — a tag can be pushed from a commit CI never saw. Nothi
   `BASELINE` in `scripts/lint-ratchet.mjs` fails too, and the number never drifts into a
   ceiling nobody re-checks. Obsidian runtime/UI rules are scoped away from `*.test.ts` in
   `eslint.config.mjs` rather than absorbed into that count.
+- A new UI string with a brand acronym ("HOME") adds a sentence-case warning, which alone fails the ratchet; reword rather than raise `BASELINE`.
 - `manifest.json` and `versions.json` are checked against each other (and against the tag,
   in `release.yml`) by `bun run verify:release`. Obsidian's catalog reads `versions.json` to
   decide which app versions may install a release, and no build step looks at it. The tag

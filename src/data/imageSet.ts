@@ -25,7 +25,32 @@ const IMAGE_SET: Record<ImageSuffix, { field: keyof ImageBundle; url: (s: ImageS
 	artwork: { field: "artwork", url: (s) => s.other?.["official-artwork"]?.front_default ?? null },
 	shiny: { field: "shiny", url: (s) => s.front_shiny },
 	"shiny-artwork": { field: "shinyArtwork", url: (s) => s.other?.["official-artwork"]?.front_shiny ?? null },
+	// HOME renders fill the same large-portrait slot as artwork, under their
+	// own cache paths, so switching style never serves the other render. A
+	// form without one falls back to its artwork.
+	home: {
+		field: "artwork",
+		url: (s) => s.other?.home?.front_default ?? s.other?.["official-artwork"]?.front_default ?? null,
+	},
+	"shiny-home": {
+		field: "shinyArtwork",
+		url: (s) => s.other?.home?.front_shiny ?? s.other?.["official-artwork"]?.front_shiny ?? null,
+	},
 };
+
+// Which large render the portrait shows: PluginSettings.spriteStyle minus
+// "sprite", which shows the sprite and reads artwork for nothing else.
+export type PortraitRender = "official-artwork" | "home";
+
+export function portraitRenderFor(style: "official-artwork" | "home" | "sprite"): PortraitRender {
+	return style === "home" ? "home" : "official-artwork";
+}
+
+// The images a detail screen loads past its sprite, for the chosen render.
+// Only these are fetched or offline-cached, never both renders.
+export function largeImageSuffixes(render: PortraitRender): ImageSuffix[] {
+	return render === "home" ? ["home", "shiny", "shiny-home"] : ["artwork", "shiny", "shiny-artwork"];
+}
 
 export const ALL_IMAGE_SUFFIXES = Object.keys(IMAGE_SET) as ImageSuffix[];
 

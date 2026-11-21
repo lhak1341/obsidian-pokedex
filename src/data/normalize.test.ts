@@ -11,13 +11,13 @@ import {
 	evolutionFamilyDepth,
 	evolutionReachByForm,
 	extractFlavorTexts,
-	hasPokeApiMoves,
 	inferAncestorFormSuffix,
 	nextEvolutionLevels,
 	normalizeEvolutionChain,
 	evolutionChainPredatesDefaults,
 	normalizeEvolutionChainForViewed,
 	resolveEvolutionVarietyIds,
+	type SpeciesVariety,
 	normalizeEvYield,
 	normalizeHeldItemDetails,
 	normalizeMoveDetail,
@@ -26,6 +26,8 @@ import {
 	resolveRegionalFormSuffix,
 	sortBySlot,
 	toEntry,
+	storedMovesAreStale,
+	withFormFlavorTexts,
 	toStoredPokemon,
 	toTableRow,
 } from "./normalize";
@@ -181,13 +183,31 @@ describe("toStoredPokemon", () => {
 
 	it("leaves every field but moves as PokeAPI sent it", () => {
 		const { moves: _rawMoves, ...rawRest } = rawPokemon;
-		const { moves: _storedMoves, ...storedRest } = toStoredPokemon(rawPokemon);
+		const { moves: _storedMoves, moveVersionGroups: _kept, ...storedRest } = toStoredPokemon(rawPokemon);
 		expect(storedRest).toEqual(rawRest);
 	});
 
-	it("is what hasPokeApiMoves tells apart from PokeAPI's move shape", () => {
-		expect(hasPokeApiMoves(rawPokemon)).toBe(true);
-		expect(hasPokeApiMoves(toStoredPokemon(rawPokemon))).toBe(false);
+	it("records the version groups it kept, which storedMovesAreStale checks against", () => {
+		const stored = toStoredPokemon(rawPokemon, groups);
+		expect(stored.moveVersionGroups).toEqual(groups);
+		expect(storedMovesAreStale(stored, groups)).toBe(false);
+		expect(storedMovesAreStale(stored, [...groups, "legends-za"])).toBe(true);
+		expect(storedMovesAreStale(toStoredPokemon(rawPokemon))).toBe(false);
+	});
+
+	it("leaves a record without the marker stale (PokeAPI's move shape, or written before it)", () => {
+		const { moveVersionGroups: _kept, ...unmarked } = toStoredPokemon(rawPokemon);
+		expect(storedMovesAreStale(unmarked)).toBe(true);
+		expect(storedMovesAreStale(rawPokemon)).toBe(true);
+	});
+});
+
+describe("withFormFlavorTexts", () => {
+	it("lets a form's own entry win per tab and keeps the species' text for the rest", () => {
+		const merged = withFormFlavorTexts({ firered: "Species FireRed.", "sun-moon": "Species Sun." }, [
+			{ flavor_text: "Form\fSun.", language: { name: "en", url: "" }, version: { name: "sun", url: "" } },
+		]);
+		expect(merged).toEqual({ firered: "Species FireRed.", "sun-moon": "Form Sun." });
 	});
 });
 
@@ -656,8 +676,11 @@ describe("normalizeEvolutionChain", () => {
 				},
 			],
 		};
-		const varietyIds: Record<string, number> = { "rattata-alola": 10091, "raticate-alola": 10092 };
-		const idOf = (name: string) => Promise.resolve(varietyIds[name]);
+		const varieties: Record<number, SpeciesVariety[]> = {
+			19: [{ name: "rattata", id: 19 }, { name: "rattata-alola", id: 10091 }],
+			20: [{ name: "raticate", id: 20 }, { name: "raticate-alola", id: 10092 }],
+		};
+		const idOf = (dexNumber: number) => Promise.resolve(varieties[dexNumber] ?? []);
 
 		it("never reads a pokemon id off a /pokemon-form/ URL (Alolan Raticate's ancestor)", async () => {
 			const node = normalizeEvolutionChainForViewed(rattataChain, {
@@ -738,10 +761,10 @@ describe("collectChainIds", () => {
 			needsOverworldRain: false,
 			turnUpsideDown: false,
 			region: null,
-			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false,
+			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, allowedNatures: [], chancePercent: null,
 			children: [
-				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, children: [] },
-				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, children: [] },
+				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, allowedNatures: [], chancePercent: null, children: [] },
+				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: null, trigger: null, item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, allowedNatures: [], chancePercent: null, children: [] },
 			],
 		};
 		expect(collectChainIds(forked)).toEqual([1, 2, 3]);
@@ -788,8 +811,8 @@ describe("nextEvolutionLevels", () => {
 			needsOverworldRain: false,
 			turnUpsideDown: false,
 			region: null,
-			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false,
-			children: [{ id: 2, dexNumber: 2, formLabel: null, name: "evolved", minLevel: null, trigger: "trade", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, children: [] }],
+			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, allowedNatures: [], chancePercent: null,
+			children: [{ id: 2, dexNumber: 2, formLabel: null, name: "evolved", minLevel: null, trigger: "trade", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, allowedNatures: [], chancePercent: null, children: [] }],
 		};
 		expect(nextEvolutionLevels(itemEvolution, 1)).toEqual([]);
 	});
@@ -816,11 +839,11 @@ describe("nextEvolutionLevels", () => {
 			needsOverworldRain: false,
 			turnUpsideDown: false,
 			region: null,
-			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false,
+			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, allowedNatures: [], chancePercent: null,
 			children: [
-				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, children: [] },
-				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: 10, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, children: [] },
-				{ id: 4, dexNumber: 4, formLabel: null, name: "branch-c", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, children: [] },
+				{ id: 2, dexNumber: 2, formLabel: null, name: "branch-a", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, allowedNatures: [], chancePercent: null, children: [] },
+				{ id: 3, dexNumber: 3, formLabel: null, name: "branch-b", minLevel: 10, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, allowedNatures: [], chancePercent: null, children: [] },
+				{ id: 4, dexNumber: 4, formLabel: null, name: "branch-c", minLevel: 20, trigger: "level-up", item: null, minHappiness: null, timeOfDay: null, heldItem: null, minBeauty: null, relativePhysicalStats: null, location: null, knownMove: null, partySpecies: null, gender: null, tradeSpecies: null, needsOverworldRain: false, turnUpsideDown: false, region: null, minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, allowedNatures: [], chancePercent: null, children: [] },
 			],
 		};
 		expect(nextEvolutionLevels(forked, 1)).toEqual([10, 20]);
@@ -850,7 +873,7 @@ describe("describeEvolutionRequirement", () => {
 			needsOverworldRain: false,
 			turnUpsideDown: false,
 			region: null,
-			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false,
+			minDamageTaken: null, usedMove: null, minMoveCount: null, minSteps: null, knownMoveType: null, minAffection: null, partyType: null, needsMultiplayer: false, allowedNatures: [], chancePercent: null,
 			children: [],
 			...overrides,
 		};
@@ -1023,10 +1046,8 @@ describe("toTableRow", () => {
 	});
 
 	it("derives canMegaEvolve/canGigantamax from species.varieties", () => {
-		// "venusaur", not the bulbasaur fixture's own name — canMegaEvolve is
-		// checked against the curated real-Mega allowlist (see
-		// MEGA_VARIETY_KEYS), and Bulbasaur itself never Mega Evolves in any
-		// game, only its final evolution does.
+		// "venusaur", not the bulbasaur fixture's own name: a Mega variety is
+		// matched against the viewed pokemon's own name (deriveMegaForms).
 		const megaGmaxSpecies: RawSpecies = {
 			...species,
 			name: "venusaur",
@@ -1242,7 +1263,7 @@ describe("normalizeMoveDetail", () => {
 			type: { name: "normal", url: "" },
 			flavor_text_entries: [
 				{ flavor_text: "Attaque physique.", language: { name: "fr", url: "" }, version_group: { name: "firered-leafgreen", url: "" } },
-				{ flavor_text: "A physical attack.", language: { name: "en", url: "" }, version_group: { name: "legends-za", url: "" } },
+				{ flavor_text: "A physical attack.", language: { name: "en", url: "" }, version_group: { name: "brilliant-diamond-shining-pearl", url: "" } },
 			],
 		};
 		expect(normalizeMoveDetail(raw).description).toBeNull();
@@ -1280,13 +1301,40 @@ describe("deriveMegaForms", () => {
 		]);
 	});
 
-	// PokeAPI hosts non-canon/fan "-mega" varieties alongside the 48 real
-	// Gen 6-7 ones (verified live: "raichu-mega-x" is a real, resolvable
-	// PokeAPI resource, but Raichu never had an official Mega Evolution in
-	// any game) — a naming-pattern-only match would wrongly surface these.
-	it("excludes a naming-pattern match that isn't a real, curated Mega Evolution", () => {
-		const species = speciesWithVarieties("raichu", ["raichu-alola", "raichu-mega-x", "raichu-mega-y"]);
-		expect(deriveMegaForms(pokemonNamed("raichu"), species)).toEqual([]);
+	// Legends: Z-A's Megas (2025-26): once on PokeAPI ahead of the games and
+	// filtered out as non-canon, now shipped (is_mega on every one, verified
+	// live 2026-11-21). Z is the third letter Z-A added (Absol, Garchomp,
+	// Lucario).
+	it("offers Legends: Z-A's Megas, labelling X/Y and Z", () => {
+		const raichu = speciesWithVarieties("raichu", ["raichu-alola", "raichu-mega-x", "raichu-mega-y"]);
+		expect(deriveMegaForms(pokemonNamed("raichu"), raichu)).toEqual([
+			{ key: "raichu-mega-x", label: "Mega X" },
+			{ key: "raichu-mega-y", label: "Mega Y" },
+		]);
+		const absol = speciesWithVarieties("absol", ["absol-mega", "absol-mega-z"]);
+		expect(deriveMegaForms(pokemonNamed("absol"), absol)).toEqual([
+			{ key: "absol-mega", label: "Mega" },
+			{ key: "absol-mega-z", label: "Mega Z" },
+		]);
+	});
+
+	// Meowstic-shaped: the species' default variety is not named after the
+	// species ("meowstic-male"), and each variety has its own Mega. A row
+	// offers only its own, as Toxtricity's Gigantamax forms do.
+	it("matches a Mega to the viewed variety when the default is not named after the species", () => {
+		const meowstic = {
+			name: "meowstic",
+			varieties: ["meowstic-male", "meowstic-female", "meowstic-male-mega", "meowstic-female-mega"].map((n, i) => ({
+				is_default: i === 0,
+				pokemon: { name: n, url: "" },
+			})),
+		} as unknown as RawSpecies;
+		expect(deriveMegaForms(pokemonNamed("meowstic-male"), meowstic)).toEqual([{ key: "meowstic-male-mega", label: "Mega" }]);
+	});
+
+	it("ignores a variety that only starts like a Mega name", () => {
+		const species = speciesWithVarieties("gengar", ["gengar-megaphone", "gengar-mega-q"]);
+		expect(deriveMegaForms(pokemonNamed("gengar"), species)).toEqual([]);
 	});
 
 	// Slowbro-shaped (real bug, caught live): Slowbro and Galarian Slowbro
@@ -1585,15 +1633,25 @@ describe("sortBySlot", () => {
 describe("live evolution chains (2026-11)", () => {
 	const raw = liveChains as unknown as Record<string, RawEvolutionChain>;
 	const chainOf = (root: string) => canonicalizeEvolutionChain(raw[root]).chain;
-	// Stub for the repository's species-varieties lookup: real pokemon ids for
-	// varieties that are pokemon, null for cosmetic forms.
-	const varietyIds: Record<string, number> = {
-		"lycanroc-midnight": 10126, "lycanroc-dusk": 10152, "wormadam-sandy": 10004, "wormadam-trash": 10005,
-		"gourgeist-small": 10030, "gourgeist-large": 10031, "gourgeist-super": 10032, "meowstic-female": 10025,
-		"basculegion-female": 10248, "urshifu-rapid-strike": 10191, "toxtricity-low-key": 10184,
-		"raichu-alola": 10100, "exeggutor-alola": 10114, "mr-mime-galar": 10168,
+	// Stub for the repository's species-varieties lookup (live 2026-11-21,
+	// Megas and Gigantamax left out): only species with more than one
+	// pokemon; a cosmetic form ("vivillon-polar") is in no list.
+	const speciesVarieties: Record<number, [string, number][]> = {
+		26: [["raichu", 26], ["raichu-alola", 10100]],
+		103: [["exeggutor", 103], ["exeggutor-alola", 10114]],
+		122: [["mr-mime", 122], ["mr-mime-galar", 10168]],
+		413: [["wormadam-plant", 413], ["wormadam-sandy", 10004], ["wormadam-trash", 10005]],
+		678: [["meowstic-male", 678], ["meowstic-female", 10025]],
+		711: [["gourgeist-average", 711], ["gourgeist-small", 10030], ["gourgeist-large", 10031], ["gourgeist-super", 10032]],
+		745: [["lycanroc-midday", 745], ["lycanroc-midnight", 10126], ["lycanroc-dusk", 10152]],
+		849: [["toxtricity-amped", 849], ["toxtricity-low-key", 10184]],
+		892: [["urshifu-single-strike", 892], ["urshifu-rapid-strike", 10191]],
+		902: [["basculegion-male", 902], ["basculegion-female", 10248]],
+		925: [["maushold-family-of-four", 925], ["maushold-family-of-three", 10257]],
+		982: [["dudunsparce-two-segment", 982], ["dudunsparce-three-segment", 10255]],
 	};
-	const idOf = (name: string) => Promise.resolve(varietyIds[name] ?? null);
+	const idOf = (dexNumber: number) =>
+		Promise.resolve((speciesVarieties[dexNumber] ?? []).map(([name, id]): SpeciesVariety => ({ name, id })));
 	const resolvedDefault = (root: string) => resolveEvolutionVarietyIds(normalizeEvolutionChain(chainOf(root)), idOf);
 	const edges = (node: EvolutionNode, out: string[] = []): string[] => {
 		for (const c of node.children) {
@@ -1640,6 +1698,65 @@ describe("live evolution chains (2026-11)", () => {
 			"rockruff>lycanroc#10152: Lv. 25 (Dusk)",
 		]);
 		expect(collectChainIds(await resolvedDefault("espurr"))).toEqual([677, 678, 10025]);
+	});
+
+	it("labels sibling cards of one species by their variety, and nothing else", async () => {
+		const labels = async (root: string) => {
+			const out: string[] = [];
+			const walk = (n: EvolutionNode) => {
+				for (const c of n.children) {
+					out.push(`${c.formLabel ?? "-"} ${c.name}`);
+					walk(c);
+				}
+			};
+			walk(await resolvedDefault(root));
+			return out;
+		};
+		expect(await labels("rockruff")).toEqual(["midday lycanroc", "midnight lycanroc", "dusk lycanroc"]);
+		expect(await labels("burmy")).toEqual(["plant wormadam", "sandy wormadam", "trash wormadam", "- mothim"]);
+		expect(await labels("toxel")).toEqual(["amped toxtricity", "low key toxtricity"]);
+		expect(await labels("espurr")).toEqual(["male meowstic", "female meowstic"]);
+		expect(await labels("kubfu")).toEqual(["single strike urshifu", "rapid strike urshifu"]);
+		expect(await labels("pumpkaboo")).toEqual(["average gourgeist", "small gourgeist", "large gourgeist", "super gourgeist"]);
+		// A lone card, a regional sibling, and merged cosmetic forms stay unlabelled.
+		expect(await labels("pichu")).toEqual(["- pikachu", "- raichu", "Alolan raichu"]);
+		expect(await labels("scatterbug")).toEqual(["- spewpa", "- vivillon"]);
+		expect(await labels("cyndaquil")).toEqual(["- quilava", "- typhlosion"]);
+	});
+
+	// No chain in the fixture has a lone card whose default variety carries a
+	// suffix; Darmanitan's is "darmanitan-standard" (live 2026-11-21).
+	it("labels a nature split by its side and a hidden roll by its chance", async () => {
+		expect(edges(await resolvedDefault("toxel"))).toEqual([
+			"toxel>toxtricity#849: Lv. 30 (Amped nature)",
+			"toxel>toxtricity#10184: Lv. 30 (Low Key nature)",
+		]);
+		expect(edges(await resolvedDefault("wurmple"))).toEqual([
+			"wurmple>silcoon#266: Lv. 7 (50% chance)",
+			"silcoon>beautifly#267: Lv. 10",
+			"wurmple>cascoon#268: Lv. 7 (50% chance)",
+			"cascoon>dustox#269: Lv. 10",
+		]);
+		expect(edges(await resolvedDefault("tandemaus"))).toEqual([
+			"tandemaus>maushold#925: Lv. 25 (99% chance)",
+			"tandemaus>maushold#10257: Lv. 25 (1% chance)",
+		]);
+		expect(edges(await resolvedDefault("dunsparce"))).toEqual([
+			"dunsparce>dudunsparce#982: Knows hyper drill (99% chance)",
+			"dunsparce>dudunsparce#10255: Knows hyper drill (1% chance)",
+		]);
+		// Alcremie's spins carry no chance, and merge into one card anyway.
+		const alcremie = edges(await resolvedDefault("milcery"));
+		expect(alcremie).toHaveLength(1);
+		expect(alcremie[0]).not.toMatch(/chance/);
+	});
+
+	it("leaves a lone card unlabelled even when its default variety has a suffix", async () => {
+		const darmanitan = { ...normalizeEvolutionChain(chainOf("cyndaquil")).children[0], id: 555, dexNumber: 555, name: "darmanitan", children: [] };
+		const darumaka = { ...darmanitan, id: 554, dexNumber: 554, name: "darumaka", children: [darmanitan] };
+		const varieties = (dexNumber: number) =>
+			Promise.resolve(dexNumber === 555 ? [{ name: "darmanitan-standard", id: 555 }, { name: "darmanitan-zen", id: 10017 }] : []);
+		expect((await resolveEvolutionVarietyIds(darumaka, varieties)).children[0].formLabel).toBeNull();
 	});
 
 	it("merges cosmetic outcomes into one card per pokemon (Vivillon, Alcremie)", async () => {
