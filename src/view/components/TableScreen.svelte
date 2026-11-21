@@ -183,9 +183,13 @@
 </script>
 
 <!-- A name with a favourite's dot just past its end (#35): placed absolutely,
-so the dot never widens Name or moves the name. -->
+so the dot never widens Name or moves the name. Every row draws the dot and a
+favourite only shows it: adding or removing it lays the whole table-layout:
+auto table out again (86-406 ms at 4x, narrow), a visibility change does not
+(ADR-0017). visibility: hidden also keeps its "Favorite" label out of the
+accessibility tree. -->
 {#snippet markedName(name: string, favorite: boolean)}
-	<span class="marked-name">{name}{#if favorite}<span class="name-dot"><FavoriteMark /></span>{/if}</span>
+	<span class="marked-name">{name}<span class="name-dot" class:shown={favorite}><FavoriteMark /></span></span>
 {/snippet}
 
 <!-- The Fields menu and the layout toggle: in this screen's own toolbar on a
@@ -637,6 +641,10 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 		position: absolute;
 		top: 0.125em;
 		left: calc(100% + 1px);
+		visibility: hidden;
+	}
+	.name-dot.shown {
+		visibility: visible;
 	}
 	/* inline-block so the target's dotted underline doesn't run under the
 	comma (decorations don't propagate into an atomic inline); pre keeps

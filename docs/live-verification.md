@@ -51,8 +51,10 @@ time out (clear `.notice` before checking one shows); `dev:mobile` is global, tu
   (`.held-item-name` in `TableScreen.svelte` and `HeldItemsPanel.svelte`, `.info-popover-box`) matches the hidden
   screen's element unless the selector is scoped to `.table-screen`/`.detail-screen` first, and state held outside a
   screen outlives it (a pin on the hidden table suppressed every hover preview until `infoPopover.svelte.ts` began
-  dropping a pin whose target has no client rects). If the leaf is on the detail screen the table measures 0px, so
-  click `.detail-screen .back-button` first.
+  dropping a pin whose target has no client rects). If the leaf is on the detail screen (a window reload restores it),
+  the table is `display: none`: it measures 0px and every timed action skips style/layout (a favourite toggle read
+  22 ms against a real 153 ms). Click `.detail-screen .back-button` and check `hidden-screen` is gone in the same eval
+  as the probe.
 - Names are capitalized by CSS `text-transform`: `.textContent` is the raw lowercase value (`"ivysaur"`), so match
   lowercase. Open a detail page by clicking the row's `.name-cell`. Toggle `aria-label`s flip with state ("Show shiny
   sprite" / "Show normal sprite", "Show Mega X form" / "Show base Mega X form"), so find a button by its current label
@@ -121,6 +123,8 @@ time out (clear `.notice` before checking one shows); `dev:mobile` is global, tu
   `PerformanceObserver({type:'long-animation-frame'})` (`scripts[].duration` vs `styleAndLayoutStart`): that found
   ADR-0016's per-tile cost, half script, half style/layout. Let a reload's background sprite decode settle first
   (inferred: a run a minute after one doubled a sort's time).
+- A speed-up credited to a mechanism is proved by observing the mechanism, not frame times: `content-visibility` on Card tiles "passed" a worst-frame A/B while `contentvisibilityautostatechange` showed 0 of 144 skips (ADR-0016). At 4× a sort or clear varies 2–3× between passes, so alternate builds (A B A B, three or more each), and remember `long-animation-frame` lists only frames of 50 ms or more: "script 0" means a short frame, so record the total too.
+- Price a rendering choice before coding it by applying it to the DOM directly, with no Svelte: it is the lower bound of the Svelte version (ADR-0017's dot insert vs `visibility`; ADR-0016's un-hiding of filtered rows still took 1.1 s, which ruled that candidate out).
 - A windowed list (the Card window) is proved by its invariants, not by eye: at many offsets, a tile still drawn after
   a scroll moved by exactly the scroll delta (no jump), and the list's total height stays constant over a full walk. A
   hit-test for empty viewport (`elementFromPoint`) lands in the grid's column and row gaps, so sample inside a column

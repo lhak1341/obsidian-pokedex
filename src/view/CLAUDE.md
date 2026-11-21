@@ -101,6 +101,7 @@ layout that frames an image tightly must size and centre it by its alpha bbox, n
   `overflow: hidden` alone does not (the Info popover target cells clip their tap area with
   it; column widths measured identical). Working pattern: `TableScreen.svelte`'s column widths.
   A second line inside a cell can still ellipsize: `display: block; width: 0; min-width: 100%` keeps it out of the cell's min-content (the narrow table's `.form-line`).
+- Adding or removing an element in any cell (an `{#if}` marker) lays out the whole auto table again: 65–90 ms at 4× in the narrow table for one 5px dot. Draw per-row markers on every row and show them by class with `visibility` (`opacity` measured no better than inserting): `TableScreen`'s `markedName`, ADR-0017.
 - `tr:nth-child(odd)` striping breaks once a row can be conditionally inserted (a divider
   shifts parity for everything after it). Track alternation with an explicit index computed
   over real data rows only, applied as a class.
