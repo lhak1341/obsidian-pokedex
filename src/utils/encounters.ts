@@ -56,8 +56,10 @@ function expandFusedCompassBikeWord(words: string[]): string[] {
 	return out;
 }
 
+// A run of hyphens is one break: PokeAPI's "verdant-cavern--trial-site-area"
+// would otherwise leave an empty word, which capitalizeLocationWord can't read.
 function formatLocationWords(text: string): string {
-	return expandFusedCompassBikeWord(text.split("-")).map(capitalizeLocationWord).join(" ");
+	return expandFusedCompassBikeWord(text.split(/-+/)).map(capitalizeLocationWord).join(" ");
 }
 
 // PokeAPI location-area names carry a redundant "-area" suffix ("route-1-

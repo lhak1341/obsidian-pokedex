@@ -1,6 +1,6 @@
 # Card view draws a window; the table still draws every row
 
-Supersedes ADR-0014's Card view decision. Its table decision stands.
+Supersedes ADR-0014's Card view decision. Its table decision, restated below, is superseded in turn by ADR-0019.
 
 ADR-0014 timed only the cold open. After it, a phone was still laggy at 1,082 rows, and decent with a subset (favourites). A second performance review (2026-11-21) timed what happens after the load, in `pokedex-test-vault` with the CPU throttled 4× over CDP (`Emulation.setCPUThrottlingRate`, a stand-in for a phone, not a measurement of one) and a 390px leaf. Each action that redraws or reorders the list cost about per drawn row, roughly half script and half style/layout (split from `long-animation-frame` entries):
 

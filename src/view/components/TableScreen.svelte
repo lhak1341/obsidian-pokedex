@@ -8,6 +8,7 @@
 	import { nextSort, sortPokemon, type SortColumn, type SortState } from "../../utils/sortPokemon";
 	import { FIELDS, formatEvYield, isStatField, sortAfterFieldsChange, unhandledCustomCell } from "../../utils/fields";
 	import { TABLE_COLUMNS, columnWidth, tableFrame } from "../../utils/tableColumns";
+	import { tableEntries, tableWindow, widestRows } from "../../utils/tableWindow";
 	import { onDestroy, untrack } from "svelte";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
 	import { createInfoDescription } from "../infoDescription.svelte";
@@ -161,6 +162,182 @@
 	// a cell's intrinsic min-content width down to ~1 char, which defeats
 	// auto layout's real safety net: never shrinking below actual content.
 	const frame = $derived(tableFrame({ narrow, density, useTypeIcons }));
+	const columnCount = $derived(4 + activeColumns.length);
+
+	// The Table window (CONTEXT.md, utils/tableWindow.ts, ADR-0019): only the
+	// rows near the viewport are drawn, plus each content-sized column's widest
+	// rows, so the auto table sizes its columns as it would from every row.
+	// Spacer rows stand in for the rest. As Card view's window, its inputs are
+	// read from the scroller (.pokedex-view) and from drawn rows, and frozen
+	// while the detail screen hides the table (every read is 0 then), so
+	// back-to-list's restored scroll offset finds the same rows drawn.
+	let tableEl = $state<HTMLTableElement | undefined>();
+	let bodyEl = $state<HTMLTableSectionElement | undefined>();
+	let scrollTop = $state(0);
+	let viewportHeight = $state(0);
+	// Every row is one height (the sprite's; no cell wraps, so EV chips stay
+	// on one line). Measured from two adjacent drawn rows; the estimate
+	// serves only a fresh mount's first draw.
+	const ESTIMATED_ROW_HEIGHT = 45;
+	let measuredRowHeight = $state<number | null>(null);
+	const rowHeight = $derived(measuredRowHeight ?? ESTIMATED_ROW_HEIGHT);
+	// What the first and last rows add to that: under border-collapse, row 0
+	// holds half of the header's 2px border (45.5px) and the last row has no
+	// border below it (44.5px). The spacer that replaces either adds the same,
+	// or every row moves half a pixel as row 0 leaves the window, and the
+	// list's height changes as the last row enters it.
+	let leadExtra = $state(0);
+	let tailExtra = $state(0);
+
+	// Each content-sized column's text width per row, for widestRows' ranking
+	// only. Cached per row object (the Active Gen scoping memo keeps it across
+	// streamed updates, sorts and filters) and dropped when the font changes.
+	let measureFont = $state("");
+	const measureCtx = document.createElement("canvas").getContext("2d");
+	let widthCache = new WeakMap<object, Map<string, number>>();
+	let widthCacheFont = "";
+	function textWidth(row: object, key: string, text: () => string): number {
+		if (!measureCtx) return 0;
+		if (widthCacheFont !== measureFont) {
+			widthCache = new WeakMap();
+			widthCacheFont = measureFont;
+			measureCtx.font = measureFont || "14px sans-serif";
+		}
+		let byKey = widthCache.get(row);
+		if (!byKey) widthCache.set(row, (byKey = new Map()));
+		let w = byKey.get(key);
+		if (w === undefined) byKey.set(key, (w = measureCtx.measureText(text()).width));
+		return w;
+	}
+	// No., sprite and the type icons are fixed widths; every other column's
+	// width follows its content. EV ranks by chip count first: each chip adds
+	// its padding and dot, which the text alone leaves out.
+	const widest = $derived.by(() => {
+		void measureFont;
+		const scores: ((row: (typeof visibleRows)[number]) => number)[] = [
+			narrow
+				? (row) => textWidth(row, "name:narrow", () => row.name)
+				: (row) => textWidth(row, "name", () => formatPokemonDisplayName(row)),
+		];
+		if (!frame.typeIcons) scores.push((row) => textWidth(row, "type", () => row.types.join(" ")));
+		for (const col of activeColumns) {
+			if (col.custom === "heldItems") {
+				scores.push((row) => textWidth(row, col.key, () => row.heldItems.map((i) => formatItemName(i.name)).join(", ")));
+			} else if (col.custom === "ev") {
+				scores.push((row) => row.evYield.length * 10_000 + textWidth(row, col.key, () => formatEvYield(row)));
+			} else if (!col.custom) {
+				const render = col.render;
+				scores.push((row) => textWidth(row, col.key, () => render(row)));
+			}
+		}
+		return widestRows(visibleRows, scores);
+	});
+	const win = $derived(tableWindow({ count: visibleRows.length, rowHeight, scrollTop, viewportHeight }));
+	// Primitives, so a scroll that keeps the same slice re-renders nothing.
+	const winStart = $derived(win.start);
+	const winEnd = $derived(win.end);
+	const entries = $derived(
+		tableEntries({ count: visibleRows.length, start: winStart, end: winEnd, extra: widest, rowHeight, leadExtra, tailExtra }),
+	);
+
+	function isShown(el: HTMLElement): boolean {
+		return el.getClientRects().length > 0;
+	}
+
+	// The scroll offset and viewport, relative to the table body's top edge.
+	function readScroll() {
+		const el = bodyEl;
+		const scroller = el?.closest<HTMLElement>(".pokedex-view");
+		if (!el || !scroller || !isShown(el)) return;
+		scrollTop = scroller.getBoundingClientRect().top - el.getBoundingClientRect().top;
+		viewportHeight = scroller.clientHeight;
+	}
+
+	// The row height, from the first two adjacent drawn rows (the distance
+	// between their tops, so the borders they share count once), and the
+	// first and last rows' differences from it (leadExtra above). Not from
+	// row 0: every spacer sized from its 45.5px came out too tall.
+	function measureRows() {
+		const el = bodyEl;
+		if (!el || !isShown(el)) return;
+		if (tableEl) {
+			const font = getComputedStyle(tableEl).font;
+			if (font !== measureFont) measureFont = font;
+		}
+		const rows = el.querySelectorAll<HTMLElement>(":scope > tr[data-index]");
+		const top = (k: number) => rows[k].getBoundingClientRect().top;
+		const indexAt = (k: number) => Number(rows[k].dataset.index);
+		for (let k = 0; k + 1 < rows.length; k++) {
+			const index = indexAt(k);
+			if (index === 0 || indexAt(k + 1) !== index + 1) continue;
+			const h = top(k + 1) - top(k);
+			if (h <= 0) return;
+			if (h !== measuredRowHeight) measuredRowHeight = h;
+			const height = (k: number) => rows[k].getBoundingClientRect().height;
+			if (indexAt(0) === 0) {
+				const extra = height(0) - h;
+				if (extra !== leadExtra) leadExtra = extra;
+			}
+			const last = rows.length - 1;
+			if (indexAt(last) === visibleRows.length - 1 && indexAt(last) !== 0) {
+				const extra = height(last) - h;
+				if (extra !== tailExtra) tailExtra = extra;
+			}
+			return;
+		}
+	}
+
+	// Scroll and viewport, coalesced to a frame. FilterBar above the table
+	// (its inline Filters panel) can move the body without a scroll, so the
+	// screen's own size changes re-read too.
+	$effect(() => {
+		const el = bodyEl;
+		const scroller = el?.closest<HTMLElement>(".pokedex-view");
+		if (!el || !scroller) return;
+		let raf = 0;
+		const schedule = () => {
+			if (raf) return;
+			raf = requestAnimationFrame(() => {
+				raf = 0;
+				readScroll();
+			});
+		};
+		scroller.addEventListener("scroll", schedule, { passive: true });
+		const ro = new ResizeObserver(schedule);
+		ro.observe(scroller);
+		const screen = el.closest(".table-screen");
+		if (screen) ro.observe(screen);
+		readScroll();
+		return () => {
+			scroller.removeEventListener("scroll", schedule);
+			ro.disconnect();
+			cancelAnimationFrame(raf);
+		};
+	});
+
+	// Drawn rows are measured a frame after they change, or after the body
+	// resizes (a font, density or width change), as CardGrid does: a write
+	// from inside the observer would re-lay the table out in the same frame.
+	$effect(() => {
+		const el = bodyEl;
+		void entries;
+		if (!el) return;
+		let raf = 0;
+		const schedule = () => {
+			if (raf) return;
+			raf = requestAnimationFrame(() => {
+				raf = 0;
+				measureRows();
+			});
+		};
+		const ro = new ResizeObserver(schedule);
+		ro.observe(el);
+		schedule();
+		return () => {
+			ro.disconnect();
+			cancelAnimationFrame(raf);
+		};
+	});
 
 	function setSort(column: SortColumn) {
 		sort = nextSort(sort, column);
@@ -286,6 +463,7 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 			is the widths before it, taken from the frame so the CSS never
 			restates them (only read on a Narrow pane, where they are px). -->
 			<table
+				bind:this={tableEl}
 				class:compact={frame.compact}
 				class:narrow
 				style:--pkdx-pin-sprite-left={frame.number.width}
@@ -325,9 +503,22 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 						{/each}
 					</tr>
 				</thead>
-				<tbody>
-					{#each visibleRows as row (row.id)}
-						<tr onclick={() => onSelect(row.id)} {...favoriteMenu.target(row.id)}>
+				<tbody bind:this={bodyEl}>
+					{#each entries as entry (entry.kind === "row" ? visibleRows[entry.index].id : `gap-${entry.key}`)}
+						{#if entry.kind === "gap"}
+							<!-- Undrawn rows (the Table window): one spacer of their exact
+							height, so the scroll offset keeps its meaning. -->
+							<tr class="gap" aria-hidden="true"><td colspan={columnCount} style:height="{entry.height}px"></td></tr>
+						{:else}
+						{@const row = visibleRows[entry.index]}
+						<!-- Striped by list position, not nth-child: spacer rows and
+						the window's start would shift the parity. -->
+						<tr
+							data-index={entry.index}
+							class:stripe={entry.index % 2 === 1}
+							onclick={() => onSelect(row.id)}
+							{...favoriteMenu.target(row.id)}
+						>
 							<td class="pin pin-number">{formatDexNumber(row.dexNumber)}</td>
 							<td
 								class="center sprite-cell pin pin-sprite"
@@ -338,8 +529,12 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 								}}
 								onpointerleave={hidePreview}
 							>
+								<!-- A row without a sprite keeps the sprite's box, so every row
+								is one height (the Table window's spacers count on it). -->
 								{#if row.spriteDataUri}
 									<img src={row.spriteDataUri} alt={formatPokemonDisplayName(row)} class="sprite-thumb" />
+								{:else}
+									<span class="sprite-thumb"></span>
 								{/if}
 							</td>
 							<td class="name-cell pin pin-name">
@@ -381,7 +576,7 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 											{/if}
 										</td>
 									{:else if col.custom === "ev"}
-										<td title={formatEvYield(row)}>
+										<td class="ev-cell" title={formatEvYield(row)}>
 											<EvChips evYield={row.evYield} />
 										</td>
 									{:else}
@@ -392,6 +587,7 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 								{/if}
 							{/each}
 						</tr>
+						{/if}
 					{/each}
 				</tbody>
 			</table>
@@ -618,11 +814,26 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 		-webkit-touch-callout: none;
 		user-select: none;
 	}
-	tbody tr:nth-child(even) {
+	tbody tr.stripe {
 		--pkdx-row-bg: var(--lk-surface-chrome);
 	}
-	tbody tr:hover {
+	tbody tr:not(.gap):hover {
 		--pkdx-row-bg: var(--lk-surface-hover);
+	}
+	tbody tr.gap {
+		cursor: default;
+	}
+	/* A spacer keeps the rows' top border: under border-collapse, the row
+	after a borderless spacer came out 0.5px short, so each spacer moved
+	everything below it up by half a pixel. */
+	tbody tr.gap td {
+		padding: 0;
+	}
+	/* One line of chips: a wrapped EV cell (three chips in the Narrow pane's
+	204px) made its row taller than the rest, and the Table window needs every
+	row one height. The column widens to the chips instead. */
+	td.ev-cell :global(.ev-chips) {
+		flex-wrap: nowrap;
 	}
 	.name-cell {
 		text-transform: capitalize;
@@ -673,6 +884,7 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 		text-transform: capitalize;
 	}
 	.sprite-thumb {
+		display: inline-block;
 		width: 32px;
 		height: 32px;
 		image-rendering: pixelated;

@@ -30,6 +30,11 @@ describe("formatItemName", () => {
 		expect(formatItemName("oran-berry")).toBe("Oran Berry");
 		expect(formatItemName("leftovers")).toBe("Leftovers");
 	});
+
+	it("reads a doubled hyphen as one word break, not an empty word", () => {
+		// PokeAPI slugs can carry one (encounters.ts met "verdant-cavern--trial-site").
+		expect(formatItemName("oran--berry")).toBe("Oran Berry");
+	});
 });
 
 describe("formatPokemonDisplayName", () => {

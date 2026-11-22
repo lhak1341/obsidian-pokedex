@@ -15,8 +15,10 @@ export function formatPokemonDisplayName(row: { name: string; formLabel: string 
 // text-transform gotcha), but a plain-text table cell with no dedicated
 // class is simplest to just format directly rather than adding CSS for one
 // column. Exported so DetailScreen's held-item display matches exactly.
+// A run of hyphens is one break: a PokeAPI slug can double one, and the
+// empty word between them has no letter to capitalize.
 export function formatItemName(name: string): string {
-	return name.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" ");
+	return name.split(/-+/).map((word) => word[0].toUpperCase() + word.slice(1)).join(" ");
 }
 
 // National Dex number as shown everywhere ("007", "1025"): zero-padded to 3

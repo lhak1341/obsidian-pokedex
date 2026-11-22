@@ -24,6 +24,12 @@ describe("formatLocationName", () => {
 		expect(formatLocationName("safari-zone-sw-area")).toBe("Safari Zone SW");
 	});
 
+	it("reads a doubled hyphen as one word break, not an empty word", () => {
+		// PokeAPI's Alola slug; the empty word between the hyphens threw on
+		// word[0] and stopped the whole table rendering at Active Gen 7.
+		expect(formatLocationName("verdant-cavern--trial-site-area")).toBe("Verdant Cavern Trial Site");
+	});
+
 	it("still title-cases an ordinary word", () => {
 		expect(formatLocationName("viridian-forest-area")).toBe("Viridian Forest");
 	});

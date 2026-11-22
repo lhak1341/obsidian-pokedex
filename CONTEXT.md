@@ -106,7 +106,11 @@ The browse screen showing each Pokemon as a card instead of a table row. Same ro
 
 ## Card window
 
-The tiles Card view actually draws: the ones in the viewport plus one viewport above and below, in whole grid rows. The rest of the list is the grid's padding, sized exactly from the two measured grid row heights (tall when a tile in the row has a form line) and the open tap panel, so the scroll offset always means the same place. Computed by `cardWindow` (`src/utils/cardView.ts`) and drawn by `CardGrid.svelte`; ADR-0016. The table has no window: it draws every row (ADR-0014).
+The tiles Card view actually draws: the ones in the viewport plus one viewport above and below, in whole grid rows. The rest of the list is the grid's padding, sized exactly from the two measured grid row heights (tall when a tile in the row has a form line) and the open tap panel, so the scroll offset always means the same place. Computed by `cardWindow` (`src/utils/cardView.ts`) and drawn by `CardGrid.svelte`; ADR-0016. The table has its own: the Table window.
+
+## Table window
+
+The rows the table actually draws: the ones in the viewport plus one viewport above and below (moved in steps of 16 rows), and each content-sized column's widest rows, drawn at their own places in the list so the auto table sizes every column as it would from all rows. Each run of undrawn rows is one spacer row of their exact height (every table row is one height). Computed by `tableWindow`, `widestRows` and `tableEntries` (`src/utils/tableWindow.ts`) and drawn by `TableScreen.svelte`; ADR-0019.
 
 ## Narrow pane
 
