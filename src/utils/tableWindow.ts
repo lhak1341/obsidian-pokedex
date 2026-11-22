@@ -63,6 +63,46 @@ export function widestRows<T>(rows: readonly T[], scores: readonly ((row: T) => 
 	return [...picked].sort((a, b) => a - b);
 }
 
+// One drawn row as the table body lays it out: its index in the list, and its
+// top edge and height in any frame shared by every reading.
+export interface TableRowReading {
+	index: number;
+	top: number;
+	height: number;
+}
+
+// What tableEntries needs from the drawn rows. A field left out had no
+// reading this time (row 0 or the last row isn't drawn): keep the last one.
+export interface TableRowMetrics {
+	rowHeight: number;
+	leadExtra?: number;
+	tailExtra?: number;
+}
+
+// Measures the drawn rows (top to bottom, widest rows included). The row
+// height is the distance between the tops of the first two adjacent drawn
+// rows, so the border they share counts once; never from row 0, whose 45.5px
+// holds half of the header's 2px border under border-collapse and sized
+// every spacer too tall. Row 0's and the last row's differences from it are
+// the lead and tail extras (the last row has no border below it: 44.5px).
+// Null when no two adjacent rows past row 0 are drawn, or the table lays
+// nothing out.
+export function tableRowMetrics(readings: readonly TableRowReading[], count: number): TableRowMetrics | null {
+	for (let k = 0; k + 1 < readings.length; k++) {
+		const index = readings[k].index;
+		if (index === 0 || readings[k + 1].index !== index + 1) continue;
+		const rowHeight = readings[k + 1].top - readings[k].top;
+		if (rowHeight <= 0) return null;
+		const metrics: TableRowMetrics = { rowHeight };
+		const first = readings[0];
+		if (first.index === 0) metrics.leadExtra = first.height - rowHeight;
+		const last = readings[readings.length - 1];
+		if (last.index === count - 1) metrics.tailExtra = last.height - rowHeight;
+		return metrics;
+	}
+	return null;
+}
+
 // What the table body draws, top to bottom: rows by their index in the list,
 // and a gap (one spacer row) for each run of undrawn rows. A gap's key is the
 // index of the row after it, so a gap keeps its key while its height changes.

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { makeActiveGenRow } from "../data/__fixtures__/rows";
 import type { StatBlock } from "../data/types";
 import {
-	CARD_GRID_GAP, cardGrid, cardRowTop, cardWindow, type CardWindowInput, fitSprite, isTallCardRow, PANEL_CHIP_GROUPS, PANEL_CHIPS, PANEL_STATS, PANEL_TARGET_WIDTH, panelColumns, panelPlacement,
+	CARD_GRID_GAP, cardGrid, cardRowHeights, cardRowTop, MAX_TOP_TILE_PASSES, settleTopTile, type TopTileIo, type TopTileState, cardWindow, type CardWindowInput, fitSprite, isTallCardRow, PANEL_CHIP_GROUPS, PANEL_CHIPS, PANEL_STATS, PANEL_TARGET_WIDTH, panelColumns, panelPlacement,
 	SORT_CHIPS, statStrip, tileCorners, tileSortValue,
 } from "./cardView";
 import type { SortColumn, SortState } from "./sortPokemon";
@@ -354,6 +354,134 @@ describe("isTallCardRow", () => {
 	it("is tall when any tile in the grid row has a form line", () => {
 		const rows = Array.from({ length: 10 }, (_, i) => makeActiveGenRow({ id: i + 1, formLabel: i === 5 ? "Galarian" : null }));
 		expect([0, 1, 2].map((r) => isTallCardRow(rows, 4, r))).toEqual([false, true, false]);
+	});
+});
+
+describe("cardRowHeights", () => {
+	// Twelve rows in grid rows of four; only row 5 has a form line, so grid row 1 is tall.
+	const rows = Array.from({ length: 12 }, (_, i) => makeActiveGenRow({ id: i + 1, formLabel: i === 5 ? "Galarian" : null }));
+	const columns = 4;
+
+	it("reads one tile per grid row, by the kind of row it is in", () => {
+		const heights = [100, 1, 1, 1, 113, 1, 1, 1, 100, 1, 1, 1];
+		expect(cardRowHeights(heights, { start: 0, columns, rows })).toEqual({ plain: 100, tall: 113 });
+	});
+
+	it("places the first drawn tile at the Card window's start", () => {
+		expect(cardRowHeights([113, 113, 113, 113], { start: 4, columns, rows })).toEqual({ tall: 113 });
+		expect(cardRowHeights([100, 100, 100, 100], { start: 8, columns, rows })).toEqual({ plain: 100 });
+	});
+
+	it("leaves out a kind with no drawn row laid out (hidden)", () => {
+		expect(cardRowHeights([0, 0, 0, 0, 0, 0, 0, 0], { start: 0, columns, rows })).toEqual({});
+		expect(cardRowHeights([], { start: 0, columns, rows })).toEqual({});
+	});
+});
+
+describe("settleTopTile", () => {
+	type Reading = ReturnType<TopTileIo["read"]>;
+	// Hands out the readings in turn (the last one repeats) and records every
+	// read and scroll; layout is never waited for.
+	function fakeIo(readings: Reading[], rowTop: (index: number) => number = () => 0) {
+		const reads: number[] = [];
+		const scrolls: number[] = [];
+		const io: TopTileIo = {
+			read: (index) => {
+				reads.push(index);
+				return readings[Math.min(reads.length - 1, readings.length - 1)];
+			},
+			rowTop,
+			scrollBy: (delta) => scrolls.push(delta),
+			nextLayout: () => Promise.resolve(),
+		};
+		return { io, reads, scrolls };
+	}
+	const anchor = { index: 40, offset: 10 };
+	const drawnAt = (tileTop: number): Reading => ({ viewTop: 100, gridTop: -5000, tileTop });
+
+	it("scrolls the drawn tile back to its offset, and settles once it is within a pixel", async () => {
+		const { io, scrolls } = fakeIo([drawnAt(150), drawnAt(110.4)]);
+		expect(await settleTopTile({ run: 0, pending: null }, anchor, io)).toBe("settled");
+		expect(scrolls).toEqual([40]);
+	});
+
+	it("scrolls nothing when the tile is already within a pixel", async () => {
+		const { io, scrolls } = fakeIo([drawnAt(110.6)]);
+		expect(await settleTopTile({ run: 0, pending: null }, anchor, io)).toBe("settled");
+		expect(scrolls).toEqual([]);
+	});
+
+	it("places an undrawn tile by its grid row, and settles only once it is drawn", async () => {
+		const rowTops: number[] = [];
+		const { io, reads, scrolls } = fakeIo(
+			[{ viewTop: 100, gridTop: -5000, tileTop: null }, drawnAt(110)],
+			(index) => (rowTops.push(index), 5110),
+		);
+		expect(await settleTopTile({ run: 0, pending: null }, anchor, io)).toBe("settled");
+		// The row arithmetic already put it at the offset: it still scrolls (by 0)
+		// and reads again, since only a drawn tile shows where it really is.
+		expect(rowTops).toEqual([40]);
+		expect(scrolls).toEqual([0]);
+		expect(reads.length).toBe(2);
+	});
+
+	it("gives up after the last pass when the tile keeps moving", async () => {
+		const { io, scrolls } = fakeIo([drawnAt(160)]);
+		expect(await settleTopTile({ run: 0, pending: null }, anchor, io)).toBe("capped");
+		expect(scrolls).toEqual(Array.from({ length: MAX_TOP_TILE_PASSES }, () => 50));
+	});
+
+	it("stops when there is no grid to read", async () => {
+		const { io, scrolls } = fakeIo([null]);
+		expect(await settleTopTile({ run: 0, pending: null }, anchor, io)).toBe("stopped");
+		expect(scrolls).toEqual([]);
+	});
+
+	it("stops an older run when a newer one starts on the same state", async () => {
+		const state: TopTileState = { run: 0, pending: null };
+		const older = fakeIo([drawnAt(150), drawnAt(110)]);
+		const newer = fakeIo([drawnAt(90), drawnAt(110)]);
+		const results = await Promise.all([settleTopTile(state, anchor, older.io), settleTopTile(state, anchor, newer.io)]);
+		expect(results).toEqual(["stopped", "settled"]);
+		expect(older.scrolls).toEqual([]);
+		expect(newer.scrolls).toEqual([-20]);
+	});
+
+	it("keeps an older run's anchor while it is pending, and drops it once a run settles", async () => {
+		const state: TopTileState = { run: 0, pending: null };
+		const older = fakeIo([drawnAt(150)]);
+		const newer = fakeIo([drawnAt(150), drawnAt(110)]);
+		const results = await Promise.all([
+			settleTopTile(state, anchor, older.io),
+			settleTopTile(state, { index: 272, offset: -63 }, newer.io),
+		]);
+		expect(results).toEqual(["stopped", "settled"]);
+		// The newer run put back the older anchor (tile 40 at 10px), not its own.
+		expect(newer.reads).toEqual([40, 40]);
+		expect(newer.scrolls).toEqual([40]);
+		expect(state.pending).toBeNull();
+		const next = fakeIo([drawnAt(37)]);
+		expect(await settleTopTile(state, { index: 272, offset: -63 }, next.io)).toBe("settled");
+		expect(next.reads).toEqual([272]);
+	});
+
+	it("leaves the anchor pending when a superseded run ends, for a third change", async () => {
+		// Older stops while middle still waits for its layout; a third change then
+		// starts before middle settles and must still get the older anchor.
+		const state: TopTileState = { run: 0, pending: null };
+		const older = fakeIo([drawnAt(150)]);
+		let release = () => {};
+		const middle = fakeIo([drawnAt(150)]);
+		middle.io.nextLayout = () => new Promise<void>((resolve) => (release = resolve));
+		const olderDone = settleTopTile(state, anchor, older.io);
+		const middleDone = settleTopTile(state, { index: 500, offset: 0 }, middle.io);
+		expect(await olderDone).toBe("stopped");
+		const third = fakeIo([drawnAt(110)]);
+		const thirdDone = settleTopTile(state, { index: 900, offset: 0 }, third.io);
+		release();
+		expect(await middleDone).toBe("stopped");
+		expect(await thirdDone).toBe("settled");
+		expect(third.reads).toEqual([40]);
 	});
 });
 

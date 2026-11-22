@@ -204,6 +204,25 @@ export function isTallCardRow(rows: readonly Pick<PokedexTableRow, "formLabel">[
 	return false;
 }
 
+// The two grid row heights, from the drawn tiles' heights (in DOM order, the
+// Card window's first tile at `start`, always a grid row's first). A tile is
+// stretched to its grid row's height, so one tile per grid row is read, and
+// isTallCardRow says which kind of row it is. A kind with no drawn row, or
+// only rows that lay out at 0 (hidden), is left out: keep the last one.
+export function cardRowHeights(
+	tileHeights: readonly number[],
+	{ start, columns, rows }: { start: number; columns: number; rows: readonly Pick<PokedexTableRow, "formLabel">[] },
+): { plain?: number; tall?: number } {
+	const heights: { plain?: number; tall?: number } = {};
+	for (let k = 0; k < tileHeights.length; k += columns) {
+		const h = tileHeights[k];
+		if (h <= 0) continue;
+		if (isTallCardRow(rows, columns, Math.floor((start + k) / columns))) heights.tall = h;
+		else heights.plain = h;
+	}
+	return heights;
+}
+
 export interface CardWindowInput {
 	rows: readonly Pick<PokedexTableRow, "formLabel">[];
 	columns: number;
@@ -275,7 +294,9 @@ function gridRowRoom(input: CardRowsInput, columns: number, r: number): number {
 	return (isTallCardRow(rows, columns, r) ? rowHeight.tall : rowHeight.plain) + (panel?.gridRow === r ? panel.height : 0);
 }
 
-type CardRowsInput = Pick<CardWindowInput, "rows" | "columns" | "rowHeight" | "rowGap" | "panel">;
+// Where the grid's rows are: what cardWindow and cardRowTop both read, so
+// CardGrid builds it once.
+export type CardRowsInput = Pick<CardWindowInput, "rows" | "columns" | "rowHeight" | "rowGap" | "panel">;
 
 // Where grid row `gridRow` starts, from the grid's top edge. A Card size change
 // re-lays the grid out with a new column count; CardGrid scrolls the tile that
@@ -285,6 +306,75 @@ export function cardRowTop(input: CardRowsInput, gridRow: number): number {
 	let top = 0;
 	for (let r = 0; r < gridRow; r++) top += gridRowRoom(input, columns, r) + input.rowGap;
 	return top;
+}
+
+// A Card size change re-lays the grid out with a new column count, so the
+// same scroll offset would show other Pokemon. The tile that was at the top
+// of the viewport (`index`, `offset` from the viewport's top edge) is put back
+// there. CardGrid supplies the DOM: `read` gives the viewport's and grid's top
+// edges and the tile's own top when the Card window draws it (else null), or
+// null when the grid is gone; `rowTop` is where the tile's grid row starts
+// (cardRowTop); `nextLayout` waits until the grid has re-laid out.
+export interface TopTileIo {
+	read: (index: number) => { viewTop: number; gridTop: number; tileTop: number | null } | null;
+	rowTop: (index: number) => number;
+	scrollBy: (delta: number) => void;
+	nextLayout: () => Promise<void>;
+}
+
+export const MAX_TOP_TILE_PASSES = 4;
+
+// Each pass puts the tile back at its offset: from the drawn tile when it is
+// drawn, else from the row arithmetic. A jump redraws the window and
+// re-measures heights, which can move the tile again, so it repeats until a
+// drawn tile is within a pixel (two passes in practice). A newer call on the
+// same `state` (another size change while this one runs) stops this one, or
+// the loops push the scroller toward each other's anchors in turn (probed:
+// three quick changes left the tile 55px off). The newer call keeps the older
+// one's anchor while it is pending: the anchor it read itself comes from a
+// grid laid out for one frame at the old offset, a tile the user never chose
+// (probed: S→M→L 30ms apart ended on #272, started on #986). Only the run
+// still current clears it, when it settles, caps or loses the grid. Resolves
+// "settled", "capped" (still moving after `maxPasses` scrolls) or "stopped"
+// (superseded, or no grid to read).
+export type TopTileAnchor = { index: number; offset: number };
+export interface TopTileState {
+	run: number;
+	pending: TopTileAnchor | null;
+}
+
+export async function settleTopTile(
+	state: TopTileState,
+	anchor: TopTileAnchor,
+	io: TopTileIo,
+	maxPasses = MAX_TOP_TILE_PASSES,
+): Promise<"settled" | "capped" | "stopped"> {
+	const run = ++state.run;
+	const kept = state.pending ?? anchor;
+	state.pending = kept;
+	const result = await settlePasses(state, run, kept, io, maxPasses);
+	if (run === state.run) state.pending = null;
+	return result;
+}
+
+async function settlePasses(
+	state: TopTileState,
+	run: number,
+	anchor: TopTileAnchor,
+	io: TopTileIo,
+	maxPasses: number,
+): Promise<"settled" | "capped" | "stopped"> {
+	for (let pass = 0; pass < maxPasses; pass++) {
+		await io.nextLayout();
+		if (run !== state.run) return "stopped";
+		const reading = io.read(anchor.index);
+		if (!reading) return "stopped";
+		const tileTop = reading.tileTop ?? reading.gridTop + io.rowTop(anchor.index);
+		const delta = tileTop - (reading.viewTop + anchor.offset);
+		if (reading.tileTop !== null && Math.abs(delta) < 1) return "settled";
+		io.scrollBy(delta);
+	}
+	return "capped";
 }
 
 // The tap panel shows every Field, whatever the tile's selection (ADR-0020):

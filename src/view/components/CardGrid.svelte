@@ -5,8 +5,8 @@
 	import type { PokedexRepository } from "../../data/PokedexRepository";
 	import type { PokedexTableRow } from "../../data/types";
 	import {
-		CARD_GRID_GAP, CARD_SIZE_SPECS, cardGrid, cardRowTop, type CardSize, cardWindow, type ContentBounds, fitSprite, isTallCardRow, panelColumns, panelPlacement, SORT_CHIPS,
-		type SpritePlacement, statStrip, tileCorners, tileSortValue,
+		CARD_GRID_GAP, CARD_SIZE_SPECS, cardGrid, cardRowHeights, cardRowTop, type CardRowsInput, type CardSize, cardWindow, type ContentBounds, fitSprite, panelColumns, panelPlacement, SORT_CHIPS,
+		settleTopTile, type SpritePlacement, statStrip, tileCorners, tileSortValue, type TopTileIo, type TopTileState,
 	} from "../../utils/cardView";
 	import { formatEvYield, STAT_LABEL_BY_KEY } from "../../utils/fields";
 	import { formatDexNumber, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
@@ -120,17 +120,16 @@
 		const plain = plainHeight ?? grid.tileWidth + ESTIMATED_TILE_TEXT;
 		return { plain, tall: tallHeight ?? plain + ESTIMATED_FORM_LINE };
 	});
-	const win = $derived(
-		cardWindow({
-			rows,
-			columns: grid.columns,
-			rowHeight,
-			rowGap: CARD_GRID_GAP * 2,
-			panel: panelAfter < 0 ? null : { gridRow: Math.floor(panelAfter / grid.columns), height: panelHeight },
-			scrollTop,
-			viewportHeight,
-		}),
-	);
+	// Where the grid rows are, for the Card window and for settleTopTile's
+	// cardRowTop alike.
+	const rowLayout = $derived<CardRowsInput>({
+		rows,
+		columns: grid.columns,
+		rowHeight,
+		rowGap: CARD_GRID_GAP * 2,
+		panel: panelAfter < 0 ? null : { gridRow: Math.floor(panelAfter / grid.columns), height: panelHeight },
+	});
+	const win = $derived(cardWindow({ ...rowLayout, scrollTop, viewportHeight }));
 	// Primitives, so a scroll that keeps the same slice re-renders nothing.
 	const winStart = $derived(win.start);
 	const winEnd = $derived(win.end);
@@ -154,16 +153,13 @@
 	function measure() {
 		const el = gridEl;
 		if (!el || !isShown(el)) return;
-		const columns = grid.columns;
-		const start = winStart;
-		const tiles = el.querySelectorAll<HTMLElement>(":scope > .card-tile");
-		for (let k = 0; k < tiles.length; k += columns) {
-			const h = tiles[k].getBoundingClientRect().height;
-			if (h <= 0) continue;
-			const tall = isTallCardRow(rows, columns, Math.floor((start + k) / columns));
-			if (tall && tallHeight !== h) tallHeight = h;
-			if (!tall && plainHeight !== h) plainHeight = h;
-		}
+		const tiles = [...el.querySelectorAll<HTMLElement>(":scope > .card-tile")];
+		const heights = cardRowHeights(
+			tiles.map((tile) => tile.getBoundingClientRect().height),
+			{ start: winStart, columns: grid.columns, rows },
+		);
+		if (heights.tall !== undefined && heights.tall !== tallHeight) tallHeight = heights.tall;
+		if (heights.plain !== undefined && heights.plain !== plainHeight) plainHeight = heights.plain;
 		const panel = el.querySelector<HTMLElement>(":scope > .card-panel");
 		if (panel) {
 			const h = panel.getBoundingClientRect().height + CARD_GRID_GAP;
@@ -263,7 +259,7 @@
 	// A Card size change re-lays the grid out with a new column count, so the
 	// same scroll offset would show other Pokemon. The tile at the top of the
 	// viewport is kept there: read before the change, put back after
-	// (restoreTopTile).
+	// (settleTopTile).
 	let laidOutSize = untrack(() => size);
 	$effect.pre(() => {
 		const next = size;
@@ -273,7 +269,7 @@
 		// Heights measured at the old size are wrong at the new one.
 		plainHeight = null;
 		tallHeight = null;
-		if (anchor) void restoreTopTile(anchor);
+		if (anchor) void settleTopTile(topTileRun, anchor, topTileIo);
 	});
 
 	function topTile(): { index: number; offset: number } | null {
@@ -292,42 +288,32 @@
 
 	const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-	// Each pass puts the anchor tile back at its offset: from the drawn tile
-	// when it is drawn, else from the row arithmetic. A jump redraws the window
-	// and re-measures heights, which can move the tile again, so it repeats
-	// until the tile stays (two passes in practice), at most MAX_ANCHOR_PASSES.
-	const MAX_ANCHOR_PASSES = 4;
-	async function restoreTopTile(anchor: { index: number; offset: number }) {
-		for (let pass = 0; pass < MAX_ANCHOR_PASSES; pass++) {
+	// settleTopTile's DOM. Its state lets a newer size change stop the loop an
+	// older one started, and keep that one's anchor while it is pending.
+	const topTileRun: TopTileState = { run: 0, pending: null };
+	const topTileIo: TopTileIo = {
+		read(index) {
+			const el = gridEl;
+			const scroller = el?.closest<HTMLElement>(".pokedex-view");
+			if (!el || !scroller) return null;
+			const tile = el.querySelector<HTMLElement>(`:scope > .card-tile[data-index="${index}"]`);
+			return {
+				viewTop: scroller.getBoundingClientRect().top,
+				gridTop: el.getBoundingClientRect().top,
+				tileTop: tile ? tile.getBoundingClientRect().top : null,
+			};
+		},
+		rowTop: (index) => cardRowTop(rowLayout, Math.floor(index / rowLayout.columns)),
+		scrollBy(delta) {
+			const scroller = gridEl?.closest<HTMLElement>(".pokedex-view");
+			if (scroller) scroller.scrollTop += delta;
+		},
+		async nextLayout() {
 			await tick();
 			await nextFrame();
 			await nextFrame();
-			const el = gridEl;
-			const scroller = el?.closest<HTMLElement>(".pokedex-view");
-			if (!el || !scroller) return;
-			const target = scroller.getBoundingClientRect().top + anchor.offset;
-			const tile = el.querySelector<HTMLElement>(`:scope > .card-tile[data-index="${anchor.index}"]`);
-			let tileTop: number;
-			if (tile) {
-				tileTop = tile.getBoundingClientRect().top;
-			} else {
-				const rowTop = cardRowTop(
-					{
-						rows,
-						columns: grid.columns,
-						rowHeight,
-						rowGap: CARD_GRID_GAP * 2,
-						panel: panelAfter < 0 ? null : { gridRow: Math.floor(panelAfter / grid.columns), height: panelHeight },
-					},
-					Math.floor(anchor.index / grid.columns),
-				);
-				tileTop = el.getBoundingClientRect().top + rowTop;
-			}
-			const delta = tileTop - target;
-			if (tile && Math.abs(delta) < 1) return;
-			scroller.scrollTop += delta;
-		}
-	}
+		},
+	};
 
 
 	function onTileKeydown(e: KeyboardEvent, id: number) {

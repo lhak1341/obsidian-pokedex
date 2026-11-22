@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { type TableEntry, tableEntries, tableWindow, widestRows } from "./tableWindow";
+import captured from "./__fixtures__/tableRowReadings.json";
+import { type TableEntry, tableEntries, tableRowMetrics, type TableRowReading, tableWindow, widestRows } from "./tableWindow";
 
 // Sums what the entries stand for: every row once, and the table's full height.
 function cover(entries: TableEntry[], rowHeight: number): { indices: number[]; height: number } {
@@ -118,5 +119,52 @@ describe("tableEntries", () => {
 	it("drops an extra row past the end of the list", () => {
 		const { indices } = cover(tableEntries({ count: 5, start: 0, end: 5, extra: [7], rowHeight: 45 }), 45);
 		expect(indices).toEqual([0, 1, 2, 3, 4]);
+	});
+});
+
+describe("tableRowMetrics", () => {
+	// Readings captured live in pokedex-test-vault: 1,396px leaf, all 9
+	// generations (1,082 rows), default Fields, the table at the top of the
+	// list and scrolled to its end, each tr[data-index]'s rect relative to the
+	// tbody. Row 0 is 0.5px taller and the last row 0.5px shorter (the
+	// collapsed borders, ADR-0019); the end window still draws rows 0 and 1
+	// and other widest rows ahead of it.
+	const densities = [
+		{ name: "comfortable", rowHeight: 45, readings: captured.comfortable },
+		{ name: "compact", rowHeight: 33, readings: captured.compact },
+	];
+	for (const { name, rowHeight, readings } of densities) {
+		it(`measures the captured ${name} table at the top of the list`, () => {
+			expect(tableRowMetrics(readings.top, readings.count)).toEqual({ rowHeight, leadExtra: 0.5 });
+		});
+		it(`measures the captured ${name} table at the end of the list`, () => {
+			expect(tableRowMetrics(readings.end, readings.count)).toEqual({ rowHeight, leadExtra: 0.5, tailExtra: -0.5 });
+		});
+	}
+
+	const row = (index: number, height = 45): TableRowReading => ({ index, top: index * 45 + (index > 0 ? 0.5 : 0), height });
+
+	it("never takes the row height from row 0", () => {
+		expect(tableRowMetrics([row(0, 45.5), row(1), row(2)], 100)?.rowHeight).toBe(45);
+	});
+
+	it("skips a widest row drawn out of sequence ahead of the window", () => {
+		expect(tableRowMetrics([row(3), row(40), row(41)], 100)).toEqual({ rowHeight: 45 });
+	});
+
+	it("leaves out the extras for a first or last row that is not drawn", () => {
+		expect(tableRowMetrics([row(5), row(6), row(98)], 100)).toEqual({ rowHeight: 45 });
+		expect(tableRowMetrics([row(5), row(6), row(99, 44.5)], 100)).toEqual({ rowHeight: 45, tailExtra: -0.5 });
+	});
+
+	it("has no reading without two adjacent rows past row 0", () => {
+		expect(tableRowMetrics([], 0)).toBeNull();
+		expect(tableRowMetrics([row(0, 45.5), row(1, 44.5)], 2)).toBeNull();
+		expect(tableRowMetrics([row(0, 45.5), row(7), row(9)], 100)).toBeNull();
+	});
+
+	it("has no reading from a table laid out at 0 (hidden)", () => {
+		const hidden = [1, 2, 3].map((index) => ({ index, top: 0, height: 0 }));
+		expect(tableRowMetrics(hidden, 100)).toBeNull();
 	});
 });

@@ -10,7 +10,7 @@
 		FIELDS, fieldsShown, formatEvYield, isStatField, isTileField, sortAfterFieldsChange, unhandledCustomCell,
 	} from "../../utils/fields";
 	import { TABLE_COLUMNS, columnWidth, tableFrame } from "../../utils/tableColumns";
-	import { tableEntries, tableWindow, widestRows } from "../../utils/tableWindow";
+	import { tableEntries, tableRowMetrics, tableWindow, widestRows } from "../../utils/tableWindow";
 	import { onDestroy, untrack } from "svelte";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
 	import { createInfoDescription } from "../infoDescription.svelte";
@@ -275,38 +275,27 @@
 		viewportHeight = scroller.clientHeight;
 	}
 
-	// The row height, from the first two adjacent drawn rows (the distance
-	// between their tops, so the borders they share count once), and the
-	// first and last rows' differences from it (leadExtra above). Not from
-	// row 0: every spacer sized from its 45.5px came out too tall.
+	// The row height and the first and last rows' extras (leadExtra above),
+	// from the drawn rows: tableRowMetrics holds the rules.
 	function measureRows() {
 		const el = bodyEl;
 		if (!el || !isShown(el)) return;
-		if (tableEl) {
-			const font = getComputedStyle(tableEl).font;
-			if (font !== measureFont) measureFont = font;
-		}
-		const rows = el.querySelectorAll<HTMLElement>(":scope > tr[data-index]");
-		const top = (k: number) => rows[k].getBoundingClientRect().top;
-		const indexAt = (k: number) => Number(rows[k].dataset.index);
-		for (let k = 0; k + 1 < rows.length; k++) {
-			const index = indexAt(k);
-			if (index === 0 || indexAt(k + 1) !== index + 1) continue;
-			const h = top(k + 1) - top(k);
-			if (h <= 0) return;
-			if (h !== measuredRowHeight) measuredRowHeight = h;
-			const height = (k: number) => rows[k].getBoundingClientRect().height;
-			if (indexAt(0) === 0) {
-				const extra = height(0) - h;
-				if (extra !== leadExtra) leadExtra = extra;
-			}
-			const last = rows.length - 1;
-			if (indexAt(last) === visibleRows.length - 1 && indexAt(last) !== 0) {
-				const extra = height(last) - h;
-				if (extra !== tailExtra) tailExtra = extra;
-			}
-			return;
-		}
+		const readings = [...el.querySelectorAll<HTMLElement>(":scope > tr[data-index]")].map((row) => {
+			const rect = row.getBoundingClientRect();
+			return { index: Number(row.dataset.index), top: rect.top, height: rect.height };
+		});
+		const metrics = tableRowMetrics(readings, visibleRows.length);
+		if (!metrics) return;
+		if (metrics.rowHeight !== measuredRowHeight) measuredRowHeight = metrics.rowHeight;
+		if (metrics.leadExtra !== undefined && metrics.leadExtra !== leadExtra) leadExtra = metrics.leadExtra;
+		if (metrics.tailExtra !== undefined && metrics.tailExtra !== tailExtra) tailExtra = metrics.tailExtra;
+	}
+
+	// The table's font, for widest's text widths (textWidth).
+	function readFont() {
+		if (!tableEl || !isShown(tableEl)) return;
+		const font = getComputedStyle(tableEl).font;
+		if (font !== measureFont) measureFont = font;
 	}
 
 	// Scroll and viewport, coalesced to a frame. FilterBar above the table
@@ -349,6 +338,7 @@
 			if (raf) return;
 			raf = requestAnimationFrame(() => {
 				raf = 0;
+				readFont();
 				measureRows();
 			});
 		};
