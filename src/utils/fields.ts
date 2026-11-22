@@ -81,6 +81,10 @@ export type Field =
 	| (FieldBase & {
 			render: (row: ActiveGenRow) => string;
 			title?: (row: ActiveGenRow) => string;
+			// True when the row has no value. Card view's tap panel then draws
+			// the muted "None" its held item chip uses; the table keeps
+			// `render`'s "-", as every empty table cell shows.
+			empty?: (row: ActiveGenRow) => boolean;
 			custom?: undefined;
 	  })
 	| (FieldBase & { custom: CustomCell });
@@ -106,6 +110,7 @@ export const FIELDS: Field[] = [
 			return encounters.isEmpty ? "-" : encounters.summary;
 		},
 		title: (row) => describeEncounters(row.encounterLocations).tooltip,
+		empty: (row) => describeEncounters(row.encounterLocations).isEmpty,
 	},
 	{ key: "catchRate", label: "Catch rate", icon: "target", sortKey: "catchRate", render: (row) => String(row.catchRate) },
 	{

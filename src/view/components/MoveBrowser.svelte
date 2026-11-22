@@ -35,6 +35,30 @@
 	const view = $derived(
 		resolveMoveView(moves, activeGen, { version: activeMoveVersion, method: activeMoveMethod }, evolvesAtLevels),
 	);
+
+	// In the phone band the list under the method tabs is at least one
+	// scroller viewport tall (the `.move-list` pane query below). A browser
+	// cannot scroll past the content's end, so switching to a short list
+	// (Egg's 4 rows after Level-Up's 16, scrolled to the tabs) shrank the page
+	// under the scroll position: it was pulled back (to 0 on a 387px phone
+	// detail screen) and the tabs jumped ~210px under the finger. With this
+	// room the tabs stay put through every method and version switch; a short
+	// list leaves blank space below it, seen only by scrolling past it. Phone
+	// band only: from 760 Moves is a bordered card beside other sections, and
+	// the room showed as ~330px of empty card under a short list.
+	// The scroller is PokedexApp's `.pokedex-view`. A hidden screen reads 0,
+	// so the last real height is kept (src/view/CLAUDE.md).
+	let listEl = $state<HTMLElement>();
+	let viewportHeight = $state(0);
+	$effect(() => {
+		const scroller = listEl?.closest<HTMLElement>(".pokedex-view");
+		if (!scroller) return;
+		const ro = new ResizeObserver(() => {
+			if (scroller.clientHeight > 0) viewportHeight = scroller.clientHeight;
+		});
+		ro.observe(scroller);
+		return () => ro.disconnect();
+	});
 </script>
 
 <!-- The section's own width, not the pane's, decides the narrow form: the
@@ -71,67 +95,73 @@ identity rail from 760px and a column from 1100px. -->
 				</button>
 			{/each}
 		</div>
-		{#if view.rows.length === 0}
-			<p class="text-muted">No moves for this game.</p>
-		{:else}
-			<!-- A column's header at each width (see the moves container
-			queries); the th's title spells it out. -->
-			{#snippet columnLabel(wide: string, narrow: string, narrowest: string)}
-				<span class="label-wide">{wide}</span><span class="label-narrow" aria-hidden="true">{narrow}</span><span
-					class="label-narrowest"
-					aria-hidden="true">{narrowest}</span
-				>
-			{/snippet}
-			<table class="move-table">
-				<thead>
-					<tr>
-						<th>Move</th>
-						{#if view.method === "level-up"}<th class="col-right" title="Level"
-								>{@render columnLabel("Level", "Lv", "L")}</th
-							>{/if}
-						<th class="col-center" title="Type">{@render columnLabel("Type", "Type", "T")}</th>
-						<th class="col-right" title="Power">{@render columnLabel("Pow", "Pow", "P")}</th>
-						<th class="col-right col-acc" title="Accuracy">{@render columnLabel("Acc", "Acc", "A")}</th>
-						<th class="col-right">PP</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each view.rows as row (row.kind === "move" ? row.move.name + row.move.levelLearnedAt : `divider-${row.level}`)}
-						{#if row.kind === "divider"}
-							<tr class="evolve-divider-row">
-								<td colspan={6}>
-									<svg class="evolve-divider-line" width="100%" height="6">
-										<line x1="0" y1="3" x2="100%" y2="3" />
-									</svg>
-								</td>
-							</tr>
-						{:else}
-							{@const move = row.move}
-							{@const detail = moveDetails[move.name]}
-							<tr class:row-shaded={row.moveIndex % 2 === 0}>
-								<td class="move-name-cell"><span class="pkdx-info-target" {...popover.target(move.name)}>{move.name}</span></td>
-								{#if view.method === "level-up"}<td class="col-right num">{move.levelLearnedAt}</td>{/if}
-								<td class="col-center">
-									{#if detail}
-										<!-- Narrow, the name gives way to the type's icon (the
-										Type icons setting's look, with the name as its
-										tooltip): "Electric" alone took a quarter of the
-										table. -->
-										<span class="type-wide"><TypeBadge type={detail.type} useIcon={useTypeIcons} /></span
-										><span class="type-narrow"><TypeBadge type={detail.type} useIcon small /></span>
-									{:else}
-										…
-									{/if}
-								</td>
-								<td class="col-right num">{detail ? (detail.power ?? "-") : "…"}</td>
-								<td class="col-right num col-acc">{detail ? (detail.accuracy ?? "-") : "…"}</td>
-								<td class="col-right num">{detail ? detail.pp : "…"}</td>
-							</tr>
-						{/if}
-					{/each}
-				</tbody>
-			</table>
-		{/if}
+		<div
+			class="move-list"
+			bind:this={listEl}
+			style:--pkdx-moves-room={viewportHeight > 0 ? `${viewportHeight}px` : undefined}
+		>
+			{#if view.rows.length === 0}
+				<p class="text-muted">No moves for this game.</p>
+			{:else}
+				<!-- A column's header at each width (see the moves container
+				queries); the th's title spells it out. -->
+				{#snippet columnLabel(wide: string, narrow: string, narrowest: string)}
+					<span class="label-wide">{wide}</span><span class="label-narrow" aria-hidden="true">{narrow}</span><span
+						class="label-narrowest"
+						aria-hidden="true">{narrowest}</span
+					>
+				{/snippet}
+				<table class="move-table">
+					<thead>
+						<tr>
+							<th>Move</th>
+							{#if view.method === "level-up"}<th class="col-right" title="Level"
+									>{@render columnLabel("Level", "Lv", "L")}</th
+								>{/if}
+							<th class="col-center" title="Type">{@render columnLabel("Type", "Type", "T")}</th>
+							<th class="col-right" title="Power">{@render columnLabel("Pow", "Pow", "P")}</th>
+							<th class="col-right col-acc" title="Accuracy">{@render columnLabel("Acc", "Acc", "A")}</th>
+							<th class="col-right">PP</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each view.rows as row (row.kind === "move" ? row.move.name + row.move.levelLearnedAt : `divider-${row.level}`)}
+							{#if row.kind === "divider"}
+								<tr class="evolve-divider-row">
+									<td colspan={6}>
+										<svg class="evolve-divider-line" width="100%" height="6">
+											<line x1="0" y1="3" x2="100%" y2="3" />
+										</svg>
+									</td>
+								</tr>
+							{:else}
+								{@const move = row.move}
+								{@const detail = moveDetails[move.name]}
+								<tr class:row-shaded={row.moveIndex % 2 === 0}>
+									<td class="move-name-cell"><span class="pkdx-info-target" {...popover.target(move.name)}>{move.name}</span></td>
+									{#if view.method === "level-up"}<td class="col-right num">{move.levelLearnedAt}</td>{/if}
+									<td class="col-center">
+										{#if detail}
+											<!-- Narrow, the name gives way to the type's icon (the
+											Type icons setting's look, with the name as its
+											tooltip): "Electric" alone took a quarter of the
+											table. -->
+											<span class="type-wide"><TypeBadge type={detail.type} useIcon={useTypeIcons} /></span
+											><span class="type-narrow"><TypeBadge type={detail.type} useIcon small /></span>
+										{:else}
+											…
+										{/if}
+									</td>
+									<td class="col-right num">{detail ? (detail.power ?? "-") : "…"}</td>
+									<td class="col-right num col-acc">{detail ? (detail.accuracy ?? "-") : "…"}</td>
+									<td class="col-right num">{detail ? detail.pp : "…"}</td>
+								</tr>
+							{/if}
+						{/each}
+					</tbody>
+				</table>
+			{/if}
+		</div>
 	{/if}
 </div>
 
@@ -340,5 +370,12 @@ identity rail from 760px and a column from 1100px. -->
 		stroke-dasharray: 2 6;
 		stroke-linecap: round;
 		opacity: 0.3;
+	}
+	/* The phone band's room under the method tabs (see the script): the
+	scroller's height, measured. DETAIL_PHONE_MAX_WIDTH. */
+	@container pane (width < 760px) {
+		.move-list {
+			min-height: var(--pkdx-moves-room, 0);
+		}
 	}
 </style>

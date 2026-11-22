@@ -2,7 +2,7 @@ import { STAT_COLUMNS } from "../data/constants";
 import type { PokedexTableRow, StatBlock } from "../data/types";
 import type { ActiveGenRow } from "./activeGenScope";
 import type { WidthClass } from "./browseLayout";
-import { type Field, FIELDS, isStatField } from "./fields";
+import { type Field, type FieldKey, FIELDS, isStatField } from "./fields";
 import type { SortColumn, SortState } from "./sortPokemon";
 
 // Card view's tile and tap panel (CONTEXT.md, "Card view"). The tile reads
@@ -163,12 +163,34 @@ export function cardGrid(width: number, size: CardSize = "small"): { columns: nu
 }
 
 // The tap panel (CONTEXT.md, "Card view") is an accordion that opens under the
-// tapped tile's grid row, spanning the grid's full width. In a CSS grid that
-// means it is drawn after the last tile of that row: `afterIndex`, which on a
-// short final row is the last tile of all.
+// tapped tile's grid row, in a grid item spanning the grid's full width. In a
+// CSS grid that means it is drawn after the last tile of that row:
+// `afterIndex`, which on a short final row is the last tile of all.
 export function panelPlacement(index: number, columns: number, count: number): { row: number; afterIndex: number } {
 	const row = Math.floor(index / columns);
 	return { row, afterIndex: Math.min(count - 1, (row + 1) * columns - 1) };
+}
+
+// The panel's content is a fixed set (ADR-0020: six stats, Total, the chips),
+// laid out for a ~390px phone pane. Across a wide pane its stat bars stretch
+// to several tiles each and the chips fill one line of a long empty band, so
+// the panel body spans about this many pixels of tile columns instead of the
+// whole row.
+export const PANEL_TARGET_WIDTH = 480;
+
+// Which tile columns the panel body covers: the whole tiles nearest
+// PANEL_TARGET_WIDTH (never more than the grid has), centred on the tapped
+// tile and held inside the grid's edges, so it reads as that tile's. Its grid
+// item still spans the row: a narrower item would let the next tiles flow into
+// the cells beside it. Whole columns keep its edges on the tiles' edges.
+// Rounding (not ceil) lands within half a tile pitch of the target: 384px at
+// the narrowest (large tiles of 189px), the phone width the content fits.
+export function panelColumns(index: number, columns: number, tileWidth: number): { start: number; span: number } {
+	const pitch = tileWidth + CARD_GRID_GAP;
+	const span = Math.min(columns, Math.max(1, Math.round((PANEL_TARGET_WIDTH + CARD_GRID_GAP) / pitch)));
+	const column = index % columns;
+	const start = Math.min(columns - span, Math.max(0, column - Math.floor((span - 1) / 2)));
+	return { start, span };
 }
 
 // A grid row is tall when any tile in it has a form line under its name: CSS
@@ -270,6 +292,21 @@ export function cardRowTop(input: CardRowsInput, gridRow: number): number {
 // chip, in menu order (FIELDS order; users cannot reorder Fields).
 export const PANEL_STATS: readonly (keyof StatBlock)[] = STAT_COLUMNS.map((c) => c.key);
 export const PANEL_CHIPS: readonly Field[] = FIELDS.filter((f) => !isStatField(f) && f.key !== "total");
+
+// Chips that wrap onto a new line as one unit: Height and Weight describe one
+// thing (size), and a line break between them left Weight alone on a line.
+const WRAP_TOGETHER: readonly (readonly FieldKey[])[] = [["height", "weight"]];
+
+// PANEL_CHIPS in wrapping units, in the same order: each chip alone, except
+// adjacent chips WRAP_TOGETHER pairs up.
+export const PANEL_CHIP_GROUPS: readonly (readonly Field[])[] = PANEL_CHIPS.reduce<Field[][]>((groups, field) => {
+	const last = groups[groups.length - 1] as Field[] | undefined;
+	const prev = last?.[last.length - 1];
+	const joins = prev !== undefined && WRAP_TOGETHER.some((set) => set.includes(prev.key) && set.includes(field.key));
+	if (last && joins) last.push(field);
+	else groups.push([field]);
+	return groups;
+}, []);
 
 // An image's opaque bounding box inside its canvas (imageBounds.ts measures it).
 export interface ContentBounds {

@@ -51,6 +51,7 @@ const CAPTURE_WIDTHS = { ringsBeside: 540, grid: 360 } as const;
 const PANE_THRESHOLDS: Record<string, readonly number[]> = {
 	"DetailScreen.svelte": [DETAIL_PHONE_MAX_WIDTH, DETAIL_HEADER_ONE_ROW_MIN_WIDTH, DETAIL_HERO_TYPES_STACK_MAX_WIDTH],
 	"PortraitPanel.svelte": [DETAIL_PHONE_MAX_WIDTH],
+	"MoveBrowser.svelte": [DETAIL_PHONE_MAX_WIDTH],
 };
 
 describe("pane breakpoints", () => {
@@ -79,6 +80,13 @@ describe("pane breakpoints", () => {
 			const conditions = queries.filter((q) => q.file === file && q.name === "pane").map((q) => q.condition);
 			expect(conditions).toContain(`width < ${DETAIL_PHONE_MAX_WIDTH}px`);
 		}
+	});
+
+	// Only the phone band, where Moves is a whole-screen tab, keeps a
+	// viewport of room under the method tabs: from 760 it is a bordered card.
+	it("the Moves list keeps its room under the method tabs in the phone band only", () => {
+		const conditions = queries.filter((q) => q.file === "MoveBrowser.svelte" && q.name === "pane").map((q) => q.condition);
+		expect(conditions).toEqual([`width < ${DETAIL_PHONE_MAX_WIDTH}px`]);
 	});
 
 	it("the detail header has two rows below a 780px leaf (#33)", () => {

@@ -390,8 +390,27 @@ accessibility tree. -->
 	<span class="marked-name">{name}<span class="name-dot" class:shown={favorite}><FavoriteMark /></span></span>
 {/snippet}
 
-<!-- The Fields menu and the layout toggle: in this screen's own toolbar on a
-wide pane, at the right of FilterBar's second row on a Narrow pane. -->
+<!-- Card size (S/M/L): next to the layout toggle on a wide pane, beside the
+result count on a Narrow pane. -->
+{#snippet cardSizeToggle()}
+	<div class="layout-toggle" role="group" aria-label="Card size">
+		{#each CARD_SIZES as size (size)}
+			<button
+				type="button"
+				class="layout-toggle-item size-item"
+				aria-label="{CARD_SIZE_LABELS[size]} cards"
+				aria-pressed={cardSize === size}
+				onclick={() => onCardSizeChange(size)}
+			>
+				{CARD_SIZE_LABELS[size][0]}
+			</button>
+		{/each}
+	</div>
+{/snippet}
+
+<!-- The Fields menu and the layout toggle, with Card size after it on a wide
+pane: in this screen's own toolbar on a wide pane, at the right of FilterBar's
+second row on a Narrow pane. -->
 {#snippet viewControls()}
 	<details class="fields-menu" class:end={narrow}>
 		<summary>
@@ -452,6 +471,9 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 			<Icon name="layout-grid" size={14} strokeWidth={2} />
 		</button>
 	</div>
+	{#if layout === "card" && !narrow}
+		{@render cardSizeToggle()}
+	{/if}
 {/snippet}
 
 <div class="table-screen">
@@ -463,24 +485,12 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 		</div>
 	{/if}
 
-	<!-- Card size sits at the right of the count, above the grid it sizes:
-	the Narrow pane's toolbar row has no room left for it. -->
+	<!-- On a Narrow pane Card size sits at the right of the count, above the
+	grid it sizes: that pane's toolbar row has no room left for it. -->
 	<div class="result-row">
 		<p class="result-count">{visibleRows.length} of {rows.length} Pokemon</p>
-		{#if layout === "card"}
-			<div class="layout-toggle" role="group" aria-label="Card size">
-				{#each CARD_SIZES as size (size)}
-					<button
-						type="button"
-						class="layout-toggle-item size-item"
-						aria-label="{CARD_SIZE_LABELS[size]} cards"
-						aria-pressed={cardSize === size}
-						onclick={() => onCardSizeChange(size)}
-					>
-						{CARD_SIZE_LABELS[size][0]}
-					</button>
-				{/each}
-			</div>
+		{#if layout === "card" && narrow}
+			{@render cardSizeToggle()}
 		{/if}
 	</div>
 
@@ -710,13 +720,15 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 		background: var(--lk-surface-hover);
 		color: var(--lk-text);
 	}
-	/* The Card size segments are letters, at the icon segments' height. */
+	/* The Card size segments are letters, at the icon segments' height (a 14px
+	icon plus 4px padding above and below: 22px), so the two groups line up
+	side by side on a wide pane. */
 	button.size-item {
 		min-width: 26px;
-		padding: 2px 6px;
+		padding: 4px 6px;
 		font-size: 0.75rem;
 		font-weight: 600;
-		line-height: 1.25;
+		line-height: 14px;
 	}
 	button.layout-toggle-item[aria-pressed="true"] {
 		background: color-mix(in srgb, var(--lk-text) 10%, transparent);

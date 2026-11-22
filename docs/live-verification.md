@@ -29,6 +29,7 @@ How to drive and read the running plugin through `obsidian eval` when checking a
 
 - Venusaur has both Mega (single "M" badge) and Gigantamax ("G"). Charizard's Mega splits into X/Y badges and is the `portraitScale` fixture: Mega X + shiny reads `scale(0.907)` on `.portrait-image` and `.portrait-preview` (shiny crops ~9% tighter).
 - Gen 9 data is missing whole categories, so an empty Gen 9 read proves nothing: no held items (probed ids 1–200), no tutor moves (ids 1–160), no encounters (`encounterLocations.json` covers Gen 3–8, so every Capture cell is `-`). Set Active Gen in memory first: ≤ 7 for held items or tutors (Butterfree: Silver Powder; Infernape: 2 tutor moves), 3–8 for Capture (Gen 4 Pikachu: "Wild, Trade"). Farfetch'd always holds an item (Stick, 5%).
+- Mock or check a layout on the data's extreme, not the first row at hand: the widest tap-panel EV chip is three stats (Kingdra 230: 1 Atk, 1 SpA, 1 SpD; also Infernape, Mesprit, Genesect, Flutter Mane). Find extremes by scanning the raw cache: database `plugin.cache.name`, store `entries`, keys `pokemon/<id>.json`, each value `{kind, value}` with `value` a JSON string (`stats[].effort` for EVs).
 
 ## Proving and showing
 

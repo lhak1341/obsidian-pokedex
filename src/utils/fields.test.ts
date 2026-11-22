@@ -42,6 +42,12 @@ describe("FIELDS", () => {
 			expect(textField("encounterLocation").title?.(scopeToActiveGen(row, 1))).toBe("");
 		});
 
+		// Card view's panel draws "None" for it, as for a missing held item.
+		it("is empty exactly at an Active Gen with no locations", () => {
+			expect(textField("encounterLocation").empty?.(scopeToActiveGen(row, 1))).toBe(true);
+			expect(textField("encounterLocation").empty?.(scopeToActiveGen(row, 2))).toBe(false);
+		});
+
 		it("shows the Active Gen's summary, with its locations as the title", () => {
 			const encounters = describeEncounters(scopeToActiveGen(row, 2).encounterLocations);
 			expect(encounters.isEmpty).toBe(false);

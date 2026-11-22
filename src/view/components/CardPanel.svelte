@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { STAT_COLORS, TYPE_COLORS } from "../../data/constants";
 	import type { StatBlock } from "../../data/types";
-	import { PANEL_CHIPS, PANEL_STATS } from "../../utils/cardView";
+	import { PANEL_CHIP_GROUPS, PANEL_STATS } from "../../utils/cardView";
 	import { formatEvYield, STAT_LABEL_BY_KEY, unhandledCustomCell } from "../../utils/fields";
 	import type { ActiveGenRow, HeldItemForGen } from "../../utils/activeGenScope";
 	import { formatItemName, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
@@ -15,16 +15,22 @@
 	// Card view's tap panel (CONTEXT.md, "Card view"): every Field of one
 	// Pokemon with its exact value, whatever the tile's selection (ADR-0020),
 	// drawn under the tapped tile's grid row. What goes where is cardView.ts
-	// (PANEL_STATS, PANEL_CHIPS); this draws it.
+	// (PANEL_STATS, PANEL_CHIP_GROUPS); this draws it.
 	// Favourites are PokedexApp's (ADR-0012), so the asterisk only asks. The
 	// held item's Info popover is TableScreen's, so its box (with the rarity)
 	// is the table's own and draws over this panel.
-	let { id, grow, row, barHeight, favorite, onToggleFavorite, onOpen, heldItemTarget }: {
+	let { id, grow, row, columns, start, span, barHeight, favorite, onToggleFavorite, onOpen, heldItemTarget }: {
 		id: string;
 		// Play the grow-in motion: a tap does; a remount as the panel's row
 		// scrolls back into the Card window doesn't. Read once, at mount.
 		grow: boolean;
 		row: ActiveGenRow;
+		// The grid's column count and the tile columns the body covers
+		// (cardView.ts, panelColumns): the region spans the row, the body
+		// only these columns.
+		columns: number;
+		start: number;
+		span: number;
 		// 0..1, relative per stat among the shown rows, as on the tile.
 		barHeight: (row: ActiveGenRow, stat: keyof StatBlock) => number;
 		favorite: boolean;
@@ -38,7 +44,16 @@
 	const typeB = $derived(row.types[1] ?? row.types[0]);
 </script>
 
-<div class="card-panel" class:still {id} role="region" aria-label="{formatPokemonDisplayName(row)} details">
+<div
+	class="card-panel"
+	class:still
+	{id}
+	role="region"
+	aria-label="{formatPokemonDisplayName(row)} details"
+	style:--pkdx-panel-columns={columns}
+	style:--pkdx-panel-start={start}
+	style:--pkdx-panel-span={span}
+>
 	<div class="panel-clip">
 		<div class="panel-body" style:--pkdx-wash-a={TYPE_COLORS[typeA]} style:--pkdx-wash-b={TYPE_COLORS[typeB]}>
 			<div class="panel-contents">
@@ -64,24 +79,34 @@
 				</div>
 
 				<div class="panel-chips">
-					{#each PANEL_CHIPS as field (field.key)}
-						<!-- No chip title over the held item: its Info popover explains it. -->
-						<span class="field-chip" title={field.custom === "heldItems" ? undefined : field.label}>
-							{#if field.icon}<span class="field-icon"><Icon name={field.icon} size={12} strokeWidth={2} /></span>{/if}
-							{#if field.custom === "ev"}
-								<span title={formatEvYield(row)}><EvChips evYield={row.evYield} /></span>
-							{:else if field.custom === "heldItems"}
-								{#each row.heldItems as item, i (item.name)}
-									{#if i > 0}<span class="chip-sep">,</span>{/if}
-									<span class="held-item-name pkdx-info-target" {...heldItemTarget(item)}>{formatItemName(item.name)}</span>
-								{:else}
-									<span class="chip-empty">None</span>
-								{/each}
-							{:else if field.custom === undefined}
-								<span class="chip-value" title={field.title?.(row)}>{field.render(row)}</span>
-							{:else}
-								{unhandledCustomCell(field.custom)}
-							{/if}
+					<!-- One wrapping unit per group (PANEL_CHIP_GROUPS): Height and Weight
+					move to a new line together. -->
+					{#each PANEL_CHIP_GROUPS as group (group[0].key)}
+						<span class="chip-group">
+							{#each group as field (field.key)}
+								<!-- No chip title over the held item: its Info popover explains it. -->
+								<span class="field-chip" title={field.custom === "heldItems" ? undefined : field.label}>
+									{#if field.icon}<span class="field-icon"><Icon name={field.icon} size={12} strokeWidth={2} /></span>{/if}
+									{#if field.custom === "ev"}
+										<span title={formatEvYield(row)}><EvChips evYield={row.evYield} /></span>
+									{:else if field.custom === "heldItems"}
+										{#each row.heldItems as item, i (item.name)}
+											{#if i > 0}<span class="chip-sep">,</span>{/if}
+											<span class="held-item-name pkdx-info-target" {...heldItemTarget(item)}>{formatItemName(item.name)}</span>
+										{:else}
+											<span class="chip-empty">None</span>
+										{/each}
+									{:else if field.custom === undefined}
+										{#if field.empty?.(row)}
+											<span class="chip-empty">None</span>
+										{:else}
+											<span class="chip-value" title={field.title?.(row)}>{field.render(row)}</span>
+										{/if}
+									{:else}
+										{unhandledCustomCell(field.custom)}
+									{/if}
+								</span>
+							{/each}
 						</span>
 					{/each}
 				</div>
@@ -115,9 +140,17 @@
 	.card-panel.still .panel-contents {
 		animation: none;
 	}
+	/* The body covers `span` tile columns from `start` (panelColumns), not the
+	whole row: across a wide pane the fixed content otherwise stretches into a
+	mostly empty band. 100% is the grid's content width (this item spans the
+	row), so one tile pitch is (100% + gap) / columns, the same arithmetic as the
+	grid's own tracks, and the edges land on the tiles' edges. */
 	.panel-clip {
+		--pkdx-panel-pitch: calc((100% + var(--pkdx-panel-gap)) / var(--pkdx-panel-columns));
 		min-height: 0;
 		overflow: hidden;
+		margin-left: calc(var(--pkdx-panel-pitch) * var(--pkdx-panel-start));
+		width: calc(var(--pkdx-panel-pitch) * var(--pkdx-panel-span) - var(--pkdx-panel-gap));
 	}
 	/* The tapped Pokemon's type wash, softer than the tile's split: a diagonal
 	blend. Its colour is the only link to the tile (no mark on the tile). Tints
@@ -222,6 +255,13 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 6px;
+	}
+	/* A wrapping unit: its chips never break onto separate lines. min-width: 0
+	lets a lone long chip (several held items) still shrink and wrap inside. */
+	.chip-group {
+		display: flex;
+		gap: 6px;
+		min-width: 0;
 	}
 	.field-chip {
 		display: inline-flex;

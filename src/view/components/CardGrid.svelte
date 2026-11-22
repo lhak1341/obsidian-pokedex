@@ -5,7 +5,7 @@
 	import type { PokedexRepository } from "../../data/PokedexRepository";
 	import type { PokedexTableRow } from "../../data/types";
 	import {
-		CARD_GRID_GAP, CARD_SIZE_SPECS, cardGrid, cardRowTop, type CardSize, cardWindow, type ContentBounds, fitSprite, isTallCardRow, panelPlacement, SORT_CHIPS,
+		CARD_GRID_GAP, CARD_SIZE_SPECS, cardGrid, cardRowTop, type CardSize, cardWindow, type ContentBounds, fitSprite, isTallCardRow, panelColumns, panelPlacement, SORT_CHIPS,
 		type SpritePlacement, statStrip, tileCorners, tileSortValue,
 	} from "../../utils/cardView";
 	import { formatEvYield, STAT_LABEL_BY_KEY } from "../../utils/fields";
@@ -68,6 +68,7 @@
 	const panelAfter = $derived(
 		openIndex < 0 ? -1 : panelPlacement(openIndex, grid.columns, rows.length).afterIndex,
 	);
+	const panelCols = $derived(openIndex < 0 ? null : panelColumns(openIndex, grid.columns, grid.tileWidth));
 
 	// Opening another tile closes the open panel at once (no closing motion:
 	// a collapse running while the new one grows would move the tapped tile
@@ -450,6 +451,9 @@
 					id={panelId}
 					grow={grown.id !== open.id}
 					row={open}
+					columns={grid.columns}
+					start={panelCols?.start ?? 0}
+					span={panelCols?.span ?? grid.columns}
 					barHeight={strip.height}
 					favorite={favoriteIds.has(open.id)}
 					onToggleFavorite={() => onToggleFavorite(open.id)}

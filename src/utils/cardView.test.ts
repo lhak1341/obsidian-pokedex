@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { makeActiveGenRow } from "../data/__fixtures__/rows";
 import type { StatBlock } from "../data/types";
 import {
-	cardGrid, cardRowTop, cardWindow, type CardWindowInput, fitSprite, isTallCardRow, PANEL_CHIPS, PANEL_STATS, panelPlacement,
+	CARD_GRID_GAP, cardGrid, cardRowTop, cardWindow, type CardWindowInput, fitSprite, isTallCardRow, PANEL_CHIP_GROUPS, PANEL_CHIPS, PANEL_STATS, PANEL_TARGET_WIDTH, panelColumns, panelPlacement,
 	SORT_CHIPS, statStrip, tileCorners, tileSortValue,
 } from "./cardView";
 import type { SortColumn, SortState } from "./sortPokemon";
@@ -217,6 +217,53 @@ describe("panelPlacement", () => {
 	});
 });
 
+describe("panelColumns", () => {
+	// Small tiles at a 1200px grid: 15 columns of ~74.4px (pitch ~80.4), so
+	// 486 / 80.4 rounds to 6 columns, 476px.
+	const wide = cardGrid(1200, "small");
+
+	it("spans the whole tiles nearest the target width", () => {
+		expect(wide.columns).toBe(15);
+		const { span } = panelColumns(0, wide.columns, wide.tileWidth);
+		expect(span).toBe(6);
+		const width = span * (wide.tileWidth + CARD_GRID_GAP) - CARD_GRID_GAP;
+		expect(Math.abs(width - PANEL_TARGET_WIDTH) < (wide.tileWidth + CARD_GRID_GAP) / 2).toBe(true);
+	});
+
+	it.each([
+		// [tapped index, start]: centred on the tapped column, held inside the grid
+		[0, 0], // left edge
+		[2, 0],
+		[3, 1],
+		[7, 5], // middle: columns 5..10 hold column 7
+		[14, 9], // right edge: the last six columns
+		[15 + 7, 5], // second row: the column counts, not the index
+	])("tile %i starts the panel at column %i", (index, start) => {
+		const placed = panelColumns(index, wide.columns, wide.tileWidth);
+		expect(placed.start).toBe(start);
+		const column = index % wide.columns;
+		expect(placed.start <= column && column < placed.start + placed.span).toBe(true);
+	});
+
+	it("spans the whole row when the grid is no wider than the target (a phone pane)", () => {
+		const phone = cardGrid(390, "small");
+		expect(panelColumns(3, phone.columns, phone.tileWidth)).toEqual({ start: 0, span: phone.columns });
+		const large = cardGrid(390, "large");
+		expect(panelColumns(1, large.columns, large.tileWidth)).toEqual({ start: 0, span: large.columns });
+	});
+
+	it("never goes below the phone width the content was laid out for", () => {
+		for (let width = 390; width <= 2400; width += 7) {
+			for (const size of ["small", "medium", "large"] as const) {
+				const g = cardGrid(width, size);
+				const { span } = panelColumns(0, g.columns, g.tileWidth);
+				const panel = span * (g.tileWidth + CARD_GRID_GAP) - CARD_GRID_GAP;
+				expect(panel >= 380 || span === g.columns).toBe(true);
+			}
+		}
+	});
+});
+
 describe("cardWindow", () => {
 	// 100 tiles in 4 columns: 25 grid rows of 100px with 10px gaps, so row r
 	// starts at 110r and the grid is 25 * 100 + 24 * 10 = 2740px tall.
@@ -320,5 +367,12 @@ describe("the tap panel", () => {
 		expect(PANEL_CHIPS.map((f) => f.key)).toEqual([
 			"ev", "heldItems", "encounterLocation", "catchRate", "hatchCounter", "height", "weight",
 		]);
+	});
+
+	it("wraps Height and Weight as one unit, every other chip alone, in the same order", () => {
+		expect(PANEL_CHIP_GROUPS.map((g) => g.map((f) => f.key))).toEqual([
+			["ev"], ["heldItems"], ["encounterLocation"], ["catchRate"], ["hatchCounter"], ["height", "weight"],
+		]);
+		expect(PANEL_CHIP_GROUPS.flat()).toEqual(PANEL_CHIPS);
 	});
 });
