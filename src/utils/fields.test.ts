@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { PokedexTableRow } from "../data/types";
-import { DEFAULT_VISIBLE_FIELDS, FIELDS, formatEvYield, isStatField, sortAfterFieldsChange } from "./fields";
+import {
+	DEFAULT_CARD_FIELDS, DEFAULT_VISIBLE_FIELDS, FIELDS, fieldsShown, formatEvYield, isStatField, isTileField,
+	sortAfterFieldsChange,
+} from "./fields";
 import { makeRow } from "../data/__fixtures__/rows";
 import { describeEncounters } from "./encounters";
 import { scopeToActiveGen } from "./activeGenScope";
@@ -92,6 +95,33 @@ describe("DEFAULT_VISIBLE_FIELDS", () => {
 		expect(DEFAULT_VISIBLE_FIELDS).toEqual([
 			"hp", "attack", "defense", "specialAttack", "specialDefense", "speed", "total", "ev",
 		]);
+	});
+});
+
+describe("Tile Fields", () => {
+	// What a Card view tile can draw: the stat strip, the Σ and EV corners.
+	it("are the six stats, Total and EV yield, and Card view's default is all of them", () => {
+		const keys = FIELDS.filter(isTileField).map((f) => f.key);
+		expect(keys).toEqual(["hp", "attack", "defense", "specialAttack", "specialDefense", "speed", "total", "ev"]);
+		expect(DEFAULT_CARD_FIELDS).toEqual(keys);
+	});
+});
+
+describe("fieldsShown", () => {
+	const chosen = new Set(["hp", "weight"]);
+
+	it("is the table's chosen Fields", () => {
+		expect(fieldsShown("table", chosen)).toBe(chosen);
+	});
+
+	// The tap panel draws every Field, so a Card view sort never resets.
+	it("is every Field in Card view, whatever is chosen", () => {
+		const shown = fieldsShown("card", new Set());
+		expect(FIELDS.every((f) => shown.has(f.key))).toBe(true);
+		expect(sortAfterFieldsChange({ column: "catchRate", direction: "desc" }, shown)).toEqual({
+			column: "catchRate",
+			direction: "desc",
+		});
 	});
 });
 

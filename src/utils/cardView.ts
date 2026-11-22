@@ -1,49 +1,131 @@
+import { STAT_COLUMNS } from "../data/constants";
 import type { PokedexTableRow, StatBlock } from "../data/types";
 import type { ActiveGenRow } from "./activeGenScope";
+import type { WidthClass } from "./browseLayout";
 import { type Field, FIELDS, isStatField } from "./fields";
-import type { SortColumn } from "./sortPokemon";
+import type { SortColumn, SortState } from "./sortPokemon";
 
-// Card view's tile and tap panel (CONTEXT.md, "Card view") read the same Fields
-// selection as the table. These are their choices that depend on it, and the
-// grid geometry, kept out of the components so they are testable without a DOM.
+// Card view's tile and tap panel (CONTEXT.md, "Card view"). The tile reads
+// Card view's own Fields selection, the Tile Fields (ADR-0020), and the sort;
+// the tap panel draws every Field. These are their choices, and the grid
+// geometry, kept out of the components so they are testable without a DOM.
 
 // The chosen stats, in stat order (menu order). Total is not a stat Field.
-function chosenStats(visibleFields: ReadonlySet<string>): (keyof StatBlock)[] {
-	return FIELDS.filter((f) => isStatField(f) && visibleFields.has(f.key)).map((f) => f.key as keyof StatBlock);
+function chosenStats(tileFields: ReadonlySet<string>): (keyof StatBlock)[] {
+	return FIELDS.filter((f) => isStatField(f) && tileFields.has(f.key)).map((f) => f.key as keyof StatBlock);
 }
 
-// The two summary corners at the bottom of the sprite well. The top corners do
-// not depend on Fields: the number always shows, the favourite mark when it is
-// one. An unchosen corner stays empty.
-export function tileCorners(visibleFields: ReadonlySet<string>): { ev: boolean; total: boolean } {
-	return { ev: visibleFields.has("ev"), total: visibleFields.has("total") };
+function isStat(column: SortColumn): column is keyof StatBlock {
+	return STAT_COLUMNS.some((c) => c.key === column);
 }
 
-// Above this many stats the strip drops its values and keeps only the bars:
-// five numbers no longer fit an ~85px tile.
-const MAX_STATS_WITH_VALUES = 4;
+// The two summary corners at the bottom of the sprite well. An unchosen corner
+// stays empty, except Σ while the list is sorted by Total: the tile always
+// shows the value it is sorted by (tileSortValue covers the rest).
+export function tileCorners(tileFields: ReadonlySet<string>, sort: SortState): { ev: boolean; total: boolean } {
+	return { ev: tileFields.has("ev"), total: tileFields.has("total") || sort.column === "total" };
+}
+
+// The top-left corner: the dex number, or the value the list is sorted by when
+// the tile does not otherwise show it (CONTEXT.md, "Sort value"). No. is the
+// dex number itself, Name is under the sprite, Total is the Σ corner
+// (tileCorners). A stat carries its colour as a dot (`stat`), the same colour
+// as its bar; any other Field carries its menu icon. Height and weight drop
+// their unit to fit an ~75px tile (the icon says which; the tap panel has the
+// unit), and keep the decimal: rounding showed Cosmoem's 999.9 kg as 1000.
+export interface TileSortValue {
+	text: string;
+	icon?: string;
+	stat?: keyof StatBlock;
+}
+
+export function tileSortValue(row: ActiveGenRow, sort: SortState): TileSortValue | null {
+	const column = sort.column;
+	if (isStat(column)) return { text: String(row.stats[column]), stat: column };
+	switch (column) {
+		case "id":
+		case "name":
+		case "total":
+			return null;
+		case "catchRate":
+			return { text: String(row.catchRate), icon: iconOf("catchRate") };
+		case "hatchCounter":
+			return { text: String(row.hatchCounter), icon: iconOf("hatchCounter") };
+		case "height":
+			return { text: (row.height / 10).toFixed(1), icon: iconOf("height") };
+		case "weight":
+			return { text: (row.weight / 10).toFixed(1), icon: iconOf("weight") };
+	}
+}
+
+function iconOf(key: string): string | undefined {
+	return FIELDS.find((f) => f.key === key)?.icon;
+}
+
+// Card size (CONTEXT.md): the user's choice of tile size, per pane-width class.
+// Each size sets the tile's minimum width, how much the sprite is zoomed, and
+// how many stats the strip prints values under. The tile image is the sprite
+// at every size (an artwork option would be a separate setting, never a size).
+export type CardSize = "small" | "medium" | "large";
+export const CARD_SIZES: readonly CardSize[] = ["small", "medium", "large"];
+// The toggle shows each one's first letter, with the word as its label.
+export const CARD_SIZE_LABELS: Record<CardSize, string> = { small: "Small", medium: "Medium", large: "Large" };
+// Remembered per pane-width class, as the layout is: a phone's choice never
+// resizes a wide desktop pane's tiles. Small everywhere is the tile as it was.
+export type CardSizeByWidthClass = Record<WidthClass, CardSize>;
+export const DEFAULT_CARD_SIZE_BY_WIDTH_CLASS: CardSizeByWidthClass = { narrow: "small", wide: "small" };
+
+interface CardSizeSpec {
+	// The grid fits as many tiles of at least this width as it can (cardGrid):
+	// four, three and two at a 390px pane.
+	minTileWidth: number;
+	// Whole-number zoom, so pixel art stays crisp: a 96px sprite at 2× fills a
+	// large tile as a native one fills a small tile.
+	spriteZoom: number;
+	// Above this many stats the strip drops its values and keeps only the
+	// bars: five numbers no longer fit a ~75px tile, six fit a ~156px one.
+	maxStatsWithValues: number;
+}
+
+export const CARD_SIZE_SPECS: Record<CardSize, CardSizeSpec> = {
+	small: { minTileWidth: 72, spriteZoom: 1, maxStatsWithValues: 4 },
+	medium: { minTileWidth: 96, spriteZoom: 1, maxStatsWithValues: 5 },
+	large: { minTileWidth: 144, spriteZoom: 2, maxStatsWithValues: 6 },
+};
 
 export interface StatStrip {
 	// The chosen stats, in stat order (menu order). Total is a corner, not a stat.
 	stats: (keyof StatBlock)[];
 	showValues: boolean;
+	// The stat the list is sorted by, when the strip draws it: its bar stays
+	// solid and the others dim, so the top corner's number reads as that bar.
+	emphasis: keyof StatBlock | null;
 	// 0..1: the row's stat against that stat's maximum among `rows`.
 	height: (row: ActiveGenRow, stat: keyof StatBlock) => number;
 }
 
 // `rows` are the rows shown (filtered, Active Gen scoped), so a bar compares
-// against its own stat among what is on screen, not a fixed ceiling.
-export function statStrip(rows: readonly ActiveGenRow[], visibleFields: ReadonlySet<string>): StatStrip {
-	const stats = chosenStats(visibleFields);
+// against its own stat among what is on screen, not a fixed ceiling. The
+// heights cover every stat, not only the chosen ones: the tap panel draws all
+// six with the same bars.
+export function statStrip(
+	rows: readonly ActiveGenRow[],
+	tileFields: ReadonlySet<string>,
+	sort: SortState,
+	size: CardSize = "small",
+): StatStrip {
+	const stats = chosenStats(tileFields);
 	const max = new Map<keyof StatBlock, number>();
-	for (const stat of stats) {
+	for (const { key } of STAT_COLUMNS) {
 		let m = 0;
-		for (const row of rows) m = Math.max(m, row.stats[stat]);
-		max.set(stat, m);
+		for (const row of rows) m = Math.max(m, row.stats[key]);
+		max.set(key, m);
 	}
+	const sorted = sort.column;
 	return {
 		stats,
-		showValues: stats.length <= MAX_STATS_WITH_VALUES,
+		showValues: stats.length <= CARD_SIZE_SPECS[size].maxStatsWithValues,
+		emphasis: isStat(sorted) && stats.includes(sorted) ? sorted : null,
 		height: (row, stat) => {
 			const m = max.get(stat) ?? 0;
 			return m > 0 ? row.stats[stat] / m : 0;
@@ -56,25 +138,27 @@ export interface SortChip {
 	label: string;
 }
 
-// Card view has no column headers, so a chip row sorts: No. and Name always
-// (they are not Fields), then every chosen Field that sorts, in menu order.
-export function sortChips(visibleFields: ReadonlySet<string>): SortChip[] {
-	const fieldChips = FIELDS.flatMap((f) =>
-		f.sortKey && visibleFields.has(f.key) ? [{ column: f.sortKey, label: f.label }] : []
-	);
-	return [{ column: "id", label: "No." }, { column: "name", label: "Name" }, ...fieldChips];
-}
+// Card view has no column headers, so a chip row sorts: No. and Name (they are
+// not Fields), then every Field that sorts, in menu order. Not only the chosen
+// ones: Card view shows every Field (fieldsShown), in the tap panel and, for
+// the sorted one, the tile's top corner. The row scrolls sideways.
+export const SORT_CHIPS: readonly SortChip[] = [
+	{ column: "id", label: "No." },
+	{ column: "name", label: "Name" },
+	...FIELDS.flatMap((f) => (f.sortKey ? [{ column: f.sortKey, label: f.label }] : [])),
+];
 
-// The grid's columns: as many tiles of at least MIN_TILE_WIDTH as fit, sharing
-// the leftover width. Four at a 390px pane, more columns of about the same
-// size on a wider one. Computed here rather than by CSS auto-fill because the
-// tile needs its own width (fitSprite) and the tap panel needs the column count
-// (which grid row a tile sits in).
-const MIN_TILE_WIDTH = 72;
+// The grid's columns: as many tiles of at least the Card size's minimum width
+// as fit, sharing the leftover width. At a 390px pane: four small, three
+// medium or two large; more columns of about the same size on a wider one.
+// Computed here rather than by CSS auto-fill because the tile needs its own
+// width (fitSprite) and the tap panel needs the column count (which grid row a
+// tile sits in).
 export const CARD_GRID_GAP = 6;
 
-export function cardGrid(width: number): { columns: number; tileWidth: number } {
-	const columns = Math.max(1, Math.floor((width + CARD_GRID_GAP) / (MIN_TILE_WIDTH + CARD_GRID_GAP)));
+export function cardGrid(width: number, size: CardSize = "small"): { columns: number; tileWidth: number } {
+	const min = CARD_SIZE_SPECS[size].minTileWidth;
+	const columns = Math.max(1, Math.floor((width + CARD_GRID_GAP) / (min + CARD_GRID_GAP)));
 	return { columns, tileWidth: Math.max(0, (width - CARD_GRID_GAP * (columns - 1)) / columns) };
 }
 
@@ -128,7 +212,7 @@ export interface CardWindow {
 // spacers are exact sums of the row heights, never estimates, so a restored
 // scroll offset and the tapped-tile correction land where they did before.
 export function cardWindow(input: CardWindowInput): CardWindow {
-	const { rows, rowHeight, rowGap, panel, scrollTop, viewportHeight } = input;
+	const { rows, rowGap, scrollTop, viewportHeight } = input;
 	const columns = Math.max(1, input.columns);
 	const gridRows = Math.ceil(rows.length / columns);
 	if (gridRows === 0) return { start: 0, end: 0, padTop: 0, padBottom: 0 };
@@ -144,9 +228,7 @@ export function cardWindow(input: CardWindowInput): CardWindow {
 	let bottom = 0;
 	for (let r = 0; r < gridRows; r++) {
 		const top = r === 0 ? 0 : bottom + rowGap;
-		bottom =
-			top + (isTallCardRow(rows, columns, r) ? rowHeight.tall : rowHeight.plain) +
-			(panel?.gridRow === r ? panel.height : 0);
+		bottom = top + gridRowRoom(input, columns, r);
 		if (first < 0 && (bottom > from || r === gridRows - 1)) {
 			first = r;
 			padTop = top;
@@ -164,37 +246,30 @@ export function cardWindow(input: CardWindowInput): CardWindow {
 	};
 }
 
-// Five or six stats stretch across the panel as the tile's columns scaled up.
-// Four or fewer keep a fixed narrow width, aligned left, so two stats do not
-// become flat slabs.
-const MIN_STRETCHED_STATS = 5;
-
-export interface PanelStats {
-	// The chosen stats, in stat order (menu order).
-	stats: (keyof StatBlock)[];
-	mode: "stretched" | "fixed";
-	// Total is not a stat Field: a muted column after a hairline at the right
-	// of the stats. With no stat chosen there is no stat row, and Total is a
-	// chip instead (panelChips), so the panel stays header and chips.
-	total: boolean;
+// A grid row's height, plus the open panel's room under it: one rule for the
+// Card window and cardRowTop, so the two never disagree about where a row is.
+function gridRowRoom(input: CardRowsInput, columns: number, r: number): number {
+	const { rows, rowHeight, panel } = input;
+	return (isTallCardRow(rows, columns, r) ? rowHeight.tall : rowHeight.plain) + (panel?.gridRow === r ? panel.height : 0);
 }
 
-export function panelStats(visibleFields: ReadonlySet<string>): PanelStats {
-	const stats = chosenStats(visibleFields);
-	return {
-		stats,
-		mode: stats.length >= MIN_STRETCHED_STATS ? "stretched" : "fixed",
-		total: stats.length > 0 && visibleFields.has("total"),
-	};
+type CardRowsInput = Pick<CardWindowInput, "rows" | "columns" | "rowHeight" | "rowGap" | "panel">;
+
+// Where grid row `gridRow` starts, from the grid's top edge. A Card size change
+// re-lays the grid out with a new column count; CardGrid scrolls the tile that
+// was at the top of the viewport back there with this.
+export function cardRowTop(input: CardRowsInput, gridRow: number): number {
+	const columns = Math.max(1, input.columns);
+	let top = 0;
+	for (let r = 0; r < gridRow; r++) top += gridRowRoom(input, columns, r) + input.rowGap;
+	return top;
 }
 
-// The panel's chips: every chosen Field that is not a stat, in menu order
-// (FIELDS order; users cannot reorder Fields). Total only when it has no stat
-// row to sit in (see PanelStats.total).
-export function panelChips(visibleFields: ReadonlySet<string>): Field[] {
-	const totalIsColumn = panelStats(visibleFields).total;
-	return FIELDS.filter((f) => !isStatField(f) && visibleFields.has(f.key) && !(f.key === "total" && totalIsColumn));
-}
+// The tap panel shows every Field, whatever the tile's selection (ADR-0020):
+// the six stats as columns with Total after them, then every other Field as a
+// chip, in menu order (FIELDS order; users cannot reorder Fields).
+export const PANEL_STATS: readonly (keyof StatBlock)[] = STAT_COLUMNS.map((c) => c.key);
+export const PANEL_CHIPS: readonly Field[] = FIELDS.filter((f) => !isStatField(f) && f.key !== "total");
 
 // An image's opaque bounding box inside its canvas (imageBounds.ts measures it).
 export interface ContentBounds {
@@ -211,9 +286,11 @@ const WELL_INSET = 4;
 
 // Places a sprite in a square well of `well` px: centred on its opaque bounding
 // box, not its canvas (PokeAPI's 96px sprites sit off-centre, and centring the
-// canvas clipped Venusaur and Charizard), at native 1:1 pixels unless the box
-// is larger than the well's room, then scaled down to fit. Never scaled up.
-// `left`/`top` place the canvas's top-left corner inside the well.
+// canvas clipped Venusaur and Charizard), at the Card size's whole-number zoom
+// (1:1 or 2:2 pixels) unless the box is larger than the well's room at that
+// zoom, then scaled down to fit (a fractional scale, drawn smoothed). Never
+// above the zoom, so every sprite in a grid keeps its size relative to the
+// others. `left`/`top` place the canvas's top-left corner inside the well.
 export interface SpritePlacement {
 	scale: number;
 	left: number;
@@ -222,9 +299,9 @@ export interface SpritePlacement {
 	height: number;
 }
 
-export function fitSprite(bounds: ContentBounds, well: number): SpritePlacement {
+export function fitSprite(bounds: ContentBounds, well: number, zoom = 1): SpritePlacement {
 	const room = well - 2 * WELL_INSET;
-	const scale = Math.min(1, room / Math.max(bounds.width, bounds.height));
+	const scale = Math.min(zoom, room / Math.max(bounds.width, bounds.height));
 	return {
 		scale,
 		left: well / 2 - (bounds.x + bounds.width / 2) * scale,

@@ -1,5 +1,6 @@
 import type { FontRoleSettings } from "@lhak/style/obsidian-helpers/font-roles";
 import type { LayoutByWidthClass } from "../utils/browseLayout";
+import type { CardSizeByWidthClass } from "../utils/cardView";
 
 // --- Raw PokeAPI response shapes (subset of fields we actually use) ---
 
@@ -529,6 +530,9 @@ export interface PluginSettings extends FontRoleSettings {
 	// Field keys (src/utils/fields.ts) the user has chosen to show. Was
 	// `visibleColumns` before #22; hydrateSettings migrates the old key.
 	visibleFields: string[];
+	// Card view's own selection: the Tile Fields (TILE_FIELD_KEYS) its tile
+	// draws (ADR-0020). Seeded from visibleFields for an older data.json.
+	cardFields: string[];
 	useTypeIcons: boolean;
 	// Which generation's stats/moves/flavor text to prioritize for display,
 	// independent of enabledGenerations (which only controls which dex rows
@@ -541,7 +545,7 @@ export interface PluginSettings extends FontRoleSettings {
 	// own row can be favorited independent of its base species) a user has
 	// starred. Saved through PokedexPlugin.preferences (ADR-0012), not the
 	// saveSettings path, which pushes a settings copy into every open view;
-	// so are visibleFields and layoutByWidthClass.
+	// so are visibleFields, cardFields and layoutByWidthClass.
 	favoritePokemonIds: number[];
 	// Makes every plugin transition instant (#26). styles.src.css does the same
 	// for the OS's prefers-reduced-motion (stricter than the kit, which keeps
@@ -550,4 +554,7 @@ export interface PluginSettings extends FontRoleSettings {
 	// The browse layout (table or Card view) each pane-width class last chose
 	// (#27, utils/browseLayout.ts). Saved through PokedexPlugin.preferences.
 	layoutByWidthClass: LayoutByWidthClass;
+	// Card view's tile size each pane-width class last chose (utils/cardView.ts,
+	// CONTEXT.md "Card size"). Saved through PokedexPlugin.preferences.
+	cardSizeByWidthClass: CardSizeByWidthClass;
 }

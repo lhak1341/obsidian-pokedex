@@ -2,33 +2,69 @@ import { describe, expect, it } from "vitest";
 import { makeActiveGenRow } from "../data/__fixtures__/rows";
 import type { StatBlock } from "../data/types";
 import {
-	cardGrid, cardWindow, type CardWindowInput, fitSprite, isTallCardRow, panelChips, panelPlacement, panelStats, sortChips,
-	statStrip, tileCorners,
+	cardGrid, cardRowTop, cardWindow, type CardWindowInput, fitSprite, isTallCardRow, PANEL_CHIPS, PANEL_STATS, panelPlacement,
+	SORT_CHIPS, statStrip, tileCorners, tileSortValue,
 } from "./cardView";
+import type { SortColumn, SortState } from "./sortPokemon";
 
 const stats = (overrides: Partial<StatBlock>): StatBlock => ({
 	hp: 50, attack: 50, defense: 50, specialAttack: 50, specialDefense: 50, speed: 50, ...overrides,
 });
 
+const byNo: SortState = { column: "id", direction: "asc" };
+const by = (column: SortColumn): SortState => ({ column, direction: "desc" });
+
 describe("tileCorners", () => {
 	it("shows EV dots and the Σ total only when their Field is chosen", () => {
-		expect(tileCorners(new Set(["hp", "total", "ev"]))).toEqual({ ev: true, total: true });
-		expect(tileCorners(new Set(["hp", "ev"]))).toEqual({ ev: true, total: false });
-		expect(tileCorners(new Set(["total"]))).toEqual({ ev: false, total: true });
-		expect(tileCorners(new Set())).toEqual({ ev: false, total: false });
+		expect(tileCorners(new Set(["hp", "total", "ev"]), byNo)).toEqual({ ev: true, total: true });
+		expect(tileCorners(new Set(["hp", "ev"]), byNo)).toEqual({ ev: true, total: false });
+		expect(tileCorners(new Set(["total"]), byNo)).toEqual({ ev: false, total: true });
+		expect(tileCorners(new Set(), byNo)).toEqual({ ev: false, total: false });
+	});
+
+	it("shows Σ while the list is sorted by Total, chosen or not", () => {
+		expect(tileCorners(new Set(), by("total"))).toEqual({ ev: false, total: true });
+		expect(tileCorners(new Set(), by("speed")).total).toBe(false);
+	});
+});
+
+describe("tileSortValue", () => {
+	const row = makeActiveGenRow({
+		dexNumber: 790, stats: stats({ speed: 37 }), catchRate: 45, hatchCounter: 120, height: 1, weight: 9999,
+	});
+
+	it("shows nothing for No., Name and Total, which the tile already shows", () => {
+		expect(tileSortValue(row, byNo)).toBeNull();
+		expect(tileSortValue(row, by("name"))).toBeNull();
+		expect(tileSortValue(row, by("total"))).toBeNull();
+	});
+
+	it("shows a stat's value with its stat, for the colour dot", () => {
+		expect(tileSortValue(row, by("speed"))).toEqual({ text: "37", stat: "speed" });
+	});
+
+	it("shows another Field's value with its menu icon", () => {
+		expect(tileSortValue(row, by("catchRate"))).toEqual({ text: "45", icon: "target" });
+		expect(tileSortValue(row, by("hatchCounter"))).toEqual({ text: "120", icon: "egg" });
+	});
+
+	// Cosmoem is 999.9 kg: rounding to fit printed 1000. No unit, one decimal.
+	it("shows height and weight without a unit and with their decimal", () => {
+		expect(tileSortValue(row, by("weight"))).toEqual({ text: "999.9", icon: "weight" });
+		expect(tileSortValue(row, by("height"))).toEqual({ text: "0.1", icon: "ruler" });
 	});
 });
 
 describe("statStrip", () => {
 	it("draws the chosen stats in stat order, never Total or another Field", () => {
-		const strip = statStrip([makeActiveGenRow()], new Set(["speed", "total", "hp", "catchRate", "attack"]));
+		const strip = statStrip([makeActiveGenRow()], new Set(["speed", "total", "hp", "catchRate", "attack"]), byNo);
 		expect(strip.stats).toEqual(["hp", "attack", "speed"]);
 	});
 
 	it("draws each bar relative to that stat's maximum among the shown rows", () => {
 		const a = makeActiveGenRow({ id: 1, stats: stats({ hp: 50, speed: 30 }) });
 		const b = makeActiveGenRow({ id: 2, stats: stats({ hp: 100, speed: 120 }) });
-		const strip = statStrip([a, b], new Set(["hp", "speed"]));
+		const strip = statStrip([a, b], new Set(["hp", "speed"]), byNo);
 		expect(strip.height(a, "hp")).toBe(0.5);
 		expect(strip.height(b, "hp")).toBe(1);
 		expect(strip.height(a, "speed")).toBe(0.25);
@@ -37,7 +73,17 @@ describe("statStrip", () => {
 
 	it("draws a zero-height bar, not NaN, when no shown row has the stat above 0", () => {
 		const a = makeActiveGenRow({ stats: stats({ hp: 0 }) });
-		expect(statStrip([a], new Set(["hp"])).height(a, "hp")).toBe(0);
+		expect(statStrip([a], new Set(["hp"]), byNo).height(a, "hp")).toBe(0);
+	});
+
+	it.each([
+		["small", 4], ["medium", 5], ["large", 6],
+	] as const)("prints values under up to as many stats as a %s tile fits (%i)", (size, most) => {
+		const all = ["hp", "attack", "defense", "specialAttack", "specialDefense", "speed"];
+		expect(statStrip([makeActiveGenRow()], new Set(all.slice(0, most)), byNo, size).showValues).toBe(true);
+		if (most < 6) {
+			expect(statStrip([makeActiveGenRow()], new Set(all.slice(0, most + 1)), byNo, size).showValues).toBe(false);
+		}
 	});
 
 	it.each([
@@ -46,19 +92,35 @@ describe("statStrip", () => {
 		[["hp", "attack", "defense", "specialAttack", "speed"], false],
 		[["hp", "attack", "defense", "specialAttack", "specialDefense", "speed"], false],
 	])("prints the values under %j: %s (dropped above four stats)", (chosen, showValues) => {
-		expect(statStrip([makeActiveGenRow()], new Set(chosen)).showValues).toBe(showValues);
+		expect(statStrip([makeActiveGenRow()], new Set(chosen), byNo).showValues).toBe(showValues);
+	});
+
+	it("emphasizes the sorted stat when the strip draws it", () => {
+		const chosen = new Set(["hp", "speed"]);
+		expect(statStrip([makeActiveGenRow()], chosen, by("speed")).emphasis).toBe("speed");
+		expect(statStrip([makeActiveGenRow()], chosen, by("attack")).emphasis).toBeNull();
+		expect(statStrip([makeActiveGenRow()], chosen, by("weight")).emphasis).toBeNull();
+	});
+
+	// The tap panel draws all six stats with the strip's heights.
+	it("gives a height for an unchosen stat too", () => {
+		const a = makeActiveGenRow({ id: 1, stats: stats({ attack: 40 }) });
+		const b = makeActiveGenRow({ id: 2, stats: stats({ attack: 80 }) });
+		expect(statStrip([a, b], new Set(["hp"]), byNo).height(a, "attack")).toBe(0.5);
 	});
 });
 
-describe("sortChips", () => {
-	it("offers No. and Name, then the chosen sortable Fields in menu order", () => {
-		const chips = sortChips(new Set(["weight", "ev", "speed", "total", "hp", "heldItems"]));
-		expect(chips.map((c) => c.label)).toEqual(["No.", "Name", "HP", "Spe", "Total", "Weight"]);
-		expect(chips.map((c) => c.column)).toEqual(["id", "name", "hp", "speed", "total", "weight"]);
-	});
-
-	it("offers only No. and Name with nothing chosen", () => {
-		expect(sortChips(new Set()).map((c) => c.column)).toEqual(["id", "name"]);
+describe("SORT_CHIPS", () => {
+	// Card view shows every Field (in the panel, and the sorted one on the
+	// tile), so it sorts by every Field that sorts, whatever the tile shows.
+	it("offers No. and Name, then every sortable Field in menu order", () => {
+		expect(SORT_CHIPS.map((c) => c.label)).toEqual([
+			"No.", "Name", "HP", "Atk", "Def", "SpA", "SpD", "Spe", "Total", "Catch rate", "Hatch counter", "Height", "Weight",
+		]);
+		expect(SORT_CHIPS.map((c) => c.column)).toEqual([
+			"id", "name", "hp", "attack", "defense", "specialAttack", "specialDefense", "speed", "total", "catchRate",
+			"hatchCounter", "height", "weight",
+		]);
 	});
 });
 
@@ -73,6 +135,19 @@ describe("cardGrid", () => {
 		expect(cardGrid(568).columns).toBe(7);
 		expect(cardGrid(1000).columns).toBe(12);
 		expect(cardGrid(1000).tileWidth).toBeLessThan(90);
+	});
+
+	// Card size: four small, three medium or two large tiles at a 390px pane.
+	it.each([
+		["small", 319, 4],
+		["medium", 319, 3],
+		["medium", 334, 3],
+		["large", 319, 2],
+		["large", 334, 2],
+		["medium", 1000, 9],
+		["large", 1000, 6],
+	] as const)("fits %s tiles at %ipx in %i columns", (size, width, columns) => {
+		expect(cardGrid(width, size).columns).toBe(columns);
 	});
 
 	it("keeps at least one column, however narrow", () => {
@@ -104,6 +179,20 @@ describe("fitSprite", () => {
 	it("never scales up", () => {
 		const tiny = { x: 40, y: 40, width: 16, height: 16, canvasWidth: 96, canvasHeight: 96 };
 		expect(fitSprite(tiny, 85).scale).toBe(1);
+	});
+
+	// A large Card size zooms 2×: crisp whole pixels, never more, so every
+	// sprite in the grid keeps its size relative to the others.
+	it("zooms a sprite that fits to the whole-number zoom, and no further", () => {
+		expect(fitSprite(offCentre, 156, 2).scale).toBe(2);
+		const tiny = { x: 40, y: 40, width: 16, height: 16, canvasWidth: 96, canvasHeight: 96 };
+		expect(fitSprite(tiny, 156, 2).scale).toBe(2);
+	});
+
+	it("scales a sprite too big for the zoom down to fit, below the zoom", () => {
+		const big = { x: 2, y: 4, width: 90, height: 84, canvasWidth: 96, canvasHeight: 96 };
+		// Room is 156 less 8: 148px for 90px of content, so 2× (180px) does not fit.
+		expect(fitSprite(big, 156, 2).scale).toBeCloseTo(148 / 90);
 	});
 });
 
@@ -143,6 +232,18 @@ describe("cardWindow", () => {
 	};
 	const withForm = (index: number) =>
 		plainRows.map((r, i) => (i === index ? { ...r, formLabel: "Alolan" } : r));
+
+	// cardRowTop and the Card window share the row arithmetic: the first drawn
+	// row's padTop is that row's top, panel and tall rows included.
+	it("agrees with cardRowTop on where every drawn window starts", () => {
+		const input = { ...base, rows: withForm(9), panel: { gridRow: 1, height: 40 } };
+		for (const scrollTop of [0, 500, 1100, 2000]) {
+			const win = cardWindow({ ...input, scrollTop });
+			expect(cardRowTop(input, win.start / input.columns)).toBe(win.padTop);
+		}
+		// Row 3 sits after rows 0 (100), 1 (100 + 40 panel) and 2 (tall, 120).
+		expect(cardRowTop(input, 3)).toBe(100 + 140 + 120 + 3 * 10);
+	});
 
 	it("draws the viewport and one viewport below it at the top", () => {
 		// Rows starting above 0 + 2 * 300: rows 0-5 (row 5 starts at 550).
@@ -209,40 +310,15 @@ describe("isTallCardRow", () => {
 	});
 });
 
-describe("panelStats", () => {
-	it.each([
-		[["hp", "attack", "defense", "specialAttack", "specialDefense", "speed"], "stretched"],
-		[["hp", "attack", "defense", "specialAttack", "speed"], "stretched"],
-		[["hp", "attack", "defense", "speed"], "fixed"],
-		[["hp", "speed"], "fixed"],
-		[["attack"], "fixed"],
-	])("draws %j as %s columns", (chosen, mode) => {
-		expect(panelStats(new Set(chosen)).mode).toBe(mode);
+describe("the tap panel", () => {
+	// It shows every Field, whatever the tile's selection (ADR-0020).
+	it("draws the six stats as columns, in stat order", () => {
+		expect(PANEL_STATS).toEqual(["hp", "attack", "defense", "specialAttack", "specialDefense", "speed"]);
 	});
 
-	it("draws the chosen stats in stat order, and Total as its own column only when chosen", () => {
-		expect(panelStats(new Set(["speed", "total", "hp", "ev"]))).toEqual({
-			stats: ["hp", "speed"], mode: "fixed", total: true,
-		});
-		expect(panelStats(new Set(["hp"])).total).toBe(false);
-	});
-
-	it("has no stat row with no stat chosen, so the panel is header and chips (Total becomes a chip)", () => {
-		expect(panelStats(new Set(["total", "weight"]))).toEqual({ stats: [], mode: "fixed", total: false });
-		expect(panelChips(new Set(["weight", "total"])).map((f) => f.key)).toEqual(["total", "weight"]);
-		expect(panelStats(new Set(["weight"])).stats).toEqual([]);
-	});
-});
-
-describe("panelChips", () => {
-	it("draws every chosen Other Field as a chip in menu order, never a stat or Total", () => {
-		const keys = panelChips(
-			new Set(["weight", "hp", "catchRate", "total", "encounterLocation", "ev", "height", "heldItems", "hatchCounter"]),
-		).map((f) => f.key);
-		expect(keys).toEqual(["ev", "heldItems", "encounterLocation", "catchRate", "hatchCounter", "height", "weight"]);
-	});
-
-	it("draws no chips when only stats and Total are chosen", () => {
-		expect(panelChips(new Set(["hp", "total"]))).toEqual([]);
+	it("draws every other Field but Total (a column after the stats) as a chip, in menu order", () => {
+		expect(PANEL_CHIPS.map((f) => f.key)).toEqual([
+			"ev", "heldItems", "encounterLocation", "catchRate", "hatchCounter", "height", "weight",
+		]);
 	});
 });

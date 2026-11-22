@@ -104,6 +104,10 @@ The up-to-four images a Pokemon (or a Mega/Gigantamax variety) can own: `sprite`
 
 The browse screen showing each Pokemon as a card instead of a table row. Same rows, filters, sort, favourites and Active Gen scoping as the table; only the presentation differs. The table is the other layout of the same browse screen, not a separate screen.
 
+## Card size
+
+Card view's tile size: Small, Medium or Large (the S / M / L toggle at the right of the result count, Card view only), remembered per pane-width class like the layout. Each size sets the tile's minimum width (72, 96, 144px: four, three or two tiles at a 390px pane), the sprite's whole-number zoom (1×, 1×, 2×, so pixel art stays crisp; a sprite too big for its tile at that zoom is scaled down and smoothed), and how many stats the strip prints values under (4, 5, 6). The tile image is the sprite at every size (ADR-0021: artwork measured and declined). A size change keeps the tile at the top of the viewport in place. `CARD_SIZE_SPECS` in `src/utils/cardView.ts`; `cardSizeByWidthClass` in settings.
+
 ## Card window
 
 The tiles Card view actually draws: the ones in the viewport plus one viewport above and below, in whole grid rows. The rest of the list is the grid's padding, sized exactly from the two measured grid row heights (tall when a tile in the row has a form line) and the open tap panel, so the scroll offset always means the same place. Computed by `cardWindow` (`src/utils/cardView.ts`) and drawn by `CardGrid.svelte`; ADR-0016. The table has its own: the Table window.
@@ -118,7 +122,19 @@ A Pokédex pane narrower than 600px, judged by the pane's own width, not the dev
 
 ## Fields
 
-The pieces of per-Pokemon data the user chooses to show on the browse screen (Total, EV yield, held items, catch rate, ...). There is one selection, shared by both layouts: switching between the table and Card view changes how the chosen Fields are drawn, never which ones are shown. A chosen Field appears as a column in the table; in Card view it appears on the tile (stats, Total, EV yield) or in the tap panel (every chosen Field, with its exact value). An unchosen Field appears nowhere, and is not offered as a sort. "Columns" was the table-only name for the same thing and is retired as the user-facing term; the menu is "Fields". In code, `FIELDS` (`src/utils/fields.ts`) is the one list every layout reads, and the setting is `visibleFields`. Unchoosing the Field the list is sorted on resets the sort to No. ascending (`sortAfterFieldsChange`).
+The pieces of per-Pokemon data the user chooses to show on the browse screen (Total, EV yield, held items, catch rate, ...). Each layout keeps its own selection (ADR-0020): the table's says which columns it draws; Card view's says what the tile draws, and offers only the Tile Fields. Card view's tap panel shows every Field, with its exact value, whatever is chosen. "Columns" was the table-only name for the same thing and is retired as the user-facing term; the menu is "Fields", and it edits the shown layout's selection. In code, `FIELDS` (`src/utils/fields.ts`) is the one list every layout reads, and the settings are `visibleFields` (the table) and `cardFields` (Card view). The list is never sorted by a Field the layout does not show (`fieldsShown`): unchoosing the table's sorted Field, or switching to the table from a sort it lacks, resets the sort to No. ascending (`sortAfterFieldsChange`). Card view shows every Field, so it sorts by any of them.
+
+## Tile Fields
+
+The Fields a Card view tile has room for: the six stats (the stat strip), Total (the Σ corner) and EV yield (the EV corner). Card view's Fields menu offers these only. `TILE_FIELD_KEYS` in `src/utils/fields.ts`.
+
+## Sort value
+
+What a Card view tile shows in its top-left corner when the list is sorted by something the tile does not otherwise show: a stat's value with its colour dot (and the strip dims the other stats), or another Field's value with its menu icon. Height and weight drop their unit and keep one decimal. Sorted by No. or Name the corner is the dex number; by Total, the Σ corner shows instead, chosen or not. `tileSortValue` in `src/utils/cardView.ts`.
+
+## Scroll-to-top button
+
+The round arrow button floating at the bottom right of the browse screen (table or Card view) on Obsidian mobile only, once the list is scrolled more than one screen down. A tap scrolls back to the top: smoothly, or at once under Reduce motion. It sits above the phone's floating nav bar. Desktop has none (the scrollbar and Home key do it). In `PokedexApp.svelte`, which owns the scroller.
 
 ## Info popover
 

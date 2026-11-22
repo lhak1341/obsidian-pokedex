@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { tick } from "svelte";
+	import { tick, untrack } from "svelte";
 	import { SvelteMap } from "svelte/reactivity";
 	import { STAT_COLORS, TYPE_COLORS } from "../../data/constants";
 	import type { PokedexRepository } from "../../data/PokedexRepository";
 	import type { PokedexTableRow } from "../../data/types";
 	import {
-		CARD_GRID_GAP, cardGrid, cardWindow, type ContentBounds, fitSprite, isTallCardRow, panelChips, panelPlacement,
-		panelStats, sortChips, type SpritePlacement, statStrip, tileCorners,
+		CARD_GRID_GAP, CARD_SIZE_SPECS, cardGrid, cardRowTop, type CardSize, cardWindow, type ContentBounds, fitSprite, isTallCardRow, panelPlacement, SORT_CHIPS,
+		type SpritePlacement, statStrip, tileCorners, tileSortValue,
 	} from "../../utils/cardView";
 	import { formatEvYield, STAT_LABEL_BY_KEY } from "../../utils/fields";
 	import { formatDexNumber, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
@@ -17,10 +17,11 @@
 	import type { FavoriteMenu } from "../favoriteMenu";
 	import type { InfoTargetProps } from "../infoPopover.svelte";
 	import CardPanel from "./CardPanel.svelte";
+	import Icon from "./Icon.svelte";
 
 	// Card view (CONTEXT.md): the browse screen's rows drawn as a grid of tiles.
 	// It owns its drawing and which tap panel is open, nothing else: rows (already filtered, sorted and Active
-	// Gen scoped), the Fields selection, the sort and favourites all come from
+	// Gen scoped), Card view's Fields selection (the Tile Fields), the sort and favourites all come from
 	// TableScreen, the browse screen's owner, so a switch to or from the table
 	// keeps them. A favourite's tile is outlined in the accent, a marker only
 	// (no accidental toggles while scrolling): a tile favourites through TableScreen's favourites menu
@@ -28,11 +29,15 @@
 	// keeps its asterisk toggle. A tile tap opens the tap panel; the panel's
 	// "Open ›" opens the detail screen (onSelect).
 	let {
-		rows, visibleFields, favoriteIds, sort, repository, onSort, onSelect, onToggleFavorite, favoriteMenu,
+		rows, tileFields, size, favoriteIds, sort, repository, onSort, onSelect, onToggleFavorite, favoriteMenu,
 		heldItemTarget,
 	}: {
 		rows: ActiveGenRow[];
-		visibleFields: ReadonlySet<string>;
+		// Card view's own Fields selection (ADR-0020): what the tile draws. The
+		// tap panel draws every Field whatever is chosen.
+		tileFields: ReadonlySet<string>;
+		// The Card size (CONTEXT.md): tile width, sprite zoom, strip values.
+		size: CardSize;
 		favoriteIds: ReadonlySet<number>;
 		sort: SortState;
 		repository: PokedexRepository;
@@ -47,12 +52,10 @@
 
 	let gridEl = $state<HTMLDivElement | undefined>();
 	let gridWidth = $state(0);
-	const grid = $derived(cardGrid(gridWidth));
-	const corners = $derived(tileCorners(visibleFields));
-	const strip = $derived(statStrip(rows, visibleFields));
-	const chips = $derived(sortChips(visibleFields));
-	const panelStatCols = $derived(panelStats(visibleFields));
-	const panelFieldChips = $derived(panelChips(visibleFields));
+	const grid = $derived(cardGrid(gridWidth, size));
+	const zoom = $derived(CARD_SIZE_SPECS[size].spriteZoom);
+	const corners = $derived(tileCorners(tileFields, sort));
+	const strip = $derived(statStrip(rows, tileFields, sort, size));
 
 	// The tap panel is an accordion: one open at a time, under its tile's grid
 	// row. Held by id, so a re-sort or filter moves it with its tile; a filter
@@ -245,14 +248,86 @@
 		}
 	});
 
-	// The canvas centred at native size, for a sprite whose box is unknown.
+	// The canvas centred at the size's zoom, for a sprite whose box is unknown.
+	// It stays hidden until measured (.measured), so this only holds its place.
 	const NATIVE_SPRITE = 96;
 	function placement(uri: string, well: number): SpritePlacement {
 		const b = bounds.get(uri);
-		if (b) return fitSprite(b, well);
-		const offset = (well - NATIVE_SPRITE) / 2;
-		return { scale: 1, left: offset, top: offset, width: NATIVE_SPRITE, height: NATIVE_SPRITE };
+		if (b) return fitSprite(b, well, zoom);
+		const side = NATIVE_SPRITE * zoom;
+		const offset = (well - side) / 2;
+		return { scale: zoom, left: offset, top: offset, width: side, height: side };
 	}
+
+	// A Card size change re-lays the grid out with a new column count, so the
+	// same scroll offset would show other Pokemon. The tile at the top of the
+	// viewport is kept there: read before the change, put back after
+	// (restoreTopTile).
+	let laidOutSize = untrack(() => size);
+	$effect.pre(() => {
+		const next = size;
+		if (next === laidOutSize) return;
+		laidOutSize = next;
+		const anchor = untrack(topTile);
+		// Heights measured at the old size are wrong at the new one.
+		plainHeight = null;
+		tallHeight = null;
+		if (anchor) void restoreTopTile(anchor);
+	});
+
+	function topTile(): { index: number; offset: number } | null {
+		const el = gridEl;
+		const scroller = el?.closest<HTMLElement>(".pokedex-view");
+		if (!el || !scroller || !isShown(el) || scroller.scrollTop === 0) return null;
+		const viewTop = scroller.getBoundingClientRect().top;
+		// The index comes from the DOM: in this pre-effect the window is already
+		// derived for the new size while the tiles are still the old one's.
+		for (const tile of el.querySelectorAll<HTMLElement>(":scope > .card-tile")) {
+			const rect = tile.getBoundingClientRect();
+			if (rect.bottom > viewTop) return { index: Number(tile.dataset.index), offset: rect.top - viewTop };
+		}
+		return null;
+	}
+
+	const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+	// Each pass puts the anchor tile back at its offset: from the drawn tile
+	// when it is drawn, else from the row arithmetic. A jump redraws the window
+	// and re-measures heights, which can move the tile again, so it repeats
+	// until the tile stays (two passes in practice), at most MAX_ANCHOR_PASSES.
+	const MAX_ANCHOR_PASSES = 4;
+	async function restoreTopTile(anchor: { index: number; offset: number }) {
+		for (let pass = 0; pass < MAX_ANCHOR_PASSES; pass++) {
+			await tick();
+			await nextFrame();
+			await nextFrame();
+			const el = gridEl;
+			const scroller = el?.closest<HTMLElement>(".pokedex-view");
+			if (!el || !scroller) return;
+			const target = scroller.getBoundingClientRect().top + anchor.offset;
+			const tile = el.querySelector<HTMLElement>(`:scope > .card-tile[data-index="${anchor.index}"]`);
+			let tileTop: number;
+			if (tile) {
+				tileTop = tile.getBoundingClientRect().top;
+			} else {
+				const rowTop = cardRowTop(
+					{
+						rows,
+						columns: grid.columns,
+						rowHeight,
+						rowGap: CARD_GRID_GAP * 2,
+						panel: panelAfter < 0 ? null : { gridRow: Math.floor(panelAfter / grid.columns), height: panelHeight },
+					},
+					Math.floor(anchor.index / grid.columns),
+				);
+				tileTop = el.getBoundingClientRect().top + rowTop;
+			}
+			const delta = tileTop - target;
+			if (tile && Math.abs(delta) < 1) return;
+			scroller.scrollTop += delta;
+		}
+	}
+
 
 	function onTileKeydown(e: KeyboardEvent, id: number) {
 		if (e.key !== "Enter" && e.key !== " ") return;
@@ -267,7 +342,7 @@
 </script>
 
 <div class="sort-chips" role="group" aria-label="Sort">
-	{#each chips as chip (chip.column)}
+	{#each SORT_CHIPS as chip (chip.column)}
 		{@const active = sort.column === chip.column}
 		<button
 			type="button"
@@ -293,8 +368,10 @@
 	{#each drawn as row, k (row.id)}
 		{@const i = winStart + k}
 		{@const [typeA, typeB = typeA] = row.types}
+		{@const sortValue = tileSortValue(row, sort)}
 		<div
 			class="card-tile"
+			data-index={i}
 			role="button"
 			tabindex="0"
 			aria-label="{formatPokemonDisplayName(row)}{favoriteIds.has(row.id) ? ', favorite' : ''}"
@@ -317,7 +394,7 @@
 						src={row.spriteDataUri}
 						alt=""
 						class="tile-sprite"
-						class:smooth={fit.scale < 1}
+						class:smooth={!Number.isInteger(fit.scale)}
 						class:measured={bounds.has(row.spriteDataUri)}
 						style:left="{fit.left}px"
 						style:top="{fit.top}px"
@@ -325,7 +402,20 @@
 						style:height="{fit.height}px"
 					/>
 				{/if}
-				<span class="corner corner-tl tile-chip">{formatDexNumber(row.dexNumber)}</span>
+				<!-- The value the list is sorted by, when the tile shows it nowhere
+				else (tileSortValue); the dex number otherwise. -->
+				{#if sortValue}
+					<span class="corner corner-tl tile-chip sort-value">
+						{#if sortValue.stat}
+							<i class="sort-dot" style:--pkdx-dot={STAT_COLORS[sortValue.stat]}></i>
+						{:else if sortValue.icon}
+							<Icon name={sortValue.icon} size={9} strokeWidth={2.25} />
+						{/if}
+						{sortValue.text}
+					</span>
+				{:else}
+					<span class="corner corner-tl tile-chip">{formatDexNumber(row.dexNumber)}</span>
+				{/if}
 				{#if corners.ev && row.evYield.length > 0}
 					<span class="corner corner-bl ev-dots" title={formatEvYield(row)}>
 						{#each evDots(row) as colour, i (i)}
@@ -342,9 +432,9 @@
 				{#if row.formLabel}<span class="form-line">{row.formLabel}</span>{/if}
 			</div>
 			{#if strip.stats.length > 0}
-				<div class="stat-strip" class:with-values={strip.showValues}>
+				<div class="stat-strip" class:with-values={strip.showValues} class:emphasized={strip.emphasis !== null}>
 					{#each strip.stats as stat (stat)}
-						<span class="strip-col" title="{STAT_LABEL_BY_KEY.get(stat)} {row.stats[stat]}">
+						<span class="strip-col" class:sorted={strip.emphasis === stat} title="{STAT_LABEL_BY_KEY.get(stat)} {row.stats[stat]}">
 							<i style:--pkdx-bar={STAT_COLORS[stat]} style:--pkdx-bar-height={strip.height(row, stat)}></i>
 							{#if strip.showValues}<b>{row.stats[stat]}</b>{/if}
 						</span>
@@ -360,8 +450,6 @@
 					id={panelId}
 					grow={grown.id !== open.id}
 					row={open}
-					stats={panelStatCols}
-					chips={panelFieldChips}
 					barHeight={strip.height}
 					favorite={favoriteIds.has(open.id)}
 					onToggleFavorite={() => onToggleFavorite(open.id)}
@@ -443,8 +531,9 @@
 		filter: brightness(0.97);
 	}
 	/* !important: Obsidian's `.view-content img { max-width: 100% }` outranks a
-	scoped class (see TableScreen's .sprite-preview). Native pixels stay crisp;
-	a sprite scaled down to fit is smoothed. Hidden until its box is measured,
+	scoped class (see TableScreen's .sprite-preview). Native or whole-number
+	zoomed pixels (a large Card size's 2×) stay crisp; a sprite scaled down to
+	fit is smoothed. Hidden until its box is measured,
 	so it never jumps from canvas-centred to box-centred. */
 	.tile-sprite {
 		position: absolute;
@@ -486,6 +575,25 @@
 		color: var(--lk-text-muted);
 		font-size: 0.66rem;
 		font-variant-numeric: tabular-nums;
+	}
+	/* The sort value is the tile's subject while it shows: full text colour,
+	as the Σ chip. Its icon (or a stat's colour dot) stays muted beside it. */
+	.sort-value {
+		gap: 2px;
+		color: var(--lk-text);
+		font-weight: 600;
+		white-space: nowrap;
+	}
+	.sort-value :global(svg) {
+		flex: none;
+		color: var(--lk-text-muted);
+	}
+	.sort-dot {
+		flex: none;
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: var(--pkdx-dot);
 	}
 	.total-chip {
 		color: var(--lk-text);
@@ -551,6 +659,11 @@
 		height: calc(var(--pkdx-bar-height) * 100%);
 		border-radius: 2px 2px 0 0;
 		background: var(--pkdx-bar);
+	}
+	/* Sorted by a stat the strip draws: the other bars fade so the sorted one
+	reads as the top corner's number. */
+	.stat-strip.emphasized .strip-col:not(.sorted) {
+		opacity: 0.25;
 	}
 	.with-values .strip-col i {
 		height: calc(var(--pkdx-bar-height) * 16px);

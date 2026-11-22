@@ -5,7 +5,9 @@ function setup(initial: Partial<LocalPreferenceValues> = {}) {
 	const settings: LocalPreferenceValues = {
 		favoritePokemonIds: [],
 		visibleFields: ["hp", "attack"],
+		cardFields: ["hp", "total"],
 		layoutByWidthClass: { narrow: "card", wide: "table" },
+		cardSizeByWidthClass: { narrow: "small", wide: "small" },
 		...initial,
 	};
 	const saved: LocalPreferenceValues[] = [];
@@ -37,6 +39,27 @@ describe("LocalPreferences", () => {
 		prefs.toggleField("speed");
 		prefs.toggleField("total");
 		expect(saved[saved.length - 1].visibleFields).toEqual(["hp", "attack", "total"]);
+	});
+
+	// ADR-0020: each layout has its own Fields selection.
+	it("toggles Card view's Fields without touching the table's, and the reverse", () => {
+		const { prefs, settings } = setup();
+		prefs.toggleCardField("ev");
+		prefs.toggleCardField("hp");
+		expect(settings.cardFields).toEqual(["total", "ev"]);
+		expect(settings.visibleFields).toEqual(["hp", "attack"]);
+		prefs.toggleField("weight");
+		expect(settings.cardFields).toEqual(["total", "ev"]);
+	});
+
+	it("writes only the current width class's Card size, as a new object", () => {
+		const { prefs, settings } = setup();
+		const before = settings.cardSizeByWidthClass;
+		prefs.setCardSize("narrow", "large");
+		expect(settings.cardSizeByWidthClass).toEqual({ narrow: "large", wide: "small" });
+		expect(settings.cardSizeByWidthClass).not.toBe(before);
+		prefs.setCardSize("wide", "medium");
+		expect(settings.cardSizeByWidthClass).toEqual({ narrow: "large", wide: "medium" });
 	});
 
 	it("writes only the current width class's layout", () => {
@@ -80,7 +103,8 @@ describe("LocalPreferences", () => {
 
 	it("reads the live settings object, so a reload that replaces it is followed", () => {
 		let settings: LocalPreferenceValues = {
-			favoritePokemonIds: [1], visibleFields: [], layoutByWidthClass: { narrow: "card", wide: "table" },
+			favoritePokemonIds: [1], visibleFields: [], cardFields: [], layoutByWidthClass: { narrow: "card", wide: "table" },
+			cardSizeByWidthClass: { narrow: "small", wide: "small" },
 		};
 		const prefs = new LocalPreferences(() => settings, () => undefined);
 		settings = { ...settings, favoritePokemonIds: [7] };

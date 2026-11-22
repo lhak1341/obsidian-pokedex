@@ -2,7 +2,8 @@ import { Notice, PluginSettingTab, Setting, type ButtonComponent, type SettingDe
 import { DEFAULT_ENABLED_GENERATIONS, GENERATIONS } from "./data/constants";
 import { portraitRenderFor } from "./data/imageSet";
 import { DEFAULT_LAYOUT_BY_WIDTH_CLASS } from "./utils/browseLayout";
-import { DEFAULT_VISIBLE_FIELDS } from "./utils/fields";
+import { DEFAULT_CARD_SIZE_BY_WIDTH_CLASS } from "./utils/cardView";
+import { DEFAULT_CARD_FIELDS, DEFAULT_VISIBLE_FIELDS } from "./utils/fields";
 import { addFontRoleSetting, DEFAULT_FONT_ROLE_SETTINGS, type FontRole } from "@lhak/style/obsidian-helpers";
 import type { PluginSettings } from "./data/types";
 import type PokedexPlugin from "./main";
@@ -18,6 +19,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	gridDensity: "comfortable",
 	defaultSortColumn: "id",
 	visibleFields: DEFAULT_VISIBLE_FIELDS,
+	cardFields: DEFAULT_CARD_FIELDS,
 	useTypeIcons: false,
 	// Latest supported generation by default, so a fresh install (or anyone
 	// who never touches the Active Gen selector) sees exactly the same
@@ -26,6 +28,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	favoritePokemonIds: [],
 	reduceMotion: false,
 	layoutByWidthClass: { ...DEFAULT_LAYOUT_BY_WIDTH_CLASS },
+	cardSizeByWidthClass: { ...DEFAULT_CARD_SIZE_BY_WIDTH_CLASS },
 };
 
 export class PokedexSettingTab extends PluginSettingTab {

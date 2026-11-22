@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { Notice } from "obsidian";
+	import { Notice, Platform } from "obsidian";
 	import { onDestroy, onMount, setContext, tick, untrack } from "svelte";
 	import type { PokedexRepository } from "../data/PokedexRepository";
 	import type { PluginSettings } from "../data/types";
 	import type { BrowseLayout } from "../utils/browseLayout";
+	import type { CardSize } from "../utils/cardView";
 	import { paneWidth } from "../utils/paneWidth";
 	import type { LocalPreferences, LocalPreferenceValues } from "../utils/localPreferences";
 	import { resolveGenerationScope } from "../utils/generationScope";
@@ -13,6 +14,7 @@
 	import DetailScreen from "./components/DetailScreen.svelte";
 	import { emptyLoadSnapshot, type LoadOutcome, type LoadSnapshot, PokedexLoadState } from "./PokedexLoadState";
 	import TableScreen from "./components/TableScreen.svelte";
+	import Icon from "./components/Icon.svelte";
 
 	let {
 		repository, initialSettings, leafEl, preferences, navState, commands, onNavigate,
@@ -70,6 +72,10 @@
 	let pane = $state.raw(untrack(() => paneWidth(leafEl.getBoundingClientRect().width)));
 	const layout = $derived(prefs.layoutByWidthClass[pane.widthClass]);
 
+	const cardSize = $derived(prefs.cardSizeByWidthClass[pane.widthClass]);
+	function setCardSize(next: CardSize) {
+		preferences.setCardSize(pane.widthClass, next);
+	}
 	function setLayout(next: BrowseLayout) {
 		preferences.setLayout(pane.widthClass, next);
 	}
@@ -159,6 +165,22 @@
 	// the table was left at carry straight over.
 	let rootEl: HTMLDivElement | undefined;
 
+	// The Scroll-to-top button (CONTEXT.md): mobile only, on the browse screen,
+	// once the list is scrolled more than a screen down. A desktop has the
+	// scrollbar and the Home key; a phone's list of 1,082 has neither.
+	const mobile = Platform.isMobile;
+	let scrolledFar = $state(false);
+	function onScroll() {
+		if (rootEl) scrolledFar = rootEl.scrollTop > rootEl.clientHeight;
+	}
+	// Smooth unless Reduce motion is on (the setting or the OS): both zero
+	// --lk-duration-base on the root (styles.src.css), so one read covers both.
+	function scrollToTop() {
+		if (!rootEl) return;
+		const instant = getComputedStyle(rootEl).getPropertyValue("--lk-duration-base").trim() === "0s";
+		rootEl.scrollTo({ top: 0, behavior: instant ? "instant" : "smooth" });
+	}
+
 	// Mirrors screen/selectedId from navState, then executes the returned
 	// ScrollInstruction — the one piece of work navState can't do itself
 	// since it stays DOM-free on purpose (see DetailNavigationState.ts).
@@ -195,7 +217,7 @@
 	}
 </script>
 
-<div class="pokedex-view" bind:this={rootEl}>
+<div class="pokedex-view" bind:this={rootEl} onscroll={mobile ? onScroll : undefined}>
 	{#if view.loading}
 		<div class="loading-panel">
 			<p>Loading Pokedex&hellip; {view.progress.loaded}/{view.progress.total || "?"}</p>
@@ -230,6 +252,7 @@
 				density={settings.gridDensity}
 				defaultSortColumn={settings.defaultSortColumn}
 				visibleFields={prefs.visibleFields}
+				cardFields={prefs.cardFields}
 				useTypeIcons={settings.useTypeIcons}
 				{repository}
 				activeGen={settings.activeGen}
@@ -237,7 +260,10 @@
 				{layout}
 				narrow={pane.widthClass === "narrow"}
 				onLayoutChange={setLayout}
+				{cardSize}
+				onCardSizeChange={setCardSize}
 				onToggleField={(key) => preferences.toggleField(key)}
+				onToggleCardField={(key) => preferences.toggleCardField(key)}
 				onToggleFavorite={toggleFavorite}
 				onSelect={openDetail}
 			/>
@@ -256,6 +282,24 @@
 				onBack={backToTable}
 				onSelect={openDetail}
 			/>
+		{/if}
+		{#if mobile && screen === "table"}
+			<!-- Sticky at the scroller's bottom padding edge, which already clears
+			Obsidian's floating phone nav bar (--view-bottom-spacing). A zero-height
+			anchor, so it adds nothing to the list's height. -->
+			<div class="scroll-top-anchor">
+				<button
+					type="button"
+					class="lk-button lk-button--icon-only scroll-top"
+					class:shown={scrolledFar}
+					aria-label="Scroll to top"
+					aria-hidden={!scrolledFar}
+					tabindex={scrolledFar ? 0 : -1}
+					onclick={scrollToTop}
+				>
+					<Icon name="arrow-up" size={20} strokeWidth={2.25} />
+				</button>
+			</div>
 		{/if}
 	{/if}
 </div>
@@ -280,6 +324,39 @@
 	}
 	.hidden-screen {
 		display: none;
+	}
+	.scroll-top-anchor {
+		position: sticky;
+		bottom: 0;
+		z-index: 20;
+		height: 0;
+	}
+	/* button.scroll-top: Obsidian's own `button` rules otherwise win the rest
+	state (root CLAUDE.md, Styles). Round, raised off the list by a shadow and
+	the strong border (a surface fill alone vanishes against the view). */
+	button.scroll-top {
+		position: absolute;
+		right: 0;
+		bottom: var(--lk-space-2);
+		width: 44px;
+		height: 44px;
+		border: 1px solid var(--lk-border-strong);
+		border-radius: 50%;
+		background: var(--lk-surface);
+		box-shadow: var(--lk-shadow-s);
+		color: var(--lk-text);
+		opacity: 0;
+		visibility: hidden;
+		transform: translateY(8px);
+		transition:
+			opacity var(--lk-duration-base) ease-out,
+			transform var(--lk-duration-base) ease-out,
+			visibility var(--lk-duration-base);
+	}
+	button.scroll-top.shown {
+		opacity: 1;
+		visibility: visible;
+		transform: none;
 	}
 	.loading-more-banner {
 		padding: 4px 10px;

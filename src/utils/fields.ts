@@ -1,15 +1,17 @@
 import { STAT_COLUMNS } from "../data/constants";
 import type { PokedexTableRow, StatBlock } from "../data/types";
 import type { ActiveGenRow } from "./activeGenScope";
+import type { BrowseLayout } from "./browseLayout";
 import type { SortColumn, SortState } from "./sortPokemon";
 import { describeEncounters } from "./encounters";
 import { formatHeight, formatWeight } from "./pokemonDisplay";
 import { totalStat } from "./stats";
 
 // The Fields the user chooses from in the browse screen's Fields menu (see
-// CONTEXT.md, "Fields"). One list, read by every layout: the table draws a
-// chosen Field as a column (its geometry lives in tableColumns.ts, keyed by
-// FieldKey), and Card view draws it on the tile and in the tap panel.
+// CONTEXT.md, "Fields"). One list, read by every layout; each layout keeps its
+// own selection (ADR-0020). The table draws a chosen Field as a column (its
+// geometry lives in tableColumns.ts, keyed by FieldKey); Card view's tile draws
+// a chosen Tile Field, and its tap panel draws every Field.
 // Order is menu order: stats in stat order, then the Other Fields.
 
 // Exported for EvChips.svelte (the table's EV cell and the detail screen),
@@ -125,14 +127,36 @@ export function isStatField(field: Field): boolean {
 	return STAT_LABEL_BY_KEY.has(field.key as keyof StatBlock);
 }
 
-// The fresh-install selection: the six stats, Total and EV yield, so a default
-// Card view tile shows its Σ and EV corners. hydrateSettings keeps any saved
-// selection as it is, so an upgrading user is not widened to this.
+// The table's fresh-install selection: the six stats, Total and EV yield.
+// hydrateSettings keeps any saved selection as it is, so an upgrading user is
+// not widened to this.
 export const DEFAULT_VISIBLE_FIELDS: FieldKey[] = [...STAT_COLUMNS.map((c) => c.key), "total", "ev"];
 
+// The Fields a Card view tile has room for (CONTEXT.md, "Tile Fields"): the
+// stat strip, the Σ corner and the EV corner. Card view's Fields menu offers
+// these only; the tap panel shows every Field whatever is chosen.
+export const TILE_FIELD_KEYS: readonly FieldKey[] = [...STAT_COLUMNS.map((c) => c.key), "total", "ev"];
+
+export function isTileField(field: Field): boolean {
+	return TILE_FIELD_KEYS.includes(field.key);
+}
+
+// Card view's fresh-install selection: everything the tile can draw.
+export const DEFAULT_CARD_FIELDS: FieldKey[] = [...TILE_FIELD_KEYS];
+
+const ALL_FIELD_KEYS: ReadonlySet<string> = new Set(FIELDS.map((f) => f.key));
+
+// The Fields a layout shows somewhere. The table shows its chosen ones; Card
+// view shows every Field (its tap panel draws them all, and the tile's top
+// corner shows whichever the list is sorted by), so its selection never
+// limits what it can sort by.
+export function fieldsShown(layout: BrowseLayout, visibleFields: ReadonlySet<string>): ReadonlySet<string> {
+	return layout === "card" ? ALL_FIELD_KEYS : visibleFields;
+}
+
 // The list is never sorted by a Field the user cannot see: when the Field
-// owning the current sort is unchosen, the sort resets to No. ascending. No.
-// and Name are not Fields, so they always stay. One rule for every layout.
+// owning the current sort is no longer shown (fieldsShown), the sort resets to
+// No. ascending. No. and Name are not Fields, so they always stay.
 export function sortAfterFieldsChange(sort: SortState, visibleFields: ReadonlySet<string>): SortState {
 	const owner = FIELDS.find((f) => f.sortKey === sort.column);
 	return owner && !visibleFields.has(owner.key) ? { column: "id", direction: "asc" } : sort;

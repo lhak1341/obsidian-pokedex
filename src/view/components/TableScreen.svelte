@@ -6,7 +6,9 @@
 	import { formatDexNumber, formatItemName, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import type { BrowseLayout } from "../../utils/browseLayout";
 	import { nextSort, sortPokemon, type SortColumn, type SortState } from "../../utils/sortPokemon";
-	import { FIELDS, formatEvYield, isStatField, sortAfterFieldsChange, unhandledCustomCell } from "../../utils/fields";
+	import {
+		FIELDS, fieldsShown, formatEvYield, isStatField, isTileField, sortAfterFieldsChange, unhandledCustomCell,
+	} from "../../utils/fields";
 	import { TABLE_COLUMNS, columnWidth, tableFrame } from "../../utils/tableColumns";
 	import { tableEntries, tableWindow, widestRows } from "../../utils/tableWindow";
 	import { onDestroy, untrack } from "svelte";
@@ -15,6 +17,7 @@
 	import { createInfoPopover } from "../infoPopover.svelte";
 	import { createFavoriteMenu } from "../favoriteMenu";
 	import CardGrid from "./CardGrid.svelte";
+	import { CARD_SIZE_LABELS, CARD_SIZES, type CardSize } from "../../utils/cardView";
 	import EvChips from "./EvChips.svelte";
 	import FavoriteMark from "./FavoriteMark.svelte";
 	import FilterBar from "./FilterBar.svelte";
@@ -23,8 +26,9 @@
 	import TypeBadge from "./TypeBadge.svelte";
 
 	let {
-		rows, density, defaultSortColumn, visibleFields, useTypeIcons, repository, activeGen,
-		favoriteIds, layout, narrow, onLayoutChange, onToggleField, onToggleFavorite, onSelect,
+		rows, density, defaultSortColumn, visibleFields, cardFields, useTypeIcons, repository, activeGen,
+		favoriteIds, layout, narrow, onLayoutChange, cardSize, onCardSizeChange, onToggleField, onToggleCardField,
+		onToggleFavorite, onSelect,
 	}: {
 		rows: PokedexTableRow[];
 		density: "compact" | "comfortable";
@@ -32,6 +36,8 @@
 		// The chosen Fields, live from the plugin's LocalPreferences: a change in
 		// another Pokedex leaf arrives here too.
 		visibleFields: string[];
+		// Card view's own selection, the Tile Fields (ADR-0020), live the same way.
+		cardFields: string[];
 		useTypeIcons: boolean;
 		repository: PokedexRepository;
 		activeGen: number;
@@ -43,7 +49,12 @@
 		// and layout toggle into its second row (see viewControls below).
 		narrow: boolean;
 		onLayoutChange: (layout: BrowseLayout) => void;
+		// Card view's tile size for this pane's width class, PokedexApp's like
+		// the layout; the toggle below only asks for a change.
+		cardSize: CardSize;
+		onCardSizeChange: (size: CardSize) => void;
 		onToggleField: (key: string) => void;
+		onToggleCardField: (key: string) => void;
 		onToggleFavorite: (id: number) => void;
 		onSelect: (id: number) => void;
 	} = $props();
@@ -109,10 +120,19 @@
 	// This component is the browse screen's owner: filters (search included)
 	// and the sort live here, and both layouts read them with the Fields
 	// selection, so switching between the table and Card view never re-sorts or
-	// clears a filter (#22's review). It is one list drawn two ways. The Fields
-	// selection itself is the plugin's (ADR-0012), shared by every leaf.
+	// clears a filter (#22's review). It is one list drawn two ways. Each
+	// layout has its own Fields selection (ADR-0020), both the plugin's
+	// (ADR-0012), shared by every leaf.
 	let filters = $state({ ...EMPTY_FILTERS, statRanges: {} });
 	const visibleFieldKeys = $derived<ReadonlySet<string>>(new Set(visibleFields));
+	const cardFieldKeys = $derived<ReadonlySet<string>>(new Set(cardFields));
+	// The Fields menu edits the shown layout's selection. Card view offers only
+	// the Tile Fields: its tap panel shows every Field anyway.
+	const menu = $derived(
+		layout === "card"
+			? { fields: FIELDS.filter(isTileField), chosen: cardFieldKeys, toggle: onToggleCardField }
+			: { fields: FIELDS, chosen: visibleFieldKeys, toggle: onToggleField },
+	);
 	// defaultSortColumn seeds the sort, and changing the setting re-sorts by
 	// it (ascending), as the remount that used to follow every settings change
 	// did. Any other settings change leaves the user's sort alone.
@@ -124,12 +144,14 @@
 		seededSortColumn = defaultSortColumn;
 		sort = { column: defaultSortColumn, direction: "asc" };
 	});
-	// Never leave the list sorted by a Field that is no longer shown, in either
-	// layout, whichever leaf unchose it. sortAfterFieldsChange hands back the
-	// same object when nothing changes, so this writes only on a reset.
+	// Never leave the list sorted by a Field that is no longer shown, whichever
+	// leaf unchose it. Card view shows every Field (fieldsShown), so this
+	// resets only in the table, or on a switch to it from a sort the table's
+	// selection lacks. sortAfterFieldsChange hands back the same object when
+	// nothing changes, so this writes only on a reset.
 	$effect.pre(() => {
 		const current = untrack(() => sort);
-		const next = sortAfterFieldsChange(current, visibleFieldKeys);
+		const next = sortAfterFieldsChange(current, fieldsShown(layout, visibleFieldKeys));
 		if (next !== current) sort = next;
 	});
 
@@ -380,12 +402,12 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 			<div class="fields-section">
 				<div class="fields-section-label">Stats</div>
 				<div class="fields-grid fields-grid-stats">
-					{#each FIELDS.filter(isStatField) as field (field.key)}
+					{#each menu.fields.filter(isStatField) as field (field.key)}
 						<label class="fields-checkbox">
 							<input
 								type="checkbox"
-								checked={visibleFieldKeys.has(field.key)}
-								onchange={() => onToggleField(field.key)}
+								checked={menu.chosen.has(field.key)}
+								onchange={() => menu.toggle(field.key)}
 							/>
 							{field.label}
 						</label>
@@ -395,12 +417,12 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 			<div class="fields-section">
 				<div class="fields-section-label">Other</div>
 				<div class="fields-grid fields-grid-other">
-					{#each FIELDS.filter((f) => !isStatField(f)) as field (field.key)}
+					{#each menu.fields.filter((f) => !isStatField(f)) as field (field.key)}
 						<label class="fields-checkbox">
 							<input
 								type="checkbox"
-								checked={visibleFieldKeys.has(field.key)}
-								onchange={() => onToggleField(field.key)}
+								checked={menu.chosen.has(field.key)}
+								onchange={() => menu.toggle(field.key)}
 							/>
 							<Icon name={field.icon ?? "circle"} size={13} strokeWidth={2} />
 							{field.label}
@@ -441,12 +463,32 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 		</div>
 	{/if}
 
-	<p class="result-count">{visibleRows.length} of {rows.length} Pokemon</p>
+	<!-- Card size sits at the right of the count, above the grid it sizes:
+	the Narrow pane's toolbar row has no room left for it. -->
+	<div class="result-row">
+		<p class="result-count">{visibleRows.length} of {rows.length} Pokemon</p>
+		{#if layout === "card"}
+			<div class="layout-toggle" role="group" aria-label="Card size">
+				{#each CARD_SIZES as size (size)}
+					<button
+						type="button"
+						class="layout-toggle-item size-item"
+						aria-label="{CARD_SIZE_LABELS[size]} cards"
+						aria-pressed={cardSize === size}
+						onclick={() => onCardSizeChange(size)}
+					>
+						{CARD_SIZE_LABELS[size][0]}
+					</button>
+				{/each}
+			</div>
+		{/if}
+	</div>
 
 	{#if layout === "card"}
 		<CardGrid
 			rows={visibleRows}
-			visibleFields={visibleFieldKeys}
+			tileFields={cardFieldKeys}
+			size={cardSize}
 			{favoriteIds}
 			{sort}
 			{repository}
@@ -617,10 +659,17 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 </div>
 
 <style>
+	.result-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--lk-space-2);
+		margin: 6px 0;
+	}
 	.result-count {
+		margin: 0;
 		color: var(--lk-text-muted);
 		font-size: 0.85em;
-		margin: 6px 0;
 	}
 	.browse-toolbar {
 		display: flex;
@@ -660,6 +709,14 @@ wide pane, at the right of FilterBar's second row on a Narrow pane. -->
 	button.layout-toggle-item:hover {
 		background: var(--lk-surface-hover);
 		color: var(--lk-text);
+	}
+	/* The Card size segments are letters, at the icon segments' height. */
+	button.size-item {
+		min-width: 26px;
+		padding: 2px 6px;
+		font-size: 0.75rem;
+		font-weight: 600;
+		line-height: 1.25;
 	}
 	button.layout-toggle-item[aria-pressed="true"] {
 		background: color-mix(in srgb, var(--lk-text) 10%, transparent);

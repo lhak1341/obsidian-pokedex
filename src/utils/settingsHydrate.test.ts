@@ -11,6 +11,8 @@ const DEFAULTS: PluginSettings = {
 	gridDensity: "comfortable",
 	defaultSortColumn: "id",
 	visibleFields: ["hp", "attack"],
+	cardFields: ["hp", "total"],
+	cardSizeByWidthClass: { narrow: "small", wide: "small" },
 	useTypeIcons: false,
 	activeGen: 9,
 	favoritePokemonIds: [],
@@ -32,11 +34,13 @@ describe("hydrateSettings", () => {
 			gridDensity: "compact",
 			defaultSortColumn: "name",
 			visibleFields: ["hp"],
+			cardFields: ["speed", "ev"],
 			useTypeIcons: true,
 			activeGen: 3,
 			favoritePokemonIds: [25, 6],
 			reduceMotion: true,
 			layoutByWidthClass: { narrow: "table", wide: "card" },
+			cardSizeByWidthClass: { narrow: "large", wide: "medium" },
 		};
 		expect(hydrateSettings(saved, DEFAULTS)).toEqual(saved);
 	});
@@ -126,6 +130,42 @@ describe("hydrateSettings", () => {
 			// An empty selection is a real choice ("show no Fields"), not "unset".
 			expect(hydrateSettings({ visibleColumns: [] }, DEFAULTS).visibleFields).toEqual([]);
 			expect(hydrateSettings({ visibleFields: ["hp"] }, DEFAULTS).visibleFields).toEqual(["hp"]);
+		});
+	});
+
+	// ADR-0020: Card view got its own selection. Before it the tile drew the
+	// Tile Fields of the shared one, so an upgrade keeps exactly those.
+	describe("cardFields", () => {
+		it("seeds an older data.json's from the saved selection's Tile Fields", () => {
+			const out = hydrateSettings({ visibleFields: ["weight", "speed", "total", "heldItems", "ev"] }, DEFAULTS);
+			expect(out.cardFields).toEqual(["speed", "total", "ev"]);
+			expect(out.visibleFields).toEqual(["weight", "speed", "total", "heldItems", "ev"]);
+		});
+
+		it("seeds from an even older visibleColumns selection too", () => {
+			expect(hydrateSettings({ visibleColumns: ["catchRate", "hp"] }, DEFAULTS).cardFields).toEqual(["hp"]);
+		});
+
+		it("keeps a saved one as it is, even empty, whatever the table's", () => {
+			expect(hydrateSettings({ visibleFields: ["hp"], cardFields: [] }, DEFAULTS).cardFields).toEqual([]);
+			expect(hydrateSettings({ visibleFields: [], cardFields: ["ev"] }, DEFAULTS).cardFields).toEqual(["ev"]);
+		});
+
+		it("gives a fresh install the default", () => {
+			expect(hydrateSettings({}, DEFAULTS).cardFields).toEqual(["hp", "total"]);
+		});
+	});
+
+	// Card size per width class. An older data.json has none: small, the tile
+	// as it was.
+	describe("cardSizeByWidthClass", () => {
+		it("gives an older data.json small tiles in both classes", () => {
+			expect(hydrateSettings({}, DEFAULTS).cardSizeByWidthClass).toEqual({ narrow: "small", wide: "small" });
+		});
+
+		it("repairs an unknown size class by class, keeping the other", () => {
+			const out = hydrateSettings({ cardSizeByWidthClass: { narrow: "huge", wide: "large" } }, DEFAULTS);
+			expect(out.cardSizeByWidthClass).toEqual({ narrow: "small", wide: "large" });
 		});
 	});
 

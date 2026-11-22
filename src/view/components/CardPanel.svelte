@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { STAT_COLORS, TYPE_COLORS } from "../../data/constants";
 	import type { StatBlock } from "../../data/types";
-	import type { PanelStats } from "../../utils/cardView";
-	import { type Field, formatEvYield, STAT_LABEL_BY_KEY, unhandledCustomCell } from "../../utils/fields";
+	import { PANEL_CHIPS, PANEL_STATS } from "../../utils/cardView";
+	import { formatEvYield, STAT_LABEL_BY_KEY, unhandledCustomCell } from "../../utils/fields";
 	import type { ActiveGenRow, HeldItemForGen } from "../../utils/activeGenScope";
 	import { formatItemName, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import { totalStat } from "../../utils/stats";
@@ -12,20 +12,19 @@
 	import Icon from "./Icon.svelte";
 	import { untrack } from "svelte";
 
-	// Card view's tap panel (CONTEXT.md, "Card view"): every chosen Field of
-	// one Pokemon with its exact value, drawn under the tapped tile's grid row.
-	// What goes where is cardView.ts (panelStats, panelChips); this draws it.
+	// Card view's tap panel (CONTEXT.md, "Card view"): every Field of one
+	// Pokemon with its exact value, whatever the tile's selection (ADR-0020),
+	// drawn under the tapped tile's grid row. What goes where is cardView.ts
+	// (PANEL_STATS, PANEL_CHIPS); this draws it.
 	// Favourites are PokedexApp's (ADR-0012), so the asterisk only asks. The
 	// held item's Info popover is TableScreen's, so its box (with the rarity)
 	// is the table's own and draws over this panel.
-	let { id, grow, row, stats, chips, barHeight, favorite, onToggleFavorite, onOpen, heldItemTarget }: {
+	let { id, grow, row, barHeight, favorite, onToggleFavorite, onOpen, heldItemTarget }: {
 		id: string;
 		// Play the grow-in motion: a tap does; a remount as the panel's row
 		// scrolls back into the Card window doesn't. Read once, at mount.
 		grow: boolean;
 		row: ActiveGenRow;
-		stats: PanelStats;
-		chips: Field[];
 		// 0..1, relative per stat among the shown rows, as on the tile.
 		barHeight: (row: ActiveGenRow, stat: keyof StatBlock) => number;
 		favorite: boolean;
@@ -50,48 +49,42 @@
 					<button type="button" class="panel-open" onclick={onOpen}>Open ›</button>
 				</div>
 
-				{#if stats.stats.length > 0 || stats.total}
-					<div class="panel-stats" class:stretched={stats.mode === "stretched"}>
-						{#each stats.stats as stat (stat)}
-							<span class="stat-col">
-								<i style:--pkdx-bar={STAT_COLORS[stat]} style:--pkdx-bar-height={barHeight(row, stat)}></i>
-								<b>{row.stats[stat]}</b>
-								<small>{STAT_LABEL_BY_KEY.get(stat)}</small>
-							</span>
-						{/each}
-						{#if stats.total}
-							<span class="stat-col total-col">
-								<b>{totalStat(row.stats)}</b>
-								<small>Total</small>
-							</span>
-						{/if}
-					</div>
-				{/if}
+				<div class="panel-stats">
+					{#each PANEL_STATS as stat (stat)}
+						<span class="stat-col">
+							<i style:--pkdx-bar={STAT_COLORS[stat]} style:--pkdx-bar-height={barHeight(row, stat)}></i>
+							<b>{row.stats[stat]}</b>
+							<small>{STAT_LABEL_BY_KEY.get(stat)}</small>
+						</span>
+					{/each}
+					<span class="stat-col total-col">
+						<b>{totalStat(row.stats)}</b>
+						<small>Total</small>
+					</span>
+				</div>
 
-				{#if chips.length > 0}
-					<div class="panel-chips">
-						{#each chips as field (field.key)}
-							<!-- No chip title over the held item: its Info popover explains it. -->
-							<span class="field-chip" title={field.custom === "heldItems" ? undefined : field.label}>
-								{#if field.icon}<span class="field-icon"><Icon name={field.icon} size={12} strokeWidth={2} /></span>{/if}
-								{#if field.custom === "ev"}
-									<span title={formatEvYield(row)}><EvChips evYield={row.evYield} /></span>
-								{:else if field.custom === "heldItems"}
-									{#each row.heldItems as item, i (item.name)}
-										{#if i > 0}<span class="chip-sep">,</span>{/if}
-										<span class="held-item-name pkdx-info-target" {...heldItemTarget(item)}>{formatItemName(item.name)}</span>
-									{:else}
-										<span class="chip-empty">None</span>
-									{/each}
-								{:else if field.custom === undefined}
-									<span class="chip-value" title={field.title?.(row)}>{field.render(row)}</span>
+				<div class="panel-chips">
+					{#each PANEL_CHIPS as field (field.key)}
+						<!-- No chip title over the held item: its Info popover explains it. -->
+						<span class="field-chip" title={field.custom === "heldItems" ? undefined : field.label}>
+							{#if field.icon}<span class="field-icon"><Icon name={field.icon} size={12} strokeWidth={2} /></span>{/if}
+							{#if field.custom === "ev"}
+								<span title={formatEvYield(row)}><EvChips evYield={row.evYield} /></span>
+							{:else if field.custom === "heldItems"}
+								{#each row.heldItems as item, i (item.name)}
+									{#if i > 0}<span class="chip-sep">,</span>{/if}
+									<span class="held-item-name pkdx-info-target" {...heldItemTarget(item)}>{formatItemName(item.name)}</span>
 								{:else}
-									{unhandledCustomCell(field.custom)}
-								{/if}
-							</span>
-						{/each}
-					</div>
-				{/if}
+									<span class="chip-empty">None</span>
+								{/each}
+							{:else if field.custom === undefined}
+								<span class="chip-value" title={field.title?.(row)}>{field.render(row)}</span>
+							{:else}
+								{unhandledCustomCell(field.custom)}
+							{/if}
+						</span>
+					{/each}
+				</div>
 			</div>
 		</div>
 	</div>
@@ -191,12 +184,8 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: flex-end;
-		width: 30px;
-		min-width: 0;
-	}
-	.stretched .stat-col {
 		flex: 1;
-		width: auto;
+		min-width: 0;
 	}
 	.stat-col i {
 		display: block;
@@ -221,13 +210,10 @@
 	}
 	/* Total: muted, after a hairline at the right. */
 	.total-col {
-		width: auto;
+		flex: none;
 		margin-left: auto;
 		padding-left: 10px;
 		border-left: 1px solid color-mix(in srgb, var(--lk-text) 18%, transparent);
-	}
-	.stretched .total-col {
-		flex: none;
 	}
 	.total-col b {
 		color: var(--lk-text-muted);
