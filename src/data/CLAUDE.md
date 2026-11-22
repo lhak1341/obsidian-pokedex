@@ -1,170 +1,42 @@
 # src/data (and the utils/view code that touches its cache)
 
-Scoped to `PokeApiClient`, `PokedexRepository`, `CacheStore`/`IndexedDbCacheStore`, `normalize.ts`,
-`constants.ts` — fetch, cache, and normalization rules for raw PokeAPI data.
+Scoped to `PokeApiClient`, `PokedexRepository`, `CacheStore`/`IndexedDbCacheStore`, `normalize.ts`, `constants.ts` — fetch, cache, and normalization rules for raw PokeAPI data.
 
 ## Data layer
 
-- `PokeApiClient` owns request throttling via an internal `Semaphore`
-  (`NETWORK_CONCURRENCY = 10`) enforced at the HTTP call site. Do not re-add cache-hit /
-  cache-miss lane splitting or pre-partitioning in `PokedexRepository` to "protect"
-  PokeAPI — that pattern forced a full-range disk scan before the first table row could
-  render.
-- `mapWithConcurrency` (`src/utils/concurrency.ts`) swallows per-item errors, so
-  `cacheRange` / `refreshRange` / `getTableRows` never reject on a single failed id, and
-  `FakePokeApiClient.failIds` cannot produce a real rejection through them. For classes
-  that only orchestrate repository calls (e.g. `GenerationCacheController`), test against a
-  narrow `Pick<PokedexRepository, …>` plus `vi.fn()` stubs; reserve the heavier
-  repository + `FakePokeApiClient` stack (`PokedexLoadState.test.ts`,
-  `DetailLoadState.test.ts`) for classes that need real fetch/cache behavior.
+- `PokeApiClient` owns request throttling via an internal `Semaphore` (NETWORK_CONCURRENCY = 10) enforced at the HTTP call site. Do not re-add cache-hit / cache-miss lane splitting or pre-partitioning in `PokedexRepository` to "protect" PokeAPI — that pattern forced a full-range disk scan before the first table row could render.
+- `mapWithConcurrency` (`src/utils/concurrency.ts`) swallows per-item errors, so `cacheRange` / `refreshRange` / `getTableRows` never reject on a single failed id, and `FakePokeApiClient.failIds` cannot produce a real rejection through them. For classes that only orchestrate repository calls (e.g. `GenerationCacheController`), test against a narrow `Pick<PokedexRepository, …>` plus `vi.fn()` stubs; reserve the heavier repository + `FakePokeApiClient` stack (`PokedexLoadState.test.ts`, `DetailLoadState.test.ts`) for classes that need real fetch/cache behavior.
 - `FakePokeApiClient` ids share one species: every fake pokemon is the bulbasaur fixture, whose species is id 1, so anything keyed by species id sees only species 1. `failIds.add(1)` fails every id (use ids ≥ 2 to fail one: `PokedexLoadState.test.ts`, "retry() reports ids still failing"), and `getCacheStatus` counts only id 1 as cached, since `species/N.json` is never written for N ≥ 2.
-- Adding a genuinely new field to a raw PokeAPI response (e.g. `held_items` — as opposed to
-  a trim-down of something already cached, like `moves`/`flavor_text_entries`) needs a
-  matching `isStale` check on its `getOrFetch` call in `PokedexRepository.ts`. Otherwise an
-  existing user's cache has the field `undefined` and crashes instead of self-healing.
-- The pokemon cache (store and mem) holds `StoredPokemon`, not `RawPokemon`: `toStoredPokemon` cuts moves to
-  `MOVE_VERSION_GROUPS` and to `StoredMove`'s three fields (145 → ~38 MB over 1,025 pokemon), a projection only, so no
-  normalize rule lives in the cache. `RawPokemon` is only what `PokeApiClient` returns and fixtures hold; normalize
-  functions take `StoredPokemon` (tests: `toStoredPokemon(fixture)`, and seed a test cache with that, never a raw
-  fixture). Each record lists the groups it was cut to (`moveVersionGroups`); `storedMovesAreStale` refetches one that
-  lacks a group now in `MOVE_VERSION_GROUPS`, or the list itself, so adding a game's tab needs no cache clear. Reading
-  a new move field means extending `StoredMove` and adding an `isStale` check, since cached records lack it. A cached
-  finished row was rejected (ADR-0015).
-- For a per-row derived value needing more than the already-fetched pokemon+species
-  response and stable until the next generation ships (e.g. evolution-family depth), do not
-  add a runtime fetch. Generate a static lookup table via `scripts/generate-*.ts`, reusing
-  the real exported pure function from `src/data/*.ts` so it cannot drift, writing a
-  committed `src/data/*.json` — see `scripts/generate-evolution-stages.ts` and
-  `EVOLUTION_STAGES`. Same pattern covers genuinely NEW data too (no existing pure function
-  to reuse at all) — see `scripts/generate-encounters.ts`/`ENCOUNTER_LOCATIONS`, which fetches
-  a PokeAPI endpoint (`/pokemon/{id}/encounters`) nothing else in this app touches; staleness
-  risk there is live PokeAPI drifting, not function drift. This keeps `PokedexTableRow` fields cheap, the invariant a first
-  attempt broke by visibly slowing table load. A second per-species fact needing the same
-  underlying walk (e.g. `IS_FINAL_EVOLUTION_STAGE`, per-node leaf-ness off the same
-  evolution-chain data `EVOLUTION_STAGES` already walks) belongs in the SAME script/fetch
-  pass, not a second one refetching all 541 chains again — write both output files from one
-  `main()`. `writeFileSync(JSON.stringify(table))` alone drops the trailing newline the
-  already-committed file has, showing a spurious diff on regen even when every value is
-  identical — append `+ "\n"`.
-  No gate catches a committed table like `evolutionStages.json`/`finalEvolutionStage.json`/
-  `encounterLocations.json` going stale against the function that produced it — the generator walks live PokeAPI, so
-  CI cannot regenerate it. `generationTables.test.ts` gates only consistency with `GENERATIONS` (array length
-  covers the last dex number, generation ids exist), not freshness. `normalize.test.ts` ties the per-form rule (`evolutionReachByForm`) and the
-  known divergent rows in `evolutionStageOverrides.json` together offline.
-  Regenerating also picks up any live PokeAPI drift (Meltan -> Melmetal flipped #808/#809 in one
-  run), so diff all three files and read the logged override list before keeping a regen.
-- Tests build a `PokedexTableRow` through `makeRow` / `makeRegionalFormRow`
-  (`src/data/__fixtures__/rows.ts`), never a literal. Adding a required field is one edit
-  there: `tsc` fails the factory's return type until it is added. A plain row derives
-  `generationId` from the dex number; a regional-form row (`id !== dexNumber`) must be made
-  with `makeRegionalFormRow`, which takes its generation explicitly. A row a layout, Field, filter or
-  sort receives is an Active Gen row: build it with `makeActiveGenRow(overrides, activeGen)`.
-- A regional-form or evolution-chain bug reported against one Pokemon is usually a whole
-  category. Chains already group by shape (Muk-shaped, Yamask-shaped, Corsola-shaped,
-  Mime-Jr-shaped, Obstagoon-shaped) — check `normalize.ts`'s shape comments for siblings
-  before calling a chain fix complete.
-- The repository never builds `normalizeEvolutionChain`'s context itself: `getEntryExtras` calls
-  `normalizeEvolutionChainForViewed(chain, { id, pokemonName, speciesName })`, which owns the
-  own-suffix / ancestor-suffix / no-context choice. A new chain shape gets its test there,
-  from raw inputs, not by hand-typing a `formSuffix`/`ownFormSuffix` context.
-- A bulk "does this whole family have property X" computation must walk the **raw**
-  evolution chain (`evolves_to`), not `normalizeEvolutionChain`'s default no-context view.
-  That view picks one coherent path for a specific viewed form and silently drops a branch
-  gated entirely on a regional form with no unconditional sibling — it undercounted
-  Farfetch'd (Galarian-only evolution) to 0 stages. See `evolutionFamilyDepth` in
-  `normalize.ts`.
-- A per-row fact stored in a table indexed by species id is wrong for any row whose own form
-  differs from the species (plain Farfetch'd is final; its species-wide entry says it evolves).
-  Key by `pokemon.name` (`EVOLUTION_STAGE_OVERRIDES`, `ENCOUNTER_LOCATIONS`) or check
-  `evolutionReachByForm` before adding another species-id table. See CONTEXT.md "Evolution stage".
-- PokeAPI's evolution schema drifts under us (2026: `base_form`/`evolved_form` renamed to
-  `required_pokemon_form`/`evolved_pokemon_form`; their URLs now `/pokemon-form/{id}`, a different id space
-  from `/pokemon/`; cosmetic and default forms named in them; one entry per game, `is_default` on the current
-  method). Every raw chain read goes through `canonicalizeEvolutionChain` (repository and generator do), no id
-  is parsed from a form URL, and a field is trusted only after checking a live response.
+- Adding a genuinely new field to a raw PokeAPI response (e.g. `held_items` — as opposed to a trim-down of something already cached, like `moves`/`flavor_text_entries`) needs a matching `isStale` check on its `getOrFetch` call in `PokedexRepository.ts`. Otherwise an existing user's cache has the field `undefined` and crashes instead of self-healing.
+- The pokemon cache (store and mem) holds `StoredPokemon`, not `RawPokemon`: `toStoredPokemon` cuts moves to `MOVE_VERSION_GROUPS` and to `StoredMove`'s three fields (145 → ~38 MB over 1,025 pokemon), a projection only, so no normalize rule lives in the cache. `RawPokemon` is only what `PokeApiClient` returns and fixtures hold; normalize functions take `StoredPokemon` (tests: `toStoredPokemon(fixture)`, and seed a test cache with that, never a raw fixture). Each record lists the groups it was cut to (`moveVersionGroups`); `storedMovesAreStale` refetches one that lacks a group now in `MOVE_VERSION_GROUPS`, or the list itself, so adding a game's tab needs no cache clear. Reading a new move field means extending `StoredMove` and adding an `isStale` check, since cached records lack it. A cached finished row was rejected (ADR-0015).
+- For a per-row derived value needing more than the already-fetched pokemon+species response and stable until the next generation ships (e.g. evolution-family depth), do not add a runtime fetch. Generate a static lookup table via `scripts/generate-*.ts`, reusing the real exported pure function from `src/data/*.ts` so it cannot drift, writing a committed `src/data/*.json` — see `scripts/generate-evolution-stages.ts` and `EVOLUTION_STAGES`. Same pattern covers genuinely NEW data too (no existing pure function to reuse at all) — see `scripts/generate-encounters.ts`/`ENCOUNTER_LOCATIONS`, which fetches a PokeAPI endpoint (`/pokemon/{id}/encounters`) nothing else in this app touches; staleness risk there is live PokeAPI drifting, not function drift. This keeps `PokedexTableRow` fields cheap, the invariant a first attempt broke by visibly slowing table load. A second per-species fact needing the same underlying walk (e.g. `IS_FINAL_EVOLUTION_STAGE`, per-node leaf-ness off the same evolution-chain data `EVOLUTION_STAGES` already walks) belongs in the SAME script/fetch pass, not a second one refetching all 541 chains again — write both output files from one `main()`. `writeFileSync(JSON.stringify(table))` alone drops the trailing newline the already-committed file has, showing a spurious diff on regen even when every value is identical — append `+ "\n"`. No gate catches a committed table like `evolutionStages.json`/`finalEvolutionStage.json`/ `encounterLocations.json` going stale against the function that produced it — the generator walks live PokeAPI, so CI cannot regenerate it. `generationTables.test.ts` gates only consistency with `GENERATIONS` (array length covers the last dex number, generation ids exist), not freshness. `normalize.test.ts` ties the per-form rule (`evolutionReachByForm`) and the known divergent rows in `evolutionStageOverrides.json` together offline. Regenerating also picks up any live PokeAPI drift (Meltan -> Melmetal flipped #808/#809 in one run), so diff all three files and read the logged override list before keeping a regen.
+- Tests build a `PokedexTableRow` through `makeRow` / `makeRegionalFormRow` (`src/data/__fixtures__/rows.ts`), never a literal. Adding a required field is one edit there: `tsc` fails the factory's return type until it is added. A plain row derives `generationId` from the dex number; a regional-form row (`id !== dexNumber`) must be made with `makeRegionalFormRow`, which takes its generation explicitly. A row a layout, Field, filter or sort receives is an Active Gen row: build it with `makeActiveGenRow(overrides, activeGen)`.
+- A regional-form or evolution-chain bug reported against one Pokemon is usually a whole category. Chains already group by shape (Muk-shaped, Yamask-shaped, Corsola-shaped, Mime-Jr-shaped, Obstagoon-shaped) — check `normalize.ts`'s shape comments for siblings before calling a chain fix complete.
+- The repository never builds `normalizeEvolutionChain`'s context itself: `getEntryExtras` calls `normalizeEvolutionChainForViewed(chain, { id, pokemonName, speciesName })`, which owns the own-suffix / ancestor-suffix / no-context choice. A new chain shape gets its test there, from raw inputs, not by hand-typing a `formSuffix`/`ownFormSuffix` context.
+- A bulk "does this whole family have property X" computation must walk the **raw** evolution chain (`evolves_to`), not `normalizeEvolutionChain`'s default no-context view. That view picks one coherent path for a specific viewed form and silently drops a branch gated entirely on a regional form with no unconditional sibling — it undercounted Farfetch'd (Galarian-only evolution) to 0 stages. See `evolutionFamilyDepth` in `normalize.ts`.
+- A per-row fact stored in a table indexed by species id is wrong for any row whose own form differs from the species (plain Farfetch'd is final; its species-wide entry says it evolves). Key by `pokemon.name` (`EVOLUTION_STAGE_OVERRIDES`, `ENCOUNTER_LOCATIONS`) or check `evolutionReachByForm` before adding another species-id table. See CONTEXT.md "Evolution stage".
+- PokeAPI's evolution schema drifts under us (2026: `base_form`/`evolved_form` renamed to `required_pokemon_form`/`evolved_pokemon_form`; their URLs now `/pokemon-form/{id}`, a different id space from `/pokemon/`; cosmetic and default forms named in them; one entry per game, `is_default` on the current method). Every raw chain read goes through `canonicalizeEvolutionChain` (repository and generator do), no id is parsed from a form URL, and a field is trusted only after checking a live response.
 
 ## Cache
 
-`PokedexRepository` depends on the `CacheStore` port (`CacheStore.ts`). `main.ts` passes an
-`IndexedDbCacheStore`; repository and load-state tests pass `MemoryCacheStore`
-(`__fixtures__/fakes.ts`). The IndexedDB store is untested by convention (no IndexedDB under
-vitest), so check it live. A new repository cache operation goes on the port and on both stores.
-Stores hold image bytes only; the repository's `ImageMemory` makes blob URLs
-(`createObjectURL`/`revokeObjectURL` injected, `RecordingObjectUrls` in tests). Artwork, shiny
-and shiny-artwork sit in an LRU bounded by `IMAGE_MEMORY_BUDGET_BYTES`, revoked on eviction;
-sprites (Mega/G-Max ones too, a few hundred KB at most) stay resident until
-`clearRange`/`clearAll`, because a revoked blob URL never loads in a new `<img>` (probed) and
-table rows, the hover preview and dex nav keep sprite URLs for the whole view mount. So nothing
-may keep a detail's URLs across calls: `VarietyToggleState` re-asks on every select,
-`mega-forms/`/`gigantamax-forms/` store an image-free `VarietyFormSource` (ADR-0002 addendum),
-and `cacheRange` stores extras bytes without making URLs. `*DataUri` fields now hold blob URLs;
-`imagePathOf(url)` gives the cache path (`contentBounds`' memo key, `imageBounds.ts`). The large portrait is one
-render, artwork or HOME (`spriteStyle`), passed as the `render` argument of every call that loads or counts it, never held
-on the repository: a render held there once let an artwork answer in flight overwrite the HOME one after a switch
-(`DetailLoadState`/`VarietyToggleState` drop the older request). `largeImageSuffixes` picks
-`artwork`/`shiny-artwork` or `home`/`shiny-home`, both filling `artworkDataUri`/`shinyArtworkDataUri` under their own
-paths, and only the chosen one is fetched or offline-cached; `getCacheStatus` counts that one. A budget test's budget must
-fit every image its assertion needs live at once: one `getEntryExtras` or form load is 3
-budgeted images in parallel, so a smaller budget evicts inside the call.
+`PokedexRepository` depends on the `CacheStore` port (`CacheStore.ts`). `main.ts` passes an `IndexedDbCacheStore`; repository and load-state tests pass `MemoryCacheStore` (`__fixtures__/fakes.ts`). The IndexedDB store is untested by convention (no IndexedDB under vitest), so check it live. A new repository cache operation goes on the port and on both stores. Stores hold image bytes only; the repository's `ImageMemory` makes blob URLs (`createObjectURL`/`revokeObjectURL` injected, `RecordingObjectUrls` in tests). Artwork, shiny and shiny-artwork sit in an LRU bounded by `IMAGE_MEMORY_BUDGET_BYTES`, revoked on eviction; sprites (Mega/G-Max ones too, a few hundred KB at most) stay resident until `clearRange`/`clearAll`, because a revoked blob URL never loads in a new `<img>` (probed) and table rows, the hover preview and dex nav keep sprite URLs for the whole view mount. So nothing may keep a detail's URLs across calls: `VarietyToggleState` re-asks on every select, `mega-forms/`/`gigantamax-forms/` store an image-free `VarietyFormSource` (ADR-0002 addendum), and `cacheRange` stores extras bytes without making URLs. `*DataUri` fields now hold blob URLs; `imagePathOf(url)` gives the cache path (`contentBounds`' memo key, `imageBounds.ts`). The large portrait is one render, artwork or HOME (`spriteStyle`), passed as the `render` argument of every call that loads or counts it, never held on the repository: a render held there once let an artwork answer in flight overwrite the HOME one after a switch (`DetailLoadState`/`VarietyToggleState` drop the older request). `largeImageSuffixes` picks `artwork`/`shiny-artwork` or `home`/`shiny-home`, both filling `artworkDataUri`/`shinyArtworkDataUri` under their own paths, and only the chosen one is fetched or offline-cached; `getCacheStatus` counts that one. A budget test's budget must fit every image its assertion needs live at once: one `getEntryExtras` or form load is 3 budgeted images in parallel, so a smaller budget evicts inside the call.
 
-The cache is per device, in IndexedDB, never in the vault (ADR-0011). One database per vault
-per device: `pokedex-cache-<key>`, with `<key>` in `app.loadLocalStorage('pokedex-cache-key')`.
-Inspect from eval via `app.plugins.plugins['obsidian-pokedex'].cache.name`. A missing or
-deleted database is a cold cache: reads miss, writes are best-effort, the connection reopens.
-`legacyDiskCache.ts` deletes the old synced `{manifest.dir}/cache` folder on startup if it
-exists and shows a notice; nothing is imported.
-To prove a load is served by the store, not PokeAPI, run `new plugin.repository.constructor(countingClient, plugin.cache)` with a `Proxy` over `plugin.repository.client` that counts calls: the live repository's mem caches answer first, so `plugin.repository` can't show it.
+The cache is per device, in IndexedDB, never in the vault (ADR-0011). One database per vault per device: `pokedex-cache-<key>`, with `<key>` in `app.loadLocalStorage('pokedex-cache-key')`. Inspect from eval via `app.plugins.plugins['obsidian-pokedex'].cache.name`. A missing or deleted database is a cold cache: reads miss, writes are best-effort, the connection reopens. `legacyDiskCache.ts` deletes the old synced `{manifest.dir}/cache` folder on startup if it exists and shows a notice; nothing is imported. To prove a load is served by the store, not PokeAPI, run `new plugin.repository.constructor(countingClient, plugin.cache)` with a `Proxy` over `plugin.repository.client` that counts calls: the live repository's mem caches answer first, so `plugin.repository` can't show it.
 
-Regional forms have two distinct cache keys: the detail view fetches by numeric PokeAPI id
-(`pokemon/10229.json` for Hisuian Growlithe) while table load's
-`deriveRegionalForms`/`getOrFetchPokemonVariant` writes the name-keyed one
-(`pokemon/growlithe-hisui.json`). `cacheRange` prefetches both unconditionally.
-A regional row's own Pokédex text is a third file, `pokemon-forms/{variety}.json` (`getEntryCore` reads it, the
-extras prefetch caches it); PokeAPI has form text only for Gen 7 forms (2026-11), so the rest store an empty list.
-`clearRange` sweeps all three, but only when the variant's own
-`REGIONAL_FORMS[suffix].generationId` matches the generation being cleared — not its base
-dex number's range, since those diverge (Alolan Rattata is dex #19 but `generationId: 7`).
-Discovery is independent of the range being cleared too — `listCachedSpeciesIds()` lists
-every cached species id via `CacheStore.listFilesIn("species")`, so a variant survives only
-if its own generation truly doesn't match, never because its base id sits outside this
-range (see ADR-0006).
+Regional forms have two distinct cache keys: the detail view fetches by numeric PokeAPI id (`pokemon/10229.json` for Hisuian Growlithe) while table load's `deriveRegionalForms`/`getOrFetchPokemonVariant` writes the name-keyed one (`pokemon/growlithe-hisui.json`). `cacheRange` prefetches both unconditionally. A regional row's own Pokédex text is a third file, `pokemon-forms/{variety}.json` (`getEntryCore` reads it, the extras prefetch caches it); PokeAPI has form text only for Gen 7 forms (2026-11), so the rest store an empty list. `clearRange` sweeps all three, but only when the variant's own `REGIONAL_FORMS[suffix].generationId` matches the generation being cleared — not its base dex number's range, since those diverge (Alolan Rattata is dex #19 but `generationId: 7`). Discovery is independent of the range being cleared too — `listCachedSpeciesIds()` lists every cached species id via `CacheStore.listFilesIn("species")`, so a variant survives only if its own generation truly doesn't match, never because its base id sits outside this range (see ADR-0006).
 
-`clearRange` also evicts each in-range base id's Mega and Gigantamax forms (`mega-forms/`,
-`gigantamax-forms/`, and their four images, paths from `megaFormPath`/`gigantamaxFormPath`).
-They belong to the base species' dex range, not their own generation, and their keys are
-derived from the cached species/pokemon JSON, so that read must happen before the base files
-are removed. `abilities/`, `items/`, `moves/` and `evolution-chain/` are shared across
-species and only the global clear removes them. That global clear is
-`PokedexRepository.clearAll()`, never `CacheStore.clear()` alone: `isIdCached`/`isExtrasCached`
-count a mem hit as cached, so a store-only clear leaves the counters at "N/N cached" and the
-files are never written again this session. A fetch already in flight is not cancelled by
-either clear and can still write afterwards.
+`clearRange` also evicts each in-range base id's Mega and Gigantamax forms (`mega-forms/`, `gigantamax-forms/`, and their four images, paths from `megaFormPath`/`gigantamaxFormPath`). They belong to the base species' dex range, not their own generation, and their keys are derived from the cached species/pokemon JSON, so that read must happen before the base files are removed. `abilities/`, `items/`, `moves/` and `evolution-chain/` are shared across species and only the global clear removes them. That global clear is `PokedexRepository.clearAll()`, never `CacheStore.clear()` alone: `isIdCached`/`isExtrasCached` count a mem hit as cached, so a store-only clear leaves the counters at "N/N cached" and the files are never written again this session. A fetch already in flight is not cancelled by either clear and can still write afterwards.
 
-Known residual gap (ADR-0006): `getCacheStatus` does not count variants at all, so its
-"X/Y cached" figure undercounts once a generation has regional forms.
+Known residual gap (ADR-0006): `getCacheStatus` does not count variants at all, so its "X/Y cached" figure undercounts once a generation has regional forms.
 
-Gating a cache-eviction sweep on a matching condition can silently make the *correctly*
-scoped case unreachable too, if discovery is still keyed by the old range. Live-verify both
-directions before calling such a fix done.
+Gating a cache-eviction sweep on a matching condition can silently make the *correctly* scoped case unreachable too, if discovery is still keyed by the old range. Live-verify both directions before calling such a fix done.
 
 ## PokeAPI
 
-- `GET /pokemon?limit=N` silently truncates when `N` is below the true count (1351 as of
-  Gen 8). Pass `limit=2000` or read the response's own `count`. A `limit=1300` scan once
-  hid 46 "-mega" varieties and shipped a real bug.
-- PokeAPI adds a game's data before the game ships: Legends: Z-A's Megas and the
-  `champions` version group were filtered out as non-canon in 2026-07 and were real by
-  2026-11 (`pokemon-form.is_mega`, populated learnsets). Judge a resource by its data
-  (`is_mega`, `move_learn_methods`, an empty learnset), not by whether the game is out yet.
-- Numbered list resources are **not** contiguous — guessing sequential ids 404s (8 of 541
-  evolution chains, confirmed live). Paginate the real list endpoint
-  (`/evolution-chain?limit=600`) and use `results[].url`.
+- `GET /pokemon?limit=N` silently truncates when `N` is below the true count (1351 as of Gen 8). Pass limit=2000 or read the response's own count. A limit=1300 scan once hid 46 "-mega" varieties and shipped a real bug.
+- PokeAPI adds a game's data before the game ships: Legends: Z-A's Megas and the `champions` version group were filtered out as non-canon in 2026-07 and were real by 2026-11 (`pokemon-form.is_mega`, populated learnsets). Judge a resource by its data (`is_mega`, `move_learn_methods`, an empty learnset), not by whether the game is out yet.
+- Numbered list resources are **not** contiguous — guessing sequential ids 404s (8 of 541 evolution chains, confirmed live). Paginate the real list endpoint (`/evolution-chain?limit=600`) and use `results[].url`.
 
 ## Debugging normalize.ts
 
-To debug a `normalize.ts` discrepancy, do not hand-trace or eval-probe: write a
-standalone script (`bun run /path/to/script.ts`) importing the real source file by
-absolute path, run it against live PokeAPI data (curl is denied here: dump it through
-`plugin.repository.client` in a `pokedex-test-vault` eval) or the plugin's cached JSON, and
-add temporary `console.error` instrumentation in the source, then revert. Chain shapes as
-served 2026-11 are in `__fixtures__/evolution-chains-2026-11.json`; add one by dropping null/false/""/[] fields recursively, keeping `evolves_to`/`evolution_details`.
+To debug a `normalize.ts` discrepancy, do not hand-trace or eval-probe: write a standalone script (`bun run /path/to/script.ts`) importing the real source file by absolute path, run it against live PokeAPI data (curl is denied here: dump it through `plugin.repository.client` in a `pokedex-test-vault` eval) or the plugin's cached JSON, and add temporary `console.error` instrumentation in the source, then revert. Chain shapes as served 2026-11 are in `__fixtures__/evolution-chains-2026-11.json`; add one by dropping null/false/""/[] fields recursively, keeping `evolves_to`/`evolution_details`.

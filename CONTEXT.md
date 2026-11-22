@@ -4,11 +4,15 @@
 
 The rule "scope to the currently Active Gen's data, fall back to the latest supported generation's data when Active Gen predates this entry" (e.g. viewing a Gen 4 mon with Active Gen set to Gen 3, which has no data for it at all).
 
-Implemented once, generically, as `resolveTabsForGen` in `src/utils/generationFallback.ts` — tested in `generationFallback.test.ts`. It returns the tabs, the generation they actually came from (`gen`, null when no generation has data) and the caller's remembered tab key resolved to a selection ("remembered key, else first tab"). `MoveBrowser`'s heading reads `gen` so it names the generation it shows (`Moves (G4 · no G3 data)` after a fallback); `FlavorTextPanel` has no label and ignores it. Used by:
-- `MoveBrowser.svelte`'s `moveVersionTabs` (move version-group tabs)
+Implemented once, generically, as `resolveTabsForGen` in `src/utils/generationFallback.ts` — tested in `generationFallback.test.ts`. It returns the tabs, the generation they actually came from (`gen`, null when no generation has data) and the caller's Remembered tab resolved to a selection. `MoveBrowser`'s heading reads `gen` (as `resolveMoveView`'s `shownGen`) so it names the generation it shows (`Moves (G4 · no G3 data)` after a fallback); `FlavorTextPanel` has no label and ignores it. Used by:
+- `resolveMoveView` in `src/utils/moveRows.ts` (move version-group tabs; `MoveBrowser` renders its result)
 - `FlavorTextPanel.svelte`'s `flavorTabs` (flavor-text version tabs)
 
 Not the same rule as `resolveStatsForGen` in `src/utils/stats.ts`, despite the similar English description — that function has the opposite control-flow direction: it defaults to `current` (already the latest-gen-correct stat line) and conditionally patches it *backward* for a finite list of species keyed by `pokemonId`, with a `validThroughGen` ceiling. It isn't a gen-indexed tab list with a filter-then-fallback shape, so it stays a separate implementation.
+
+## Remembered tab
+
+A tab choice kept across navigation and Active Gen switches (move version, move method, flavor-text version). A view shows the remembered tab when it has it, else its first tab; the choice itself is never overwritten, so a later view that has the tab again shows it again. `pickRemembered` in `src/utils/generationFallback.ts`, used by `resolveTabsForGen` and by `resolveMoveView` for move method tabs, the one Remembered tab with no Generation fallback (Champions teaches only by Train, so it opens there whatever is remembered).
 
 ## Quick jump
 

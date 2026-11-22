@@ -34,8 +34,11 @@
 		row-gap: 4px;
 		column-gap: 10px;
 	}
-	/* The total's number sits in the number column, under the stats', with
-	its label spanning both columns before it. */
+	/* The total's label and number take the label and number columns, so the
+	number sits under the stats'. Not one area spanning both with the number
+	pushed to its end: neither item then makes room for the other, and with
+	only two-digit stats (Bulbasaur) "318" overlapped "Total" by 3.5px. Here
+	each column grows to fit its total item instead. */
 	.stat-total {
 		grid-column: 1 / -1;
 		display: grid;
@@ -47,14 +50,14 @@
 		font-weight: 700;
 	}
 	.stat-total-label {
-		grid-column: 1 / 3;
+		grid-column: 1;
 		grid-row: 1;
 		color: var(--lk-text);
 		font-size: 0.85em;
 		white-space: nowrap;
 	}
 	.stat-total-value {
-		grid-column: 1 / 3;
+		grid-column: 2;
 		grid-row: 1;
 		justify-self: end;
 		font-family: var(--lk-font-code);

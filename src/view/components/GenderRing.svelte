@@ -1,19 +1,19 @@
 <script lang="ts">
+	import { arcDasharray, RING_RADIUS as RADIUS, RING_SIZE as SIZE, RING_STROKE as STROKE } from "../../utils/ring";
 	import Icon from "./Icon.svelte";
 
 	// Gender ratio as a third Capture & Breeding ring: the male share from
 	// 12 o'clock clockwise in blue, the female share after it in pink, both
-	// percentages beside it (or under it, below a 540px panel). Same shape
-	// and breakpoint as Ring.svelte. Null shares are genderless: an empty
+	// percentages beside it (or under it, below a 540px panel). Same dial
+	// (utils/ring.ts) and breakpoint as Ring.svelte. Null shares are genderless: an empty
 	// track and "None".
 	let { malePct, femalePct }: { malePct: number | null; femalePct: number | null } = $props();
 
-	const SIZE = 44;
-	const STROKE = 5;
-	const RADIUS = (SIZE - STROKE) / 2;
-	const C = 2 * Math.PI * RADIUS;
-	const male = $derived(malePct === null ? 0 : (malePct / 100) * C);
-	const female = $derived(femalePct === null ? 0 : (femalePct / 100) * C);
+	// Square ends (the default cap), unlike Ring's round ones: the two arcs
+	// meet, and round caps would overlap at the join.
+	const maleShare = $derived((malePct ?? 0) / 100);
+	const male = $derived(arcDasharray(0, maleShare));
+	const female = $derived(arcDasharray(maleShare, (femalePct ?? 0) / 100));
 </script>
 
 {#snippet shares()}
@@ -29,13 +29,13 @@
 	<div class="ring-dial" style:width="{SIZE}px" style:height="{SIZE}px">
 		<svg width={SIZE} height={SIZE} viewBox="0 0 {SIZE} {SIZE}" aria-hidden="true">
 			<circle class="ring-track" cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} stroke-width={STROKE} />
-			{#if male > 0}
+			{#if male}
 				<circle class="arc-male" cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} stroke-width={STROKE}
-					stroke-dasharray="{male} {C}" transform="rotate(-90 {SIZE / 2} {SIZE / 2})" />
+					stroke-dasharray={male} transform="rotate(-90 {SIZE / 2} {SIZE / 2})" />
 			{/if}
-			{#if female > 0}
+			{#if female}
 				<circle class="arc-female" cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} stroke-width={STROKE}
-					stroke-dasharray="0 {male} {female} {C}" transform="rotate(-90 {SIZE / 2} {SIZE / 2})" />
+					stroke-dasharray={female} transform="rotate(-90 {SIZE / 2} {SIZE / 2})" />
 			{/if}
 		</svg>
 	</div>

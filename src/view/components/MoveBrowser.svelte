@@ -1,9 +1,7 @@
 <script lang="ts">
-	import { MOVE_VERSION_TABS_BY_GEN } from "../../data/constants";
 	import type { MoveDetail, MoveEntry } from "../../data/types";
 	import { createInfoPopover } from "../infoPopover.svelte";
-	import { resolveTabsForGen } from "../../utils/generationFallback";
-	import { buildMoveRows, type MoveRow } from "../../utils/moveRows";
+	import { resolveMoveView } from "../../utils/moveRows";
 	import InfoPopoverBox from "./InfoPopoverBox.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 
@@ -24,69 +22,19 @@
 	// the time a row can be hovered.
 	const popover = createInfoPopover(".detail-screen");
 
-	// Keys are PokeAPI move-learn-method names. "reminder" (Scarlet/Violet,
-	// Legends: Z-A: learnable from the move reminder with no level) and
-	// "train" (Pokemon Champions' training menu, the only method that game
-	// has) appear in one or two games each; a method PokeAPI has that is not
-	// listed here (form-change, light-ball-egg, ...) shows no tab.
-	const MOVE_METHOD_TABS = [
-		{ key: "level-up", label: "Level-Up" },
-		{ key: "reminder", label: "Reminder" },
-		{ key: "machine", label: "Machine" },
-		{ key: "egg", label: "Egg" },
-		{ key: "tutor", label: "Tutor" },
-		{ key: "train", label: "Train" },
-	] as const;
-
 	// Not reset on id change (this component instance persists across
 	// Pokemon navigation — see DetailScreen, which doesn't remount this
 	// panel when `id` changes, only when entry itself becomes null) — lets
 	// a user stay on e.g. "Machine" while browsing several Pokemon.
 	let activeMoveMethod = $state<string>("level-up");
 	// Remembered raw key (not derived from any one generation's tab set) —
-	// see moveVersionTabs/effectiveMoveVersion below for what happens when a
-	// navigation or Active Gen switch leaves it pointing at a game this
-	// entry/generation doesn't have.
+	// resolveMoveView shows it when this entry/generation has the game,
+	// else the first one, and never rewrites it.
 	let activeMoveVersion = $state<string>("firered-leafgreen");
 
-	// Games within the active generation this species actually has moves
-	// for (e.g. FRLG/Emerald teach the same move at different levels
-	// sometimes — normalizeMoves keeps both rows since they're genuinely
-	// distinct data, which reads as a duplicate here; this toggle scopes the
-	// list to one game at a time instead) — falling back to the latest
-	// supported generation's games when the active generation predates this
-	// species (e.g. viewing a Gen 4 mon with Active Gen set to Gen 3, which
-	// has no data for it at all), see resolveTabsForGen.
-	const resolvedMoveVersions = $derived.by(() => {
-		const versionsWithMoves = new Set(moves.map((m) => m.versionGroup));
-		return resolveTabsForGen(
-			MOVE_VERSION_TABS_BY_GEN,
-			activeGen,
-			(tab) => versionsWithMoves.has(tab.key),
-			activeMoveVersion,
-		);
-	});
-	const moveVersionTabs = $derived(resolvedMoveVersions.tabs);
-	const effectiveMoveVersion = $derived(resolvedMoveVersions.selected?.key ?? "");
-	// The generation the tabs actually came from — differs from activeGen
-	// after a fallback, and null when no generation has moves for this entry.
-	const shownGen = $derived(resolvedMoveVersions.gen ?? activeGen);
-
-	const versionMoves = $derived(moves.filter((m) => m.versionGroup === effectiveMoveVersion));
-	// Only the methods this game teaches this entry anything by, so Champions
-	// (every move under "train") does not open on an empty Level-Up tab. The
-	// remembered method wins when the game has it, else the first one shown.
-	const moveMethodTabs = $derived.by(() => {
-		const methods = new Set(versionMoves.map((m) => m.learnMethod));
-		return MOVE_METHOD_TABS.filter((tab) => methods.has(tab.key));
-	});
-	const effectiveMoveMethod = $derived(
-		moveMethodTabs.some((tab) => tab.key === activeMoveMethod) ? activeMoveMethod : (moveMethodTabs[0]?.key ?? activeMoveMethod),
+	const view = $derived(
+		resolveMoveView(moves, activeGen, { version: activeMoveVersion, method: activeMoveMethod }, evolvesAtLevels),
 	);
-
-	const filteredMoves = $derived(versionMoves.filter((m) => m.learnMethod === effectiveMoveMethod));
-
-	const displayRows = $derived(buildMoveRows(filteredMoves, evolvesAtLevels, effectiveMoveMethod === "level-up"));
 </script>
 
 <!-- The section's own width, not the pane's, decides the narrow form: the
@@ -94,13 +42,13 @@ Moves panel is a tab of the whole screen on the phone, a tab beside the
 identity rail from 760px and a column from 1100px. -->
 <div class="move-browser">
 	<div class="moves-heading-row">
-		<h3 class="section-heading">Moves (G{shownGen}{shownGen !== activeGen ? ` · no G${activeGen} data` : ""})</h3>
+		<h3 class="section-heading">Moves (G{view.shownGen}{view.shownGen !== activeGen ? ` · no G${activeGen} data` : ""})</h3>
 		<div class="move-tabs move-version-tabs">
-			{#each moveVersionTabs as tab (tab.key)}
+			{#each view.versionTabs as tab (tab.key)}
 				<button
 					type="button"
 					class="move-tab"
-					class:active={effectiveMoveVersion === tab.key}
+					class:active={view.version === tab.key}
 					onclick={() => (activeMoveVersion = tab.key)}
 				>
 					{tab.label}
@@ -112,18 +60,18 @@ identity rail from 760px and a column from 1100px. -->
 		<p class="text-muted">No move data for this version group.</p>
 	{:else}
 		<div class="move-tabs">
-			{#each moveMethodTabs as tab (tab.key)}
+			{#each view.methodTabs as tab (tab.key)}
 				<button
 					type="button"
 					class="move-tab"
-					class:active={effectiveMoveMethod === tab.key}
+					class:active={view.method === tab.key}
 					onclick={() => (activeMoveMethod = tab.key)}
 				>
 					{tab.label}
 				</button>
 			{/each}
 		</div>
-		{#if filteredMoves.length === 0}
+		{#if view.rows.length === 0}
 			<p class="text-muted">No moves for this game.</p>
 		{:else}
 			<!-- A column's header at each width (see the moves container
@@ -138,7 +86,7 @@ identity rail from 760px and a column from 1100px. -->
 				<thead>
 					<tr>
 						<th>Move</th>
-						{#if effectiveMoveMethod === "level-up"}<th class="col-right" title="Level"
+						{#if view.method === "level-up"}<th class="col-right" title="Level"
 								>{@render columnLabel("Level", "Lv", "L")}</th
 							>{/if}
 						<th class="col-center" title="Type">{@render columnLabel("Type", "Type", "T")}</th>
@@ -148,7 +96,7 @@ identity rail from 760px and a column from 1100px. -->
 					</tr>
 				</thead>
 				<tbody>
-					{#each displayRows as row (row.kind === "move" ? row.move.name + row.move.levelLearnedAt : `divider-${row.level}`)}
+					{#each view.rows as row (row.kind === "move" ? row.move.name + row.move.levelLearnedAt : `divider-${row.level}`)}
 						{#if row.kind === "divider"}
 							<tr class="evolve-divider-row">
 								<td colspan={6}>
@@ -162,7 +110,7 @@ identity rail from 760px and a column from 1100px. -->
 							{@const detail = moveDetails[move.name]}
 							<tr class:row-shaded={row.moveIndex % 2 === 0}>
 								<td class="move-name-cell"><span class="pkdx-info-target" {...popover.target(move.name)}>{move.name}</span></td>
-								{#if effectiveMoveMethod === "level-up"}<td class="col-right num">{move.levelLearnedAt}</td>{/if}
+								{#if view.method === "level-up"}<td class="col-right num">{move.levelLearnedAt}</td>{/if}
 								<td class="col-center">
 									{#if detail}
 										<!-- Narrow, the name gives way to the type's icon (the
@@ -352,7 +300,7 @@ identity rail from 760px and a column from 1100px. -->
 	.move-table th.col-center, .move-table td.col-center {
 		text-align: center;
 	}
-	/* Driven by moveIndex (see displayRows), not `tr:nth-child(odd)` — a
+	/* Driven by moveIndex (see view.rows), not `tr:nth-child(odd)` — a
 	divider row sits between real move rows and would otherwise count toward
 	the alternation, shifting every row after it out of sync. */
 	.row-shaded {

@@ -33,13 +33,19 @@ const isNarrow = (condition: string) => /^width\s*<|max-width/.test(condition);
 // (Moves) or middle column from 1100, so "is this section too narrow" is not
 // monotonic in the leaf width. MoveBrowser's `moves`; DetailScreen's `paired`
 // (Base stats beside Abilities) and `capture` (the ring line, which Ring and
-// GenderRing lay out too); EvolutionTree's `evo` (its smallest cards).
+// GenderRing lay out too, so its widths are pinned below by CAPTURE_WIDTHS);
+// EvolutionTree's `evo` (its smallest cards).
 const COMPONENT_WIDTH_CONTAINERS: Record<string, readonly string[]> = {
 	moves: ["MoveBrowser.svelte"],
 	paired: ["DetailScreen.svelte"],
 	capture: ["DetailScreen.svelte", "Ring.svelte", "GenderRing.svelte"],
 	evo: ["EvolutionChain.svelte"],
 };
+// `capture` is the one component container queried from more than one file,
+// and a container query cannot read a variable, so each file writes the
+// number itself (ADR-0018). These are the widths every copy must use: rings
+// beside their labels from 540, a 2x2 grid below 360 (DetailScreen only).
+const CAPTURE_WIDTHS = { ringsBeside: 540, grid: 360 } as const;
 // The leaf widths a component may query, by file. Browse switches at the
 // Narrow pane in JS (PokedexApp), so no component queries 600.
 const PANE_THRESHOLDS: Record<string, readonly number[]> = {
@@ -55,12 +61,15 @@ describe("pane breakpoints", () => {
 		expect(css).toContain(`.workspace-leaf-content[data-type="${viewType}"] { container: pane / inline-size; }`);
 	});
 
-	it("every narrow pane query uses one of its file's named leaf widths", () => {
-		const pane = queries.filter((q) => q.name === "pane" && isNarrow(q.condition));
+	// Both directions: the one-row header's `width >= 780px` is the complement
+	// of the two-row `width < 780px`, and moving either alone leaves a band of
+	// leaf widths with neither layout's rules.
+	it("every pane query uses one of its file's named leaf widths", () => {
+		const pane = queries.filter((q) => q.name === "pane");
 		// The phone hero and header (#31) at least: the scan found something.
 		expect(pane.length).toBeGreaterThanOrEqual(3);
 		for (const q of pane) {
-			const allowed = (PANE_THRESHOLDS[q.file] ?? []).map((w) => `width < ${w}px`);
+			const allowed = (PANE_THRESHOLDS[q.file] ?? []).flatMap((w) => [`width < ${w}px`, `width >= ${w}px`]);
 			expect({ file: q.file, allowed: allowed.includes(q.condition) }).toEqual({ file: q.file, allowed: true });
 		}
 	});
@@ -82,5 +91,26 @@ describe("pane breakpoints", () => {
 			(q) => q.name !== "pane" && isNarrow(q.condition) && !COMPONENT_WIDTH_CONTAINERS[q.name]?.includes(q.file),
 		);
 		expect(inner.map((q) => `${q.file}: @container ${q.name} (${q.condition})`)).toEqual([]);
+	});
+
+	it("every capture query uses a named Capture & Breeding width", () => {
+		const capture = queries.filter((q) => q.name === "capture");
+		const allowed = Object.values(CAPTURE_WIDTHS).map((w) => `width < ${w}px`);
+		expect(capture.length).toBeGreaterThanOrEqual(4);
+		for (const q of capture) {
+			expect({ file: q.file, condition: q.condition, allowed: allowed.includes(q.condition) }).toEqual({
+				file: q.file,
+				condition: q.condition,
+				allowed: true,
+			});
+		}
+	});
+
+	it("the panel and both rings switch at the same capture width", () => {
+		const beside = `width < ${CAPTURE_WIDTHS.ringsBeside}px`;
+		for (const file of COMPONENT_WIDTH_CONTAINERS.capture) {
+			const conditions = queries.filter((q) => q.file === file && q.name === "capture").map((q) => q.condition);
+			expect({ file, conditions, switches: conditions.includes(beside) }).toEqual({ file, conditions, switches: true });
+		}
 	});
 });

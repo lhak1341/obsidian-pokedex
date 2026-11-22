@@ -21,16 +21,27 @@ export interface ResolvedTabs<T> {
 	selectedIndex: number;
 }
 
+// The Remembered tab rule on its own: the remembered key when `tabs` has
+// it, else the first tab (null, index 0, when `tabs` is empty). The
+// remembered key itself is the caller's and is never rewritten here, so a
+// later view that has the tab again shows it again. resolveTabsForGen
+// applies it to version tabs; resolveMoveView (utils/moveRows.ts) to move
+// method tabs, which have no generation fallback.
+export function pickRemembered<T extends { key: string }>(
+	tabs: readonly T[],
+	remembered: string,
+): { selected: T | null; selectedIndex: number } {
+	const selectedIndex = Math.max(0, tabs.findIndex((tab) => tab.key === remembered));
+	return { selected: tabs[selectedIndex] ?? null, selectedIndex };
+}
+
 export function resolveTabsForGen<T extends { key: string }>(
 	tabsByGen: Record<number, readonly T[]>,
 	activeGen: number,
 	hasData: (tab: T) => boolean,
 	remembered: string,
 ): ResolvedTabs<T> {
-	const pick = (tabs: T[], gen: number | null): ResolvedTabs<T> => {
-		const selectedIndex = Math.max(0, tabs.findIndex((tab) => tab.key === remembered));
-		return { tabs, gen, selected: tabs[selectedIndex] ?? null, selectedIndex };
-	};
+	const pick = (tabs: T[], gen: number | null): ResolvedTabs<T> => ({ tabs, gen, ...pickRemembered(tabs, remembered) });
 	const primary = (tabsByGen[activeGen] ?? []).filter(hasData);
 	if (primary.length > 0) return pick(primary, activeGen);
 	// Falling back to LATEST_GEN specifically used to be a no-op whenever

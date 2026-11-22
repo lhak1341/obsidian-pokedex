@@ -4,122 +4,33 @@ Scoped to the Svelte components, view-state classes, and table/detail-screen UI.
 
 ## Domain rules
 
-- A row's generation is its precomputed `generationId`, drawn with `romanNumeral()` (`utils/romanNumeral.ts`). Never
-  `resolveGenerationId(dexNumber)` in UI code: it is wrong for every regional form (Alolan Rattata: dexNumber 19/Gen 1,
-  real generationId 7), and `DetailScreen.svelte` once showed the wrong numeral that way. eslint parses no `.svelte`
-  here, so nothing catches it.
-- Every path in `PokedexLoadState` that hands back state (streamed rows, progress, `load()`'s end, `retry()`) crosses
-  both guards, and a new path must too: `admit()` applies the generation scope to its rows (`getRowsForIds` adds
-  regional-form rows next to every base id, so `retry()` once merged a disabled generation's Alolan Rattata into the
-  table), and `isCurrent(loadNumber)` drops whatever a load superseded by `setScope` still hands back.
-  `onUpdate(snapshot)` hands a new `rows` array exactly when the rows changed (the class only replaces it), and at most
-  one progress or streamed-row update per `UPDATE_INTERVAL_MS`: each update re-runs every `TableScreen` derived, and an
-  update per callback took a cache-served load from 1.85 s to 24 s. `PokedexApp` holds it in `$state.raw`, since a deep
-  `$state` wraps every assignment in a new proxy.
-- Active Gen data is unscoped at its source and scoped once before anything shows it: `scopeToActiveGen`
-  (`utils/activeGenScope.ts`) makes an Active Gen row (CONTEXT.md), as `TableScreen`'s `scopedRows` and
-  `DetailScreen`'s `scopedEntry`. The type is the guard: `ActiveGenRow` has no `*AllGens` field, and layouts, Fields
-  (`render(row)`), Quirks/Traits, `filterPokemon` and `sortPokemon` take it, so an unscoped read fails typecheck (the
-  name alone was missed for the table cell, its tooltip, the detail page and the Quirks filter in one session). The
-  memo keeps a row's scoped object identical across streamed updates; a new reader takes the scoped row, never
-  `PokedexTableRow`.
+- A row's generation is its precomputed `generationId`, drawn with `romanNumeral()` (`utils/romanNumeral.ts`). Never `resolveGenerationId(dexNumber)` in UI code: it is wrong for every regional form (Alolan Rattata: dexNumber 19/Gen 1, real generationId 7), and `DetailScreen.svelte` once showed the wrong numeral that way. eslint parses no `.svelte` here, so nothing catches it.
+- Every path in `PokedexLoadState` that hands back state (streamed rows, progress, `load()`'s end, `retry()`) crosses both guards, and a new path must too: `admit()` applies the generation scope to its rows (`getRowsForIds` adds regional-form rows next to every base id, so `retry()` once merged a disabled generation's Alolan Rattata into the table), and `isCurrent(loadNumber)` drops whatever a load superseded by `setScope` still hands back. `onUpdate(snapshot)` hands a new `rows` array exactly when the rows changed (the class only replaces it), and at most one progress or streamed-row update per `UPDATE_INTERVAL_MS`: each update re-runs every `TableScreen` derived, and an update per callback took a cache-served load from 1.85 s to 24 s. `PokedexApp` holds it in `$state.raw`, since a deep `$state` wraps every assignment in a new proxy.
+- Active Gen data is unscoped at its source and scoped once before anything shows it: `scopeToActiveGen` (`utils/activeGenScope.ts`) makes an Active Gen row (CONTEXT.md), as `TableScreen`'s `scopedRows` and `DetailScreen`'s `scopedEntry`. The type is the guard: `ActiveGenRow` has no `*AllGens` field, and layouts, Fields (`render(row)`), Quirks/Traits, `filterPokemon` and `sortPokemon` take it, so an unscoped read fails typecheck (the name alone was missed for the table cell, its tooltip, the detail page and the Quirks filter in one session). The memo keeps a row's scoped object identical across streamed updates; a new reader takes the scoped row, never `PokedexTableRow`.
 - Every open Pokédex leaf mounts its own app, so a `window`/`document` listener in a component fires once per leaf, background tabs included (←/→ stepped every leaf, probed live). Keys go through Leaf hotkeys (CONTEXT.md: `PokedexView`'s one gated listener, `leafHotkeyListener.test.ts` pins it); any other global listener must check the event is its own leaf's (`infoPopover`'s Escape attaches only while its popover is open).
-- Saved preferences are never a local copy. Favourites, the Fields selection and the layout per width class live in
-  `PokedexPlugin.preferences` (`utils/localPreferences.ts`, ADR-0012), one holder shared by every open Pokédex leaf;
-  `PokedexApp` mirrors it (`prefs`, refreshed by `subscribe`) and writes through it, and every layout or panel takes
-  `favoriteIds`/`onToggleFavorite` from there. The single-Pokémon views (detail screen, tap panel) draw
-  `FavoriteToggle.svelte`; lists mark favourites only (the table with the dot `FavoriteMark.svelte`, Card view with an accent outline on the tile) and toggle
-  through `view/favoriteMenu.ts` (right-click or press and hold; rules in `utils/pressHold.ts`). A `$state` seeded once via
-  `untrack(() => initialX)` never re-seeds from its prop unless an effect does it on purpose (TableScreen's `sort` only on a
-  `defaultSortColumn` change), which is right for view state and wrong
-  for anything saved: two leaves then save over each other.
-- The browse screen is one list drawn two ways. `TableScreen.svelte` owns filters (search included) and one `SortState`
-  and renders the `<table>` or `CardGrid.svelte` from the same `visibleRows`, so a layout switch keeps them; both sort
-  through `nextSort`, and an effect resets the sort through `sortAfterFieldsChange` whichever leaf unchose the Field.
-  `PokedexApp` picks the layout per width class (`utils/browseLayout.ts`) from a `ResizeObserver` on the leaf; CSS reads
-  the same leaf as the `pane` container, so a leaf-width query is `@container pane (width < N)` with N a named leaf
-  width, never a width converted to an inner container (`paneBreakpoint.test.ts`). A component that must fit its own width, which the
-  bands make non-monotonic in the leaf's (MoveBrowser's `moves`: 399px at a 760px leaf, 337px at 1100; DetailScreen's
-  `paired` and `capture`; EvolutionTree's `evo`), queries its own container and is listed in that test's
-  `COMPONENT_WIDTH_CONTAINERS`. The detail screen's three bands (phone tabs below 760, #32; identity rail with
-  Overview · Moves to 1100, #33; three columns from 1100) are a JS branch on the same leaf width (`DetailScreen`'s `band`
-  prop, `utils/detailBand.ts`), since the tab sets differ; one selected tab is shown where the band has it
-  (`shownDetailTab`). The phone band is not the Narrow pane: a 600-759px leaf browses wide but shows the phone detail
-  screen (why: `detailBand.ts`). Each group is a `{#snippet}` every branch renders, so a panel is never written twice.
-  The phone hero is a `pane` query at the same 760 (`DETAIL_PHONE_MAX_WIDTH`); the header's two rows below 780 and the
-  hero's stacked type badges below 420 are the other `pane` widths, each a named constant in `detailBand.ts`. A sticky bar inside `.pokedex-view` (the scroller) sticks at its
-  `--lk-space-4` padding edge, so rows show through above it: stick at `calc(-1 * var(--lk-space-4))` and fill that
-  band (`.detail-tabs-bar`); that fill reaches up into whatever sits above it at rest, so the header stacks above the bar. Card
-  view's derivations (tile, grid, the tap panel's placement, columns and chips) are pure in `utils/cardView.ts`; a tile
-  tap opens `CardPanel.svelte` (open id held in `CardGrid`), whose held item uses TableScreen's `itemPopover`. Card view draws
-  only its Card window (CONTEXT.md, ADR-0016): a tile outside it has no DOM, so a live probe over `.card-tile` sees
-  the slice, not every row (scroll the tile into view first), and a new per-tile height difference must reach
-  `isTallCardRow` or the spacers drift.
-- Fields (`utils/fields.ts`, `FIELDS`) are `{ render, title? }` text Fields, both called with the Active Gen, or
-  `{ custom: CustomCell }` Fields the layout draws itself (held items, EV yield: more than a string). A value that only
-  needs Active Gen scoping is a text Field, not a custom one. The table's geometry per Field is `TABLE_GEOMETRY`
-  (`utils/tableColumns.ts`). A new custom Field needs a `col.custom === …` branch in `TableScreen.svelte` and a
-  `field.custom === …` branch in `CardPanel.svelte`; both end in `unhandledCustomCell` (a `never` parameter), so a
-  missing branch fails typecheck.
-- `vitest.config.ts` has no Svelte plugin or jsdom, so a `.svelte.ts` rune module (`infoPopover.svelte.ts`,
-  `quickJumpDropdown.svelte.ts`) can't be tested (the Info popover's pin rules are therefore `utils/infoPopoverPin.ts`;
-  press and hold's are `utils/pressHold.ts`). Put the branching in `utils/`, and give a DOM-bound module its DOM piece
-  as a parameter so a test passes a fake: `resolvePortraitScale(…, measure)` takes DetailScreen's `measurePortrait`;
-  `settleEvolutionLayout(…, read, apply)` takes EvolutionTree's card reader and re-render (CONTEXT.md "Evolution
-  layout"); the press bindings (`favoriteMenu.ts`, `portraitPress.ts`) take a `PressWatch` and `openMenu` (fakes in `view/__fixtures__/`:
-  plain-object events cast `as unknown as PointerEvent`, `vi.stubGlobal` for an `instanceof Element`; ADR-0013 keeps
-  them two bindings). The decode's memo is `contentBounds = memoizeByCachePath(decode)` (`imageBounds.ts`, read by
-  `contentScale` and Card view's `fitSprite`). ADR-0003 covers adding jsdom itself.
-- A settings change never remounts: `PokedexView.refresh()` re-applies fonts and Reduce motion on `contentEl` and hands
-  the app a settings copy (`applySettings`); only a new generation scope reloads rows, in place, through
-  `PokedexLoadState.setScope`, which keeps `loading` off so the table (filters, sort) and detail screen stay mounted. So a
-  screen's `onDestroy` runs only when the leaf closes or `onOpen` fires again; TableScreen also stays mounted under
-  `display:none`, so an "after unmount" bug needs the view swapped (`docs/live-verification.md`) to trigger, and every
-  size read inside it (`bind:clientWidth`, a `ResizeObserver`, a rect) gets 0 while the detail screen shows: ignore the
-  0 or freeze, as CardGrid's width and Card window do.
+- Saved preferences are never a local copy. Favourites, the Fields selection and the layout per width class live in `PokedexPlugin.preferences` (`utils/localPreferences.ts`, ADR-0012), one holder shared by every open Pokédex leaf; `PokedexApp` mirrors it (`prefs`, refreshed by `subscribe`) and writes through it, and every layout or panel takes `favoriteIds`/`onToggleFavorite` from there. The single-Pokémon views (detail screen, tap panel) draw `FavoriteToggle.svelte`; lists mark favourites only (the table with the dot `FavoriteMark.svelte`, Card view with an accent outline on the tile) and toggle through view/favoriteMenu.ts (right-click or press and hold; rules in utils/pressHold.ts). A $state seeded once via `untrack(() => initialX)` never re-seeds from its prop unless an effect does it on purpose (TableScreen's `sort` only on a `defaultSortColumn` change), which is right for view state and wrong for anything saved: two leaves then save over each other.
+- The browse screen is one list drawn two ways. `TableScreen.svelte` owns filters (search included) and one `SortState` and renders the <table> or CardGrid.svelte from the same visibleRows, so a layout switch keeps them; both sort through `nextSort`, and an effect resets the sort through `sortAfterFieldsChange` whichever leaf unchose the Field. `PokedexApp` picks the layout per width class (`utils/browseLayout.ts`) from a `ResizeObserver` on the leaf; CSS reads the same leaf as the `pane` container, so a leaf-width query is `@container pane (width < N)` with N a named leaf width, never a width converted to an inner container (`paneBreakpoint.test.ts`). A component that must fit its own width, which the bands make non-monotonic in the leaf's (MoveBrowser's `moves`: 399px at a 760px leaf, 337px at 1100; DetailScreen's `paired` and `capture`; EvolutionTree's `evo`), queries its own container and is listed in that test's `COMPONENT_WIDTH_CONTAINERS`; `capture`, queried by DetailScreen and both rings, takes its widths from `CAPTURE_WIDTHS` there (ADR-0018). The detail screen's three bands (phone tabs below 760, #32; identity rail with Overview · Moves to 1100, #33; three columns from 1100) are a JS branch on the same leaf width (`DetailScreen`'s `band` prop, `utils/detailBand.ts`), since the tab sets differ; one selected tab is shown where the band has it (`shownDetailTab`). The phone band is not the Narrow pane: a 600-759px leaf browses wide but shows the phone detail screen (why: `detailBand.ts`). Each group is a `{#snippet}` every branch renders, so a panel is never written twice. The phone hero is a `pane` query at the same 760 (`DETAIL_PHONE_MAX_WIDTH`); the header's two rows below 780 and the hero's stacked type badges below 420 are the other `pane` widths, each a named constant in `detailBand.ts`. A sticky bar inside `.pokedex-view` (the scroller) sticks at its `--lk-space-4` padding edge, so rows show through above it: stick at `calc(-1 * var(--lk-space-4))` and fill that band (`.detail-tabs-bar`); that fill reaches up into whatever sits above it at rest, so the header stacks above the bar. Card view's derivations (tile, grid, the tap panel's placement, columns and chips) are pure in `utils/cardView.ts`; a tile tap opens `CardPanel.svelte` (open id held in `CardGrid`), whose held item uses TableScreen's `itemPopover`. Card view draws only its Card window (CONTEXT.md, ADR-0016): a tile outside it has no DOM, so a live probe over `.card-tile` sees the slice, not every row (scroll the tile into view first), and a new per-tile height difference must reach `isTallCardRow` or the spacers drift.
+- Fields (`utils/fields.ts`, `FIELDS`) are `{ render, title? }` text Fields, both called with the Active Gen, or `{ custom: CustomCell }` Fields the layout draws itself (held items, EV yield: more than a string). A value that only needs Active Gen scoping is a text Field, not a custom one. The table's geometry per Field is `TABLE_GEOMETRY` (`utils/tableColumns.ts`). A new custom Field needs a `col.custom === …` branch in `TableScreen.svelte` and a `field.custom === …` branch in `CardPanel.svelte`; both end in `unhandledCustomCell` (a `never` parameter), so a missing branch fails typecheck.
+- `vitest.config.ts` has no Svelte plugin or jsdom, so a `.svelte.ts` rune module (`infoPopover.svelte.ts`, `quickJumpDropdown.svelte.ts`) can't be tested (the Info popover's pin rules are therefore `utils/infoPopoverPin.ts`; press and hold's are `utils/pressHold.ts`). Put the branching in `utils/`, and give a DOM-bound module its DOM piece as a parameter so a test passes a fake: `resolvePortraitScale(…, measure)` takes DetailScreen's `measurePortrait`; `settleEvolutionLayout(…, read, apply)` takes EvolutionTree's card reader and re-render (CONTEXT.md "Evolution layout"); the press bindings (`favoriteMenu.ts`, `portraitPress.ts`) take a `PressWatch` and `openMenu` (fakes in `view/__fixtures__/`: plain-object events cast `as unknown as PointerEvent`, `vi.stubGlobal` for an `instanceof Element`; ADR-0013 keeps them two bindings). The decode's memo is `contentBounds = memoizeByCachePath(decode)` (`imageBounds.ts`, read by `contentScale` and Card view's `fitSprite`). ADR-0003 covers adding jsdom itself.
+- A settings change never remounts: `PokedexView.refresh()` re-applies fonts and Reduce motion on `contentEl` and hands the app a settings copy (`applySettings`); only a new generation scope reloads rows, in place, through `PokedexLoadState.setScope`, which keeps `loading` off so the table (filters, sort) and detail screen stay mounted. So a screen's `onDestroy` runs only when the leaf closes or `onOpen` fires again; TableScreen also stays mounted under `display:none`, so an "after unmount" bug needs the view swapped (`docs/live-verification.md`) to trigger, and every size read inside it (`bind:clientWidth`, a `ResizeObserver`, a rect) gets 0 while the detail screen shows: ignore the 0 or freeze, as CardGrid's width and Card window do.
 
-Adding a generation stales cached Moves/Flavor Text and needs a checklist walk — see
-`docs/multi-gen-expansion-plan.md`'s Recipe section, not a bespoke fix here.
+Adding a generation stales cached Moves/Flavor Text and needs a checklist walk — see `docs/multi-gen-expansion-plan.md`'s Recipe section, not a bespoke fix here.
 
 ## PokeAPI-driven rendering
 
-PokeAPI images do not place or scale their content consistently inside the canvas, so any
-layout that frames an image tightly must size and centre it by its alpha bbox, not its canvas.
-- Official-artwork shiny PNGs crop up to 31% tighter than non-shiny for ~46 of 97 Mega
-  species (classic Gen 6 megas on a 475x475 canvas); newer fan-added megas (534x534) are
-  unaffected. `PortraitPanel.svelte`'s `portraitScale` (rule: `resolvePortraitScale` in `utils/portrait.ts`), via `imageBounds.ts`'s
-  `contentScale`, decodes each render's alpha bbox and scales the outlier down, shrink-only.
-  Treat "this sprite looks bigger/smaller" reports as a whole-variety-group bbox scan
-  before assuming a plugin bug.
-- 96px front sprites sit off-centre on their canvas: centring the canvas in an 85px Card view
-  tile clipped Venusaur/Charizard; centring the bbox fixed all but 5 of 40, which then need a downscale.
+PokeAPI images do not place or scale their content consistently inside the canvas, so any layout that frames an image tightly must size and centre it by its alpha bbox, not its canvas.
+- Official-artwork shiny PNGs crop up to 31% tighter than non-shiny for ~46 of 97 Mega species (classic Gen 6 megas on a 475x475 canvas); newer fan-added megas (534x534) are unaffected. `PortraitPanel.svelte`'s `portraitScale` (rule: `resolvePortraitScale` in `utils/portrait.ts`), via `imageBounds.ts`'s `contentScale`, decodes each render's alpha bbox and scales the outlier down, shrink-only. Treat "this sprite looks bigger/smaller" reports as a whole-variety-group bbox scan before assuming a plugin bug.
+- 96px front sprites sit off-centre on their canvas: centring the canvas in an 85px Card view tile clipped Venusaur/Charizard; centring the bbox fixed all but 5 of 40, which then need a downscale.
 
 ## Table layout
 
-- `table-layout: fixed` breaks "percentage width with a minimum floor" two ways silently:
-  its sizing pass ignores `min-width`/`max-width` on `<col>`/`th`/`td` entirely, and it
-  ignores `max()`/`calc()` on `<col>` width (falling back to equal splits). Use
-  `table-layout: auto` with a plain `width: N%` on `<col>` for the extra-space share and a
-  real `min-width` on the `<th>` as the floor — auto layout's never-shrink-below-content
-  guarantee does the rest. Do **not** add `text-overflow: ellipsis` as a safety net: it
-  collapses intrinsic min-content width to ~1 character and defeats that guarantee.
-  `overflow: hidden` alone does not (the Info popover target cells clip their tap area with
-  it; column widths measured identical). Working pattern: `TableScreen.svelte`'s column widths.
-  A second line inside a cell can still ellipsize: `display: block; width: 0; min-width: 100%` keeps it out of the cell's min-content (the narrow table's `.form-line`).
+- Two grid items placed in one area (or spanning the same tracks) never make room for each other: tracks sized by other rows fit each alone, so they overlap only for data that narrows those tracks (StatBars' "Total"/"318" on Bulbasaur, all two-digit stats). Give each item its own track, and live-check the narrowest data, not one typical row.
+- `table-layout: fixed` breaks "percentage width with a minimum floor" two ways silently: its sizing pass ignores `min-width`/`max-width` on `<col>`/`th`/`td` entirely, and it ignores `max()`/`calc()` on `<col>` width (falling back to equal splits). Use `table-layout: auto` with a plain `width: N%` on `<col>` for the extra-space share and a real `min-width` on the `<th>` as the floor — auto layout's never-shrink-below-content guarantee does the rest. Do **not** add `text-overflow: ellipsis` as a safety net: it collapses intrinsic min-content width to ~1 character and defeats that guarantee. `overflow: hidden` alone does not (the Info popover target cells clip their tap area with it; column widths measured identical). Working pattern: `TableScreen.svelte`'s column widths. A second line inside a cell can still ellipsize: `display: block; width: 0; min-width: 100%` keeps it out of the cell's min-content (the narrow table's `.form-line`).
 - Adding or removing an element in any cell (an `{#if}` marker) lays out the whole auto table again: 65–90 ms at 4× in the narrow table for one 5px dot. Draw per-row markers on every row and show them by class with `visibility` (`opacity` measured no better than inserting): `TableScreen`'s `markedName`, ADR-0017.
-- `tr:nth-child(odd)` striping breaks once a row can be conditionally inserted (a divider
-  shifts parity for everything after it). Track alternation with an explicit index computed
-  over real data rows only, applied as a class.
-- A `<tr>`/`<td>` can take `height: 0` (with `position: relative; overflow: visible` on the
-  `td`) and still show `position: absolute` content — absolutely positioned children do not
-  contribute to auto-height. Used for `MoveBrowser`'s evolution-level divider overlay.
-- `stroke-dasharray` with a dash shorter than `stroke-width` plus `stroke-linecap: round`
-  (EvolutionTree's connector: width 3, dasharray "2 6") renders pill-shaped blobs, not
-  circles — the two round caps overlap. CSS `radial-gradient`/dashed borders cannot
-  reproduce it; reuse a real inline `<svg><line>`.
+- `tr:nth-child(odd)` striping breaks once a row can be conditionally inserted (a divider shifts parity for everything after it). Track alternation with an explicit index computed over real data rows only, applied as a class.
+- A `<tr>`/`<td>` can take `height: 0` (with `position: relative; overflow: visible` on the `td`) and still show `position: absolute` content — absolutely positioned children do not contribute to auto-height. Used for `MoveBrowser`'s evolution-level divider overlay.
+- `stroke-dasharray` with a dash shorter than `stroke-width` plus `stroke-linecap: round` (EvolutionTree's connector: width 3, dasharray "2 6") renders pill-shaped blobs, not circles — the two round caps overlap. CSS `radial-gradient`/dashed borders cannot reproduce it; reuse a real inline `<svg><line>`.
 
 ## Live verification
 
-Driving the running plugin through `obsidian eval` (remounting, faking I/O, scoping selectors to the visible screen,
-Info popover events, fixtures, A/B proofs, phone-width overlays) is in `docs/live-verification.md`; read it before a
-live check.
+Driving the running plugin through `obsidian eval` (remounting, faking I/O, scoping selectors to the visible screen, Info popover events, fixtures, A/B proofs, phone-width overlays) is in `docs/live-verification.md`; read it before a live check.

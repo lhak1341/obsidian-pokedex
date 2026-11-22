@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ringFill } from "../../utils/ring";
+	import { arcDasharray, RING_RADIUS as RADIUS, RING_SIZE as SIZE, RING_STROKE as STROKE, ringFill } from "../../utils/ring";
 
 	// Catch rate and hatch counter in Capture & Breeding: a 44px ring in the
 	// bars' colour. From a 540px panel (DetailScreen's `capture` container)
@@ -8,20 +8,16 @@
 	// one line. GenderRing.svelte draws the same shape with two arcs.
 	let { label, value, max }: { label: string; value: number; max: number } = $props();
 
-	const SIZE = 44;
-	const STROKE = 5;
-	const RADIUS = (SIZE - STROKE) / 2;
-	const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-	const filled = $derived(ringFill(value, max) * CIRCUMFERENCE);
+	const fill = $derived(arcDasharray(0, ringFill(value, max)));
 </script>
 
 <div class="ring">
 	<div class="ring-dial" style:width="{SIZE}px" style:height="{SIZE}px">
 		<svg width={SIZE} height={SIZE} viewBox="0 0 {SIZE} {SIZE}" aria-hidden="true">
 			<circle class="ring-track" cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} stroke-width={STROKE} />
-			{#if filled > 0}
+			{#if fill}
 				<circle class="ring-fill" cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} stroke-width={STROKE}
-					stroke-dasharray="{filled} {CIRCUMFERENCE}" transform="rotate(-90 {SIZE / 2} {SIZE / 2})" />
+					stroke-dasharray={fill} transform="rotate(-90 {SIZE / 2} {SIZE / 2})" />
 			{/if}
 		</svg>
 		<span class="ring-value in-dial">{value}</span>

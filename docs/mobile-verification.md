@@ -1,94 +1,35 @@
 # Mobile verification loop
 
-Two paths. Emulation is cheap and agent-drivable, but it covers layout and `Platform` only
-(no touch, no WebKit, no phone memory: see `temp/research/obsidian-mobile-constraints.md`).
-Anything touch-, engine- or memory-dependent waits for the iPhone path.
+Two paths. Emulation is cheap and agent-drivable, but it covers layout and `Platform` only (no touch, no WebKit, no phone memory: see `temp/research/obsidian-mobile-constraints.md`). Anything touch-, engine- or memory-dependent waits for the iPhone path.
 
 ## Emulated (agent-drivable, desktop)
 
-Vault: `pokedex-test-vault/` (gitignored, registered in Obsidian). The folder name is
-unique on purpose: the CLI's `vault=` matches by **name**, and `obsidian-linear-calendar`
-also has a `test-vault`. Its cache starts empty, so the first open fetches from PokeAPI.
+Vault: `pokedex-test-vault/` (gitignored, registered in Obsidian). The folder name is unique on purpose: the CLI's `vault=` matches by **name**, and `obsidian-linear-calendar` also has a `test-vault`. Its cache starts empty, so the first open fetches from PokeAPI.
 
-1. Build and copy into the test vault only (`bun run deploy` also writes the real vault):
-   `bun run build && /bin/cp main.js manifest.json styles.css pokedex-test-vault/.obsidian/plugins/obsidian-pokedex/`
-   `plugin:reload` keeps a `.svelte` component's old CSS (injected once into `<head>`): after a CSS change, reload the window.
-2. Open the window if it is closed. `obsidian://open?path=…` does **not** register or open
-   an unknown folder (it opened the other `test-vault`). From any open vault:
-   `obsidian vault=lhakZettel eval code="require('electron').ipcRenderer.sendSync('vault-open', '<abs path>/pokedex-test-vault', false)"`
-   `Command "eval" not found` from `vault=pokedex-test-vault` means its window is closed, not
-   that a plugin is missing. A freshly opened window is hidden (`document.visibilityState`),
-   which throttles it: an async eval hung past 120 s and screenshots go stale. Run
-   `const w=require('electron').remote.getCurrentWindow(); w.setBackgroundThrottling(false); w.restore(); w.show(); w.moveTop(); w.focus()`
-   and confirm `"visible"` (`moveTop()` or `focus()` without `show()` left it hidden; after a window reload, `show()` + `focus()` without `restore()` did too).
-3. `obsidian vault=pokedex-test-vault dev:mobile on` (reloads that window; for ~10 s after any reload `eval` answers `Command "eval" not found`, so wait before reading that as a closed window).
-   **The flag is global** (unprefixed `localStorage.EmulateMobile`): any other vault window
-   that reloads while it is on comes up in mobile mode too. Always end with step 7.
-4. Phone size: `eval code="window.resizeTo(390, 844)"`, then confirm
-   `document.body.classList.contains('is-phone')` (below 600x600 gives `is-phone`, else
-   `is-tablet`). Tablet: resize to e.g. 820x1180.
-   `is-phone` is computed at load: if it reads false after the resize, reload (`setTimeout(()=>location.reload(),200)`) and re-check.
-5. `eval code="app.commands.executeCommandById('obsidian-pokedex:open-pokedex')"`. Rows
-   stream in; a cold cache shows `Loading more Pokemon… n/1025` for a while.
-   To remount the view (a fresh mount; a setting changed in memory shows through
-   `plugin.saveSettings()` without one), do not detach the
-   leaf: detaching the only leaf in emulated mobile leaves no tab group, and the open command
-   then fails with `No tab group found` in `dev:errors`. Swap the view in place instead:
-   `const l=app.workspace.getLeavesOfType('pokedex-view')[0]; await l.setViewState({type:'empty'}); await l.setViewState({type:'pokedex-view',active:true})`.
-   If it is already detached, `app.workspace.createLeafInParent(app.workspace.rootSplit, 0)`
-   gives a leaf to call `setViewState` on.
-   The mobile window restores its own saved layout, not the desktop one, so a leaf opens on whatever it last showed in emulation.
-   Rows are card tiles here: `.card-tile` `.click()` expands one, its `.panel-open` button opens the detail.
-6. Screenshot: `dev:screenshot path=<abs>/temp/mobile-loop/<name>.png`. A background window
-   returns stale frames (a "New tab" shot while the DOM already held the Pokédex): after
-   step 2's visibility fix, run `require('electron').remote.getCurrentWindow().webContents.invalidate()`
-   before each shot (the BrowserWindow itself has no `invalidate`), shoot twice
-   and keep the second. A sideways `scrollLeft` never paints: fake it with `transform`.
-7. Clean up: `dev:mobile off`, resize back (`window.resizeTo(1440, 900)`: the size persists, and a later desktop check found the window still 390x844), then confirm `localStorage.getItem('EmulateMobile') === null`
-   in both `pokedex-test-vault` and `lhakZettel`; close the test window
-   (`eval code="setTimeout(()=>window.close(),200)"`).
+1. Build and copy into the test vault only (`bun run deploy` also writes the real vault): `bun run build && /bin/cp main.js manifest.json styles.css pokedex-test-vault/.obsidian/plugins/obsidian-pokedex/` `plugin:reload` keeps a `.svelte` component's old CSS (injected once into `<head>`): after a CSS change, reload the window.
+2. Open the window if it is closed. `obsidian://open?path=…` does **not** register or open an unknown folder (it opened the other `test-vault`). From any open vault: `obsidian vault=lhakZettel eval code="require('electron').ipcRenderer.sendSync('vault-open', '<abs path>/pokedex-test-vault', false)"` `Command "eval" not found` from `vault=pokedex-test-vault` means its window is closed, not that a plugin is missing. A freshly opened window is hidden (`document.visibilityState`), which throttles it: an async eval hung past 120 s and screenshots go stale. Run `const w=require('electron').remote.getCurrentWindow(); w.setBackgroundThrottling(false); w.restore(); w.show(); w.moveTop(); w.focus()` and confirm "visible" (moveTop() or focus() without show() left it hidden; after a window reload, show() + focus() without restore() did too).
+3. `obsidian vault=pokedex-test-vault dev:mobile on` (reloads that window; for ~10 s after any reload `eval` answers `Command "eval" not found`, so wait before reading that as a closed window). **The flag is global** (unprefixed `localStorage.EmulateMobile`): any other vault window that reloads while it is on comes up in mobile mode too. Always end with step 7.
+4. Phone size: `eval code="window.resizeTo(390, 844)"`, then confirm `document.body.classList.contains('is-phone')` (below 600x600 gives `is-phone`, else `is-tablet`). Tablet: resize to e.g. 820x1180. `is-phone` is computed at load: if it reads false after the resize, reload (`setTimeout(()=>location.reload(),200)`) and re-check.
+5. `eval code="app.commands.executeCommandById('obsidian-pokedex:open-pokedex')"`. Rows stream in; a cold cache shows `Loading more Pokemon… n/1025` for a while. To remount the view (a fresh mount; a setting changed in memory shows through `plugin.saveSettings()` without one), do not detach the leaf: detaching the only leaf in emulated mobile leaves no tab group, and the open command then fails with `No tab group found` in `dev:errors`. Swap the view in place instead: `const l=app.workspace.getLeavesOfType('pokedex-view')[0]; await l.setViewState({type:'empty'}); await l.setViewState({type:'pokedex-view',active:true})`. If it is already detached, `app.workspace.createLeafInParent(app.workspace.rootSplit, 0)` gives a leaf to call `setViewState` on. The mobile window restores its own saved layout, not the desktop one, so a leaf opens on whatever it last showed in emulation. Rows are card tiles here: `.card-tile` `.click()` expands one, its `.panel-open` button opens the detail.
+6. Screenshot: `dev:screenshot path=<abs>/temp/mobile-loop/<name>.png`. A background window returns stale frames (a "New tab" shot while the DOM already held the Pokédex): after step 2's visibility fix, run `require('electron').remote.getCurrentWindow().webContents.invalidate()` before each shot (the BrowserWindow itself has no `invalidate`), shoot twice and keep the second. A sideways scrollLeft never paints: fake it with transform.
+7. Clean up: `dev:mobile off`, resize back (`window.resizeTo(1440, 900)`: the size persists, and a later desktop check found the window still 390x844), then confirm `localStorage.getItem('EmulateMobile') === null` in both `pokedex-test-vault` and `lhakZettel`; close the test window (`eval code="setTimeout(()=>window.close(),200)"`).
 
 Touch in emulation:
 
 - No touch events fire; mouse hover still works, so hover-only UI looks fine here.
-- CDP `Input.dispatchTouchEvent` (via `dev:cdp`, with `dev:debug on` and
-  `Emulation.setTouchEmulationEnabled`) **hangs** until killed (tried 3 times, 45 s each;
-  the window reports `visibilityState: "hidden"` even after `Page.bringToFront`; untested
-  whether step 2's `focus()` fix cures it — inferred same cause).
-  `Input.dispatchMouseEvent` works (about 7 s per call).
-- So emulation can test the plugin's `pointerType` branching only with JS-synthesized
-  `new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true })`. That does not
-  produce the browser's compatibility mouse events after a tap, so any check about them
-  (popover flicker) is iPhone-only.
+- CDP `Input.dispatchTouchEvent` (via `dev:cdp`, with `dev:debug on` and `Emulation.setTouchEmulationEnabled`) **hangs** until killed (tried 3 times, 45 s each; the window reports `visibilityState: "hidden"` even after `Page.bringToFront`; untested whether step 2's `focus()` fix cures it — inferred same cause). `Input.dispatchMouseEvent` works (about 7 s per call).
+- So emulation can test the plugin's `pointerType` branching only with JS-synthesized `new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true })`. That does not produce the browser's compatibility mouse events after a tap, so any check about them (popover flicker) is iPhone-only.
 
 ## iPhone (human, real vault)
 
-Vault: lhakZettel over iCloud. The phone receives the whole plugin cache (845 MB at last
-count, 428 MB of it iCloud conflict copies), so the first sync is slow.
+Vault: lhakZettel over iCloud. The phone receives the whole plugin cache (845 MB at last count, 428 MB of it iCloud conflict copies), so the first sync is slow.
 
 1. `bun run deploy` (the manifest ships `isDesktopOnly: false`).
-2. Wait for iCloud to deliver `.obsidian/plugins/pokedex/` to the phone (Files app →
-   iCloud Drive → Obsidian → lhakZettel; the folder is hidden, so check the plugin appears
-   under Settings → Community plugins instead). `obsidian-pokedex` is already in the synced
-   `community-plugins.json`, so it loads on next app start.
-3. Inspector (**not yet done**: skipped in the first run, so no console or memory
-   reading exists from a real device): iPhone Settings → Apps → Safari → Advanced → Web
-   Inspector on; connect by cable; Mac Safari → Develop → <iPhone> → Obsidian (iOS 16.4+).
-   Console, and Timelines → Memory for the warm-up/peak-memory fog.
-4. Open the Pokédex (command palette → "Open Pokedex"). Take a screenshot
-   (side button + volume up) and AirDrop it to `temp/mobile-loop/iphone-table.png`.
-   Done 2026-11-17: the plugin loads on the iPhone from lhakZettel, all 1082 rows from the
-   synced cache.
-5. Touch checks carried from the Touch replacement for hover popovers ticket (**not yet
-   done**: skipped in the first run, so every touch behaviour below is unverified on a real
-   device):
-   1. Long-press a table row and a Card view tile (#35): the favourites menu opens once, as a
-      bottom sheet, with no iOS selection callout, and the tap that follows does not open the
-      detail screen or tile panel. To see whether `contextmenu` also fires (inferred no on iOS;
-      it must neither open a second menu nor close the first), Inspector console:
-      `document.addEventListener('contextmenu', e => console.log('ctx', e.target), true)`.
-   2. Tap an Info popover target: it opens once and does not flicker from the mouse events
-      that follow the tap.
-   3. Row-height tap areas on held items and type icons are comfortable to hit.
-   4. Portrait press-and-hold at tablet width: needs an iPad, which is not available. Left
-      open.
+2. Wait for iCloud to deliver `.obsidian/plugins/pokedex/` to the phone (Files app → iCloud Drive → Obsidian → lhakZettel; the folder is hidden, so check the plugin appears under Settings → Community plugins instead). `obsidian-pokedex` is already in the synced `community-plugins.json`, so it loads on next app start.
+3. Inspector (**not yet done**: skipped in the first run, so no console or memory reading exists from a real device): iPhone Settings → Apps → Safari → Advanced → Web Inspector on; connect by cable; Mac Safari → Develop → <iPhone> → Obsidian (iOS 16.4+). Console, and Timelines → Memory for the warm-up/peak-memory fog.
+4. Open the Pokédex (command palette → "Open Pokedex"). Take a screenshot (side button + volume up) and AirDrop it to `temp/mobile-loop/iphone-table.png`. Done 2026-11-17: the plugin loads on the iPhone from lhakZettel, all 1082 rows from the synced cache.
+5. Touch checks carried from the Touch replacement for hover popovers ticket (**not yet done**: skipped in the first run, so every touch behaviour below is unverified on a real device):
+   6. Long-press a table row and a Card view tile (#35): the favourites menu opens once, as a bottom sheet, with no iOS selection callout, and the tap that follows does not open the detail screen or tile panel. To see whether `contextmenu` also fires (inferred no on iOS; it must neither open a second menu nor close the first), Inspector console: `document.addEventListener('contextmenu', e => console.log('ctx', e.target), true)`.
+   7. Tap an Info popover target: it opens once and does not flicker from the mouse events that follow the tap.
+   8. Row-height tap areas on held items and type icons are comfortable to hit.
+   9. Portrait press-and-hold at tablet width: needs an iPad, which is not available. Left open.

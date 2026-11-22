@@ -50,9 +50,9 @@ export function tabsForBand(band: DetailBand): readonly DetailTabSpec[] {
 }
 
 // One selected tab is kept across bands. A band shows it if it has that tab
-// (Moves is in both tab sets, so it survives a resize across 600), else its
-// first tab; the selection itself is untouched, so resizing back restores a
-// phone tab the rail lacks.
+// (Moves is in both tab sets, so it survives a resize across 760, the
+// phone/rail boundary), else its first tab; the selection itself is
+// untouched, so resizing back restores a phone tab the rail lacks.
 export function shownDetailTab(selected: DetailTab, band: DetailBand): DetailTab | null {
 	const tabs = TABS[band];
 	if (tabs.length === 0) return null;
