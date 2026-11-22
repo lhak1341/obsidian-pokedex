@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { MoveDetail, MoveEntry } from "../../data/types";
 	import { createInfoPopover } from "../infoPopover.svelte";
+	import { getScroller } from "../viewportWatch";
 	import { resolveMoveView } from "../../utils/moveRows";
 	import InfoPopoverBox from "./InfoPopoverBox.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
@@ -46,12 +47,12 @@
 	// list leaves blank space below it, seen only by scrolling past it. Phone
 	// band only: from 760 Moves is a bordered card beside other sections, and
 	// the room showed as ~330px of empty card under a short list.
-	// The scroller is PokedexApp's `.pokedex-view`. A hidden screen reads 0,
-	// so the last real height is kept (src/view/CLAUDE.md).
-	let listEl = $state<HTMLElement>();
+	// The scroller is PokedexApp's (getScroller). A hidden screen reads 0, so
+	// the last real height is kept (src/view/CLAUDE.md).
+	const scrollerOf = getScroller();
 	let viewportHeight = $state(0);
 	$effect(() => {
-		const scroller = listEl?.closest<HTMLElement>(".pokedex-view");
+		const scroller = scrollerOf();
 		if (!scroller) return;
 		const ro = new ResizeObserver(() => {
 			if (scroller.clientHeight > 0) viewportHeight = scroller.clientHeight;
@@ -97,7 +98,6 @@ identity rail from 760px and a column from 1100px. -->
 		</div>
 		<div
 			class="move-list"
-			bind:this={listEl}
 			style:--pkdx-moves-room={viewportHeight > 0 ? `${viewportHeight}px` : undefined}
 		>
 			{#if view.rows.length === 0}

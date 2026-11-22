@@ -65,8 +65,9 @@ interface FieldBase {
 // production never calls it" unrepresentable; Fields used to carry such a
 // function, and tests pinned behavior the app never ran. `custom` names which
 // cell TableScreen and CardPanel draw; both templates branch on each value
-// and end in unhandledCustomCell, so a new value without its own branch in
-// each fails typecheck there.
+// and end in unhandledCustomCell, as does TableScreen's `widest` (each
+// content-sized column's width score, ADR-0019), so a new value without its
+// own branch in each fails typecheck there.
 export type CustomCell = "heldItems" | "ev";
 
 // A layout's fallback after its last `custom` branch. The parameter is

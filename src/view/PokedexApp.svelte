@@ -14,6 +14,7 @@
 	import DetailScreen from "./components/DetailScreen.svelte";
 	import { emptyLoadSnapshot, type LoadOutcome, type LoadSnapshot, PokedexLoadState } from "./PokedexLoadState";
 	import TableScreen from "./components/TableScreen.svelte";
+	import { SCROLLER_CONTEXT, type ScrollerGetter } from "./viewportWatch";
 	import Icon from "./components/Icon.svelte";
 
 	let {
@@ -162,8 +163,11 @@
 	// dev tools: contentEl's scrollHeight === clientHeight, while this element's
 	// doesn't). Table and detail share it, so entering/leaving detail has to
 	// manage scroll position explicitly rather than letting whatever position
-	// the table was left at carry straight over.
-	let rootEl: HTMLDivElement | undefined;
+	// the table was left at carry straight over. The screens read it through
+	// SCROLLER_CONTEXT (viewportWatch.ts); $state so an effect that read it
+	// before the bind re-runs once it binds.
+	let rootEl = $state<HTMLDivElement | undefined>();
+	setContext<ScrollerGetter>(SCROLLER_CONTEXT, () => rootEl);
 
 	// The Scroll-to-top button (CONTEXT.md): mobile only, on the browse screen,
 	// once the list is scrolled more than a screen down. A desktop has the

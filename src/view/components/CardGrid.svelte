@@ -14,6 +14,7 @@
 	import { totalStat } from "../../utils/stats";
 	import type { ActiveGenRow, HeldItemForGen } from "../../utils/activeGenScope";
 	import { contentBounds } from "../imageBounds";
+	import { getScroller, isShown, watchViewport } from "../viewportWatch";
 	import type { FavoriteMenu } from "../favoriteMenu";
 	import type { InfoTargetProps } from "../infoPopover.svelte";
 	import CardPanel from "./CardPanel.svelte";
@@ -79,7 +80,7 @@
 	// is missing on older iOS WebKit; the grid opts out of it so the two never
 	// both correct.
 	async function toggle(id: number, tile: HTMLElement) {
-		const scroller = tile.closest<HTMLElement>(".pokedex-view");
+		const scroller = scrollerOf();
 		const before = tile.getBoundingClientRect().top;
 		openId = openId === id ? null : id;
 		// A tap grows the panel; a remount (its row scrolled back into the
@@ -94,11 +95,12 @@
 
 	// The Card window (CONTEXT.md, cardWindow): only the tiles near the
 	// viewport are drawn; the grid's padding stands in for the rest. Its
-	// inputs are read from the scroller (.pokedex-view, which scrolls the whole
-	// browse screen) and from drawn tiles, and frozen while the table screen
+	// inputs are read from the scroller (PokedexApp's, which scrolls the whole
+	// browse screen; getScroller) and from drawn tiles, and frozen while the table screen
 	// is hidden (the detail screen owns the scroller then, and the grid
 	// measures 0): the window keeps its last slice until the table shows
 	// again and back-to-list restores the scroll offset.
+	const scrollerOf = getScroller();
 	let scrollTop = $state(0);
 	let viewportHeight = $state(0);
 	// Measured grid row heights, null until a row of that kind is drawn. The
@@ -135,19 +137,6 @@
 	const winEnd = $derived(win.end);
 	const drawn = $derived(rows.slice(winStart, winEnd));
 
-	function isShown(el: HTMLElement): boolean {
-		return el.getClientRects().length > 0;
-	}
-
-	// Reads the scroll offset and viewport, relative to the grid's top edge.
-	function readScroll() {
-		const el = gridEl;
-		const scroller = el?.closest<HTMLElement>(".pokedex-view");
-		if (!el || !scroller || !isShown(el)) return;
-		scrollTop = scroller.getBoundingClientRect().top - el.getBoundingClientRect().top;
-		viewportHeight = scroller.clientHeight;
-	}
-
 	// Reads the drawn rows' heights (a tile is stretched to its grid row's
 	// height) and the open panel's room.
 	function measure() {
@@ -179,31 +168,17 @@
 		return () => ro.disconnect();
 	});
 
-	// Scroll and viewport. Coalesced to a frame. The browse screen above the
-	// grid (FilterBar's inline Filters panel) can move the grid without a
-	// scroll, so the screen's own size changes re-read too.
+	// Scroll and viewport, relative to the grid's top edge. The browse screen
+	// above the grid (FilterBar's inline Filters panel) can move the grid
+	// without a scroll, so the screen's own size changes re-read too.
 	$effect(() => {
 		const el = gridEl;
-		const scroller = el?.closest<HTMLElement>(".pokedex-view");
+		const scroller = scrollerOf();
 		if (!el || !scroller) return;
-		let frame = 0;
-		const schedule = () => {
-			if (frame) return;
-			frame = requestAnimationFrame(() => {
-				frame = 0;
-				readScroll();
-			});
-		};
-		scroller.addEventListener("scroll", schedule, { passive: true });
-		const ro = new ResizeObserver(schedule);
-		ro.observe(scroller);
-		if (el.parentElement) ro.observe(el.parentElement);
-		readScroll();
-		return () => {
-			scroller.removeEventListener("scroll", schedule);
-			ro.disconnect();
-			cancelAnimationFrame(frame);
-		};
+		return watchViewport(el, scroller, el.parentElement, (r) => {
+			scrollTop = r.scrollTop;
+			viewportHeight = r.viewportHeight;
+		});
 	});
 
 	// Drawn rows and the panel are watched for size, so a font, Fields or
@@ -274,7 +249,7 @@
 
 	function topTile(): { index: number; offset: number } | null {
 		const el = gridEl;
-		const scroller = el?.closest<HTMLElement>(".pokedex-view");
+		const scroller = scrollerOf();
 		if (!el || !scroller || !isShown(el) || scroller.scrollTop === 0) return null;
 		const viewTop = scroller.getBoundingClientRect().top;
 		// The index comes from the DOM: in this pre-effect the window is already
@@ -294,7 +269,7 @@
 	const topTileIo: TopTileIo = {
 		read(index) {
 			const el = gridEl;
-			const scroller = el?.closest<HTMLElement>(".pokedex-view");
+			const scroller = scrollerOf();
 			if (!el || !scroller) return null;
 			const tile = el.querySelector<HTMLElement>(`:scope > .card-tile[data-index="${index}"]`);
 			return {
@@ -305,7 +280,7 @@
 		},
 		rowTop: (index) => cardRowTop(rowLayout, Math.floor(index / rowLayout.columns)),
 		scrollBy(delta) {
-			const scroller = gridEl?.closest<HTMLElement>(".pokedex-view");
+			const scroller = scrollerOf();
 			if (scroller) scroller.scrollTop += delta;
 		},
 		async nextLayout() {

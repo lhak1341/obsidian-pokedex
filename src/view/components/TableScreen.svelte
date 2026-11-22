@@ -13,6 +13,7 @@
 	import { tableEntries, tableRowMetrics, tableWindow, widestRows } from "../../utils/tableWindow";
 	import { onDestroy, untrack } from "svelte";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
+	import { getScroller, isShown, watchViewport } from "../viewportWatch";
 	import { createInfoDescription } from "../infoDescription.svelte";
 	import { createInfoPopover } from "../infoPopover.svelte";
 	import { createFavoriteMenu } from "../favoriteMenu";
@@ -137,6 +138,8 @@
 	// it (ascending), as the remount that used to follow every settings change
 	// did. Any other settings change leaves the user's sort alone.
 	// Table headers and Card view's sort chips both go through nextSort.
+	// The seed is only ever No. or Name, which no Field owns, so the reset
+	// below never undoes it and their order does not matter (ADR-0022).
 	let sort = $state<SortState>({ column: untrack(() => defaultSortColumn), direction: "asc" });
 	let seededSortColumn = untrack(() => defaultSortColumn);
 	$effect.pre(() => {
@@ -190,7 +193,7 @@
 	// rows near the viewport are drawn, plus each content-sized column's widest
 	// rows, so the auto table sizes its columns as it would from every row.
 	// Spacer rows stand in for the rest. As Card view's window, its inputs are
-	// read from the scroller (.pokedex-view) and from drawn rows, and frozen
+	// read from the scroller (getScroller) and from drawn rows, and frozen
 	// while the detail screen hides the table (every read is 0 then), so
 	// back-to-list's restored scroll offset finds the same rows drawn.
 	let tableEl = $state<HTMLTableElement | undefined>();
@@ -250,6 +253,10 @@
 			} else if (!col.custom) {
 				const render = col.render;
 				scores.push((row) => textWidth(row, col.key, () => render(row)));
+			} else {
+				// A custom Field with no score would change its column's width
+				// as rows scroll in: this fails typecheck until it has one.
+				unhandledCustomCell(col.custom);
 			}
 		}
 		return widestRows(visibleRows, scores);
@@ -261,19 +268,6 @@
 	const entries = $derived(
 		tableEntries({ count: visibleRows.length, start: winStart, end: winEnd, extra: widest, rowHeight, leadExtra, tailExtra }),
 	);
-
-	function isShown(el: HTMLElement): boolean {
-		return el.getClientRects().length > 0;
-	}
-
-	// The scroll offset and viewport, relative to the table body's top edge.
-	function readScroll() {
-		const el = bodyEl;
-		const scroller = el?.closest<HTMLElement>(".pokedex-view");
-		if (!el || !scroller || !isShown(el)) return;
-		scrollTop = scroller.getBoundingClientRect().top - el.getBoundingClientRect().top;
-		viewportHeight = scroller.clientHeight;
-	}
 
 	// The row height and the first and last rows' extras (leadExtra above),
 	// from the drawn rows: tableRowMetrics holds the rules.
@@ -298,32 +292,18 @@
 		if (font !== measureFont) measureFont = font;
 	}
 
-	// Scroll and viewport, coalesced to a frame. FilterBar above the table
-	// (its inline Filters panel) can move the body without a scroll, so the
-	// screen's own size changes re-read too.
+	// Scroll and viewport, relative to the table body's top edge. FilterBar
+	// above the table (its inline Filters panel) can move the body without a
+	// scroll, so the screen's own size changes re-read too.
+	const scrollerOf = getScroller();
 	$effect(() => {
 		const el = bodyEl;
-		const scroller = el?.closest<HTMLElement>(".pokedex-view");
+		const scroller = scrollerOf();
 		if (!el || !scroller) return;
-		let raf = 0;
-		const schedule = () => {
-			if (raf) return;
-			raf = requestAnimationFrame(() => {
-				raf = 0;
-				readScroll();
-			});
-		};
-		scroller.addEventListener("scroll", schedule, { passive: true });
-		const ro = new ResizeObserver(schedule);
-		ro.observe(scroller);
-		const screen = el.closest(".table-screen");
-		if (screen) ro.observe(screen);
-		readScroll();
-		return () => {
-			scroller.removeEventListener("scroll", schedule);
-			ro.disconnect();
-			cancelAnimationFrame(raf);
-		};
+		return watchViewport(el, scroller, el.closest(".table-screen"), (r) => {
+			scrollTop = r.scrollTop;
+			viewportHeight = r.viewportHeight;
+		});
 	});
 
 	// Drawn rows are measured a frame after they change, or after the body
