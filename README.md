@@ -1,17 +1,45 @@
 # Pokedex
 
-Browse, search, and inspect Pokemon (Gen 1-9) via [PokeAPI](https://pokeapi.co/), right inside Obsidian.
+**Every Pokemon, Gen 1–9, inside Obsidian.** Browse, filter, and inspect the full National Dex (1082 entries, regional forms and Megas included) from a pane in your vault, powered by [PokeAPI](https://pokeapi.co/).
+
+![Card view in light and dark themes, split by a diagonal: sprite tiles tinted by type, with stat sparkbars underneath](docs/images/card-view.png)
+
+## Find the one you want
+
+Filter by Type, Generation, Ability, Stats, Rarity, EV yield, and Traits or Quirks; combine as many as you like. Here, Fire and Flying leaves six Pokemon out of 1082. Quick search takes a name or a number and works from the keyboard.
+
+![Type filter open with Fire and Flying selected, narrowing the grid to six Pokemon](docs/images/type-filter.png)
+
+## Table or cards
+
+Switch between a sortable **table** and a **card grid** from the toolbar. Choose which Fields the table shows as columns; cards come in three sizes and show the value the list is sorted by.
+
+The screenshot below is set to Gen 3 with the Held Item quirk on, so every row has an item, and the Held item and Capture columns are switched on. Both are off by default. Held items come from Gen 3 to 7 and Capture locations from Gen 3 to 8; the default Active gen, Gen 9, has neither in PokeAPI, so those two columns read "-" there.
+
+![Table view at Gen 3, filtered to Pokemon that hold an item, with Held item and Capture columns](docs/images/table-view.png)
+
+## Everything on one screen
+
+The detail screen puts the evolution chain, base stats, abilities, capture and breeding data, flavor text, and a move browser side by side. Hover any move, ability, or item for its description.
+
+![Teddiursa's detail screen: evolution chain, base stats, abilities, capture and breeding, and level-up moves](docs/images/detail-screen.png)
+
+## On your phone
+
+Obsidian mobile gets the same Pokedex, laid out for a narrow screen: Card view as the list, and a detail screen split into About, Evolution, Stats and Moves tabs. The screenshots are Obsidian's mobile emulation at 390 × 844, not a real device.
+
+![Phone layout: Card view of the first twelve Pokemon, and Teddiursa's detail screen with About, Evolution, Stats and Moves tabs](docs/images/phone-view.png)
 
 ## Features
 
-- **Sortable, filterable table.** Filter by Type, Generation, Ability, Stats, Rarity, EV yield, and Quirks; quick search with keyboard nav. Choose which Fields show as columns.
-- **Card view.** A sprite-tile grid as an alternative to the table, remembered per pane width. Tap a tile for a panel with every Field; tiles come in three sizes and show the value the list is sorted by.
+- **Sortable, filterable table**, with columns you choose.
+- **Card view**, remembered per pane width. Tap a tile for a panel with every Field.
 - **Favourites.** Star a Pokemon on its detail screen; favourites are marked in both lists and toggled by right-click or press and hold.
 - **Mobile and narrow panes.** Runs on Obsidian mobile; a narrow pane gets a compact toolbar, a sideways-scrolling table with No. and Name pinned, and a detail screen laid out for its width.
-- **Detail screen.** Evolution chain, move browser (with per-version move-list toggles), abilities, held items, and flavor text, all with hover previews/descriptions.
-- **Mega Evolution & Gigantamax.** Toggle alternate forms where available, including split Mega X/Y variants and Legends: Z-A Megas.
-- **Regional forms.** Alolan, Galarian, Hisuian, and Paldean forms surfaced alongside their base species.
-- **Shiny toggle** on sprites/artwork.
+- **Move browser** with per-version move-list toggles (S/V, Legends: Z-A, Champions).
+- **Mega Evolution and Gigantamax.** Toggle alternate forms where available, including split Mega X/Y variants and Legends: Z-A Megas.
+- **Regional forms.** Alolan, Galarian, Hisuian, and Paldean forms appear alongside their base species.
+- **Shiny toggle** on sprites and artwork.
 - **View history** with prev/next navigation between viewed Pokemon.
 - **Reduce motion** setting, also following the OS preference.
 - **Per-generation caching.** Prefetch, refresh, or delete cached data per generation from the settings tab.
@@ -33,7 +61,7 @@ Open the Pokedex view via the ribbon icon or the "Pokedex: Open" command. Config
 
 Not on the community plugin store. Either:
 
-- **Manual:** download `main.js`, `styles.css`, and `manifest.json` from a [release](https://github.com/lhak1341/obsidian-pokedex/releases) into `<vault>/.obsidian/plugins/obsidian-pokedex/`, then enable it in Obsidian's Community Plugins settings.
+- **Manual:** download `main.js`, `styles.css`, and `manifest.json` from a [release](https://github.com/lhak1341/obsidian-pokedex/releases) into `<vault>/.obsidian/plugins/lhak-pokedex/`, then enable it in Obsidian's Community Plugins settings.
 - **BRAT:** add this repo to [Obsidian42 - BRAT](https://github.com/TfTHacker/obsidian42-brat) as a beta plugin.
 
 ## Development
