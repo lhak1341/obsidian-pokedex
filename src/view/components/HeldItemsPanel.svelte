@@ -32,6 +32,7 @@
 		cursor: default;
 	}
 	.held-item-name {
-		text-decoration: underline dotted;
+		text-decoration-line: underline;
+		text-decoration-style: dotted;
 	}
 </style>

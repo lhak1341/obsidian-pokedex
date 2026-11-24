@@ -20,7 +20,7 @@ function decode(url: string): Promise<ContentBounds | null> {
 	return new Promise((resolve, reject) => {
 		const img = new Image();
 		img.onload = () => {
-			const canvas = document.createElement("canvas");
+			const canvas = createEl("canvas");
 			canvas.width = img.naturalWidth;
 			canvas.height = img.naturalHeight;
 			const ctx = canvas.getContext("2d");

@@ -19,7 +19,7 @@ import { spawnSync } from "node:child_process";
 // Every entry is a real statement about hand-written runtime code; rules that
 // only describe in-app plugin behaviour are scoped away from test files in
 // eslint.config.mjs rather than being absorbed into this number.
-const BASELINE = 7;
+const BASELINE = 5;
 
 const run = spawnSync("npx", ["eslint", "src/**/*.ts", "--format", "json"], {
 	encoding: "utf8",

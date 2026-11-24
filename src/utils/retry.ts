@@ -6,8 +6,8 @@ export interface RetryOptions {
 	shouldRetry?: (error: unknown) => boolean;
 }
 
-// Falls back to the global timer under vitest, where there's no `window`.
-const timers = typeof window !== "undefined" ? window : globalThis;
+// Falls back to the bare timer under vitest, where there's no `window`.
+const timers = typeof window !== "undefined" ? window : { setTimeout };
 
 function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => timers.setTimeout(resolve, ms));

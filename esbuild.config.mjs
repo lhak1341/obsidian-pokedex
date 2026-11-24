@@ -2,7 +2,7 @@ import esbuild from "esbuild";
 import esbuildSvelte from "esbuild-svelte";
 import sveltePreprocess from "svelte-preprocess";
 import process from "process";
-import builtins from "builtin-modules";
+import { builtinModules as builtins } from "node:module";
 import { stylesOptions } from "./scripts/styles.mjs";
 
 const prod = process.argv[2] === "production";

@@ -80,7 +80,8 @@ button.filter-chip {
 .pkdx-info-target {
 	position: relative;
 	cursor: pointer;
-	text-decoration: underline dotted;
+	text-decoration-line: underline;
+	text-decoration-style: dotted;
 	text-underline-offset: 0.2em;
 }
 
