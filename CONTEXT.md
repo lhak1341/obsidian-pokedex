@@ -118,7 +118,7 @@ The tiles Card view actually draws: the ones in the viewport plus one viewport a
 
 ## Table window
 
-The rows the table actually draws: the ones in the viewport plus one viewport above and below (moved in steps of 16 rows), and each content-sized column's widest rows, drawn at their own places in the list so the auto table sizes every column as it would from all rows. Each run of undrawn rows is one spacer row of their exact height (every table row is one height). Computed by `tableWindow`, `widestRows` and `tableEntries` (`src/utils/tableWindow.ts`) and drawn by `TableScreen.svelte`; the row height and the first and last rows' extras come from the drawn rows' rects through `tableRowMetrics` (tested on readings captured live). ADR-0019.
+The rows the table actually draws: the ones in the viewport plus one viewport above and below (moved in steps of 16 rows), and each content-sized column's widest rows, drawn at their own places in the list so the auto table sizes every column as it would from all rows. Each run of undrawn rows is one spacer row of their exact height (every table row is one height). Computed by `tableWindow`, `widestRows` and `tableEntries` (`src/utils/tableWindow.ts`), with each column's widest rows picked by `tableWidestRows` (`src/utils/tableColumns.ts`), and drawn by `TableScreen.svelte`; the row height and the first and last rows' extras come from the drawn rows' rects through `tableRowMetrics` (tested on readings captured live). ADR-0019.
 
 ## Narrow pane
 

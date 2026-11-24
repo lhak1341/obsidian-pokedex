@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { FIELDS } from "./fields";
-import { TABLE_GEOMETRY, TABLE_COLUMNS, columnWidth, tableFrame } from "./tableColumns";
+import { makeActiveGenRow } from "../data/__fixtures__/rows";
+import { FIELDS, formatEvYield } from "./fields";
+import {
+	TABLE_GEOMETRY, TABLE_COLUMNS, columnWidth, createRowTextWidths, tableFrame, tableWidestRows,
+	type RowTextWidths, type TableColumn,
+} from "./tableColumns";
 
 describe("TABLE_GEOMETRY", () => {
 	// A Field without an entry would reach TableScreen with no width or floor.
@@ -64,5 +68,116 @@ describe("columnWidth", () => {
 		if (!hp) return;
 		expect(columnWidth(hp, true)).toBe("52px");
 		expect(columnWidth(hp, false)).toBe("4%");
+	});
+});
+
+// A fake RowTextWidths: a width of the text's length, or of `wide`'s value for
+// the texts it names, recording every key and text asked for.
+function fakeWidths(wide: Record<string, number> = {}) {
+	const asked: { key: string; text: string }[] = [];
+	const widths: RowTextWidths = (_row, key, text) => {
+		const t = text();
+		asked.push({ key, text: t });
+		return wide[t] ?? t.length;
+	};
+	return { widths, asked };
+}
+
+const wideFrame = tableFrame({ narrow: false, density: "comfortable", useTypeIcons: false });
+const iconFrame = tableFrame({ narrow: false, density: "comfortable", useTypeIcons: true });
+const column = (key: string): TableColumn => {
+	const col = TABLE_COLUMNS.find((c) => c.key === key);
+	if (!col) throw new Error(`no column ${key}`);
+	return col;
+};
+
+describe("tableWidestRows", () => {
+	// ADR-0019: a content-sized column with no score changes its width as rows
+	// scroll in. Every column is asked for one, with the text its cell draws.
+	it("scores Name, Type as text and every chosen Field, a text Field by its render", () => {
+		const row = makeActiveGenRow();
+		const { widths, asked } = fakeWidths();
+		tableWidestRows([row], { frame: wideFrame, columns: TABLE_COLUMNS, narrow: false, widths });
+		const keys = new Set(asked.map((a) => a.key));
+		expect([...keys].sort()).toEqual(["name", "type", ...TABLE_COLUMNS.map((c) => c.key)].sort());
+		for (const col of TABLE_COLUMNS) {
+			if (col.custom) continue;
+			expect(asked.find((a) => a.key === col.key)?.text, col.key).toBe(col.render(row));
+		}
+	});
+
+	it("scores a Narrow pane's Name by the base name, and the wide table's by the display name", () => {
+		const rows = [
+			makeActiveGenRow({ id: 1, name: "aaaaaaaaaa" }),
+			makeActiveGenRow({ id: 2, name: "b", formLabel: "A very long form label" }),
+			makeActiveGenRow({ id: 3, name: "cccccccc" }),
+		];
+		const narrowFrame = tableFrame({ narrow: true, density: "comfortable", useTypeIcons: false });
+		expect(tableWidestRows(rows, { frame: narrowFrame, columns: [], narrow: true, widths: fakeWidths().widths }))
+			.toEqual([0, 2]);
+		expect(tableWidestRows(rows, { frame: iconFrame, columns: [], narrow: false, widths: fakeWidths().widths }))
+			.toEqual([0, 1]);
+	});
+
+	it("scores Type only when it draws text, not icons", () => {
+		// Names tie, so Name keeps the first two rows.
+		const rows = [1, 2, 3].map((id) => makeActiveGenRow({ id, types: ["fire"] }));
+		rows.push(makeActiveGenRow({ id: 4, types: ["electric", "fighting"] }));
+		expect(tableWidestRows(rows, { frame: iconFrame, columns: [], narrow: false, widths: fakeWidths().widths }))
+			.toEqual([0, 1]);
+		expect(tableWidestRows(rows, { frame: wideFrame, columns: [], narrow: false, widths: fakeWidths().widths }))
+			.toEqual([0, 1, 3]);
+	});
+
+	it("ranks EV yield by chip count before its text", () => {
+		const one = { stat: "hp" as const, amount: 1 };
+		const rows = [
+			makeActiveGenRow({ id: 1 }),
+			makeActiveGenRow({ id: 2 }),
+			makeActiveGenRow({ id: 3, evYield: [one, one, one] }),
+			makeActiveGenRow({ id: 4, evYield: [one, { stat: "speed", amount: 2 }] }),
+			makeActiveGenRow({ id: 5 }),
+			makeActiveGenRow({ id: 6, evYield: [one, one, one] }),
+		];
+		// Two chips whose text measures far wider than any three.
+		const { widths } = fakeWidths({ [formatEvYield(rows[3])]: 9_999 });
+		expect(tableWidestRows(rows, { frame: iconFrame, columns: [column("ev")], narrow: false, widths }))
+			.toEqual([0, 1, 2, 5]);
+	});
+
+	it("scores held items by their names as the cell draws them", () => {
+		const row = {
+			...makeActiveGenRow(),
+			heldItems: [{ name: "oran-berry", rarities: [50] }, { name: "sitrus-berry", rarities: [5] }],
+		};
+		const { widths, asked } = fakeWidths();
+		tableWidestRows([row], { frame: iconFrame, columns: [column("heldItems")], narrow: false, widths });
+		expect(asked.find((a) => a.key === "heldItems")?.text).toBe("Oran Berry, Sitrus Berry");
+	});
+});
+
+describe("createRowTextWidths", () => {
+	it("measures each row and key once, building the text only then", () => {
+		const measured: string[] = [];
+		let built = 0;
+		const widths = createRowTextWidths((text) => {
+			measured.push(text);
+			return text.length;
+		});
+		const a = makeActiveGenRow({ id: 1 });
+		const b = makeActiveGenRow({ id: 2 });
+		const text = (t: string) => () => {
+			built++;
+			return t;
+		};
+		expect(widths(a, "name", text("bulbasaur"))).toBe(9);
+		expect(widths(a, "name", text("other"))).toBe(9);
+		expect(built).toBe(1);
+		widths(a, "type", text("grass poison"));
+		widths(b, "name", text("ivysaur"));
+		expect(measured).toEqual(["bulbasaur", "grass poison", "ivysaur"]);
+		// A new cache (a font change) measures again.
+		const fresh = createRowTextWidths((t) => t.length * 2);
+		expect(fresh(a, "name", text("bulbasaur"))).toBe(18);
 	});
 });

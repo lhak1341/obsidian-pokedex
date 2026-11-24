@@ -1,5 +1,8 @@
 import type { PluginSettings } from "../data/types";
-import { FIELDS, type Field, type FieldKey } from "./fields";
+import type { ActiveGenRow } from "./activeGenScope";
+import { FIELDS, type Field, type FieldKey, formatEvYield, unhandledCustomCell } from "./fields";
+import { formatItemName, formatPokemonDisplayName } from "./pokemonDisplay";
+import { widestRows } from "./tableWindow";
 
 // The table's own geometry for each Field (the Field itself — label, icon,
 // sort key, value — lives in fields.ts and is shared with Card view).
@@ -104,4 +107,61 @@ export function tableFrame({ narrow, density, useTypeIcons }: {
 // shared out across the stats by percentage.
 export function columnWidth(col: TableGeometry, narrow: boolean): string {
 	return narrow ? col.minWidth : col.widthPercent;
+}
+
+// One row's cell text width, for widestRows' ranking only: `key` names the
+// column (or a variant of it, as Name's narrow and wide texts), and `text` is
+// built only when that row and key have no width yet.
+export type RowTextWidths = (row: object, key: string, text: () => string) => number;
+
+// Each row's widths, cached by row object: the Active Gen scoping memo keeps a
+// row's object across streamed updates, sorts and filters, so a row is
+// measured once per column. `measure` is TableScreen's canvas measureText in
+// the table's font; a font change makes a new cache.
+export function createRowTextWidths(measure: (text: string) => number): RowTextWidths {
+	const cache = new WeakMap<object, Map<string, number>>();
+	return (row, key, text) => {
+		let byKey = cache.get(row);
+		if (!byKey) cache.set(row, (byKey = new Map<string, number>()));
+		let w = byKey.get(key);
+		if (w === undefined) byKey.set(key, (w = measure(text())));
+		return w;
+	};
+}
+
+// The rows the Table window draws wherever it is (ADR-0019): each
+// content-sized column's widest, so the auto table sizes every column as it
+// would from all rows. No., sprite and the type icons are fixed widths; every
+// other column scores the text its cell draws in TableScreen. Name on a Narrow
+// pane draws the base name with the form on a second line that stays out of
+// the cell's min-content, so only the base name counts. EV ranks by chip
+// count first: each chip adds its padding and dot, which the text leaves out.
+export function tableWidestRows<T extends ActiveGenRow>(rows: readonly T[], { frame, columns, narrow, widths }: {
+	frame: Pick<TableFrame, "typeIcons">;
+	// The chosen Fields' columns, as the table draws them.
+	columns: readonly TableColumn[];
+	narrow: boolean;
+	widths: RowTextWidths;
+}): number[] {
+	const scores: ((row: T) => number)[] = [
+		narrow
+			? (row) => widths(row, "name:narrow", () => row.name)
+			: (row) => widths(row, "name", () => formatPokemonDisplayName(row)),
+	];
+	if (!frame.typeIcons) scores.push((row) => widths(row, "type", () => row.types.join(" ")));
+	for (const col of columns) {
+		if (col.custom === "heldItems") {
+			scores.push((row) => widths(row, col.key, () => row.heldItems.map((i) => formatItemName(i.name)).join(", ")));
+		} else if (col.custom === "ev") {
+			scores.push((row) => row.evYield.length * 10_000 + widths(row, col.key, () => formatEvYield(row)));
+		} else if (!col.custom) {
+			const render = col.render;
+			scores.push((row) => widths(row, col.key, () => render(row)));
+		} else {
+			// A custom Field with no score would change its column's width
+			// as rows scroll in: this fails typecheck until it has one.
+			unhandledCustomCell(col.custom);
+		}
+	}
+	return widestRows(rows, scores);
 }

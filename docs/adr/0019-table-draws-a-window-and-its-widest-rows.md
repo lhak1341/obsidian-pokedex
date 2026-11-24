@@ -36,3 +36,5 @@ Probed live: the header's column widths equal HEAD's (every row drawn, EV chips 
 - **A running maximum** (columns only grow as wider rows scroll in): columns move while the user scrolls.
 
 **Reopen when** the iPhone shows a table action over about 300 ms, or a fling that stutters past the first one after opening.
+
+**Addendum (2026-11-24):** the scores (which columns get one, from what text) and the per-row width cache moved out of `TableScreen`'s `widest` into `tableWidestRows` and `createRowTextWidths` in `utils/tableColumns.ts`, where they are tested with a fake `measure`. `TableScreen` keeps the canvas and the font read. The decision above is unchanged; where it says "a score in `TableScreen`'s `widest`", read `tableWidestRows`.

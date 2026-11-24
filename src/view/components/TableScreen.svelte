@@ -9,8 +9,10 @@
 	import {
 		FIELDS, fieldsShown, formatEvYield, isStatField, isTileField, sortAfterFieldsChange, unhandledCustomCell,
 	} from "../../utils/fields";
-	import { TABLE_COLUMNS, columnWidth, tableFrame } from "../../utils/tableColumns";
-	import { tableEntries, tableRowMetrics, tableWindow, widestRows } from "../../utils/tableWindow";
+	import {
+		TABLE_COLUMNS, columnWidth, createRowTextWidths, tableFrame, tableWidestRows,
+	} from "../../utils/tableColumns";
+	import { tableEntries, tableRowMetrics, tableWindow } from "../../utils/tableWindow";
 	import { onDestroy, untrack } from "svelte";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
 	import { getScroller, isShown, watchViewport } from "../viewportWatch";
@@ -214,53 +216,25 @@
 	let leadExtra = $state(0);
 	let tailExtra = $state(0);
 
-	// Each content-sized column's text width per row, for widestRows' ranking
-	// only. Cached per row object (the Active Gen scoping memo keeps it across
-	// streamed updates, sorts and filters) and dropped when the font changes.
+	// The canvas half of widest's text widths: measureText in the table's font
+	// (readFont). The cache per row object (createRowTextWidths) keeps a row's
+	// widths across streamed updates, sorts and filters, and a font change
+	// starts a new one.
 	let measureFont = $state("");
 	const measureCtx = document.createElement("canvas").getContext("2d");
-	let widthCache = new WeakMap<object, Map<string, number>>();
-	let widthCacheFont = "";
-	function textWidth(row: object, key: string, text: () => string): number {
-		if (!measureCtx) return 0;
-		if (widthCacheFont !== measureFont) {
-			widthCache = new WeakMap();
-			widthCacheFont = measureFont;
-			measureCtx.font = measureFont || "14px sans-serif";
-		}
-		let byKey = widthCache.get(row);
-		if (!byKey) widthCache.set(row, (byKey = new Map()));
-		let w = byKey.get(key);
-		if (w === undefined) byKey.set(key, (w = measureCtx.measureText(text()).width));
-		return w;
-	}
-	// No., sprite and the type icons are fixed widths; every other column's
-	// width follows its content. EV ranks by chip count first: each chip adds
-	// its padding and dot, which the text alone leaves out.
-	const widest = $derived.by(() => {
-		void measureFont;
-		const scores: ((row: (typeof visibleRows)[number]) => number)[] = [
-			narrow
-				? (row) => textWidth(row, "name:narrow", () => row.name)
-				: (row) => textWidth(row, "name", () => formatPokemonDisplayName(row)),
-		];
-		if (!frame.typeIcons) scores.push((row) => textWidth(row, "type", () => row.types.join(" ")));
-		for (const col of activeColumns) {
-			if (col.custom === "heldItems") {
-				scores.push((row) => textWidth(row, col.key, () => row.heldItems.map((i) => formatItemName(i.name)).join(", ")));
-			} else if (col.custom === "ev") {
-				scores.push((row) => row.evYield.length * 10_000 + textWidth(row, col.key, () => formatEvYield(row)));
-			} else if (!col.custom) {
-				const render = col.render;
-				scores.push((row) => textWidth(row, col.key, () => render(row)));
-			} else {
-				// A custom Field with no score would change its column's width
-				// as rows scroll in: this fails typecheck until it has one.
-				unhandledCustomCell(col.custom);
-			}
-		}
-		return widestRows(visibleRows, scores);
+	const rowTextWidths = $derived.by(() => {
+		const ctx = measureCtx;
+		if (!ctx) return createRowTextWidths(() => 0);
+		// Set once per font: only the newest measure is ever called.
+		ctx.font = measureFont || "14px sans-serif";
+		return createRowTextWidths((text) => ctx.measureText(text).width);
 	});
+	// Each content-sized column's widest rows, drawn whatever the window
+	// (ADR-0019). Which columns get a score, and from what text, is
+	// tableWidestRows' (utils/tableColumns.ts).
+	const widest = $derived(
+		tableWidestRows(visibleRows, { frame, columns: activeColumns, narrow, widths: rowTextWidths }),
+	);
 	const win = $derived(tableWindow({ count: visibleRows.length, rowHeight, scrollTop, viewportHeight }));
 	// Primitives, so a scroll that keeps the same slice re-renders nothing.
 	const winStart = $derived(win.start);
@@ -285,7 +259,7 @@
 		if (metrics.tailExtra !== undefined && metrics.tailExtra !== tailExtra) tailExtra = metrics.tailExtra;
 	}
 
-	// The table's font, for widest's text widths (textWidth).
+	// The table's font, for widest's text widths (rowTextWidths).
 	function readFont() {
 		if (!tableEl || !isShown(tableEl)) return;
 		const font = getComputedStyle(tableEl).font;
