@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { makeActiveGenRow } from "../data/__fixtures__/rows";
 import type { StatBlock } from "../data/types";
+import { FIELDS } from "./fields";
 import {
 	CARD_GRID_GAP, cardGrid, cardRowHeights, cardRowTop, MAX_TOP_TILE_PASSES, settleTopTile, type TopTileIo, type TopTileState, cardWindow, type CardWindowInput, fitSprite, isTallCardRow, PANEL_CHIP_GROUPS, PANEL_CHIPS, PANEL_STATS, PANEL_TARGET_WIDTH, panelColumns, panelPlacement,
 	SORT_CHIPS, statStrip, tileCorners, tileSortValue,
@@ -52,6 +53,20 @@ describe("tileSortValue", () => {
 	it("shows height and weight without a unit and with their decimal", () => {
 		expect(tileSortValue(row, by("weight"))).toEqual({ text: "999.9", icon: "weight" });
 		expect(tileSortValue(row, by("height"))).toEqual({ text: "0.1", icon: "ruler" });
+	});
+
+	// The tile drops only the unit: its number is the Field cell's, so a
+	// change to one format reaches both.
+	it("shows the Field's own rendered value, less any unit", () => {
+		const rows = [row, makeActiveGenRow(), makeActiveGenRow({ height: 145, weight: 2100, catchRate: 3, hatchCounter: 5 })];
+		const units: Record<string, string> = { catchRate: "", hatchCounter: "", height: " m", weight: " kg" };
+		for (const r of rows) {
+			for (const [key, unit] of Object.entries(units)) {
+				const field = FIELDS.find((f) => f.key === key);
+				if (!field || field.custom) throw new Error(`no text Field ${key}`);
+				expect(`${tileSortValue(r, by(key as SortColumn))?.text}${unit}`, key).toBe(field.render(r));
+			}
+		}
 	});
 });
 

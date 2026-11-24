@@ -28,11 +28,21 @@ export function formatDexNumber(dexNumber: number): string {
 	return String(dexNumber).padStart(3, "0");
 }
 
-// PokeAPI stores height in decimeters and weight in hectograms.
+// PokeAPI stores height in decimeters and weight in hectograms. The number
+// alone is Card view's tile Sort value (cardView.ts's tileSortValue), so the
+// tile and the Field's cell never disagree about its decimals.
+export function formatHeightValue(decimeters: number): string {
+	return (decimeters / 10).toFixed(1);
+}
+
+export function formatWeightValue(hectograms: number): string {
+	return (hectograms / 10).toFixed(1);
+}
+
 export function formatHeight(decimeters: number): string {
-	return `${(decimeters / 10).toFixed(1)} m`;
+	return `${formatHeightValue(decimeters)} m`;
 }
 
 export function formatWeight(hectograms: number): string {
-	return `${(hectograms / 10).toFixed(1)} kg`;
+	return `${formatWeightValue(hectograms)} kg`;
 }

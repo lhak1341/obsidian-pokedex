@@ -496,7 +496,7 @@
 		filter: brightness(0.97);
 	}
 	/* !important: Obsidian's `.view-content img { max-width: 100% }` outranks a
-	scoped class (see TableScreen's .sprite-preview). Native or whole-number
+	scoped class (see TableGrid's .sprite-preview). Native or whole-number
 	zoomed pixels (a large Card size's 2×) stay crisp; a sprite scaled down to
 	fit is smoothed. Hidden until its box is measured,
 	so it never jumps from canvas-centred to box-centred. */

@@ -116,7 +116,7 @@ export function tableEntries({ count, start, end, extra, rowHeight, leadExtra = 
 	extra: readonly number[];
 	rowHeight: number;
 	// What the first and last rows are taller than the rest (negative:
-	// shorter), added to a gap that stands in for either (TableScreen: their
+	// shorter), added to a gap that stands in for either (TableGrid: their
 	// share of the collapsed borders).
 	leadExtra?: number;
 	tailExtra?: number;

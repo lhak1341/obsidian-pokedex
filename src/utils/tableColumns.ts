@@ -8,7 +8,7 @@ import { widestRows } from "./tableWindow";
 // sort key, value — lives in fields.ts and is shared with Card view).
 interface TableGeometry {
 	// widthPercent becomes the <col>'s width (table stays table-layout: auto
-	// — see TableScreen's comment on why). minWidth becomes a real min-width
+	// — see TableGrid's comment on why). minWidth becomes a real min-width
 	// on the <th>, sized to this column's actual max content (a 3-digit
 	// stat, a sort arrow's worst case, etc) as a deliberate floor/buffer;
 	// auto layout's own never-shrink-below-content behavior is what actually
@@ -44,7 +44,7 @@ export const TABLE_GEOMETRY: Record<FieldKey, TableGeometry> = {
 
 export type TableColumn = Field & TableGeometry;
 
-// Every Field joined with its geometry, in menu order; TableScreen filters
+// Every Field joined with its geometry, in menu order; TableGrid filters
 // this by the chosen Fields.
 export const TABLE_COLUMNS: TableColumn[] = FIELDS.map((f) => ({ ...f, ...TABLE_GEOMETRY[f.key] }));
 
@@ -69,7 +69,7 @@ export interface TableFrame {
 
 // A Narrow pane's table scrolls sideways with No., sprite and Name pinned
 // (CONTEXT.md, "Narrow pane"). The pinned columns' left offsets in
-// TableScreen's CSS add up No. and sprite, so those two are exact px widths
+// TableGrid's CSS add up No. and sprite, so those two are exact px widths
 // their content fits inside; Name is the last pinned column, so it is the
 // auto column: a floor, and it takes any spare width a short Fields selection
 // leaves. Type draws 22px icons whatever the type-icons setting says, so a
@@ -116,7 +116,7 @@ export type RowTextWidths = (row: object, key: string, text: () => string) => nu
 
 // Each row's widths, cached by row object: the Active Gen scoping memo keeps a
 // row's object across streamed updates, sorts and filters, so a row is
-// measured once per column. `measure` is TableScreen's canvas measureText in
+// measured once per column. `measure` is TableGrid's canvas measureText in
 // the table's font; a font change makes a new cache.
 export function createRowTextWidths(measure: (text: string) => number): RowTextWidths {
 	const cache = new WeakMap<object, Map<string, number>>();
@@ -132,7 +132,7 @@ export function createRowTextWidths(measure: (text: string) => number): RowTextW
 // The rows the Table window draws wherever it is (ADR-0019): each
 // content-sized column's widest, so the auto table sizes every column as it
 // would from all rows. No., sprite and the type icons are fixed widths; every
-// other column scores the text its cell draws in TableScreen. Name on a Narrow
+// other column scores the text its cell draws in TableGrid. Name on a Narrow
 // pane draws the base name with the form on a second line that stays out of
 // the cell's min-content, so only the base name counts. EV ranks by chip
 // count first: each chip adds its padding and dot, which the text leaves out.
@@ -164,4 +164,32 @@ export function tableWidestRows<T extends ActiveGenRow>(rows: readonly T[], { fr
 		}
 	}
 	return widestRows(rows, scores);
+}
+
+// What the table measured, kept by its owner (TableScreen) across layout
+// switches: TableGrid mounts afresh on every switch from Card view, and
+// starting from nothing cost the switch a re-measure of every row's text
+// (94-129 ms against 53-86) and spacers half a pixel off until the last row
+// was drawn again. TableGrid reads and writes it; the owner never looks inside.
+export interface TableMemory {
+	rowHeight: number | null;
+	leadExtra: number;
+	tailExtra: number;
+	font: string;
+	widths: { font: string; widths: RowTextWidths } | null;
+}
+
+export function createTableMemory(): TableMemory {
+	return { rowHeight: null, leadExtra: 0, tailExtra: 0, font: "", widths: null };
+}
+
+// The remembered widths for this font, or a new cache (from `measureFor`'s
+// measure) that replaces them: a font change measures every row again.
+export function rememberedRowTextWidths(
+	memory: TableMemory,
+	font: string,
+	measureFor: () => (text: string) => number,
+): RowTextWidths {
+	if (memory.widths?.font !== font) memory.widths = { font, widths: createRowTextWidths(measureFor()) };
+	return memory.widths.widths;
 }

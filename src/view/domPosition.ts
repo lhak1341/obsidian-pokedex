@@ -35,7 +35,7 @@ export function relativeRect(target: HTMLElement, containerSelector: string): Re
 	};
 }
 
-// Side-anchored hover-preview positioning shared by TableScreen's sprite
+// Side-anchored hover-preview positioning shared by TableGrid's sprite
 // preview and DetailScreen's portrait preview — used to be duplicated
 // verbatim between the two (same relativeRect + vertical-clamp shape, only
 // the container selector and halfHeight differed). The clamp/shift math

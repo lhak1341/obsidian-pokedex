@@ -319,7 +319,7 @@ identity rail from 760px and a column from 1100px. -->
 	}
 	/* The name is the Info popover target: its tap area (styles.src.css,
 	.pkdx-info-target::before) reaches past the row and the cell clips it, so
-	it spans the row's height at the name's own width, as in TableScreen. */
+	it spans the row's height at the name's own width, as in TableGrid. */
 	.move-name-cell {
 		--pkdx-tap-pad-y: 64px;
 		overflow: hidden;

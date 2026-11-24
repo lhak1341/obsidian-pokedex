@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { makeActiveGenRow } from "../data/__fixtures__/rows";
 import { FIELDS, formatEvYield } from "./fields";
 import {
-	TABLE_GEOMETRY, TABLE_COLUMNS, columnWidth, createRowTextWidths, tableFrame, tableWidestRows,
-	type RowTextWidths, type TableColumn,
+	TABLE_GEOMETRY, TABLE_COLUMNS, columnWidth, createRowTextWidths, createTableMemory, rememberedRowTextWidths,
+	tableFrame, tableWidestRows, type RowTextWidths, type TableColumn,
 } from "./tableColumns";
 
 describe("TABLE_GEOMETRY", () => {
-	// A Field without an entry would reach TableScreen with no width or floor.
+	// A Field without an entry would reach TableGrid with no width or floor.
 	it("has an entry for every Field, and none for a key that is not a Field", () => {
 		expect(FIELDS.length).toBeGreaterThan(0);
 		expect(Object.keys(TABLE_GEOMETRY).sort()).toEqual(FIELDS.map((f) => f.key).sort());
@@ -179,5 +179,26 @@ describe("createRowTextWidths", () => {
 		// A new cache (a font change) measures again.
 		const fresh = createRowTextWidths((t) => t.length * 2);
 		expect(fresh(a, "name", text("bulbasaur"))).toBe(18);
+	});
+});
+
+describe("rememberedRowTextWidths", () => {
+	// TableGrid remounts on every switch from Card view; the widths it measured
+	// stay in its owner's TableMemory for as long as the font does.
+	it("keeps one cache per font across calls, and starts a new one on a font change", () => {
+		const memory = createTableMemory();
+		let measures = 0;
+		const measureFor = () => {
+			measures++;
+			return (text: string) => text.length;
+		};
+		const row = makeActiveGenRow();
+		const first = rememberedRowTextWidths(memory, "14px a", measureFor);
+		first(row, "name", () => "bulbasaur");
+		expect(rememberedRowTextWidths(memory, "14px a", measureFor)).toBe(first);
+		expect(measures).toBe(1);
+		const other = rememberedRowTextWidths(memory, "16px b", measureFor);
+		expect(other).not.toBe(first);
+		expect(measures).toBe(2);
 	});
 });

@@ -64,7 +64,7 @@ interface FieldBase {
 // targets, EV yield is coloured chips. The type makes "render exists but
 // production never calls it" unrepresentable; Fields used to carry such a
 // function, and tests pinned behavior the app never ran. `custom` names which
-// cell TableScreen and CardPanel draw; both templates branch on each value
+// cell TableGrid and CardPanel draw; both templates branch on each value
 // and end in unhandledCustomCell, as does tableColumns.ts's tableWidestRows
 // (each content-sized column's width score, ADR-0019), so a new value without its
 // own branch in each fails typecheck there.

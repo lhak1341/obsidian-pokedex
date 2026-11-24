@@ -3,7 +3,7 @@
 // preview's vertical center into the visible viewport (so a target near the
 // top/bottom edge doesn't center the preview off-screen), then express the
 // result back in the caller's container-relative coordinate space. Shared by
-// TableScreen's sprite preview and DetailScreen's portrait preview — same
+// TableGrid's sprite preview and DetailScreen's portrait preview — same
 // side-anchored-with-vertical-clamp shape, different fixed preview height
 // (halfHeight) and container. Pure/DOM-free on purpose: everything here runs
 // on numbers already read from the DOM by the caller (see

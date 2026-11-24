@@ -173,7 +173,7 @@
 	// is not memoized.
 	const measurePortrait = (uri: string) => contentScale(repository.imagePathOf(uri) ?? uri, uri);
 
-	// Hover-to-enlarge for the portrait, mirroring TableScreen's
+	// Hover-to-enlarge for the portrait, mirroring TableGrid's
 	// sprite-preview (same side-anchored-with-vertical-clamp shape, shared
 	// via domPosition.ts's computeSideAnchoredPreviewPosition) rather than
 	// the ability/move popovers' above/below flip — this is a magnified copy
@@ -894,7 +894,7 @@
 		top: 0;
 	}
 
-	/* Hover-to-enlarge, same shape as TableScreen's .sprite-preview: fixed
+	/* Hover-to-enlarge, same shape as TableGrid's .sprite-preview: fixed
 	size, side-anchored with vertical clamp via relativeRect(".detail-screen"),
 	position: absolute (not fixed — .workspace-leaf's `contain: strict` would
 	otherwise make it the fixed-positioning containing block instead of the

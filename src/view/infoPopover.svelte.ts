@@ -13,7 +13,7 @@ type Placement = "below" | "above";
 type Pos = { top: number; left: number; placement: Placement };
 
 // The Info popover binding, shared by AbilitiesPanel, HeldItemsPanel,
-// MoveBrowser and TableScreen. The rules (hover previews for a mouse only, a
+// MoveBrowser, TableScreen and TableGrid. The rules (hover previews for a mouse only, a
 // tap pins, a tap elsewhere closes without being swallowed, …) live in
 // utils/infoPopoverPin.ts and are tested there; this file only turns DOM
 // events into its PinEvents, reading pointerType per event, and positions the

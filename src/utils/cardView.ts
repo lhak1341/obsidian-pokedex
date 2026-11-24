@@ -3,6 +3,7 @@ import type { PokedexTableRow, StatBlock } from "../data/types";
 import type { ActiveGenRow } from "./activeGenScope";
 import type { WidthClass } from "./browseLayout";
 import { type Field, type FieldKey, FIELDS, isStatField } from "./fields";
+import { formatHeightValue, formatWeightValue } from "./pokemonDisplay";
 import type { SortColumn, SortState } from "./sortPokemon";
 
 // Card view's tile and tap panel (CONTEXT.md, "Card view"). The tile reads
@@ -33,6 +34,8 @@ export function tileCorners(tileFields: ReadonlySet<string>, sort: SortState): {
 // as its bar; any other Field carries its menu icon. Height and weight drop
 // their unit to fit an ~75px tile (the icon says which; the tap panel has the
 // unit), and keep the decimal: rounding showed Cosmoem's 999.9 kg as 1000.
+// The number is formatHeightValue's/formatWeightValue's, the same as the
+// Fields' render, so only the unit differs (ADR-0023 keeps this a switch).
 export interface TileSortValue {
 	text: string;
 	icon?: string;
@@ -52,9 +55,9 @@ export function tileSortValue(row: ActiveGenRow, sort: SortState): TileSortValue
 		case "hatchCounter":
 			return { text: String(row.hatchCounter), icon: iconOf("hatchCounter") };
 		case "height":
-			return { text: (row.height / 10).toFixed(1), icon: iconOf("height") };
+			return { text: formatHeightValue(row.height), icon: iconOf("height") };
 		case "weight":
-			return { text: (row.weight / 10).toFixed(1), icon: iconOf("weight") };
+			return { text: formatWeightValue(row.weight), icon: iconOf("weight") };
 	}
 }
 
