@@ -1,9 +1,9 @@
 {
 	"id": "lhak-pokedex",
 	"name": "Pokedex",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"minAppVersion": "1.13.0",
-	"description": "Browse, search, and inspect Pokemon (Gen 1-9) via PokeAPI, right inside Obsidian.",
+	"description": "Browse, search, and inspect Pokemon (Gen 1-9) via PokeAPI, right inside your vault.",
 	"author": "lhak1341",
 	"isDesktopOnly": false
 }
