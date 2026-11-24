@@ -14,3 +14,14 @@ A shared description would have to carry two views of the same list, or make the
 **Decision:** leave status and eviction as separate questions. Don't re-flag them as one duplicated footprint in a future review.
 
 **Reopen when** a new per-species artifact is added and either the status check or eviction misses it (a real bug, not a hypothetical), or when `getCacheStatus` is extended to count regional-form variants. The ADR-0006 gap needs a new honest total surfaced through `settings.ts`, and that work would touch the status side anyway.
+
+## Addendum (2026-11-24): prefetch runs the detail-open plan
+
+The "Prefetch enumerates nothing" line above stopped being true with #21 (8d1758b). From then on, `cacheRange` called its own `prefetchEntryExtras` instead of `getEntryExtras`, so that a generation's large images would not pass through the image LRU. That copy listed flavour text, the raw chain and the large images, and fell behind what a detail open loads. It never fetched the move pool (`moves/*.json`), the species a chain's variety ids are resolved from, or the chain members' pokemon and sprites outside the range. So "Cache" promised an instant detail screen that still needed the network.
+
+`PokedexRepository.loadEntry` is now the one detail-open plan (CONTEXT.md, "Entry load"). `DetailLoadState.load` runs it with images "hold", and `cacheRange` runs it with images "store". `DetailLoadState.test.ts` pins it: after `cacheRange`, a detail load against a client that throws on every call makes no request.
+
+The decision above stands. Status and eviction stay separate questions:
+
+- **Status keeps its stand-in.** `isExtrasCached` checks the large image only, and does not check the move pool or chain members. A generation cached before this change reads as cached while missing them. Online nothing shows, since moves load on open as before. Offline, a Refresh fills them in.
+- **Eviction is unchanged.** Move details and other generations' chain members are shared, so `clearRange` leaves them, and only `clearAll` removes them.

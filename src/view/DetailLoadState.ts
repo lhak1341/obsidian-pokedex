@@ -1,7 +1,7 @@
 import { collectChainIds } from "../data/normalize";
 import type { PortraitRender } from "../data/imageSet";
-import type { PokedexRepository } from "../data/PokedexRepository";
-import type { MoveDetail, PokedexEntry } from "../data/types";
+import type { EntryExtras, PokedexRepository } from "../data/PokedexRepository";
+import type { EvolutionChainVisual, MoveDetail, PokedexEntry } from "../data/types";
 
 // Owns the fetch/retry lifecycle for a single detail-screen entry: the
 // pokemon/species/sprite core, move details, evolution-chain sprites, and
@@ -116,61 +116,79 @@ export class DetailLoadState {
 		this.evolutionSprites = {};
 		this.evolutionTypes = {};
 
+		// Supersedes only the extras stage once the core has landed: a later
+		// setRender drops this load's images and chain, while its move details
+		// keep landing.
+		let extrasStale = stale;
 		try {
-			// Pokemon/species/sprite are already mem-cached from the table load
-			// that got the user to this row, so this resolves almost
-			// instantly — render on it instead of waiting on the genuinely
-			// slow, never-cached-until-now parts fetched below.
-			const core = await this.repository.getEntryCore(id);
-			if (stale()) return;
-			this.entry = core;
-			this.loading = false;
-			onUpdate?.();
-
-			void this.repository.getMoveDetailsForMoves(core.moves.map((m) => m.name), (name, detail) => {
-				if (stale()) return;
-				this.moveDetails = { ...this.moveDetails, [name]: detail };
-				onMoveDetail?.(name, detail);
+			// The order lives in the repository's detail-open plan (loadEntry),
+			// the same one cacheRange prefetches. Pokemon/species/sprite are
+			// already mem-cached from the table load that got the user to this
+			// row, so the core resolves almost instantly and renders before the
+			// genuinely slow parts.
+			await this.repository.loadEntry(id, {
+				images: "hold",
+				render: () => this.render,
+				isCancelled: stale,
+				onCore: (core) => {
+					this.entry = core;
+					this.loading = false;
+					onUpdate?.();
+					const extrasGen = ++this.extrasGeneration;
+					extrasStale = () => stale() || extrasGen !== this.extrasGeneration;
+				},
+				onMove: (name, detail) => {
+					this.moveDetails = { ...this.moveDetails, [name]: detail };
+					onMoveDetail?.(name, detail);
+				},
+				onExtras: (extras) => {
+					if (!extrasStale()) this.applyExtras(extras, onUpdate);
+				},
+				onChainMembers: (members) => {
+					if (!extrasStale()) this.applyChainMembers(members, onUpdate);
+				},
 			});
-
-			await this.loadExtras(id, stale, onUpdate);
 		} catch (err) {
-			if (stale()) return;
+			// A superseded request's failure is not this entry's error.
+			if (extrasStale()) return;
 			this.error = err instanceof Error ? err.message : String(err);
 			this.loading = false;
 			onUpdate?.();
 		}
 	}
 
-	// The extras stage, shared by load() and setRender(): the large images in
-	// the render current when it starts, the evolution chain, then the chain's
-	// sprites. `superseded` is the caller's own check (an id change); a newer
-	// extras request supersedes this one too. A failure is thrown to the
-	// caller only while this request is current.
+	// The extras stage on its own, for setRender(): the large images in the
+	// new render, the evolution chain, then the chain's members. `superseded` is
+	// the caller's own check (an id change); a newer extras request supersedes
+	// this one too. A failure is thrown to the caller only while this request
+	// is current.
 	private async loadExtras(id: number, superseded: () => boolean, onUpdate?: () => void): Promise<void> {
 		const extrasGen = ++this.extrasGeneration;
 		const stale = () => superseded() || extrasGen !== this.extrasGeneration;
 		try {
 			const extras = await this.repository.getEntryExtras(id, this.render);
-			if (stale() || this.entry === null) return;
-			this.entry = { ...this.entry, ...extras };
-			onUpdate?.();
+			if (stale()) return;
+			this.applyExtras(extras, onUpdate);
 
 			if (!extras.evolutionChain) return;
-			const chainIds = collectChainIds(extras.evolutionChain);
-			const visuals = await this.repository.getEntryChainVisuals(chainIds);
+			const members = await this.repository.getEntryChainVisuals(collectChainIds(extras.evolutionChain));
 			if (stale()) return;
-			this.evolutionSprites = Object.fromEntries(
-				Object.entries(visuals).map(([id, v]) => [id, v.sprite]),
-			);
-			this.evolutionTypes = Object.fromEntries(
-				Object.entries(visuals).map(([id, v]) => [id, v.types]),
-			);
-			onUpdate?.();
+			this.applyChainMembers(members, onUpdate);
 		} catch (err) {
-			// A superseded request's failure is not this entry's error.
 			if (stale()) return;
 			throw err;
 		}
+	}
+
+	private applyExtras(extras: EntryExtras, onUpdate?: () => void): void {
+		if (this.entry === null) return;
+		this.entry = { ...this.entry, ...extras };
+		onUpdate?.();
+	}
+
+	private applyChainMembers(members: Record<number, EvolutionChainVisual>, onUpdate?: () => void): void {
+		this.evolutionSprites = Object.fromEntries(Object.entries(members).map(([id, v]) => [id, v.sprite]));
+		this.evolutionTypes = Object.fromEntries(Object.entries(members).map(([id, v]) => [id, v.types]));
+		onUpdate?.();
 	}
 }

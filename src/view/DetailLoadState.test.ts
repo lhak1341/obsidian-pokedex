@@ -1,15 +1,26 @@
 import { describe, expect, it, vi } from "vitest";
 import { FakePokeApiClient, MemoryCacheStore } from "../data/__fixtures__/fakes";
+import { collectChainIds } from "../data/normalize";
 import { PokedexRepository } from "../data/PokedexRepository";
-import type { RawPokemon } from "../data/types";
+import type { RawEvolutionChain, RawEvolutionChainLink, RawPokemon } from "../data/types";
 import bulbasaur from "../data/__fixtures__/bulbasaur.json";
+import bulbasaurChain from "../data/__fixtures__/bulbasaur-evolution-chain.json";
 import { DetailLoadState } from "./DetailLoadState";
 
 function makeLoadState() {
 	const client = new FakePokeApiClient();
 	const cache = new MemoryCacheStore();
 	const repository = new PokedexRepository(client, cache);
-	return { client, repository, loadState: new DetailLoadState(repository) };
+	return { client, cache, repository, loadState: new DetailLoadState(repository) };
+}
+
+function withDefaults(raw: RawEvolutionChain): RawEvolutionChain {
+	const link = (l: RawEvolutionChainLink): RawEvolutionChainLink => ({
+		...l,
+		evolution_details: l.evolution_details.map((d) => ({ ...d, is_default: true })),
+		evolves_to: l.evolves_to.map(link),
+	});
+	return { ...raw, chain: link(raw.chain) };
 }
 
 function tick(): Promise<void> {
@@ -122,14 +133,14 @@ describe("DetailLoadState", () => {
 	});
 
 	it("a render switch before the core lands is the render the load's extras ask for", async () => {
-		const { repository, loadState } = makeLoadState();
-		const getEntryExtras = vi.spyOn(repository, "getEntryExtras");
+		const { cache, repository, loadState } = makeLoadState();
 
 		const load = loadState.load(1, "official-artwork");
 		await loadState.setRender("home");
 		await load;
 
-		expect(getEntryExtras.mock.calls.map(([, render]) => render)).toEqual(["home"]);
+		// The artwork render was never asked for, so it never reached the store.
+		expect(await cache.exists("images/1-artwork.png")).toBe(false);
 		expect(repository.imagePathOf(loadState.entry!.artworkDataUri!)).toBe("images/1-home.png");
 	});
 
@@ -144,10 +155,50 @@ describe("DetailLoadState", () => {
 		});
 		const seen: string[] = [];
 
-		await loadState.load(1, "official-artwork", undefined, (name) => seen.push(name));
+		// load() resolves once its move pool settles, so it is awaited last.
+		const load = loadState.load(1, "official-artwork", undefined, (name) => seen.push(name));
+		await vi.waitFor(() => expect(loadState.entry?.evolutionChain).toBeTruthy());
 		await loadState.setRender("home");
 		release();
-		await vi.waitFor(() => expect(seen.length).toBeGreaterThan(0));
+		await load;
+		expect(seen.length).toBeGreaterThan(0);
+	});
+
+	// cacheRange runs the same detail-open plan (loadEntry) with images stored,
+	// so a cached generation's detail screen needs nothing from the network:
+	// its move pool, large images, evolution chain and the chain members
+	// outside the cached range (Ivysaur and Venusaur, for a range of one) included.
+	it("a detail screen in a generation cacheRange stored opens with no request", async () => {
+		const { client, cache, repository } = makeLoadState();
+		// As PokeAPI serves it since 2026-06: the bare fixture lacks is_default,
+		// which reads as a pre-2026 cached chain and is refetched on every read.
+		client.fetchEvolutionChain.mockResolvedValue(withDefaults(bulbasaurChain as unknown as RawEvolutionChain));
+		await repository.cacheRange({ id: 1, name: "Test Gen", start: 1, end: 1 }, "official-artwork");
+		// A new repository over the same store, so its memory caches answer nothing.
+		const offline = new FakePokeApiClient();
+		const requests = Object.values(offline).filter((value) => vi.isMockFunction(value));
+		for (const request of requests) {
+			request.mockImplementation(() => {
+				throw new Error("offline");
+			});
+		}
+		const loadState = new DetailLoadState(new PokedexRepository(offline, cache));
+
+		await loadState.load(1, "official-artwork");
+
+		expect(requests.length).toBeGreaterThan(5);
+		for (const request of requests) expect(request.mock.calls).toEqual([]);
+		const entry = loadState.entry!;
+		expect(loadState.error).toBeNull();
+		expect(entry.artworkDataUri).not.toBeNull();
+		expect(entry.moves.length).toBeGreaterThan(0);
+		for (const move of entry.moves) expect(loadState.moveDetails[move.name]).toBeDefined();
+		const chainIds = collectChainIds(entry.evolutionChain!);
+		expect(chainIds).toEqual([1, 2, 3]);
+		for (const id of chainIds) {
+			expect(loadState.evolutionSprites[id]).not.toBeNull();
+			expect(loadState.evolutionTypes[id].length).toBeGreaterThan(0);
+		}
 	});
 
 	it("load() merges evolution chain and sprites once extras resolve", async () => {
