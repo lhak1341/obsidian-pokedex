@@ -4,7 +4,7 @@ House conventions for Obsidian plugin repos live in the `obsidian-plugin-dev` sk
 
 Issue tracker: GitHub issues; wayfinding operations (sub-issues, blocking, claims) are in `docs/agents/issue-tracker.md`. A ticket's interface is shaped by the tickets that consume it: before settling a signature, read the parent spec's sections for those later tickets (#19's cache port first returned data URIs; #21's blob-URL LRU needs bytes).
 
-Deploys to the vault folder `pokedex` (intentionally ≠ manifest id `obsidian-pokedex`), and to `pokedex-test-vault/` (named so the Obsidian CLI's by-name `vault=` cannot hit a sibling repo's `test-vault`; `vault=` counts only before the subcommand — `obsidian eval vault=…` silently runs in the focused vault, the real one). `bun run deploy` writes both, so a test-vault-only live check copies the build instead (`docs/mobile-verification.md` step 1).
+Deploys to the vault folder `pokedex` (intentionally ≠ manifest id `lhak-pokedex`), and to `pokedex-test-vault/` (named so the Obsidian CLI's by-name `vault=` cannot hit a sibling repo's `test-vault`; `vault=` counts only before the subcommand — `obsidian eval vault=…` silently runs in the focused vault, the real one). `bun run deploy` writes both, so a test-vault-only live check copies the build instead (`docs/mobile-verification.md` step 1).
 
 Inline comments here are unusually thorough and load-bearing. Most "shallow module" or "duplicate logic" findings from automated architecture review turn out to be deliberate, already-documented separations once the comments are read (6 of 8 candidates misdiagnosed in one round, 3 of 5 in another). Reread the full file and check for an existing ADR in `docs/adr/` before writing a candidate into a report — not only before implementing one.
 

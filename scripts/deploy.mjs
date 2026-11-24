@@ -11,7 +11,7 @@ const VAULT_DIR =
 	'/Users/lhak/Library/Mobile Documents/iCloud~md~obsidian/Documents/lhakZettel/.obsidian/plugins';
 
 const PLUGIN_DIR_NAME = 'pokedex';
-const TEST_VAULT_DIR_NAME = 'obsidian-pokedex';
+const TEST_VAULT_DIR_NAME = 'lhak-pokedex';
 
 // styles.css is generated (styles.src.css) and carries the @lhak/style roles the
 // view reads, so a missing one must fail the deploy, not ship an unstyled view.
