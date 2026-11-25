@@ -2,16 +2,55 @@ import { describe, expect, it, vi } from "vitest";
 import bulbasaur from "./__fixtures__/bulbasaur.json";
 import bulbasaurSpecies from "./__fixtures__/bulbasaur-species.json";
 import { FakePokeApiClient, MemoryCacheStore, RecordingObjectUrls } from "./__fixtures__/fakes";
-import { PokedexRepository } from "./PokedexRepository";
+import type { PortraitRender } from "./imageSet";
+import { PokedexRepository, type EntryExtras } from "./PokedexRepository";
 import { MOVE_VERSION_GROUPS } from "./constants";
 import { toStoredPokemon } from "./normalize";
-import type { MegaFormDetail, RawPokemon, RawSpecies, StoredPokemon } from "./types";
+import type { EvolutionChainVisual, MegaFormDetail, PokedexEntry, RawPokemon, RawSpecies, StoredPokemon } from "./types";
 
 function makeRepository(imageBudgetBytes?: number) {
 	const client = new FakePokeApiClient();
 	const cache = new MemoryCacheStore();
 	const objectUrls = new RecordingObjectUrls();
 	return { client, cache, objectUrls, repository: new PokedexRepository(client, cache, { objectUrls, imageBudgetBytes }) };
+}
+
+// The extras the Entry load's extras stage hands its caller (the large
+// images in `render` and the evolution chain), as a detail screen holds them.
+// The stage is cancelled once they land, so it asks for no chain members and
+// their sprites never count against an image or call budget here.
+async function extrasOf(repository: PokedexRepository, id: number, render: PortraitRender): Promise<EntryExtras> {
+	let extras: EntryExtras | undefined;
+	await repository.loadEntryExtras(id, render, {
+		images: "hold",
+		isCancelled: () => extras !== undefined,
+		onExtras: (answer) => (extras = answer),
+	});
+	if (!extras) throw new Error("loadEntryExtras never handed over its extras");
+	return extras;
+}
+
+// The core the Entry load hands its caller first (pokemon, species, sprite,
+// a regional form's own text). The load is cancelled once it lands, so it
+// asks for no move pool and no extras.
+async function coreOf(repository: PokedexRepository, id: number): Promise<PokedexEntry> {
+	let core: PokedexEntry | undefined;
+	await repository.loadEntry(id, {
+		images: "hold",
+		render: () => "official-artwork",
+		isCancelled: () => core !== undefined,
+		onCore: (answer) => (core = answer),
+	});
+	if (!core) throw new Error("loadEntry never handed over its core");
+	return core;
+}
+
+// The chain members the extras stage hands its caller for `id`'s chain.
+async function chainMembersOf(repository: PokedexRepository, id: number): Promise<Record<number, EvolutionChainVisual>> {
+	let members: Record<number, EvolutionChainVisual> | undefined;
+	await repository.loadEntryExtras(id, "official-artwork", { images: "hold", onChainMembers: (answer) => (members = answer) });
+	if (!members) throw new Error("loadEntryExtras never handed over chain members");
+	return members;
 }
 
 async function blobBytes(blob: Blob | undefined): Promise<Uint8Array | null> {
@@ -280,9 +319,9 @@ describe("PokedexRepository", () => {
 	it("gives a regional row its form's own Pokédex text where PokeAPI has it, the species' elsewhere", async () => {
 		const { client, cache, repository } = makeRepository();
 		await setUpAlolanRattataDetail(client, cache);
-		const speciesTexts = (await repository.getEntryCore(19)).flavorTexts;
+		const speciesTexts = (await coreOf(repository, 19)).flavorTexts;
 
-		const alolan = await repository.getEntryCore(10091);
+		const alolan = await coreOf(repository, 10091);
 
 		expect(alolan.flavorTexts["sun-moon"]).toBe("Alolan text.");
 		expect(alolan.flavorTexts.firered).toBe(speciesTexts.firered);
@@ -298,9 +337,9 @@ describe("PokedexRepository", () => {
 		await setUpAlolanRattataDetail(client, cache);
 		client.failForms = true;
 
-		const alolan = await repository.getEntryCore(10091);
+		const alolan = await coreOf(repository, 10091);
 
-		expect(alolan.flavorTexts).toEqual((await repository.getEntryCore(19)).flavorTexts);
+		expect(alolan.flavorTexts).toEqual((await coreOf(repository, 19)).flavorTexts);
 	});
 
 	it("caches a regional row's form text with its extras, and clearRange evicts it with the variant", async () => {
@@ -320,7 +359,7 @@ describe("PokedexRepository", () => {
 
 		await repository.cacheRange({ id: 1, name: "Test Gen", start: 19, end: 19 }, "official-artwork");
 
-		// getEntryExtras(10091) fetches by the variant's own NUMERIC id (a
+		// The extras stage for 10091 fetches by the variant's own NUMERIC id (a
 		// separate call from the name-keyed "rattata-alola" fetch the core
 		// phase already made) — confirms the extras phase reached beyond the
 		// static range ids to the row getTableRows actually discovered.
@@ -335,7 +374,7 @@ describe("PokedexRepository", () => {
 		// name-keyed file (table load) and the numeric-id-keyed one (a detail-
 		// view visit) — see this repo's CLAUDE.md cache-duplication gotcha.
 		await repository.getTableRows({ start: 19, end: 19 });
-		await repository.getEntryExtras(10091, "official-artwork");
+		await extrasOf(repository, 10091, "official-artwork");
 		expect(await cache.readJson("pokemon/rattata-alola.json")).not.toBeNull();
 		expect(await cache.readJson("pokemon/10091.json")).not.toBeNull();
 
@@ -356,7 +395,7 @@ describe("PokedexRepository", () => {
 		const { client, cache, repository } = makeRepository();
 		await setUpRattataWithAlolanForm(client, cache);
 		await repository.getTableRows({ start: 19, end: 19 });
-		await repository.getEntryExtras(10091, "official-artwork");
+		await extrasOf(repository, 10091, "official-artwork");
 
 		// Alolan Rattata's base dex number (#19) sits in Gen 1's range, but its
 		// own generationId is 7 — clearing "Gen 1" (id: 1) must not evict a
@@ -372,10 +411,10 @@ describe("PokedexRepository", () => {
 
 	it("clearRange leaves no image behind after every image-writing fetch path has run", async () => {
 		const { cache, repository } = makeRepository();
-		// Table load writes the sprite; getEntryExtras writes artwork, shiny and
+		// Table load writes the sprite; the extras stage writes artwork, shiny and
 		// shiny-artwork. Together they cover all four suffixes for id 1.
 		await repository.getTableRows({ start: 1, end: 1 });
-		await repository.getEntryExtras(1, "official-artwork");
+		await extrasOf(repository, 1, "official-artwork");
 		expect((await cache.listFilesIn("images")).length).toBe(4);
 
 		await repository.clearRange({ id: 1, name: "Test Gen 1", start: 1, end: 151 });
@@ -394,7 +433,7 @@ describe("PokedexRepository", () => {
 	it("getCacheStatus serves a mem-cache hit without touching disk", async () => {
 		const { cache, repository } = makeRepository();
 		await repository.getTableRows({ start: 1, end: 1 });
-		await repository.getEntryExtras(1, "official-artwork");
+		await extrasOf(repository, 1, "official-artwork");
 
 		// isIdCached/isExtrasCached both check cache.exists(...) before falling
 		// back to disk — a mem hit on the same instance should never reach it.
@@ -409,7 +448,7 @@ describe("PokedexRepository", () => {
 		const { client, cache } = makeRepository();
 		const repoA = new PokedexRepository(client, cache);
 		await repoA.getTableRows({ start: 1, end: 1 });
-		await repoA.getEntryExtras(1, "official-artwork");
+		await extrasOf(repoA, 1, "official-artwork");
 		client.fetchPokemon.mockClear();
 		client.fetchSpecies.mockClear();
 		client.fetchImageBinary.mockClear();
@@ -433,7 +472,7 @@ describe("PokedexRepository", () => {
 		const { repository } = makeRepository();
 		// getTableRows populates pokemon.json/species.json (isIdCached's
 		// concern) but never touches the artwork/shiny/evolution-chain fetch
-		// getEntryExtras makes — a real, naturally-reachable partial state
+		// the extras stage makes — a real, naturally-reachable partial state
 		// (browsing the table caches core; opening the detail screen is what
 		// caches extras), not a contrived one.
 		await repository.getTableRows({ start: 1, end: 1 });
@@ -458,7 +497,7 @@ describe("PokedexRepository", () => {
 	it("getCacheStatus counts only the fully-cached id in a multi-id range", async () => {
 		const { repository } = makeRepository();
 		await repository.getTableRows({ start: 1, end: 2 });
-		await repository.getEntryExtras(1, "official-artwork");
+		await extrasOf(repository, 1, "official-artwork");
 		// id 2's core is cached but its extras never were (same shape as the
 		// partial-miss test above) — only id 1 should count.
 
@@ -492,27 +531,27 @@ describe("PokedexRepository", () => {
 		expect(seen.sort((a, b) => a - b)).toEqual([1, 3]);
 	});
 
-	it("getEntryExtras swallows a failed evolution-chain fetch instead of rejecting", async () => {
+	it("the extras stage swallows a failed evolution-chain fetch instead of rejecting", async () => {
 		const { client, repository } = makeRepository();
 		client.failEvolutionChain = true;
 
-		const extras = await repository.getEntryExtras(1, "official-artwork");
+		const extras = await extrasOf(repository, 1, "official-artwork");
 
 		expect(extras.evolutionChain).toBeNull();
 	});
 
-	it("getEntryExtras swallows a failed artwork/shiny image fetch, returning null per field", async () => {
+	it("the extras stage swallows a failed artwork/shiny image fetch, returning null per field", async () => {
 		const { client, repository } = makeRepository();
 		client.failImage = true;
 
-		const extras = await repository.getEntryExtras(1, "official-artwork");
+		const extras = await extrasOf(repository, 1, "official-artwork");
 
 		expect(extras.artworkDataUri).toBeNull();
 		expect(extras.shinyDataUri).toBeNull();
 		expect(extras.shinyArtworkDataUri).toBeNull();
 	});
 
-	it("getEntryCore resolves the fast fields without touching evolution chain or artwork/shiny", async () => {
+	it("the Entry load's core resolves the fast fields without touching evolution chain or artwork/shiny", async () => {
 		const { client, repository } = makeRepository();
 		// Table load already cached pokemon/species/sprite for this id — the
 		// same state the detail view finds them in when a row is clicked.
@@ -520,7 +559,7 @@ describe("PokedexRepository", () => {
 		client.fetchEvolutionChain.mockClear();
 		client.fetchImageBinary.mockClear();
 
-		const core = await repository.getEntryCore(1);
+		const core = await coreOf(repository, 1);
 
 		expect(core.name).toBe("bulbasaur");
 		expect(core.spriteDataUri).not.toBeNull();
@@ -534,10 +573,10 @@ describe("PokedexRepository", () => {
 		expect(client.fetchEvolutionChain).not.toHaveBeenCalled();
 	});
 
-	it("getEntryExtras resolves evolution chain, artwork, shiny, and shiny artwork", async () => {
+	it("the extras stage resolves evolution chain, artwork, shiny, and shiny artwork", async () => {
 		const { repository } = makeRepository();
 
-		const extras = await repository.getEntryExtras(1, "official-artwork");
+		const extras = await extrasOf(repository, 1, "official-artwork");
 
 		expect(extras.evolutionChain?.name).toBe("bulbasaur");
 		expect(extras.artworkDataUri).not.toBeNull();
@@ -545,22 +584,28 @@ describe("PokedexRepository", () => {
 		expect(extras.shinyArtworkDataUri).not.toBeNull();
 	});
 
-	it("getEntryChainVisuals resolves a sprite and types per id without fetching species", async () => {
-		const { client, repository } = makeRepository();
+	it("the extras stage resolves a sprite and types per chain member", async () => {
+		const { repository } = makeRepository();
 
-		const visuals = await repository.getEntryChainVisuals([1, 2]);
+		const visuals = await chainMembersOf(repository, 1);
 
-		expect(visuals[1].sprite).not.toBeNull();
-		expect(visuals[1].types.length).toBeGreaterThan(0);
-		expect(visuals[2].sprite).not.toBeNull();
-		expect(client.fetchSpecies).not.toHaveBeenCalled();
+		expect(Object.keys(visuals)).toEqual(["1", "2", "3"]);
+		for (const id of [1, 2, 3]) {
+			expect(visuals[id].sprite).not.toBeNull();
+			expect(visuals[id].types.length).toBeGreaterThan(0);
+		}
 	});
 
-	it("getEntryChainVisuals resolves a null sprite/empty types for an id that fails, without dropping the others", async () => {
+	it("the extras stage resolves a null sprite/empty types for a chain member that fails, without dropping the others", async () => {
 		const { client, repository } = makeRepository();
-		client.failIds.add(2);
+		// Only Ivysaur's pokemon fails: its species still resolves the chain.
+		const fetchPokemon = client.fetchPokemon.getMockImplementation()!;
+		client.fetchPokemon.mockImplementation(async (idOrName) => {
+			if (idOrName === 2) throw new Error("fake failure fetching pokemon 2");
+			return fetchPokemon(idOrName);
+		});
 
-		const visuals = await repository.getEntryChainVisuals([1, 2, 3]);
+		const visuals = await chainMembersOf(repository, 1);
 
 		expect(visuals[1].sprite).not.toBeNull();
 		expect(visuals[2].sprite).toBeNull();
@@ -713,7 +758,7 @@ describe("PokedexRepository", () => {
 				? { ...raw, name: idOrName, sprites: { ...raw.sprites, other: { ...raw.sprites.other, home } } }
 				: { ...raw, id: idOrName, sprites: { ...raw.sprites, other: { ...raw.sprites.other, home } } },
 		);
-		const extras = await repository.getEntryExtras(1, "home");
+		const extras = await extrasOf(repository, 1, "home");
 		await repository.getMegaForm("charizard-mega-x", "home");
 		await repository.cacheRange({ id: 1, name: "Test Gen", start: 2, end: 2 }, "home");
 
@@ -845,8 +890,8 @@ describe("PokedexRepository", () => {
 // an LRU bounded in bytes; sprites stay resident, since table rows keep their
 // sprite URL for the whole view mount and a revoked URL never loads again.
 describe("PokedexRepository image memory", () => {
-	// getEntryExtras loads exactly the three budgeted images and no sprite.
-	function extrasUrls(extras: Awaited<ReturnType<PokedexRepository["getEntryExtras"]>>): string[] {
+	// The extras stage loads exactly the three budgeted images and no sprite.
+	function extrasUrls(extras: EntryExtras): string[] {
 		return [extras.artworkDataUri, extras.shinyDataUri, extras.shinyArtworkDataUri].filter((u): u is string => u !== null);
 	}
 
@@ -854,12 +899,12 @@ describe("PokedexRepository image memory", () => {
 		const { client, objectUrls, repository } = makeRepository(600);
 		client.imageSize = 100;
 
-		const two = extrasUrls(await repository.getEntryExtras(2, "official-artwork"));
-		const three = extrasUrls(await repository.getEntryExtras(3, "official-artwork"));
+		const two = extrasUrls(await extrasOf(repository, 2, "official-artwork"));
+		const three = extrasUrls(await extrasOf(repository, 3, "official-artwork"));
 		// A mem hit makes id 2's images the most recently used.
-		expect(extrasUrls(await repository.getEntryExtras(2, "official-artwork"))).toEqual(two);
+		expect(extrasUrls(await extrasOf(repository, 2, "official-artwork"))).toEqual(two);
 		const logBeforeFour = objectUrls.log.length;
-		const four = extrasUrls(await repository.getEntryExtras(4, "official-artwork"));
+		const four = extrasUrls(await extrasOf(repository, 4, "official-artwork"));
 
 		expect(objectUrls.peakLiveBytes).toBeLessThanOrEqual(600);
 		expect([...objectUrls.live.keys()].sort()).toEqual([...two, ...four].sort());
@@ -872,9 +917,9 @@ describe("PokedexRepository image memory", () => {
 		const { client, objectUrls, repository } = makeRepository(300);
 		client.imageSize = 100;
 
-		const first = await repository.getEntryExtras(2, "official-artwork");
-		await repository.getEntryExtras(3, "official-artwork");
-		const again = await repository.getEntryExtras(2, "official-artwork");
+		const first = await extrasOf(repository, 2, "official-artwork");
+		await extrasOf(repository, 3, "official-artwork");
+		const again = await extrasOf(repository, 2, "official-artwork");
 
 		expect(client.fetchImageBinary).toHaveBeenCalledTimes(6);
 		expect(again.artworkDataUri).not.toBe(first.artworkDataUri);
@@ -886,7 +931,7 @@ describe("PokedexRepository image memory", () => {
 		client.imageSize = 100;
 		const { rows } = await repository.getTableRows({ start: 1, end: 5 });
 
-		for (const id of [2, 3, 4]) await repository.getEntryExtras(id, "official-artwork");
+		for (const id of [2, 3, 4]) await extrasOf(repository, id, "official-artwork");
 
 		for (const row of rows) expect(objectUrls.live.has(row.spriteDataUri ?? "")).toBe(true);
 	});
@@ -894,7 +939,7 @@ describe("PokedexRepository image memory", () => {
 	it("clearAll revokes every live URL, sprites included", async () => {
 		const { objectUrls, repository } = makeRepository();
 		await repository.getTableRows({ start: 1, end: 3 });
-		await repository.getEntryExtras(2, "official-artwork");
+		await extrasOf(repository, 2, "official-artwork");
 		expect(objectUrls.live.size).toBe(6);
 
 		await repository.clearAll();
@@ -905,7 +950,7 @@ describe("PokedexRepository image memory", () => {
 	it("clearRange revokes the URLs of the ids it clears and keeps the rest", async () => {
 		const { objectUrls, repository } = makeRepository();
 		const { rows } = await repository.getTableRows({ start: 1, end: 2 });
-		const two = extrasUrls(await repository.getEntryExtras(2, "official-artwork"));
+		const two = extrasUrls(await extrasOf(repository, 2, "official-artwork"));
 		const [one] = rows;
 
 		await repository.clearRange({ id: 1, name: "Test Gen", start: 2, end: 2 });
@@ -928,7 +973,7 @@ describe("PokedexRepository image memory", () => {
 		client.imageSize = 100;
 		client.variantPokemon.set("venusaur-mega", { ...(bulbasaur as unknown as RawPokemon), name: "venusaur-mega" });
 		await repository.getMegaForm("venusaur-mega", "official-artwork");
-		await repository.getEntryExtras(2, "official-artwork");
+		await extrasOf(repository, 2, "official-artwork");
 
 		const again = megaUrls(await repository.getMegaForm("venusaur-mega", "official-artwork"));
 
@@ -973,7 +1018,7 @@ describe("PokedexRepository image memory", () => {
 	it("cacheRange stores a generation's artwork and shiny images without holding them, so it leaves the open detail's URLs live", async () => {
 		const { client, cache, objectUrls, repository } = makeRepository(300);
 		client.imageSize = 100;
-		const open = extrasUrls(await repository.getEntryExtras(10, "official-artwork"));
+		const open = extrasUrls(await extrasOf(repository, 10, "official-artwork"));
 
 		await repository.cacheRange({ id: 1, name: "Test Gen", start: 1, end: 3 }, "official-artwork");
 
@@ -993,7 +1038,7 @@ describe("PokedexRepository image memory", () => {
 		const { client, objectUrls, repository } = makeRepository(50);
 		client.imageSize = 100;
 
-		const urls = extrasUrls(await repository.getEntryExtras(2, "official-artwork"));
+		const urls = extrasUrls(await extrasOf(repository, 2, "official-artwork"));
 
 		expect(urls).toHaveLength(3);
 		expect(objectUrls.live.size).toBe(1);
@@ -1011,10 +1056,10 @@ describe("PokedexRepository image memory", () => {
 			return new ArrayBuffer(4);
 		});
 
-		const first = repository.getEntryExtras(2, "official-artwork");
+		const first = extrasOf(repository, 2, "official-artwork");
 		await vi.waitFor(() => expect(client.fetchImageBinary).toHaveBeenCalledTimes(3));
 		await repository.clearAll();
-		const second = repository.getEntryExtras(2, "official-artwork");
+		const second = extrasOf(repository, 2, "official-artwork");
 		// Both loads are now fetching the same three images, undeduplicated.
 		await vi.waitFor(() => expect(client.fetchImageBinary).toHaveBeenCalledTimes(6));
 		release();
@@ -1039,10 +1084,10 @@ describe("PokedexRepository image memory", () => {
 		const { client, repository } = makeRepository(300);
 		client.imageSize = 100;
 
-		const { artworkDataUri } = await repository.getEntryExtras(2, "official-artwork");
+		const { artworkDataUri } = await extrasOf(repository, 2, "official-artwork");
 		expect(repository.imagePathOf(artworkDataUri ?? "")).toBe("images/2-artwork.png");
 
-		await repository.getEntryExtras(3, "official-artwork");
+		await extrasOf(repository, 3, "official-artwork");
 		expect(repository.imagePathOf(artworkDataUri ?? "")).toBeNull();
 	});
 });

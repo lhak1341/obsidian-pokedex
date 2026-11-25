@@ -321,7 +321,7 @@ export interface MoveDetail {
 	description: string | null;
 }
 
-// Per evolution-chain-member visuals (see PokedexRepository.getEntryChainVisuals) —
+// Per evolution-chain-member visuals (the chain members PokedexRepository.loadEntryExtras hands over) —
 // sprite AND types together so a partner outside the browsed dex range (id
 // beyond the plugin's configured range) still gets both, not just a sprite
 // with no type badges.
@@ -459,7 +459,7 @@ export interface PokedexEntry extends PokedexTableRow {
 	evolutionChain: EvolutionNode | null;
 	// Mega Evolution varieties this species has, if any (empty for the ~95%
 	// of species that don't) — cheap to derive from species.varieties at
-	// getEntryCore time, no extra fetch. Selecting one lazily fetches the
+	// the Entry load's core (entryCore), no extra fetch. Selecting one lazily fetches the
 	// full MegaFormDetail (see PokedexRepository.getMegaForm) only when the
 	// user actually picks that tab, same lazy-on-interaction shape as
 	// ability/move descriptions.

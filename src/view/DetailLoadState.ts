@@ -1,4 +1,3 @@
-import { collectChainIds } from "../data/normalize";
 import type { PortraitRender } from "../data/imageSet";
 import type { EntryExtras, PokedexRepository } from "../data/PokedexRepository";
 import type { EvolutionChainVisual, MoveDetail, PokedexEntry } from "../data/types";
@@ -74,7 +73,12 @@ export class DetailLoadState {
 		if (!entry) return;
 		const gen = this.generation;
 		try {
-			await this.loadExtras(entry.id, () => this.cancelled || gen !== this.generation, onUpdate);
+			await this.repository.loadEntryExtras(entry.id, render, {
+				images: "hold",
+				isCancelled: this.newExtrasRequest(() => this.cancelled || gen !== this.generation),
+				onExtras: (extras) => this.applyExtras(extras, onUpdate),
+				onChainMembers: (members) => this.applyChainMembers(members, onUpdate),
+			});
 		} catch {
 			// the entry and its previous images stay
 		}
@@ -130,26 +134,24 @@ export class DetailLoadState {
 				images: "hold",
 				render: () => this.render,
 				isCancelled: stale,
+				isExtrasCancelled: () => extrasStale(),
 				onCore: (core) => {
 					this.entry = core;
 					this.loading = false;
 					onUpdate?.();
-					const extrasGen = ++this.extrasGeneration;
-					extrasStale = () => stale() || extrasGen !== this.extrasGeneration;
+					extrasStale = this.newExtrasRequest(stale);
 				},
 				onMove: (name, detail) => {
 					this.moveDetails = { ...this.moveDetails, [name]: detail };
 					onMoveDetail?.(name, detail);
 				},
-				onExtras: (extras) => {
-					if (!extrasStale()) this.applyExtras(extras, onUpdate);
-				},
-				onChainMembers: (members) => {
-					if (!extrasStale()) this.applyChainMembers(members, onUpdate);
-				},
+				onExtras: (extras) => this.applyExtras(extras, onUpdate),
+				onChainMembers: (members) => this.applyChainMembers(members, onUpdate),
 			});
 		} catch (err) {
-			// A superseded request's failure is not this entry's error.
+			// A superseded load's failure is not this entry's error. Only the
+			// core can reject here: past it, the extras stage fails to nulls
+			// (PokedexRepository.loadEntryExtras) and a move is skipped.
 			if (extrasStale()) return;
 			this.error = err instanceof Error ? err.message : String(err);
 			this.loading = false;
@@ -157,27 +159,12 @@ export class DetailLoadState {
 		}
 	}
 
-	// The extras stage on its own, for setRender(): the large images in the
-	// new render, the evolution chain, then the chain's members. `superseded` is
-	// the caller's own check (an id change); a newer extras request supersedes
-	// this one too. A failure is thrown to the caller only while this request
-	// is current.
-	private async loadExtras(id: number, superseded: () => boolean, onUpdate?: () => void): Promise<void> {
+	// Starts an extras request (load()'s once its core lands, or a render
+	// switch's): every older one is superseded from now on. Returns the new
+	// request's check, which the repository asks before each callback.
+	private newExtrasRequest(superseded: () => boolean): () => boolean {
 		const extrasGen = ++this.extrasGeneration;
-		const stale = () => superseded() || extrasGen !== this.extrasGeneration;
-		try {
-			const extras = await this.repository.getEntryExtras(id, this.render);
-			if (stale()) return;
-			this.applyExtras(extras, onUpdate);
-
-			if (!extras.evolutionChain) return;
-			const members = await this.repository.getEntryChainVisuals(collectChainIds(extras.evolutionChain));
-			if (stale()) return;
-			this.applyChainMembers(members, onUpdate);
-		} catch (err) {
-			if (stale()) return;
-			throw err;
-		}
+		return () => superseded() || extrasGen !== this.extrasGeneration;
 	}
 
 	private applyExtras(extras: EntryExtras, onUpdate?: () => void): void {

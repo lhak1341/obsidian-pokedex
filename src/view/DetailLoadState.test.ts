@@ -27,6 +27,25 @@ function tick(): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+const ARTWORK_URL = (bulbasaur as unknown as RawPokemon).sprites.other!["official-artwork"]!.front_default!;
+
+// Holds the client's answer to the first fetch of `url` until the returned
+// release() is called; every other fetch answers at once.
+function holdFirstImage(client: FakePokeApiClient, url: string): () => void {
+	const fetchImageBinary = client.fetchImageBinary.getMockImplementation()!;
+	let release!: () => void;
+	const held = new Promise<void>((resolve) => (release = resolve));
+	let first = true;
+	client.fetchImageBinary.mockImplementation(async (requested) => {
+		if (requested === url && first) {
+			first = false;
+			await held;
+		}
+		return fetchImageBinary(requested);
+	});
+	return release;
+}
+
 describe("DetailLoadState", () => {
 	it("load() populates entry and flips loading off", async () => {
 		const { loadState } = makeLoadState();
@@ -55,27 +74,21 @@ describe("DetailLoadState", () => {
 	});
 
 	it("setRender() with the render already loaded asks for nothing", async () => {
-		const { repository, loadState } = makeLoadState();
+		const { loadState } = makeLoadState();
 		await loadState.load(1, "home");
-		const getEntryExtras = vi.spyOn(repository, "getEntryExtras");
+		let updates = 0;
 
-		await loadState.setRender("home");
+		await loadState.setRender("home", () => updates++);
 
-		expect(getEntryExtras).not.toHaveBeenCalled();
+		expect(updates).toBe(0);
 	});
 
 	it("setRender() drops its answer once another entry has started loading", async () => {
-		const { repository, loadState } = makeLoadState();
+		const { client, repository, loadState } = makeLoadState();
 		await loadState.load(1, "official-artwork");
-
-		// Holds entry 1's answer until entry 2 has loaded, so it lands late.
-		const getEntryExtras = repository.getEntryExtras.bind(repository);
-		let release!: () => void;
-		const held = new Promise<void>((resolve) => (release = resolve));
-		vi.spyOn(repository, "getEntryExtras").mockImplementation(async (id, render) => {
-			if (id === 1) await held;
-			return getEntryExtras(id, render);
-		});
+		// The fixture has no HOME image, so HOME reads the artwork URL (under
+		// its own path). Entry 1's HOME image is the first fetch of it.
+		const release = holdFirstImage(client, ARTWORK_URL);
 
 		const switched = loadState.setRender("home");
 		await loadState.load(2, "home");
@@ -88,19 +101,14 @@ describe("DetailLoadState", () => {
 
 	// The race a render on the repository used to lose: load()'s extras, asked
 	// for in artwork, landed after the switch's HOME ones and overwrote them.
+	// Held at the client, so it holds load()'s extras whichever repository
+	// method runs them.
 	it("a render switch while load()'s extras are in flight leaves the new render", async () => {
-		const { repository, loadState } = makeLoadState();
-		const getEntryExtras = repository.getEntryExtras.bind(repository);
-		let release!: () => void;
-		const held = new Promise<void>((resolve) => (release = resolve));
-		vi.spyOn(repository, "getEntryExtras").mockImplementation(async (id, render) => {
-			const answer = getEntryExtras(id, render);
-			if (render === "official-artwork") await held;
-			return answer;
-		});
+		const { client, repository, loadState } = makeLoadState();
+		const release = holdFirstImage(client, ARTWORK_URL);
 
 		const load = loadState.load(1, "official-artwork");
-		await tick();
+		await vi.waitFor(() => expect(client.fetchImageBinary).toHaveBeenCalledWith(ARTWORK_URL));
 		await loadState.setRender("home");
 		release();
 		await load;
@@ -109,27 +117,63 @@ describe("DetailLoadState", () => {
 		expect(loadState.error).toBeNull();
 	});
 
-	it("a superseded extras request that fails is not the entry's error", async () => {
-		const { repository, loadState } = makeLoadState();
-		const getEntryExtras = repository.getEntryExtras.bind(repository);
-		let release!: () => void;
-		const held = new Promise<void>((resolve) => (release = resolve));
-		vi.spyOn(repository, "getEntryExtras").mockImplementation(async (id, render) => {
-			if (render === "official-artwork") {
-				await held;
-				throw new Error("network down");
-			}
-			return getEntryExtras(id, render);
-		});
+	it("a superseded load that fails is not the entry's error", async () => {
+		const { client, loadState } = makeLoadState();
+		let fail!: () => void;
+		const failed = new Promise<never>((_, reject) => (fail = () => reject(new Error("network down"))));
+		client.fetchPokemon.mockImplementationOnce(() => failed);
 
-		const load = loadState.load(1, "official-artwork");
-		await tick();
-		await loadState.setRender("home");
-		release();
-		await load;
+		// Id 4 sits outside the fixture's chain (1-3), so load(3) never waits on it.
+		const first = loadState.load(4, "official-artwork");
+		await loadState.load(3, "official-artwork");
+		fail();
+		await first;
 
 		expect(loadState.error).toBeNull();
-		expect(repository.imagePathOf(loadState.entry!.artworkDataUri!)).toBe("images/1-home.png");
+		expect(loadState.entry?.id).toBe(3);
+	});
+
+	it("a superseded load's chain members never land on the next entry", async () => {
+		const { client, loadState } = makeLoadState();
+		// Id 4 is a one-member chain of its own, so a superseded load(1)'s
+		// members (1-3) are told apart from load(4)'s.
+		const charmanderChain: RawEvolutionChain = {
+			id: 2,
+			chain: { species: { name: "charmander", url: "https://pokeapi.co/api/v2/pokemon-species/4/" }, evolution_details: [], evolves_to: [] },
+		};
+		const fetchPokemon = client.fetchPokemon.getMockImplementation()!;
+		const fetchSpecies = client.fetchSpecies.getMockImplementation()!;
+		const fetchEvolutionChain = client.fetchEvolutionChain.getMockImplementation()!;
+		let release!: () => void;
+		const held = new Promise<void>((resolve) => (release = resolve));
+		client.fetchPokemon.mockImplementation(async (idOrName) => {
+			// Ivysaur is first fetched as a chain member of load(1).
+			if (idOrName === 2) await held;
+			const pokemon = await fetchPokemon(idOrName);
+			return idOrName === 4
+				? { ...pokemon, name: "charmander", species: { name: "charmander", url: "https://pokeapi.co/api/v2/pokemon-species/4/" } }
+				: pokemon;
+		});
+		client.fetchSpecies.mockImplementation(async (idOrName) => {
+			const species = await fetchSpecies(idOrName);
+			if (Number(idOrName) !== 4) return species;
+			return {
+				...species,
+				name: "charmander",
+				evolution_chain: { url: "https://pokeapi.co/api/v2/evolution-chain/2/" },
+				varieties: [{ is_default: true, pokemon: { name: "charmander", url: "https://pokeapi.co/api/v2/pokemon/4/" } }],
+			};
+		});
+		client.fetchEvolutionChain.mockImplementation(async (url) => (url.includes("/evolution-chain/2/") ? charmanderChain : fetchEvolutionChain(url)));
+
+		const first = loadState.load(1, "official-artwork");
+		await vi.waitFor(() => expect(client.fetchPokemon).toHaveBeenCalledWith(2));
+		await loadState.load(4, "official-artwork");
+		release();
+		await first;
+
+		expect(loadState.entry?.id).toBe(4);
+		expect(Object.keys(loadState.evolutionSprites)).toEqual(["4"]);
 	});
 
 	it("a render switch before the core lands is the render the load's extras ask for", async () => {
@@ -145,13 +189,13 @@ describe("DetailLoadState", () => {
 	});
 
 	it("a render switch mid-load keeps the load's move details landing", async () => {
-		const { repository, loadState } = makeLoadState();
-		const getMoveDetailsForMoves = repository.getMoveDetailsForMoves.bind(repository);
+		const { client, loadState } = makeLoadState();
+		const fetchMove = client.fetchMove.getMockImplementation()!;
 		let release!: () => void;
 		const held = new Promise<void>((resolve) => (release = resolve));
-		vi.spyOn(repository, "getMoveDetailsForMoves").mockImplementation(async (names, onDetail) => {
+		client.fetchMove.mockImplementation(async (name) => {
 			await held;
-			return getMoveDetailsForMoves(names, onDetail);
+			return fetchMove(name);
 		});
 		const seen: string[] = [];
 

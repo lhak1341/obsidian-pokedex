@@ -540,7 +540,7 @@ async function labelSiblingVarieties(
 	});
 }
 
-// The entry PokedexRepository.getEntryExtras uses: given a species' raw chain
+// The entry PokedexRepository's extras stage (entryExtras) uses: given a species' raw chain
 // and the Pokemon actually being viewed (`id` is the row's own numeric fetch
 // id; `pokemonName`/`speciesName` are PokeAPI's, e.g. "vulpix-alola" /
 // "vulpix"), works out which regional-variant path the chain should be

@@ -96,13 +96,13 @@ The two checkbox groups in FilterBar. Each option is one entry in `src/utils/qui
 
 ## Entry load
 
-What opening one Pokemon's detail screen loads, in order: the core (pokemon, species, sprite, a regional form's own text), then the move pool and the extras side by side (large images in the chosen render, the evolution chain with its variety ids), then the chain members' pokemon and sprites. Defined once, as `PokedexRepository.loadEntry`. It runs two ways, and only the images differ. `DetailLoadState.load` holds them as blob URLs and gets each stage through a callback. `cacheRange` (the settings "Cache" action) writes their bytes to the store and makes no URL. So a cached generation opens every detail screen with no network (ADR-0010 addendum). A Sprite style switch re-runs only the extras and chain members (`getEntryExtras`, `getEntryChainVisuals`). Ability and held-item descriptions load on hover and are not part of it.
+What opening one Pokemon's detail screen loads, in order: the core (pokemon, species, sprite, a regional form's own text), then the move pool and the extras side by side (large images in the chosen render, the evolution chain with its variety ids), then the chain members' pokemon and sprites. Defined once, as `PokedexRepository.loadEntry`. It runs two ways, and only the images differ. `DetailLoadState.load` holds them as blob URLs and gets each stage through a callback. `cacheRange` (the settings "Cache" action) writes their bytes to the store and makes no URL. So a cached generation opens every detail screen with no network (ADR-0010 addendum). A Sprite style switch re-runs only the extras stage, `loadEntryExtras`, the same one `loadEntry` runs after the core. Ability and held-item descriptions load on hover and are not part of it.
 
 ## Image set
 
 The up-to-four images a Pokemon (or a Mega/Gigantamax variety) can own: `sprite`, `artwork`, `shiny`, `shiny-artwork`. `IMAGE_SET` in `src/data/imageSet.ts` is the single table mapping each cache suffix to its `RawPokemon.sprites` field and its `ImageBundle` field; `ALL_IMAGE_SUFFIXES` is derived from it, so `clearRange`'s delete side cannot miss a suffix a fetch site writes. A `Record<ImageSuffix, …>`, so a new suffix without a row fails typecheck.
 
-`PokedexRepository.fetchImages` fetches a chosen subset, each image caught independently to `null`. The core sprite (`getEntryCore`, `getRowsForIds`) deliberately stays outside it: a failed core sprite must fail the whole id, the opposite policy. `ImageBundle` is the fetched shape; `PortraitImageSource` (`types.ts`) is the entry-side `*DataUri` shape and is intentionally separate.
+`PokedexRepository.fetchImages` fetches a chosen subset, each image caught independently to `null`. The core sprite (the Entry load's core, `entryCore`, and `getRowsForIds`) deliberately stays outside it: a failed core sprite must fail the whole id, the opposite policy. `ImageBundle` is the fetched shape; `PortraitImageSource` (`types.ts`) is the entry-side `*DataUri` shape and is intentionally separate.
 
 ## Card view
 

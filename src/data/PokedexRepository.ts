@@ -78,15 +78,24 @@ export type EntryImages = "hold" | "store";
 
 export type EntryExtras = Pick<PokedexEntry, "artworkDataUri" | "shinyDataUri" | "shinyArtworkDataUri" | "evolutionChain">;
 
-export interface EntryLoadOptions {
+// The extras stage of the Entry load on its own (loadEntryExtras): what a
+// Sprite style switch re-runs.
+export interface EntryExtrasOptions {
 	images: EntryImages;
-	// Read when the extras stage starts (see loadEntry).
-	render: () => PortraitRender;
 	isCancelled?: () => boolean;
-	onCore?: (core: PokedexEntry) => void;
-	onMove?: (name: string, detail: MoveDetail) => void;
 	onExtras?: (extras: EntryExtras) => void;
 	onChainMembers?: (members: Record<number, EvolutionChainVisual>) => void;
+}
+
+export interface EntryLoadOptions extends EntryExtrasOptions {
+	// Read when the extras stage starts (see loadEntry).
+	render: () => PortraitRender;
+	// Checked, besides isCancelled, before each extras-stage callback: a
+	// caller can drop the extras stage (a newer render asked for) while the
+	// move pool keeps landing.
+	isExtrasCancelled?: () => boolean;
+	onCore?: (core: PokedexEntry) => void;
+	onMove?: (name: string, detail: MoveDetail) => void;
 }
 
 export interface TableLoadResult {
@@ -521,7 +530,7 @@ export class PokedexRepository {
 
 	// Mega forms are rare (<40 species out of 900+) and only ever needed when
 	// a user actually clicks that species' Mega tab — fetched lazily here
-	// rather than eagerly during getEntryCore/getEntryExtras, same reasoning
+	// rather than eagerly during the Entry load (loadEntry), same reasoning
 	// as ability/item descriptions above. `varietyKey` (e.g.
 	// "charizard-mega-x") is a PokeAPI pokemon name, never a numeric id, so it
 	// can't collide with the `pokemon/{id}.json` cache getOrFetchPokemon uses.
@@ -561,8 +570,9 @@ export class PokedexRepository {
 	}
 
 	// Whether opening this id's detail screen would still hit the network —
-	// i.e. whether getEntryExtras(id) (the chosen render's large image and its
-	// shiny, the shiny sprite, evolution chain) has already landed on disk,
+	// i.e. whether the extras stage (loadEntryExtras: the chosen render's
+	// large image and its shiny, the shiny sprite, evolution chain) has
+	// already landed on disk,
 	// not just the table-row core. A style switch to the other render reads as
 	// uncached until that render is stored. Checked via the large image as a
 	// proxy for "the detail-open plan
@@ -696,8 +706,8 @@ export class PokedexRepository {
 	// the suffix -> sprites-field table). Every image is caught independently and
 	// resolves to null on failure — a dropped connection on just the shiny
 	// sprite shouldn't take the rest down. The core sprite is NOT fetched
-	// through here: a failed core sprite must fail the whole id (getEntryCore,
-	// getRowsForIds), the opposite policy. Suffixes not requested stay null.
+	// through here: a failed core sprite must fail the whole id (the Entry
+	// load's core, entryCore, and getRowsForIds), the opposite policy. Suffixes not requested stay null.
 	private async fetchImages(
 		key: number | string,
 		sprites: ImageSources,
@@ -864,7 +874,7 @@ export class PokedexRepository {
 		// one variant is swallowed rather than failing the whole id: the base
 		// row (already built above it) still renders, just without that one
 		// regional sibling this load — same "a partial miss shouldn't take
-		// down what did succeed" reasoning as getEntryExtras' per-image
+		// down what did succeed" reasoning as entryExtras' per-image
 		// .catch(() => null) below.
 		const fetchRow = async (id: number): Promise<PokedexTableRow[]> => {
 			const pokemon = await this.getOrFetchPokemon(id);
@@ -938,14 +948,6 @@ export class PokedexRepository {
 		return this.getRowsForIds(ids, onProgress, isCancelled);
 	}
 
-	async getEntryCore(id: number): Promise<PokedexEntry> {
-		return this.entryCore(id, "hold");
-	}
-
-	async getEntryExtras(id: number, render: PortraitRender): Promise<EntryExtras> {
-		return this.entryExtras(id, render, "hold");
-	}
-
 	// The detail-open plan (CONTEXT.md, "Entry load"): everything opening one
 	// Pokemon's detail screen loads, in order. Core first (renders at once),
 	// then the move pool and the extras side by side, then the chain members
@@ -959,9 +961,9 @@ export class PokedexRepository {
 	//
 	// "render" is read when the extras stage starts, so a Sprite style switch
 	// that lands before the core does is honoured. "isCancelled" is checked
-	// before every callback and every next stage; a move or chain member
-	// that fails is skipped (getMoveDetailsForMoves, entryChainMembers), and
-	// a core failure rejects. Resolves once every stage, moves included, has
+	// before every callback and every next stage, "isExtrasCancelled" also
+	// before the extras stage's; a move or chain member that fails is skipped
+	// (getMoveDetailsForMoves, entryChainMembers), and a core failure rejects. Resolves once every stage, moves included, has
 	// settled, so a prefetch that resolves has stored everything a later
 	// offline open asks for (DetailLoadState.test.ts pins it).
 	async loadEntry(id: number, options: EntryLoadOptions): Promise<void> {
@@ -970,26 +972,44 @@ export class PokedexRepository {
 		const core = await this.entryCore(id, images);
 		if (!live()) return;
 		options.onCore?.(core);
+		if (!live()) return;
 		const render = options.render();
 		await Promise.all([
 			this.getMoveDetailsForMoves(core.moves.map((m) => m.name), (name, detail) => {
 				if (live()) options.onMove?.(name, detail);
 			}),
-			(async () => {
-				const extras = await this.entryExtras(id, render, images);
-				if (!live()) return;
-				options.onExtras?.(extras);
-				if (!extras.evolutionChain) return;
-				const members = await this.entryChainMembers(collectChainIds(extras.evolutionChain), images);
-				if (live()) options.onChainMembers?.(members);
-			})(),
+			this.loadEntryExtras(id, render, {
+				images,
+				isCancelled: () => !live() || (options.isExtrasCancelled?.() ?? false),
+				onExtras: options.onExtras,
+				onChainMembers: options.onChainMembers,
+			}),
 		]);
+	}
+
+	// The Entry load's extras stage: the large images in `render`, the
+	// evolution chain, then the chain's members. loadEntry runs it after the
+	// core; a Sprite style switch runs it alone (DetailLoadState.setRender), so
+	// the two cannot drift apart. "isCancelled" is checked before each
+	// callback and before the chain members are asked for. Once the core has
+	// landed it does not reject through the client: images and the chain
+	// fail to null, a member to a null sprite, and pokemon/species are
+	// already in memory.
+	async loadEntryExtras(id: number, render: PortraitRender, options: EntryExtrasOptions): Promise<void> {
+		const { images, isCancelled } = options;
+		const live = () => !isCancelled?.();
+		const extras = await this.entryExtras(id, render, images);
+		if (!live()) return;
+		options.onExtras?.(extras);
+		if (!extras.evolutionChain || !live()) return;
+		const members = await this.entryChainMembers(collectChainIds(extras.evolutionChain), images);
+		if (live()) options.onChainMembers?.(members);
 	}
 
 	// Everything the detail view needs that's already sitting in mem cache by
 	// the time a row is clickable — pokemon + species were fetched for every
 	// visible row during the table load, and the sprite is the same file the
-	// table already showed. Resolves near-instantly; see getEntryExtras for
+	// table already showed. Resolves near-instantly; see entryExtras for
 	// the actually-slow, never-cached-until-now parts (evolution chain,
 	// official artwork, shiny) that the detail view was previously blocking on
 	// before showing anything at all.
@@ -1066,17 +1086,13 @@ export class PokedexRepository {
 	// network fetch — but even then it's one fetch per partner id, not a
 	// separate one for sprite vs types, since both come off the same
 	// already-fetched StoredPokemon. Skips species entirely, unlike
-	// getEntryCore — the evolution tree only ever renders a partner's
+	// the Entry load's core (entryCore) — the evolution tree only ever renders a partner's
 	// id/name/sprite/types, name already comes free from the evolution-chain
 	// response itself (see normalizeEvolutionChain), so fetching a partner's
 	// whole species record just to throw away everything but that would be
 	// wasted work. Each id resolves independently to a null sprite / empty
 	// types on failure rather than rejecting the whole set — a dropped
 	// connection on one partner shouldn't blank out the others.
-	async getEntryChainVisuals(ids: number[]): Promise<Record<number, EvolutionChainVisual>> {
-		return this.entryChainMembers(ids, "hold");
-	}
-
 	private async entryChainMembers(ids: number[], images: EntryImages): Promise<Record<number, EvolutionChainVisual>> {
 		const pairs = await Promise.all(
 			ids.map(async (id): Promise<readonly [number, EvolutionChainVisual]> => {

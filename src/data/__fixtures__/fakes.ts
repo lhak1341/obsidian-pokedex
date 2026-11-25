@@ -125,7 +125,7 @@ export class FakePokeApiClient extends PokeApiClient {
 		return { flavor_text_entries: this.formFlavorTexts.get(name) ?? [] };
 	});
 
-	fetchEvolutionChain = vi.fn(async (): Promise<RawEvolutionChain> => {
+	fetchEvolutionChain = vi.fn(async (_url: string): Promise<RawEvolutionChain> => {
 		if (this.failEvolutionChain) throw new Error("fake failure fetching evolution chain");
 		return bulbasaurChain as unknown as RawEvolutionChain;
 	});

@@ -17,6 +17,17 @@ function tick(): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+// Opens `id`'s large images as a detail screen's extras stage does, stopping
+// once they land, so no chain member is fetched.
+async function openLargeImages(repository: PokedexRepository, id: number): Promise<void> {
+	let landed = false;
+	await repository.loadEntryExtras(id, "official-artwork", {
+		images: "hold",
+		isCancelled: () => landed,
+		onExtras: () => (landed = true),
+	});
+}
+
 describe("VarietyToggleState", () => {
 	it("selectMega sets activeMegaKey and clears an active Gigantamax selection", () => {
 		const { client, toggle } = makeState();
@@ -59,8 +70,8 @@ describe("VarietyToggleState", () => {
 		toggle.selectMega("charizard-mega-x", "official-artwork");
 		toggle.selectGigantamax("charizard-gmax", "official-artwork");
 		await tick();
-		await repository.getEntryExtras(2, "official-artwork");
-		await repository.getEntryExtras(3, "official-artwork");
+		await openLargeImages(repository, 2);
+		await openLargeImages(repository, 3);
 
 		toggle.selectMega("charizard-mega-x", "official-artwork");
 		toggle.selectGigantamax("charizard-gmax", "official-artwork");
