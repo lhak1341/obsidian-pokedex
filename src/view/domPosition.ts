@@ -1,5 +1,18 @@
 import { sideAnchoredPreviewPosition } from "../utils/previewPosition";
 
+// The window an element is drawn in: a pop-out leaf's own, not the main
+// window the plugin's code runs in, which the bare `window`/`activeWindow`
+// globals can name instead. Frames, timers and the viewport's height come
+// from it. Probed live: a pop-out focused over a minimised main window got 90
+// frames in 1.5 s from its own window and 0 from the global
+// `requestAnimationFrame` (the table's spacers kept the old row height); a
+// 600px pop-out beside an 870px main window placed an Info popover below a
+// target with 79px of room, since the global `innerHeight` said 349.
+// `src/view/ownWindow.test.ts` fails on a global read.
+export function windowOf(el: Element): Window {
+	return el.ownerDocument.defaultView ?? activeWindow;
+}
+
 export interface RelativeRect {
 	top: number;
 	left: number;
@@ -57,6 +70,6 @@ export function computeSideAnchoredPreviewPosition(
 		viewportRect.top,
 		viewportRect.height,
 		halfHeight,
-		window.innerHeight,
+		windowOf(target).innerHeight,
 	);
 }

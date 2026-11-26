@@ -25,3 +25,4 @@ The decision above stands. Status and eviction stay separate questions:
 
 - **Status keeps its stand-in.** `isExtrasCached` checks the large image only, and does not check the move pool or chain members. A generation cached before this change reads as cached while missing them. Online nothing shows, since moves load on open as before. Offline, a Refresh fills them in.
 - **Eviction is unchanged.** Move details and other generations' chain members are shared, so `clearRange` leaves them, and only `clearAll` removes them.
+- **Variety forms are stored, not counted (2026-11-26).** `cacheRange` now also stores each species' Mega and Gigantamax forms (`storeVarietyForms`), which `clearRange` already evicted, so a cached generation's Variety toggle works offline. The status check still skips them: opening an id is instant without them, and they load on a toggle click. A generation cached before this reads as cached without its forms; a Refresh stores them.

@@ -97,14 +97,75 @@ describe("VarietyToggleState", () => {
 		expect(toggle.megaFormCache["charizard-mega-x"]).toBeDefined();
 	});
 
-	it("a rejected fetch is swallowed: no unhandled rejection, cache stays empty, key stays selected", async () => {
+	// No variety pokemon set on the fake client: fetching the form rejects.
+	it("a failed load clears the selection and reports it once, so one more click retries", async () => {
 		const { toggle } = makeState();
+		const failed: string[] = [];
+		const updates: (string | null)[] = [];
 
-		toggle.selectMega("charizard-mega-x", "official-artwork");
+		toggle.selectMega("charizard-mega-x", "official-artwork", () => updates.push(toggle.activeMegaKey), (key) => failed.push(key));
 		await tick();
 
-		expect(toggle.activeMegaKey).toBe("charizard-mega-x");
+		expect(toggle.activeMegaKey).toBeNull();
 		expect(toggle.megaFormCache["charizard-mega-x"]).toBeUndefined();
+		expect(failed).toEqual(["charizard-mega-x"]);
+		expect(updates).toEqual(["charizard-mega-x", null]);
+	});
+
+	// The answer for `name` waits for the returned release, then rejects.
+	function holdFailing(client: FakePokeApiClient, name: string): () => void {
+		const fetchPokemon = client.fetchPokemon.getMockImplementation()!;
+		let release!: () => void;
+		const held = new Promise<void>((resolve) => (release = resolve));
+		client.fetchPokemon.mockImplementation(async (idOrName) => {
+			if (idOrName !== name) return fetchPokemon(idOrName);
+			await held;
+			throw new Error(`fake failure fetching ${name}`);
+		});
+		return release;
+	}
+
+	it("a render switch while a failing form is in flight reverts once and reports once", async () => {
+		const { client, toggle } = makeState();
+		const release = holdFailing(client, "charizard-mega-x");
+		const failed: string[] = [];
+		const onFailed = (key: string) => failed.push(key);
+
+		toggle.selectMega("charizard-mega-x", "official-artwork", undefined, onFailed);
+		toggle.reselect("home", undefined, onFailed);
+		release();
+		await tick();
+
+		expect(toggle.activeMegaKey).toBeNull();
+		expect(failed).toEqual(["charizard-mega-x"]);
+	});
+
+	it("a failure that lands after a switch to the other form changes nothing and reports nothing", async () => {
+		const { client, toggle } = makeState();
+		client.variantPokemon.set("charizard-gmax", { ...(bulbasaur as unknown as RawPokemon) });
+		const release = holdFailing(client, "charizard-mega-x");
+		const failed: string[] = [];
+		const onFailed = (key: string) => failed.push(key);
+
+		toggle.selectMega("charizard-mega-x", "official-artwork", undefined, onFailed);
+		toggle.selectGigantamax("charizard-gmax", "official-artwork", undefined, onFailed);
+		release();
+		await tick();
+
+		expect(toggle.activeGigantamaxKey).toBe("charizard-gmax");
+		expect(toggle.gigantamaxFormCache["charizard-gmax"]).toBeDefined();
+		expect(failed).toEqual([]);
+	});
+
+	it("a Gigantamax failure clears its selection and reports it", async () => {
+		const { toggle } = makeState();
+		const failed: string[] = [];
+
+		toggle.selectGigantamax("charizard-gmax", "official-artwork", undefined, (key) => failed.push(key));
+		await tick();
+
+		expect(toggle.activeGigantamaxKey).toBeNull();
+		expect(failed).toEqual(["charizard-gmax"]);
 	});
 
 	it("reselect() asks again for the selected form only, in the new render", async () => {

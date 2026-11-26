@@ -875,6 +875,70 @@ describe("PokedexRepository", () => {
 		expect(await cache.exists("images/venusaur-gmax-shiny.png")).toBe(false);
 	});
 
+	// A generation of one species with a Mega and a Gigantamax variety, as
+	// PokeAPI lists them: every fake pokemon is named "bulbasaur", so the
+	// varieties are "bulbasaur-mega" and "bulbasaur-gmax" (deriveMegaForms
+	// and deriveGigantamaxForms match the viewed pokemon's own name).
+	function withVarietyForms(client: FakePokeApiClient) {
+		const species = client.fetchSpecies.getMockImplementation()!;
+		client.fetchSpecies.mockImplementation(async (idOrName) => ({
+			...(await species(idOrName)),
+			varieties: [
+				{ is_default: true, pokemon: { name: "bulbasaur", url: "" } },
+				{ is_default: false, pokemon: { name: "bulbasaur-mega", url: "" } },
+				{ is_default: false, pokemon: { name: "bulbasaur-gmax", url: "" } },
+			],
+		}));
+		for (const name of ["bulbasaur-mega", "bulbasaur-gmax"]) {
+			client.variantPokemon.set(name, { ...(bulbasaur as unknown as RawPokemon), id: 10000, name });
+		}
+		return { id: 1, name: "Test Gen", start: 1, end: 1 };
+	}
+
+	it("cacheRange stores a species' Mega and Gigantamax forms, so the Variety toggle works offline", async () => {
+		const { client, cache, repository } = makeRepository();
+		const gen = withVarietyForms(client);
+		await repository.cacheRange(gen, "official-artwork");
+		// A new repository over the same store, so its memory caches answer nothing.
+		const offline = new FakePokeApiClient();
+		const requests = Object.values(offline).filter((value) => vi.isMockFunction(value));
+		for (const request of requests) {
+			request.mockImplementation(() => {
+				throw new Error("offline");
+			});
+		}
+		const reopened = new PokedexRepository(offline, cache, { objectUrls: new RecordingObjectUrls() });
+
+		const mega = await reopened.getMegaForm("bulbasaur-mega", "official-artwork");
+		const gmax = await reopened.getGigantamaxForm("bulbasaur-gmax", "official-artwork");
+
+		for (const request of requests) expect(request.mock.calls).toEqual([]);
+		expect(mega.types.length).toBeGreaterThan(0);
+		for (const detail of [mega, gmax]) {
+			expect(detail.spriteDataUri).not.toBeNull();
+			expect(detail.artworkDataUri).not.toBeNull();
+			expect(detail.shinyArtworkDataUri).not.toBeNull();
+		}
+	});
+
+	it("clearRange removes every variety-form file cacheRange stored", async () => {
+		const { client, cache, repository } = makeRepository();
+		const gen = withVarietyForms(client);
+		const before = new Set(await cache.listFilesIn("images"));
+		await repository.cacheRange(gen, "official-artwork");
+		const formImages = (await cache.listFilesIn("images")).filter((f) => !before.has(f) && /bulbasaur-(mega|gmax)/.test(f));
+		expect(formImages.length).toBeGreaterThan(0);
+		expect(await cache.readJson("mega-forms/bulbasaur-mega.json")).not.toBeNull();
+		expect(await cache.readJson("gigantamax-forms/bulbasaur-gmax.json")).not.toBeNull();
+
+		await repository.clearRange(gen);
+
+		expect(await cache.readJson("mega-forms/bulbasaur-mega.json")).toBeNull();
+		expect(await cache.readJson("gigantamax-forms/bulbasaur-gmax.json")).toBeNull();
+		const left = (await cache.listFilesIn("images")).filter((f) => formImages.includes(f));
+		expect(left).toEqual([]);
+	});
+
 	it("clearRange leaves Mega and Gigantamax forms whose base species is outside the range", async () => {
 		const { client, cache, repository } = makeRepository();
 		await setUpVenusaurWithVarietyForms(client, cache, repository);

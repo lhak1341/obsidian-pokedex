@@ -1,5 +1,5 @@
 import { CLOSED, stepPin, type PinEvent, type PinState } from "../utils/infoPopoverPin";
-import { relativeRect } from "./domPosition";
+import { relativeRect, windowOf } from "./domPosition";
 
 // Below this much room (px) between the target's bottom edge and the
 // viewport's own bottom, there isn't enough space left to render a popover
@@ -54,9 +54,10 @@ interface OpenInfo {
 function place(targetEl: HTMLElement, anchorSelector: string, offsetY: number): Pos {
 	// Viewport-relative (not relativeRect's container-relative numbers) —
 	// this decision is about actual on-screen room, independent of wherever
-	// the anchor's own box happens to sit.
+	// the anchor's own box happens to sit. The target's own window: a pop-out
+	// leaf's height is not the main window's (windowOf).
 	const viewportRect = targetEl.getBoundingClientRect();
-	const placement: Placement = window.innerHeight - viewportRect.bottom < MIN_SPACE_BELOW ? "above" : "below";
+	const placement: Placement = windowOf(targetEl).innerHeight - viewportRect.bottom < MIN_SPACE_BELOW ? "above" : "below";
 	const r = relativeRect(targetEl, anchorSelector);
 	return placement === "below"
 		? { top: r.bottom + offsetY, left: r.left, placement }

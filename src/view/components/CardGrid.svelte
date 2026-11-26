@@ -14,7 +14,7 @@
 	import { totalStat } from "../../utils/stats";
 	import type { ActiveGenRow, HeldItemForGen } from "../../utils/activeGenScope";
 	import { contentBounds } from "../imageBounds";
-	import { getScroller, isShown, watchViewport } from "../viewportWatch";
+	import { getScroller, isShown, nextFrame, watchLayout, watchSize, watchViewport } from "../viewportWatch";
 	import type { FavoriteMenu } from "../favoriteMenu";
 	import type { InfoTargetProps } from "../infoPopover.svelte";
 	import CardPanel from "./CardPanel.svelte";
@@ -141,7 +141,7 @@
 	// height) and the open panel's room.
 	function measure() {
 		const el = gridEl;
-		if (!el || !isShown(el)) return;
+		if (!el) return;
 		const tiles = [...el.querySelectorAll<HTMLElement>(":scope > .card-tile")];
 		const heights = cardRowHeights(
 			tiles.map((tile) => tile.getBoundingClientRect().height),
@@ -156,16 +156,12 @@
 		}
 	}
 
-	// The grid's width, ignoring the 0 it reports while hidden, so a trip to
-	// the detail screen re-lays nothing out.
+	// The grid's width, kept through the 0 it reports while hidden
+	// (watchSize), so a trip to the detail screen re-lays nothing out.
 	$effect(() => {
 		const el = gridEl;
 		if (!el) return;
-		const ro = new ResizeObserver(() => {
-			if (el.clientWidth > 0) gridWidth = el.clientWidth;
-		});
-		ro.observe(el);
-		return () => ro.disconnect();
+		return watchSize(el, () => el.clientWidth, (w) => (gridWidth = w));
 	});
 
 	// Scroll and viewport, relative to the grid's top edge. The browse screen
@@ -182,27 +178,14 @@
 	});
 
 	// Drawn rows and the panel are watched for size, so a font, Fields or
-	// width change re-measures them wherever it comes from. Measured a frame
-	// later: a write from inside the observer re-lays the grid out in the same
-	// frame, which Chromium reports as an undelivered ResizeObserver loop.
+	// width change re-measures them wherever it comes from; measured a frame
+	// later, never while hidden (watchLayout).
 	$effect(() => {
 		const el = gridEl;
 		void drawn;
 		void openIndex;
 		if (!el) return;
-		let frame = 0;
-		const ro = new ResizeObserver(() => {
-			if (frame) return;
-			frame = requestAnimationFrame(() => {
-				frame = 0;
-				measure();
-			});
-		});
-		for (const child of el.children) ro.observe(child);
-		return () => {
-			ro.disconnect();
-			cancelAnimationFrame(frame);
-		};
+		return watchLayout(el, el.children, measure);
 	});
 
 	// Each sprite's opaque box, by URL, so the tile can centre the content
@@ -261,8 +244,6 @@
 		return null;
 	}
 
-	const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-
 	// settleTopTile's DOM. Its state lets a newer size change stop the loop an
 	// older one started, and keep that one's anchor while it is pending.
 	const topTileRun: TopTileState = { run: 0, pending: null };
@@ -285,8 +266,10 @@
 		},
 		async nextLayout() {
 			await tick();
-			await nextFrame();
-			await nextFrame();
+			const el = gridEl;
+			if (!el) return;
+			await nextFrame(el);
+			await nextFrame(el);
 		},
 	};
 

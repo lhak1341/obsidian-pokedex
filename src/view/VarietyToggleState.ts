@@ -52,56 +52,69 @@ export class VarietyToggleState {
 
 	// Mega and Gigantamax are mutually exclusive in-game (see DetailScreen's
 	// own comment) — selecting one clears the other rather than letting both
-	// apply at once. Fetch is fire-and-forget and swallowed on failure: a
-	// dropped connection just means the toggle silently doesn't populate
-	// until a retry click succeeds, same as a dropped shiny/artwork fetch
-	// elsewhere in this view not taking down the rest of the entry — but
-	// swallowed explicitly now, rather than left as an unhandled rejection.
+	// apply at once.
 	//
 	// A form already in the cache is still asked for again: its image URLs
 	// are blob URLs the repository's LRU may have evicted (and revoked) since,
 	// and a revoked URL never loads. The repository answers from memory, so
 	// this costs no fetch; the cached detail shows until the fresh one lands.
-	selectMega(key: string | null, render: PortraitRender, onUpdate?: () => void): void {
+	//
+	// A failed load clears the selection and calls `onFailed` (DetailScreen
+	// raises a Notice), so a selected badge always means its form loaded for
+	// the current request and one more click retries (the badge's click on a
+	// selected form deselects it, so a failure left selected took two). Only
+	// the newest request for a still-selected key does this: a failure that
+	// lands after a newer click, a switch to the other form or a deselect is
+	// dropped, silently. It reverts even with an earlier answer in the cache,
+	// whose large images may be revoked blob URLs by then.
+	selectMega(key: string | null, render: PortraitRender, onUpdate?: () => void, onFailed?: (key: string) => void): void {
 		this.activeMegaKey = key;
 		if (key) this.activeGigantamaxKey = null;
 		const request = key ? this.nextRequest(key) : 0;
 		onUpdate?.();
-		if (key) {
-			this.repository
-				.getMegaForm(key, render)
-				.then((detail) => {
-					if (request !== this.requests.get(key)) return;
-					this.megaFormCache = { ...this.megaFormCache, [key]: detail };
-					onUpdate?.();
-				})
-				.catch(() => undefined);
-		}
+		if (!key) return;
+		this.repository.getMegaForm(key, render).then(
+			(detail) => {
+				if (request !== this.requests.get(key)) return;
+				this.megaFormCache = { ...this.megaFormCache, [key]: detail };
+				onUpdate?.();
+			},
+			() => {
+				if (request !== this.requests.get(key) || this.activeMegaKey !== key) return;
+				this.activeMegaKey = null;
+				onUpdate?.();
+				onFailed?.(key);
+			},
+		);
 	}
 
 	// A Sprite style switch: the selected form asks again for its images in
 	// the new render (the repository answers from memory for everything else),
 	// superseding any select still in flight.
-	reselect(render: PortraitRender, onUpdate?: () => void): void {
-		if (this.activeMegaKey) this.selectMega(this.activeMegaKey, render, onUpdate);
-		else if (this.activeGigantamaxKey) this.selectGigantamax(this.activeGigantamaxKey, render, onUpdate);
+	reselect(render: PortraitRender, onUpdate?: () => void, onFailed?: (key: string) => void): void {
+		if (this.activeMegaKey) this.selectMega(this.activeMegaKey, render, onUpdate, onFailed);
+		else if (this.activeGigantamaxKey) this.selectGigantamax(this.activeGigantamaxKey, render, onUpdate, onFailed);
 	}
 
-	selectGigantamax(key: string | null, render: PortraitRender, onUpdate?: () => void): void {
+	selectGigantamax(key: string | null, render: PortraitRender, onUpdate?: () => void, onFailed?: (key: string) => void): void {
 		this.activeGigantamaxKey = key;
 		if (key) this.activeMegaKey = null;
 		const request = key ? this.nextRequest(key) : 0;
 		onUpdate?.();
-		if (key) {
-			this.repository
-				.getGigantamaxForm(key, render)
-				.then((detail) => {
-					if (request !== this.requests.get(key)) return;
-					this.gigantamaxFormCache = { ...this.gigantamaxFormCache, [key]: detail };
-					onUpdate?.();
-				})
-				.catch(() => undefined);
-		}
+		if (!key) return;
+		this.repository.getGigantamaxForm(key, render).then(
+			(detail) => {
+				if (request !== this.requests.get(key)) return;
+				this.gigantamaxFormCache = { ...this.gigantamaxFormCache, [key]: detail };
+				onUpdate?.();
+			},
+			() => {
+				if (request !== this.requests.get(key) || this.activeGigantamaxKey !== key) return;
+				this.activeGigantamaxKey = null;
+				onUpdate?.();
+				onFailed?.(key);
+			},
+		);
 	}
 
 	private nextRequest(key: string): number {

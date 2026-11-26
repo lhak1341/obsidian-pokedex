@@ -528,10 +528,12 @@ export class PokedexRepository {
 		);
 	}
 
-	// Mega forms are rare (<40 species out of 900+) and only ever needed when
-	// a user actually clicks that species' Mega tab — fetched lazily here
-	// rather than eagerly during the Entry load (loadEntry), same reasoning
-	// as ability/item descriptions above. `varietyKey` (e.g.
+	// Mega forms are rare (97 Mega and 34 Gigantamax varieties across 1,025
+	// species, counted 2026-11) and only ever needed when a user actually
+	// clicks that species' Mega tab — fetched here on the click rather than
+	// during the Entry load (loadEntry), as ability/item descriptions are.
+	// cacheRange stores them ahead (storeVarietyForms), so a cached
+	// generation answers this from the store. `varietyKey` (e.g.
 	// "charizard-mega-x") is a PokeAPI pokemon name, never a numeric id, so it
 	// can't collide with the `pokemon/{id}.json` cache getOrFetchPokemon uses.
 	//
@@ -686,6 +688,37 @@ export class PokedexRepository {
 		}
 	}
 
+	// The "store" side of the Variety toggle (CONTEXT.md): each of the species'
+	// Mega and Gigantamax forms, its source record and its images in `render`,
+	// written to the store with no blob URL made, so a cached generation's
+	// toggle works offline. Not part of the Entry load: a detail open leaves
+	// the forms to the toggle's click (getMegaForm). The keys come from the
+	// same derivation evictVarietyForms removes them by, and pokemon/species
+	// are memory hits after the Entry load. A form that fails is skipped, as a
+	// chain member is; cacheRange's only caller.
+	private async storeVarietyForms(id: number, render: PortraitRender): Promise<void> {
+		const pokemon = await this.getOrFetchPokemon(id);
+		const species = await this.getOrFetchSpecies(this.speciesIdFromPokemon(pokemon));
+		const forms = [
+			...deriveMegaForms(pokemon, species).map((form) => ({ key: form.key, memCache: this.megaFormMemCache, path: megaFormPath })),
+			...deriveGigantamaxForms(pokemon, species).map((form) => ({
+				key: form.key,
+				memCache: this.gigantamaxFormMemCache,
+				path: gigantamaxFormPath,
+			})),
+		];
+		await Promise.all(
+			forms.map(async ({ key, memCache, path }) => {
+				try {
+					const source = await this.getOrFetchVarietyFormSource(key, memCache, path(key));
+					await this.storeImages(key, source.sprites, ["sprite", ...largeImageSuffixes(render)]);
+				} catch {
+					// Skipped: the toggle fetches it on click once online.
+				}
+			}),
+		);
+	}
+
 	private async evictVarietyForms(id: number): Promise<void> {
 		const pokemon = await this.cache.readJson<StoredPokemon>(pokemonPath(id));
 		const species = await this.cache.readJson<RawSpecies>(speciesPath(id));
@@ -817,7 +850,10 @@ export class PokedexRepository {
 		await mapWithConcurrency(
 			result.rows.map((r) => r.id),
 			FETCH_CONCURRENCY,
-			(id) => this.loadEntry(id, { images: "store", render: () => render, isCancelled }),
+			async (id) => {
+				await this.loadEntry(id, { images: "store", render: () => render, isCancelled });
+				if (!isCancelled?.()) await this.storeVarietyForms(id, render);
+			},
 			() => {
 				extrasLoaded++;
 				onProgress?.(extrasLoaded, extrasTotal);

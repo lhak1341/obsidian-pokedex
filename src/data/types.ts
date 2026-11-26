@@ -459,10 +459,10 @@ export interface PokedexEntry extends PokedexTableRow {
 	evolutionChain: EvolutionNode | null;
 	// Mega Evolution varieties this species has, if any (empty for the ~95%
 	// of species that don't) — cheap to derive from species.varieties at
-	// the Entry load's core (entryCore), no extra fetch. Selecting one lazily fetches the
+	// the Entry load's core (entryCore), no extra fetch. Selecting one fetches the
 	// full MegaFormDetail (see PokedexRepository.getMegaForm) only when the
-	// user actually picks that tab, same lazy-on-interaction shape as
-	// ability/move descriptions.
+	// user actually picks that tab, as ability and held-item descriptions load
+	// on hover (a cached generation has it stored: storeVarietyForms).
 	megaForms: MegaFormSummary[];
 	// Gigantamax varieties this species has, if any — same lazy-fetch shape
 	// as megaForms (see PokedexRepository.getGigantamaxForm), but the detail

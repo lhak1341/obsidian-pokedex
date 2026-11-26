@@ -9,7 +9,7 @@
 	import { untrack } from "svelte";
 	import { tableEntries, tableRowMetrics, tableWindow } from "../../utils/tableWindow";
 	import { computeSideAnchoredPreviewPosition } from "../domPosition";
-	import { getScroller, isShown, watchViewport } from "../viewportWatch";
+	import { getScroller, watchLayout, watchViewport } from "../viewportWatch";
 	import type { FavoriteMenu } from "../favoriteMenu";
 	import { createInfoPopover, type InfoTargetProps } from "../infoPopover.svelte";
 	import EvChips from "./EvChips.svelte";
@@ -175,7 +175,7 @@
 	// from the drawn rows: tableRowMetrics holds the rules.
 	function measureRows() {
 		const el = bodyEl;
-		if (!el || !isShown(el)) return;
+		if (!el) return;
 		const readings = [...el.querySelectorAll<HTMLElement>(":scope > tr[data-index]")].map((row) => {
 			const rect = row.getBoundingClientRect();
 			return { index: Number(row.dataset.index), top: rect.top, height: rect.height };
@@ -189,7 +189,7 @@
 
 	// The table's font, for widest's text widths (rowTextWidths).
 	function readFont() {
-		if (!tableEl || !isShown(tableEl)) return;
+		if (!tableEl) return;
 		const font = getComputedStyle(tableEl).font;
 		if (font !== measureFont) memory.font = measureFont = font;
 	}
@@ -209,28 +209,16 @@
 	});
 
 	// Drawn rows are measured a frame after they change, or after the body
-	// resizes (a font, density or width change), as CardGrid does: a write
-	// from inside the observer would re-lay the table out in the same frame.
+	// resizes (a font, density or width change), never while hidden
+	// (watchLayout).
 	$effect(() => {
 		const el = bodyEl;
 		void entries;
 		if (!el) return;
-		let raf = 0;
-		const schedule = () => {
-			if (raf) return;
-			raf = requestAnimationFrame(() => {
-				raf = 0;
-				readFont();
-				measureRows();
-			});
-		};
-		const ro = new ResizeObserver(schedule);
-		ro.observe(el);
-		schedule();
-		return () => {
-			ro.disconnect();
-			cancelAnimationFrame(raf);
-		};
+		return watchLayout(el, [el], () => {
+			readFont();
+			measureRows();
+		});
 	});
 
 	function sortIndicator(column: SortColumn): string {

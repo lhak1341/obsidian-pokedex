@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { MoveDetail, MoveEntry } from "../../data/types";
 	import { createInfoPopover } from "../infoPopover.svelte";
-	import { getScroller } from "../viewportWatch";
+	import { getScroller, watchSize } from "../viewportWatch";
 	import { resolveMoveView } from "../../utils/moveRows";
 	import InfoPopoverBox from "./InfoPopoverBox.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
@@ -48,17 +48,13 @@
 	// band only: from 760 Moves is a bordered card beside other sections, and
 	// the room showed as ~330px of empty card under a short list.
 	// The scroller is PokedexApp's (getScroller). A hidden screen reads 0, so
-	// the last real height is kept (src/view/CLAUDE.md).
+	// the last real height is kept (watchSize).
 	const scrollerOf = getScroller();
 	let viewportHeight = $state(0);
 	$effect(() => {
 		const scroller = scrollerOf();
 		if (!scroller) return;
-		const ro = new ResizeObserver(() => {
-			if (scroller.clientHeight > 0) viewportHeight = scroller.clientHeight;
-		});
-		ro.observe(scroller);
-		return () => ro.disconnect();
+		return watchSize(scroller, () => scroller.clientHeight, (h) => (viewportHeight = h));
 	});
 </script>
 

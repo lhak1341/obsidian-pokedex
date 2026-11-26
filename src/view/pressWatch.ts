@@ -6,6 +6,8 @@
 // jsdom in vitest.config.ts). Both bindings take a PressWatch, and their tests
 // pass a fake one whose timer and scroll fire on demand.
 
+import { windowOf } from "./domPosition";
+
 export interface PressWatch {
 	// Starts the hold timer and the scroll watch for the press `e` began.
 	// onTimer gets the current time on the clock e.timeStamp uses, for the
@@ -28,8 +30,9 @@ export function createPressWatch(): PressWatch {
 	return {
 		start(e, holdMs, { onTimer, onScroll }) {
 			stop();
-			const doc = (e.currentTarget as HTMLElement).ownerDocument;
-			const win = doc.defaultView ?? activeWindow;
+			const el = e.currentTarget as HTMLElement;
+			const doc = el.ownerDocument;
+			const win = windowOf(el);
 			// The event's timeStamp and performance.now() share a clock.
 			timer = { win, handle: win.setTimeout(() => onTimer(win.performance.now(), doc), holdMs) };
 			// Scroll doesn't bubble: capture on the document sees the pane

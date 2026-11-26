@@ -146,10 +146,17 @@
 	// with every load and select, never set on the repository.
 	const portraitRender = $derived(portraitRenderFor(spriteStyle));
 	function selectMegaForm(key: string | null) {
-		varietyToggle.selectMega(key, portraitRender, mirrorVariety);
+		varietyToggle.selectMega(key, portraitRender, mirrorVariety, reportFormFailure);
 	}
 	function selectGigantamaxForm(key: string | null) {
-		varietyToggle.selectGigantamax(key, portraitRender, mirrorVariety);
+		varietyToggle.selectGigantamax(key, portraitRender, mirrorVariety, reportFormFailure);
+	}
+	// The toggle has already cleared the selection (VarietyToggleState), so
+	// the badge reads unselected and one click retries; this says why.
+	function reportFormFailure(key: string) {
+		const forms = [...(entryLoad.entry?.megaForms ?? []), ...(entryLoad.entry?.gigantamaxForms ?? [])];
+		const label = forms.find((form) => form.key === key)?.label ?? "variety";
+		new Notice(`Pokedex: couldn't load the ${label} form.`);
 	}
 
 	// Image resolution (base/Mega/Gigantamax, shiny toggle) and the
@@ -257,7 +264,7 @@
 		const render = portraitRender;
 		untrack(() => {
 			void loadState.setRender(render, mirror);
-			varietyToggle.reselect(render, mirrorVariety);
+			varietyToggle.reselect(render, mirrorVariety, reportFormFailure);
 		});
 	});
 
