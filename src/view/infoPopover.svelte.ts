@@ -1,5 +1,5 @@
 import { CLOSED, stepPin, type PinEvent, type PinState } from "../utils/infoPopoverPin";
-import { relativeRect, windowOf } from "./domPosition";
+import { getScreenRoot, relativeRect, type ScreenRootGetter, windowOf } from "./domPosition";
 
 // Below this much room (px) between the target's bottom edge and the
 // viewport's own bottom, there isn't enough space left to render a popover
@@ -13,11 +13,11 @@ type Placement = "below" | "above";
 type Pos = { top: number; left: number; placement: Placement };
 
 // The Info popover binding, shared by AbilitiesPanel, HeldItemsPanel,
-// MoveBrowser, TableScreen and TableGrid. The rules (hover previews for a mouse only, a
+// MoveBrowser, BrowseScreen and TableGrid. The rules (hover previews for a mouse only, a
 // tap pins, a tap elsewhere closes without being swallowed, …) live in
 // utils/infoPopoverPin.ts and are tested there; this file only turns DOM
 // events into its PinEvents, reading pointerType per event, and positions the
-// box (relative to an ancestor selector — see relativeRect for why
+// box (relative to its screen's root, getScreenRoot — see relativeRect for why
 // position: fixed doesn't work here: Obsidian's .workspace-leaf has
 // contain: strict).
 //
@@ -46,19 +46,19 @@ export interface InfoTargetProps {
 interface OpenInfo {
 	owner: object;
 	name: string;
-	anchorSelector: string;
+	root: ScreenRootGetter;
 	offsetY: number;
 	onOpen?: () => void;
 }
 
-function place(targetEl: HTMLElement, anchorSelector: string, offsetY: number): Pos {
+function place(targetEl: HTMLElement, root: Element | undefined, offsetY: number): Pos {
 	// Viewport-relative (not relativeRect's container-relative numbers) —
 	// this decision is about actual on-screen room, independent of wherever
 	// the anchor's own box happens to sit. The target's own window: a pop-out
 	// leaf's height is not the main window's (windowOf).
 	const viewportRect = targetEl.getBoundingClientRect();
 	const placement: Placement = windowOf(targetEl).innerHeight - viewportRect.bottom < MIN_SPACE_BELOW ? "above" : "below";
-	const r = relativeRect(targetEl, anchorSelector);
+	const r = relativeRect(targetEl, root);
 	return placement === "below"
 		? { top: r.bottom + offsetY, left: r.left, placement }
 		// Anchored to the target's own top edge, not a computed
@@ -87,7 +87,7 @@ function dispatch(event: PinEvent<HTMLElement>, info?: OpenInfo): boolean {
 		if (open && info) {
 			openOwner = info.owner;
 			openName = info.name;
-			openPos = place(open, info.anchorSelector, info.offsetY);
+			openPos = place(open, info.root(), info.offsetY);
 			info.onOpen?.();
 		} else {
 			openOwner = null;
@@ -144,8 +144,11 @@ function syncDocListeners() {
 	}
 }
 
-export function createInfoPopover(anchorSelector: string, offsetY = 6) {
+// Call during component init, inside a screen: the box is placed against
+// that screen's root (getScreenRoot).
+export function createInfoPopover(offsetY = 6) {
 	const owner = {};
+	const root = getScreenRoot();
 
 	// A component that unmounts with its popover open takes the popover (and
 	// the document listeners) with it.
@@ -157,7 +160,7 @@ export function createInfoPopover(anchorSelector: string, offsetY = 6) {
 	// {...popover.target(name)}>`. `onOpen` runs each time this target's
 	// popover opens (a fetch, or per-target content like a held item's rarity).
 	function target(name: string, onOpen?: () => void): InfoTargetProps {
-		const info: OpenInfo = { owner, name, anchorSelector, offsetY, onOpen };
+		const info: OpenInfo = { owner, name, root, offsetY, onOpen };
 		return {
 			role: "button",
 			tabindex: 0,

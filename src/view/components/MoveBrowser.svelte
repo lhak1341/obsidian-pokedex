@@ -21,7 +21,7 @@
 	// DetailLoadState.load() already prefetches the whole movepool up front,
 	// so moveDetails[name].description (or its absence) is already known by
 	// the time a row can be hovered.
-	const popover = createInfoPopover(".detail-screen");
+	const popover = createInfoPopover();
 
 	// Not reset on id change (this component instance persists across
 	// Pokemon navigation — see DetailScreen, which doesn't remount this

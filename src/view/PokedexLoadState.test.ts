@@ -330,7 +330,7 @@ describe("PokedexLoadState update throttle", () => {
 		load.timer.fire();
 
 		expect(load.updates).toHaveLength(3);
-		// progress only: the same array, so TableScreen's deriveds stay put
+		// progress only: the same array, so BrowseScreen's deriveds stay put
 		expect(load.updates[1].rows).toBe(load.updates[0].rows);
 		// a new row: a new array, which those deriveds re-run on
 		expect(load.updates[2].rows).not.toBe(load.updates[1].rows);

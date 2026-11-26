@@ -31,6 +31,11 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 	cardSizeByWidthClass: { ...DEFAULT_CARD_SIZE_BY_WIDTH_CLASS },
 };
 
+// A control's key names a PluginSettings field. Obsidian types it as any
+// string, so a mistyped key would compile, read undefined and save a junk
+// field; this makes it a typecheck error.
+type SettingKey = keyof PluginSettings;
+
 export class PokedexSettingTab extends PluginSettingTab {
 	constructor(app: import("obsidian").App, private plugin: PokedexPlugin) {
 		super(app, plugin);
@@ -58,7 +63,7 @@ export class PokedexSettingTab extends PluginSettingTab {
 	// getControlValue/setControlValue below, and the rows that need live state
 	// (cache progress, cache size) are `render` rows. update() re-reads all of
 	// this, which is how the Clear cache button refreshes the statuses.
-	getSettingDefinitions(): SettingDefinitionItem[] {
+	getSettingDefinitions(): SettingDefinitionItem<SettingKey>[] {
 		// A render row is rebuilt on every update(), so the registries restart here.
 		this.refreshCacheStatuses = [];
 		return [
@@ -182,7 +187,7 @@ export class PokedexSettingTab extends PluginSettingTab {
 	// field shown only while "Custom" is chosen. The field saves on every
 	// keystroke; saveSettings re-applies the roles on each open view's
 	// contentEl (PokedexView.refresh) without remounting it.
-	private fontRows(role: FontRole, name: string, desc: string): SettingGroupItem[] {
+	private fontRows(role: FontRole, name: string, desc: string): SettingGroupItem<SettingKey>[] {
 		const keys = FONT_ROLE_KEYS[role];
 		return [
 			{
@@ -198,7 +203,7 @@ export class PokedexSettingTab extends PluginSettingTab {
 		];
 	}
 
-	private generationRow(gen: (typeof GENERATIONS)[number]): SettingGroupItem {
+	private generationRow(gen: (typeof GENERATIONS)[number]): SettingGroupItem<SettingKey> {
 		const baseDesc = `National dex #${gen.start}-${gen.end}.`;
 		return {
 			name: gen.name,

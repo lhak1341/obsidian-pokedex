@@ -17,7 +17,7 @@
 	// round-trip). Positioned relative to .detail-screen (position: absolute,
 	// not fixed — see DetailScreen's .detail-screen CSS comment for why), not
 	// the raw viewport rect.
-	const popover = createInfoDescription(".detail-screen", (name) => getDescription(name));
+	const popover = createInfoDescription((name) => getDescription(name));
 </script>
 
 <ul class="ability-list">

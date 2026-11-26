@@ -14,6 +14,7 @@
 	import { totalStat } from "../../utils/stats";
 	import type { ActiveGenRow, HeldItemForGen } from "../../utils/activeGenScope";
 	import { contentBounds } from "../imageBounds";
+	import { getScreenRoot } from "../domPosition";
 	import { getScroller, isShown, nextFrame, watchLayout, watchSize, watchViewport } from "../viewportWatch";
 	import type { FavoriteMenu } from "../favoriteMenu";
 	import type { InfoTargetProps } from "../infoPopover.svelte";
@@ -23,9 +24,9 @@
 	// Card view (CONTEXT.md): the browse screen's rows drawn as a grid of tiles.
 	// It owns its drawing and which tap panel is open, nothing else: rows (already filtered, sorted and Active
 	// Gen scoped), Card view's Fields selection (the Tile Fields), the sort and favourites all come from
-	// TableScreen, the browse screen's owner, so a switch to or from the table
+	// BrowseScreen, the browse screen's owner, so a switch to or from the table
 	// keeps them. A favourite's tile is outlined in the accent, a marker only
-	// (no accidental toggles while scrolling): a tile favourites through TableScreen's favourites menu
+	// (no accidental toggles while scrolling): a tile favourites through BrowseScreen's favourites menu
 	// (right-click or press and hold, as a table row does), and the tap panel
 	// keeps its asterisk toggle. A tile tap opens the tap panel; the panel's
 	// "Open ›" opens the detail screen (onSelect).
@@ -46,7 +47,7 @@
 		onSelect: (id: number) => void;
 		onToggleFavorite: (id: number) => void;
 		favoriteMenu: FavoriteMenu;
-		// TableScreen's held-item Info popover, so its box (rarity included)
+		// BrowseScreen's held-item Info popover, so its box (rarity included)
 		// is the table's own and draws over the panel.
 		heldItemTarget: (item: HeldItemForGen) => InfoTargetProps;
 	} = $props();
@@ -96,11 +97,12 @@
 	// The Card window (CONTEXT.md, cardWindow): only the tiles near the
 	// viewport are drawn; the grid's padding stands in for the rest. Its
 	// inputs are read from the scroller (PokedexApp's, which scrolls the whole
-	// browse screen; getScroller) and from drawn tiles, and frozen while the table screen
+	// browse screen; getScroller) and from drawn tiles, and frozen while the browse screen
 	// is hidden (the detail screen owns the scroller then, and the grid
 	// measures 0): the window keeps its last slice until the table shows
 	// again and back-to-list restores the scroll offset.
 	const scrollerOf = getScroller();
+	const screenRootOf = getScreenRoot();
 	let scrollTop = $state(0);
 	let viewportHeight = $state(0);
 	// Measured grid row heights, null until a row of that kind is drawn. The
@@ -170,8 +172,9 @@
 	$effect(() => {
 		const el = gridEl;
 		const scroller = scrollerOf();
-		if (!el || !scroller) return;
-		return watchViewport(el, scroller, el.parentElement, (r) => {
+		const screen = screenRootOf();
+		if (!el || !scroller || !screen) return;
+		return watchViewport(el, scroller, screen, (r) => {
 			scrollTop = r.scrollTop;
 			viewportHeight = r.viewportHeight;
 		});

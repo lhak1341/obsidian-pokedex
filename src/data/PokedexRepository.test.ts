@@ -6,7 +6,7 @@ import type { PortraitRender } from "./imageSet";
 import { PokedexRepository, type EntryExtras } from "./PokedexRepository";
 import { MOVE_VERSION_GROUPS } from "./constants";
 import { toStoredPokemon } from "./normalize";
-import type { EvolutionChainVisual, MegaFormDetail, PokedexEntry, RawPokemon, RawSpecies, StoredPokemon } from "./types";
+import type { ChainMember, MegaFormDetail, PokedexEntry, RawPokemon, RawSpecies, StoredPokemon } from "./types";
 
 function makeRepository(imageBudgetBytes?: number) {
 	const client = new FakePokeApiClient();
@@ -46,8 +46,8 @@ async function coreOf(repository: PokedexRepository, id: number): Promise<Pokede
 }
 
 // The chain members the extras stage hands its caller for `id`'s chain.
-async function chainMembersOf(repository: PokedexRepository, id: number): Promise<Record<number, EvolutionChainVisual>> {
-	let members: Record<number, EvolutionChainVisual> | undefined;
+async function chainMembersOf(repository: PokedexRepository, id: number): Promise<Record<number, ChainMember>> {
+	let members: Record<number, ChainMember> | undefined;
 	await repository.loadEntryExtras(id, "official-artwork", { images: "hold", onChainMembers: (answer) => (members = answer) });
 	if (!members) throw new Error("loadEntryExtras never handed over chain members");
 	return members;

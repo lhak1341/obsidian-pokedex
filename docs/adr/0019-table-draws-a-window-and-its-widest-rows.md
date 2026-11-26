@@ -34,6 +34,7 @@ Probed live: the header's column widths equal HEAD's (every row drawn, EV chips 
 - **Fixed column widths** (`table-layout: fixed`, or widths measured once and written as px): `fixed` drops the min-width floors, and a measured width needs every row's content anyway.
 - **Hidden sizer rows** (the widest rows in a `visibility: collapse` or zero-height row group): `collapse` on rows is unverified on iOS WebKit, and a zero-height row needs every cell's content wrapped, a second copy of the row markup.
 - **A running maximum** (columns only grow as wider rows scroll in): columns move while the user scrolls.
+- **Scores built from a shared cell description** (runs and box padding, rather than the cell's plain text): ADR-0024.
 
 **Reopen when** the iPhone shows a table action over about 300 ms, or a fling that stutters past the first one after opening.
 

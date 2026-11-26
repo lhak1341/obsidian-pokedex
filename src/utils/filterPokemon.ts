@@ -34,7 +34,7 @@ export interface PokedexFilters {
 	// no meaningful "any of" reading (e.g. Baby + Fossil should mean both).
 	traits: string[];
 	// Not derivable from a PokedexTableRow field — favorites are user state
-	// (TableScreen's right-click menu), not fetched data, so filterPokemon
+	// (BrowseScreen's right-click menu), not fetched data, so filterPokemon
 	// takes the actual favorite id set as a separate argument (see below)
 	// rather than this flag alone.
 	favoritesOnly: boolean;

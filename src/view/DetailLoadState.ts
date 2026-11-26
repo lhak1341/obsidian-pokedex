@@ -1,6 +1,6 @@
 import type { PortraitRender } from "../data/imageSet";
 import type { EntryExtras, PokedexRepository } from "../data/PokedexRepository";
-import type { EvolutionChainVisual, MoveDetail, PokedexEntry } from "../data/types";
+import type { ChainMember, MoveDetail, PokedexEntry } from "../data/types";
 
 // Owns the fetch/retry lifecycle for a single detail-screen entry: the
 // pokemon/species/sprite core, move details, evolution-chain sprites, and
@@ -28,20 +28,18 @@ export interface DetailEntrySnapshot {
 	entry: PokedexEntry | null;
 	loading: boolean;
 	error: string | null;
-	evolutionSprites: Record<number, string | null>;
-	evolutionTypes: Record<number, string[]>;
+	chainMembers: Record<number, ChainMember>;
 }
 
 export class DetailLoadState {
 	entry: PokedexEntry | null = null;
 	loading = true;
 	error: string | null = null;
-	evolutionSprites: Record<number, string | null> = {};
-	// Keyed the same as evolutionSprites, kept as a separate map (not folded
-	// into PokedexEntry) since it covers every chain member — including ones
-	// outside the currently-browsed dex range, which never get a
-	// PokedexTableRow of their own to carry types on.
-	evolutionTypes: Record<number, string[]> = {};
+	// The Chain members (CONTEXT.md), keyed by id, as the repository hands
+	// them over. Kept beside the entry, not folded into PokedexEntry: they
+	// land in their own stage, after the chain, and cover members outside the
+	// browsed dex range, which never get a PokedexTableRow of their own.
+	chainMembers: Record<number, ChainMember> = {};
 	// Not reset per load() call, unlike the fields above — moves repeat
 	// heavily across species (nearly everything learns Tackle or Growl), so
 	// this accumulates across every entry viewed this session rather than
@@ -93,12 +91,11 @@ export class DetailLoadState {
 			entry: this.entry,
 			loading: this.loading,
 			error: this.error,
-			evolutionSprites: this.evolutionSprites,
-			evolutionTypes: this.evolutionTypes,
+			chainMembers: this.chainMembers,
 		};
 	}
 
-	// onUpdate fires whenever entry/loading/error/evolutionSprites changes —
+	// onUpdate fires whenever entry/loading/error/chainMembers changes —
 	// a caller (e.g. a Svelte component, whose $state can't see mutations on
 	// a plain class instance) re-mirrors all of them wholesale each time.
 	// onMoveDetail is a separate channel because moves stream in one at a
@@ -117,8 +114,7 @@ export class DetailLoadState {
 		this.entry = null;
 		this.loading = true;
 		this.error = null;
-		this.evolutionSprites = {};
-		this.evolutionTypes = {};
+		this.chainMembers = {};
 
 		// Supersedes only the extras stage once the core has landed: a later
 		// setRender drops this load's images and chain, while its move details
@@ -173,9 +169,8 @@ export class DetailLoadState {
 		onUpdate?.();
 	}
 
-	private applyChainMembers(members: Record<number, EvolutionChainVisual>, onUpdate?: () => void): void {
-		this.evolutionSprites = Object.fromEntries(Object.entries(members).map(([id, v]) => [id, v.sprite]));
-		this.evolutionTypes = Object.fromEntries(Object.entries(members).map(([id, v]) => [id, v.types]));
+	private applyChainMembers(members: Record<number, ChainMember>, onUpdate?: () => void): void {
+		this.chainMembers = members;
 		onUpdate?.();
 	}
 }

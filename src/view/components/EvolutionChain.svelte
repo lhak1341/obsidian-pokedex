@@ -1,23 +1,19 @@
 <script lang="ts">
 	import { describeEvolutionRequirement } from "../../data/normalize";
-	import type { EvolutionNode } from "../../data/types";
+	import type { ChainMember, EvolutionNode } from "../../data/types";
 	import { canPairBranches } from "../../utils/evolutionLayout";
 	import { formatDexNumber, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import EvolutionChain from "./EvolutionChain.svelte";
 	import TypeBadge from "./TypeBadge.svelte";
 
-	let { node, onSelect, sprites, types, useTypeIcons, evolveLabel, compact = false, splitLabels = false, pairBranches = false, inPairedRow = false, stageWidths = [], depth = 0 }: {
+	let { node, onSelect, chainMembers, useTypeIcons, evolveLabel, compact = false, splitLabels = false, pairBranches = false, inPairedRow = false, stageWidths = [], depth = 0 }: {
 		node: EvolutionNode;
 		onSelect: (id: number) => void;
-		// Keyed by dex id. Evolution partners are always within the same
-		// contiguous fetch range as whatever's currently displayed (see
-		// DetailScreen), so these resolve near-instantly from the repository's
-		// mem cache — no separate loading state needed here, a node just shows
-		// text-only for the brief moment before its sprite lands.
-		sprites: Record<number, string | null>;
-		// Keyed by dex id, drawn from the already-loaded browse table (see
-		// DetailScreen's evoTypes) rather than a per-node fetch.
-		types: Record<number, string[]>;
+		// The Chain members (CONTEXT.md), keyed by id: each card's sprite and
+		// type badges, from the Entry load's chain-members stage rather than a
+		// per-node fetch. No loading state of its own: until they land (or for
+		// a member that failed) a card shows text only.
+		chainMembers: Record<number, ChainMember>;
 		useTypeIcons: boolean;
 		// The level/item/trigger that led INTO this node — computed by the
 		// parent (it's the parent that knows which of its evolution_details
@@ -47,6 +43,7 @@
 	} = $props();
 
 	const canPair = $derived(canPairBranches(node));
+	const member = $derived(chainMembers[node.id]);
 
 </script>
 
@@ -61,8 +58,8 @@
 		style:--pkdx-evo-stage-width={stageWidths[depth] ? `${stageWidths[depth]}px` : null}
 		onclick={() => onSelect(node.id)}
 	>
-		{#if sprites[node.id]}
-			<img src={sprites[node.id]} alt={formatPokemonDisplayName(node)} class="evo-sprite" />
+		{#if member?.sprite}
+			<img src={member.sprite} alt={formatPokemonDisplayName(node)} class="evo-sprite" />
 		{/if}
 		<!-- Always rendered (even for the root, which has no evolveLabel) so
 		every card reserves the same slot height — otherwise the root's
@@ -78,7 +75,7 @@
 			<span class="evo-name">{formatPokemonDisplayName(node)}</span></span
 		>
 		<span class="evo-types">
-			{#each types[node.id] ?? [] as type (type)}
+			{#each member?.types ?? [] as type (type)}
 				<TypeBadge {type} useIcon={useTypeIcons} compact />
 			{/each}
 		</span>
@@ -91,8 +88,7 @@
 					<EvolutionChain
 						node={child}
 						{onSelect}
-						{sprites}
-						{types}
+						{chainMembers}
 						{useTypeIcons}
 						evolveLabel={describeEvolutionRequirement(child)}
 						{compact}

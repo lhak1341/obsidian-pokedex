@@ -8,6 +8,7 @@
 	import { FIELDS, fieldsShown, isStatField, isTileField, sortAfterFieldsChange } from "../../utils/fields";
 	import { onDestroy, untrack } from "svelte";
 	import { createInfoDescription } from "../infoDescription.svelte";
+	import { provideScreenRoot } from "../domPosition";
 	import { createFavoriteMenu } from "../favoriteMenu";
 	import CardGrid from "./CardGrid.svelte";
 	import { CARD_SIZE_LABELS, CARD_SIZES, type CardSize } from "../../utils/cardView";
@@ -55,7 +56,13 @@
 	// (see infoDescription.svelte.ts) — shared across every row/cell instead
 	// of a per-cell instance, so hovering "oran-berry" on row 4 doesn't
 	// re-fetch it after already hovering it on row 1.
-	const itemPopover = createInfoDescription(".table-screen", (name) => repository.getItemDescription(name));
+	// This screen's root: the positioning root every Info popover and the
+	// sprite preview inside it are placed against (getScreenRoot, domPosition.ts),
+	// and what the layouts' windows re-read on a resize of (FilterBar's inline
+	// Filters panel moves the list without a scroll).
+	let rootEl = $state<HTMLDivElement | undefined>();
+	provideScreenRoot(() => rootEl);
+	const itemPopover = createInfoDescription((name) => repository.getItemDescription(name));
 	// Unlike HeldItemsPanel (which prints "Name (X%)" inline and keeps the
 	// tooltip to description-only), the table cell shows bare names to save
 	// column width — rarity moves into the tooltip instead. Rarity isn't
@@ -223,7 +230,7 @@ second row on a Narrow pane. -->
 	{/if}
 {/snippet}
 
-<div class="table-screen">
+<div class="browse-screen" bind:this={rootEl}>
 	<FilterBar bind:filters {abilityOptions} {useTypeIcons} {rows} {narrow} controls={viewControls} onQuickSelect={onSelect} />
 
 	{#if !narrow}
@@ -445,7 +452,7 @@ second row on a Narrow pane. -->
 		background: var(--lk-surface-hover);
 		color: var(--lk-text);
 	}
-	.table-screen {
+	.browse-screen {
 		/* Positioning root for TableGrid's .sprite-preview (position: absolute,
 		computed relative to this element — see its CSS comment for why) and
 		for every Info popover box here and in TableGrid. */

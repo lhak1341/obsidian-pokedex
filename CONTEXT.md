@@ -21,7 +21,7 @@ A small always-visible search box (FilterBar's main search input, QuickSearch on
 Match derivation and Up/Down/Enter nav are implemented once in `src/utils/quickJump.ts` (`quickJumpMatches`, `stepQuickJumpNav` — tested in `quickJump.test.ts`). The dropdown orchestration built on top of those primitives — open/activeIndex state, DOM event wiring, registering the Cmd/Ctrl+Shift+L focus handler under its screen — used to be duplicated between `QuickSearch.svelte` and `FilterBar.svelte`; it's now a single shared seam, `createQuickJumpDropdown` in `src/view/quickJumpDropdown.svelte.ts` (runes-based, untested by convention — same DOM-bound category as `infoPopover.svelte.ts`), paired with a shared `QuickJumpDropdown.svelte` for the list markup itself.
 
 The two callers diverge in exactly two caller-supplied places, both taken as callbacks by the hook rather than hardcoded:
-- **On Select** — QuickSearch's `onSelect` blurs the input (so the editable-target rule doesn't block the `"["`/`"]"` Leaf hotkey right after navigating, since QuickSearch stays on the same detail screen); FilterBar's `onSelect` switches to the detail screen, so it doesn't need to blur: TableScreen stays mounted but goes `display:none`, which drops the input's focus.
+- **On Select** — QuickSearch's `onSelect` blurs the input (so the editable-target rule doesn't block the `"["`/`"]"` Leaf hotkey right after navigating, since QuickSearch stays on the same detail screen); FilterBar's `onSelect` switches to the detail screen, so it doesn't need to blur: BrowseScreen stays mounted but goes `display:none`, which drops the input's focus.
 - **On Escape** — the hook itself does the (identical, unconditional) blur; only the text-clearing is caller-specific, via `onEscape` (QuickSearch clears its ephemeral `query`; FilterBar's `onEscape` is a no-op, since `filters.search` is the table's real live filter, not an ephemeral query).
 
 The search text itself (`query()` in the hook's options) also stays caller-owned rather than moving into the hook — QuickSearch's is a local ephemeral string, FilterBar's is `filters.search`, which the table's own live filter also reads.
@@ -86,7 +86,7 @@ Not the same as Generation fallback: that rule picks a different generation's ta
 
 ## Active Gen row
 
-A row scoped to the Active Gen (`ActiveGenRow`, or `ActiveGen<T>` for a `PokedexEntry`): `stats` overlaid, and `heldItems` / `encounterLocations` in place of the `*AllGens` fields, holding the Active Gen's entries only. It has no `*AllGens` field, so a layout, Field, filter or sort that reads unscoped data fails typecheck. The browse screen scopes its rows once (`scopedRows` in `TableScreen.svelte`) and the table, Card view, Fields, Quirks, Traits, filter and sort all take Active Gen rows; the detail page scopes its entry once (`scopedEntry`). Memoized per source row, so the same row at the same Active Gen is the same object across streamed updates.
+A row scoped to the Active Gen (`ActiveGenRow`, or `ActiveGen<T>` for a `PokedexEntry`): `stats` overlaid, and `heldItems` / `encounterLocations` in place of the `*AllGens` fields, holding the Active Gen's entries only. It has no `*AllGens` field, so a layout, Field, filter or sort that reads unscoped data fails typecheck. The browse screen scopes its rows once (`scopedRows` in `BrowseScreen.svelte`) and the table, Card view, Fields, Quirks, Traits, filter and sort all take Active Gen rows; the detail page scopes its entry once (`scopedEntry`). Memoized per source row, so the same row at the same Active Gen is the same object across streamed updates.
 
 
 ## Quirk and Trait
@@ -98,11 +98,19 @@ The two checkbox groups in FilterBar. Each option is one entry in `src/utils/qui
 
 What opening one Pokemon's detail screen loads, in order: the core (pokemon, species, sprite, a regional form's own text), then the move pool and the extras side by side (large images in the chosen render, the evolution chain with its variety ids), then the chain members' pokemon and sprites. Defined once, as `PokedexRepository.loadEntry`. It runs two ways, and only the images differ. `DetailLoadState.load` holds them as blob URLs and gets each stage through a callback. `cacheRange` (the settings "Cache" action) writes their bytes to the store and makes no URL. So a cached generation opens every detail screen with no network (ADR-0010 addendum). `cacheRange` also stores each species' Mega and Gigantamax forms after its Entry load (`storeVarietyForms`), so the Variety toggle works offline too; they are not part of the Entry load, since a detail open leaves them to the toggle's click. A Sprite style switch re-runs only the extras stage, `loadEntryExtras`, the same one `loadEntry` runs after the core. Ability and held-item descriptions load on hover and are not part of it.
 
+## Chain member
+
+One record per id in the evolution chain a detail screen shows: that Pokemon's sprite and its types, in slot order. The Entry load's extras stage loads them after the chain (`loadEntryExtras`), by id, whatever range is browsed, so a member outside it (Pichu on Pikachu's screen while browsing Gen 1) still gets its sprite and type badges. A member that fails to load is an empty one (no sprite, no types) and does not blank the others. They travel as one record, keyed by id, from the repository to each Evolution layout card.
+
 ## Image set
 
 The up-to-four images a Pokemon (or a Mega/Gigantamax variety) can own: `sprite`, `artwork`, `shiny`, `shiny-artwork`. `IMAGE_SET` in `src/data/imageSet.ts` is the single table mapping each cache suffix to its `RawPokemon.sprites` field and its `ImageBundle` field; `ALL_IMAGE_SUFFIXES` is derived from it, so `clearRange`'s delete side cannot miss a suffix a fetch site writes. A `Record<ImageSuffix, …>`, so a new suffix without a row fails typecheck.
 
 `PokedexRepository.fetchImages` fetches a chosen subset, each image caught independently to `null`. The core sprite (the Entry load's core, `entryCore`, and `getRowsForIds`) deliberately stays outside it: a failed core sprite must fail the whole id, the opposite policy. `ImageBundle` is the fetched shape; `PortraitImageSource` (`types.ts`) is the entry-side `*DataUri` shape and is intentionally separate.
+
+## Browse screen
+
+The list screen: filters (search included), sort, Fields and favourites over every enabled Pokemon, drawn as the table or as Card view. The detail screen is the other screen. In code `BrowseScreen.svelte`; it was `TableScreen.svelte` before 2026-11-26 (it drew the table itself until `TableGrid` took that over), and older ADRs use that name.
 
 ## Card view
 

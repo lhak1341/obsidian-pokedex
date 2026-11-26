@@ -15,7 +15,7 @@ export function getScroller(): ScrollerGetter {
 	return getContext<ScrollerGetter>(SCROLLER_CONTEXT);
 }
 
-// An element with no client rects is under `display:none`: TableScreen stays
+// An element with no client rects is under `display:none`: BrowseScreen stays
 // mounted while the detail screen shows, and every size read inside it is 0.
 export function isShown(el: Element): boolean {
 	return el.getClientRects().length > 0;

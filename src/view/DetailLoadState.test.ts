@@ -173,7 +173,7 @@ describe("DetailLoadState", () => {
 		await first;
 
 		expect(loadState.entry?.id).toBe(4);
-		expect(Object.keys(loadState.evolutionSprites)).toEqual(["4"]);
+		expect(Object.keys(loadState.chainMembers)).toEqual(["4"]);
 	});
 
 	it("a render switch before the core lands is the render the load's extras ask for", async () => {
@@ -240,8 +240,8 @@ describe("DetailLoadState", () => {
 		const chainIds = collectChainIds(entry.evolutionChain!);
 		expect(chainIds).toEqual([1, 2, 3]);
 		for (const id of chainIds) {
-			expect(loadState.evolutionSprites[id]).not.toBeNull();
-			expect(loadState.evolutionTypes[id].length).toBeGreaterThan(0);
+			expect(loadState.chainMembers[id].sprite).not.toBeNull();
+			expect(loadState.chainMembers[id].types.length).toBeGreaterThan(0);
 		}
 	});
 
@@ -252,7 +252,7 @@ describe("DetailLoadState", () => {
 
 		expect(loadState.entry?.evolutionChain?.name).toBe("bulbasaur");
 		const chainIds = [1, loadState.entry!.evolutionChain!.children[0].id];
-		for (const id of chainIds) expect(loadState.evolutionSprites[id]).not.toBeNull();
+		for (const id of chainIds) expect(loadState.chainMembers[id].sprite).not.toBeNull();
 	});
 
 	it("onMoveDetail fires per move as the movepool settles, mirrored into moveDetails", async () => {

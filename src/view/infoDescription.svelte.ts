@@ -1,7 +1,7 @@
 import { describeHoverStatus, type HoverDescriptionStatus } from "../utils/hoverDescriptionText";
 import { createInfoPopover } from "./infoPopover.svelte";
 
-// Shared by TableScreen, AbilitiesPanel and HeldItemsPanel: an Info popover
+// Shared by BrowseScreen, AbilitiesPanel and HeldItemsPanel: an Info popover
 // whose text is fetched once per name, the first time its popover opens, and
 // cached for the hook instance's lifetime (never reset — both callers'
 // component instances persist across Pokemon navigation, same reasoning as
@@ -11,11 +11,10 @@ import { createInfoPopover } from "./infoPopover.svelte";
 // description or "none available"), see describeHoverStatus — callers render
 // it as is.
 export function createInfoDescription(
-	anchorSelector: string,
 	getDescription: (name: string) => Promise<string | null>,
 	offsetY = 6,
 ) {
-	const popover = createInfoPopover(anchorSelector, offsetY);
+	const popover = createInfoPopover(offsetY);
 	let descriptions = $state<Record<string, { text: string | null } | { error: true }>>({});
 
 	function fetchOnce(name: string) {

@@ -321,11 +321,12 @@ export interface MoveDetail {
 	description: string | null;
 }
 
-// Per evolution-chain-member visuals (the chain members PokedexRepository.loadEntryExtras hands over) —
-// sprite AND types together so a partner outside the browsed dex range (id
-// beyond the plugin's configured range) still gets both, not just a sprite
-// with no type badges.
-export interface EvolutionChainVisual {
+// One Chain member (CONTEXT.md): what the Entry load's extras stage
+// (PokedexRepository.loadEntryExtras) hands over for each evolution-chain id,
+// sprite AND types together, fetched by id whatever the browsed range, so a
+// partner outside it (Pichu on Pikachu's screen while browsing Gen 1) still gets both. A member
+// that fails is { sprite: null, types: [] } on its own.
+export interface ChainMember {
 	sprite: string | null;
 	types: string[];
 }

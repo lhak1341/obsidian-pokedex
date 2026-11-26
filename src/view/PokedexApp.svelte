@@ -13,7 +13,7 @@
 	import { LEAF_COMMANDS_CONTEXT, type LeafCommandRegistry } from "./LeafCommandRegistry";
 	import DetailScreen from "./components/DetailScreen.svelte";
 	import { emptyLoadSnapshot, type LoadOutcome, type LoadSnapshot, PokedexLoadState } from "./PokedexLoadState";
-	import TableScreen from "./components/TableScreen.svelte";
+	import BrowseScreen from "./components/BrowseScreen.svelte";
 	import { SCROLLER_CONTEXT, type ScrollerGetter } from "./viewportWatch";
 	import Icon from "./components/Icon.svelte";
 
@@ -114,7 +114,7 @@
 	// component only renders them and shows the Notices. `$state.raw`: nothing
 	// here changes a snapshot in place, and a deep `$state` would wrap each
 	// update anew (Svelte's proxy() keeps no per-object cache), handing
-	// TableScreen a new `rows` even when the class shared its array.
+	// BrowseScreen a new `rows` even when the class shared its array.
 	let view = $state.raw<LoadSnapshot>(emptyLoadSnapshot());
 
 	const loadState = new PokedexLoadState(
@@ -188,7 +188,7 @@
 	// Mirrors screen/selectedId from navState, then executes the returned
 	// ScrollInstruction — the one piece of work navState can't do itself
 	// since it stays DOM-free on purpose (see DetailNavigationState.ts).
-	// TableScreen stays mounted (see template — it's hidden via CSS while
+	// BrowseScreen stays mounted (see template — it's hidden via CSS while
 	// viewing detail, not destroyed, so its filters/sort/column state
 	// survive) but restoring a non-zero scroll position still needs the DOM
 	// to have un-hidden it first, or the browser clamps the scrollTop write
@@ -233,7 +233,7 @@
 			</div>
 		</div>
 	{:else}
-		<!-- TableScreen stays mounted under both screens (display:none rather
+		<!-- BrowseScreen stays mounted under both screens (display:none rather
 		than an {#if}/{:else if} swap) so its local filter/sort/column-visibility
 		state survives a round trip through the detail view instead of resetting
 		every time. -->
@@ -251,7 +251,7 @@
 					</button>
 				</div>
 			{/if}
-			<TableScreen
+			<BrowseScreen
 				rows={view.rows}
 				density={settings.gridDensity}
 				defaultSortColumn={settings.defaultSortColumn}

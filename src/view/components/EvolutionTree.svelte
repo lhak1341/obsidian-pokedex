@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from "svelte";
-	import type { EvolutionNode } from "../../data/types";
+	import type { ChainMember, EvolutionNode } from "../../data/types";
 	import {
 		type CardReading,
 		createEvolutionLayoutState,
@@ -11,11 +11,10 @@
 	} from "../../utils/evolutionLayout";
 	import EvolutionChain from "./EvolutionChain.svelte";
 
-	let { chain, onSelect, sprites, types, useTypeIcons, compact: compactProp = false }: {
+	let { chain, onSelect, chainMembers, useTypeIcons, compact: compactProp = false }: {
 		chain: EvolutionNode;
 		onSelect: (id: number) => void;
-		sprites: Record<number, string | null>;
-		types: Record<number, string[]>;
+		chainMembers: Record<number, ChainMember>;
 		useTypeIcons: boolean;
 		compact?: boolean;
 	} = $props();
@@ -105,7 +104,7 @@
 			// drifts away from the sprite (and looks visibly off) whenever
 			// those grow or shrink (e.g. the types row toggling on/off).
 			// Falls back to the card itself for the brief pre-sprite-load
-			// window (see EvolutionChain's sprites prop).
+			// window (see EvolutionChain's chainMembers prop).
 			const anchorEl = cardEl.querySelector<HTMLElement>(".evo-sprite") ?? cardEl;
 			const r = anchorEl.getBoundingClientRect();
 			return { x: r.left + r.width / 2 - containerRect.left, y: r.top + r.height / 2 - containerRect.top };
@@ -119,15 +118,16 @@
 		lines = next;
 	}
 
-	// Re-measure whenever the chain changes (a different Pokemon), sprites
-	// arrive (cards grow once their image loads in), or the container itself
+	// Re-measure whenever the chain changes (a different Pokemon), its Chain
+	// members arrive (a sprite and the type badges both change a card's
+	// height), or the container itself
 	// resizes (a pane width change within a band,
 	// or a branch wraps to a new line) — all of these move card centers
 	// without necessarily remounting this component. The newest of these runs
 	// wins (settleEvolutionLayout).
 	$effect(() => {
 		void chain;
-		void sprites;
+		void chainMembers;
 		void tick().then(measure);
 	});
 
@@ -150,7 +150,7 @@
 			<line x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} />
 		{/each}
 	</svg>
-	<EvolutionChain node={chain} {onSelect} {sprites} {types} {useTypeIcons} {compact} splitLabels={layout.splitLabels} pairBranches={layout.pairBranches} stageWidths={layout.stageWidths} />
+	<EvolutionChain node={chain} {onSelect} {chainMembers} {useTypeIcons} {compact} splitLabels={layout.splitLabels} pairBranches={layout.pairBranches} stageWidths={layout.stageWidths} />
 </div>
 
 <style>

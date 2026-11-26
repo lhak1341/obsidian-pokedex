@@ -17,7 +17,7 @@
 	// drawn under the tapped tile's grid row. What goes where is cardView.ts
 	// (PANEL_STATS, PANEL_CHIP_GROUPS); this draws it.
 	// Favourites are PokedexApp's (ADR-0012), so the asterisk only asks. The
-	// held item's Info popover is TableScreen's, so its box (with the rarity)
+	// held item's Info popover is BrowseScreen's, so its box (with the rarity)
 	// is the table's own and draws over this panel.
 	let { id, grow, row, columns, start, span, barHeight, favorite, onToggleFavorite, onOpen, heldItemTarget }: {
 		id: string;

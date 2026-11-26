@@ -11,7 +11,7 @@
 	// Keyed by item name, same not-reset-on-id-change reasoning as
 	// AbilitiesPanel's cache — common held items (e.g. "oran-berry") repeat
 	// across species within a session.
-	const popover = createInfoDescription(".detail-screen", (name) => getDescription(name));
+	const popover = createInfoDescription((name) => getDescription(name));
 </script>
 
 {#each heldItems as item (item.name)}

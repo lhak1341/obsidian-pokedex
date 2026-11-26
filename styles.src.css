@@ -73,9 +73,9 @@ button.filter-chip {
 /* ── Info popover targets (view/hoverPopover.svelte.ts, `target()`) ───────────
    Ability, held item, move and type names that open an Info popover on hover and pin it on a
    tap. Here, not in each component, because four components draw them. A dotted underline
-   marks a text target (the type icon opts out in TableScreen). The ::before is the tap area: the
+   marks a text target (the type icon opts out in BrowseScreen). The ::before is the tap area: the
    target's own width, extended up and down by --pkdx-tap-pad-y (default 0); it draws nothing.
-   TableScreen sets it past any row height on its target cells and clips it with the cell's
+   BrowseScreen sets it past any row height on its target cells and clips it with the cell's
    overflow, so a tap anywhere in the row's height lands. */
 .pkdx-info-target {
 	position: relative;

@@ -7,7 +7,7 @@ import type { LeafCommand } from "../utils/leafHotkeys";
 // it to PokedexApp (which puts it in Svelte context), and runs a command
 // against the screen that is showing.
 //
-// Keyed by screen because TableScreen stays mounted under display:none on the
+// Keyed by screen because BrowseScreen stays mounted under display:none on the
 // detail screen: its FilterBar registers too, and running every handler
 // focused every mounted search box (probed live).
 //

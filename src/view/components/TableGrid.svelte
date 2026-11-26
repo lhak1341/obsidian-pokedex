@@ -8,7 +8,7 @@
 	} from "../../utils/tableColumns";
 	import { untrack } from "svelte";
 	import { tableEntries, tableRowMetrics, tableWindow } from "../../utils/tableWindow";
-	import { computeSideAnchoredPreviewPosition } from "../domPosition";
+	import { computeSideAnchoredPreviewPosition, getScreenRoot } from "../domPosition";
 	import { getScroller, watchLayout, watchViewport } from "../viewportWatch";
 	import type { FavoriteMenu } from "../favoriteMenu";
 	import { createInfoPopover, type InfoTargetProps } from "../infoPopover.svelte";
@@ -21,14 +21,13 @@
 	// The table (CONTEXT.md, "Table window"): the browse screen's rows drawn as
 	// a table, Card view's sibling layout. It owns its drawing, nothing else:
 	// rows (already filtered, sorted and Active Gen scoped), the table's Fields
-	// selection, the sort and favourites all come from TableScreen, the browse
+	// selection, the sort and favourites all come from BrowseScreen, the browse
 	// screen's owner, so a switch to or from Card view keeps them. Headers sort
 	// through onSort; a row opens the detail screen (onSelect) and favourites
-	// through TableScreen's favourites menu.
+	// through BrowseScreen's favourites menu.
 	//
-	// The sprite preview and the type popover position against .table-screen,
-	// TableScreen's root (position: relative), found with closest() from the
-	// hovered element. So this component draws no wrapper of its own around
+	// The sprite preview and the type popover position against BrowseScreen's
+	// root (position: relative), which it provides (getScreenRoot). So this component draws no wrapper of its own around
 	// them, and nothing it draws above them may be positioned: that element
 	// would become their containing block, and .table-wrap's overflow: auto
 	// clips a preview that pokes out of a short table (see .sprite-preview).
@@ -48,7 +47,7 @@
 		onSort: (column: SortColumn) => void;
 		onSelect: (id: number) => void;
 		favoriteMenu: FavoriteMenu;
-		// TableScreen's held-item Info popover, shared with Card view's tap
+		// BrowseScreen's held-item Info popover, shared with Card view's tap
 		// panel so both show the same box (rarity included).
 		heldItemTarget: (item: HeldItemForGen) => InfoTargetProps;
 		// What this table measured before a switch to Card view unmounted it
@@ -63,9 +62,10 @@
 	// shows up in a screenshot, and reading `.title` alone passes even on an
 	// invisible/clipped element) and was reported not actually appearing on
 	// hover in the table. This custom popover is a guaranteed-visible
-	// fallback, same mechanism as TableScreen's held-item tooltip — only wired
+	// fallback, same mechanism as BrowseScreen's held-item tooltip — only wired
 	// up in icon mode, since text mode already shows the type name directly.
-	const typePopover = createInfoPopover(".table-screen");
+	const screenRootOf = getScreenRoot();
+	const typePopover = createInfoPopover();
 
 	let hoveredSpriteId = $state<number | null>(null);
 	let previewPos = $state<{ top: number; left: number } | null>(null);
@@ -78,7 +78,7 @@
 	function showPreview(id: number, target: EventTarget | null) {
 		hoveredSpriteId = id;
 		const targetEl = target as HTMLElement;
-		// Positioned relative to .table-screen (position: absolute, not
+		// Positioned relative to BrowseScreen's root (position: absolute, not
 		// fixed — see its CSS comment for why), not the raw viewport rect.
 		// A row near the top or bottom edge of the visible viewport would
 		// otherwise center the preview off-screen (same class of bug
@@ -89,7 +89,7 @@
 		// of reusing that hook). See domPosition.ts's
 		// computeSideAnchoredPreviewPosition/utils/previewPosition.ts for the
 		// shared clamp math (also used by DetailScreen's portrait preview).
-		previewPos = computeSideAnchoredPreviewPosition(targetEl, ".table-screen", PREVIEW_HALF_HEIGHT);
+		previewPos = computeSideAnchoredPreviewPosition(targetEl, screenRootOf(), PREVIEW_HALF_HEIGHT);
 	}
 
 	function hidePreview() {
@@ -201,8 +201,9 @@
 	$effect(() => {
 		const el = bodyEl;
 		const scroller = scrollerOf();
-		if (!el || !scroller) return;
-		return watchViewport(el, scroller, el.closest(".table-screen"), (r) => {
+		const screen = screenRootOf();
+		if (!el || !scroller || !screen) return;
+		return watchViewport(el, scroller, screen, (r) => {
 			scrollTop = r.scrollTop;
 			viewportHeight = r.viewportHeight;
 		});
@@ -510,7 +511,7 @@ accessibility tree. -->
 		!important: Obsidian's own `body:not(.zoom-off) .view-content img {
 		max-width: 100% }` (its click-to-zoom feature) outranks a plain
 		two-class selector on specificity (0,2,2 vs 0,2,0).
-		position: absolute, relative to .table-screen (not the immediate
+		position: absolute, relative to BrowseScreen's root (not the immediate
 		.sprite-cell, and NOT position: fixed) — two separate bugs ruled
 		that out: (1) .table-wrap has `overflow: auto`, which clips any
 		descendant that pokes outside its box whenever the box is short
@@ -520,7 +521,7 @@ accessibility tree. -->
 		descendants instead of the viewport — so a fixed popover positioned
 		from a viewport-relative getBoundingClientRect() lands visibly off
 		(by however tall the tab bar is). Absolute positioning against a
-		container we control (.table-screen, computed at hover time —
+		container we control (BrowseScreen's root, read at hover time —
 		see showPreview) sidesteps both. */
 		width: 192px;
 		height: 192px;

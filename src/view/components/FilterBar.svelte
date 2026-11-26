@@ -14,10 +14,10 @@
 
 	// `narrow` (a Narrow pane, PokedexApp's width class) folds the bar into two
 	// rows: search and the favourites toggle, then Filters (n) with the caller's
-	// `controls` (TableScreen's Fields menu and layout toggle) at the right. Its
+	// `controls` (BrowseScreen's Fields menu and layout toggle) at the right. Its
 	// Filters button opens an inline panel of collapsible sections instead of
 	// the rail's anchored flyouts. Wide panes draw today's rail and ignore
-	// `controls` (TableScreen draws them in its own toolbar there).
+	// `controls` (BrowseScreen draws them in its own toolbar there).
 	let { filters = $bindable(), abilityOptions, useTypeIcons, rows, narrow = false, controls, onQuickSelect }: {
 		filters: PokedexFilters;
 		abilityOptions: string[];
@@ -111,7 +111,7 @@
 		inputRef: () => searchInputEl,
 		screen: "table",
 		// onQuickSelect switches to the detail screen, so unlike
-		// QuickSearch's onSelect this doesn't need to blur: the table screen
+		// QuickSearch's onSelect this doesn't need to blur: the browse screen
 		// stays mounted but goes display:none, which drops the input's focus.
 		onSelect: (id) => onQuickSelect(id),
 		// Unlike QuickSearch's own Escape, this doesn't clear filters.search
@@ -560,7 +560,7 @@
 	}
 
 	/* Narrow pane: two rows, then the inline panel. Row 1 is the search box
-	alone at full width; row 2 holds Filters (n) at the left and TableScreen's
+	alone at full width; row 2 holds Filters (n) at the left and BrowseScreen's
 	controls at the right. */
 	.filter-bar.narrow {
 		flex-direction: column;
@@ -571,7 +571,7 @@
 		flex: none;
 		min-width: 0;
 	}
-	/* Positioned: TableScreen's Fields list spans this row (see .fields-menu.end). */
+	/* Positioned: BrowseScreen's Fields list spans this row (see .fields-menu.end). */
 	.filter-toolbar-row {
 		position: relative;
 		display: flex;
@@ -584,7 +584,7 @@
 		gap: var(--lk-space-2);
 		margin-left: auto;
 	}
-	/* Drawn like the Fields menu's summary beside it (TableScreen), so row 2
+	/* Drawn like the Fields menu's summary beside it (BrowseScreen), so row 2
 	reads as one set of controls. button.filters-toggle restates what
 	Obsidian's button rules set (root CLAUDE.md, Styles). */
 	button.filters-toggle {

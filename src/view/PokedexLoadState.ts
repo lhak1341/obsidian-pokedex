@@ -27,7 +27,7 @@ export interface RetryOutcome {
 }
 
 // How often a progress tick or a streamed row may reach the view. Each update
-// re-runs TableScreen's filter and sort and re-checks every drawn row (38 ms
+// re-runs BrowseScreen's filter and sort and re-checks every drawn row (38 ms
 // apiece with 1,082 rows, measured live), and a load reports one progress
 // tick per id plus one callback per row: about 2,100 updates, which took a
 // cache-served load to 24 s through the UI against 1.85 s with the rows
@@ -94,7 +94,7 @@ export class PokedexLoadState {
 
 	// `rows` is the class's own array, safe to share because it is only ever
 	// replaced: the view sees a new array exactly when the rows changed
-	// (TableScreen's deriveds re-run on identity), and a progress-only update
+	// (BrowseScreen's deriveds re-run on identity), and a progress-only update
 	// leaves them alone.
 	snapshot(): LoadSnapshot {
 		return {

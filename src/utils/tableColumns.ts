@@ -132,7 +132,9 @@ export function createRowTextWidths(measure: (text: string) => number): RowTextW
 // The rows the Table window draws wherever it is (ADR-0019): each
 // content-sized column's widest, so the auto table sizes every column as it
 // would from all rows. No., sprite and the type icons are fixed widths; every
-// other column scores the text its cell draws in TableGrid. Name on a Narrow
+// other column scores its cell's plain text in the table's font, though the
+// cell draws it bold, capitalised or in padded badges and chips: the order
+// still matches what is drawn (ADR-0024). Name on a Narrow
 // pane draws the base name with the form on a second line that stays out of
 // the cell's min-content, so only the base name counts. EV ranks by chip
 // count first: each chip adds its padding and dot, which the text leaves out.
@@ -166,11 +168,12 @@ export function tableWidestRows<T extends ActiveGenRow>(rows: readonly T[], { fr
 	return widestRows(rows, scores);
 }
 
-// What the table measured, kept by its owner (TableScreen) across layout
+// What the table measured, kept by its owner (BrowseScreen) across layout
 // switches: TableGrid mounts afresh on every switch from Card view, and
 // starting from nothing cost the switch a re-measure of every row's text
 // (94-129 ms against 53-86) and spacers half a pixel off until the last row
 // was drawn again. TableGrid reads and writes it; the owner never looks inside.
+// Keeping both layouts mounted instead was measured and rejected (ADR-0025).
 export interface TableMemory {
 	rowHeight: number | null;
 	leadExtra: number;

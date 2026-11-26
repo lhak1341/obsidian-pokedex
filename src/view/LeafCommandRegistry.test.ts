@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { LeafCommandRegistry } from "./LeafCommandRegistry";
 
 describe("LeafCommandRegistry", () => {
-	// TableScreen stays mounted under the detail screen, so FilterBar's search
+	// BrowseScreen stays mounted under the detail screen, so FilterBar's search
 	// is registered there too; Mod+Shift+L once focused every mounted box.
 	it("runs only the showing screen's handler", () => {
 		const registry = new LeafCommandRegistry();

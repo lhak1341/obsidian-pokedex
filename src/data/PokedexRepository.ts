@@ -42,7 +42,7 @@ import {
 import { PokeApiClient } from "./PokeApiClient";
 import { REGIONAL_FORMS, type Generation } from "./constants";
 import type {
-	EvolutionChainVisual,
+	ChainMember,
 	EvolutionNode,
 	GigantamaxFormDetail,
 	MegaFormDetail,
@@ -84,7 +84,7 @@ export interface EntryExtrasOptions {
 	images: EntryImages;
 	isCancelled?: () => boolean;
 	onExtras?: (extras: EntryExtras) => void;
-	onChainMembers?: (members: Record<number, EvolutionChainVisual>) => void;
+	onChainMembers?: (members: Record<number, ChainMember>) => void;
 }
 
 export interface EntryLoadOptions extends EntryExtrasOptions {
@@ -1129,9 +1129,9 @@ export class PokedexRepository {
 	// wasted work. Each id resolves independently to a null sprite / empty
 	// types on failure rather than rejecting the whole set — a dropped
 	// connection on one partner shouldn't blank out the others.
-	private async entryChainMembers(ids: number[], images: EntryImages): Promise<Record<number, EvolutionChainVisual>> {
+	private async entryChainMembers(ids: number[], images: EntryImages): Promise<Record<number, ChainMember>> {
 		const pairs = await Promise.all(
-			ids.map(async (id): Promise<readonly [number, EvolutionChainVisual]> => {
+			ids.map(async (id): Promise<readonly [number, ChainMember]> => {
 				try {
 					const pokemon = await this.getOrFetchPokemon(id);
 					const sprite =

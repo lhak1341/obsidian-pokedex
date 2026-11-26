@@ -10,7 +10,7 @@
 	import EvChips from "./EvChips.svelte";
 	import FavoriteToggle from "./FavoriteToggle.svelte";
 	import { DetailLoadState, type DetailEntrySnapshot } from "../DetailLoadState";
-	import { computeSideAnchoredPreviewPosition } from "../domPosition";
+	import { computeSideAnchoredPreviewPosition, provideScreenRoot } from "../domPosition";
 	import { LEAF_COMMANDS_CONTEXT, type LeafCommandRegistry } from "../LeafCommandRegistry";
 	import { contentScale } from "../imageBounds";
 	import EvolutionTree from "./EvolutionTree.svelte";
@@ -77,16 +77,14 @@
 	const loadState = $derived(new DetailLoadState(repository));
 	onDestroy(() => loadState.cancel());
 
-	// Keyed by dex id, filled in once the evolution chain arrives. Every id
-	// in a chain was already fetched for the table load that got the user
-	// here, so this resolves from mem cache — not a second round of real
-	// network requests.
+	// chainMembers: the Chain members (CONTEXT.md), keyed by id, filled in
+	// after the evolution chain arrives. A member outside the browsed range
+	// is fetched then, so this can take a real request.
 	let entryLoad = $state<DetailEntrySnapshot>({
 		entry: null,
 		loading: true,
 		error: null,
-		evolutionSprites: {},
-		evolutionTypes: {},
+		chainMembers: {},
 	});
 	function mirror() {
 		entryLoad = loadState.snapshot();
@@ -186,10 +184,15 @@
 	// the ability/move popovers' above/below flip — this is a magnified copy
 	// of the same image, not a text panel.
 	let portraitPreviewPos = $state<{ top: number; left: number } | null>(null);
+	// This screen's root: the positioning root its Info popovers (abilities,
+	// held items, moves) and the portrait preview are placed against
+	// (getScreenRoot, domPosition.ts).
+	let rootEl = $state<HTMLDivElement | undefined>();
+	provideScreenRoot(() => rootEl);
 	const PORTRAIT_PREVIEW_HALF_HEIGHT = 160;
 	function showPortraitPreview(target: EventTarget | null) {
 		const targetEl = target as HTMLElement;
-		portraitPreviewPos = computeSideAnchoredPreviewPosition(targetEl, ".detail-screen", PORTRAIT_PREVIEW_HALF_HEIGHT);
+		portraitPreviewPos = computeSideAnchoredPreviewPosition(targetEl, rootEl, PORTRAIT_PREVIEW_HALF_HEIGHT);
 	}
 	function hidePortraitPreview() {
 		portraitPreviewPos = null;
@@ -296,7 +299,7 @@
 	}));
 </script>
 
-<div class="detail-screen">
+<div class="detail-screen" bind:this={rootEl}>
 	<!-- Back-button and the grid both live inside .page so they share the
 	same centered max-width box — the grid alone previously got margin:auto
 	while this button didn't, so its left edge drifted away from the
@@ -425,8 +428,7 @@
 						<EvolutionTree
 							chain={entry.evolutionChain}
 							{onSelect}
-							sprites={entryLoad.evolutionSprites}
-							types={entryLoad.evolutionTypes}
+							chainMembers={entryLoad.chainMembers}
 							{useTypeIcons}
 							{compact}
 						/>
@@ -902,7 +904,7 @@
 	}
 
 	/* Hover-to-enlarge, same shape as TableGrid's .sprite-preview: fixed
-	size, side-anchored with vertical clamp via relativeRect(".detail-screen"),
+	size, side-anchored with vertical clamp via relativeRect against this screen's root,
 	position: absolute (not fixed — .workspace-leaf's `contain: strict` would
 	otherwise make it the fixed-positioning containing block instead of the
 	viewport, landing the popover off by the tab-bar's height). !important
