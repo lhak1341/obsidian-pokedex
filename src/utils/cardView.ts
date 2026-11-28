@@ -2,7 +2,7 @@ import { STAT_COLUMNS } from "../data/constants";
 import type { PokedexTableRow, StatBlock } from "../data/types";
 import type { ActiveGenRow } from "./activeGenScope";
 import type { WidthClass } from "./browseLayout";
-import { type Field, type FieldKey, FIELDS, isStatField } from "./fields";
+import { type Field, type FieldKey, FIELDS, isStatField, sortColumnOf } from "./fields";
 import { formatHeightValue, formatWeightValue } from "./pokemonDisplay";
 import type { SortColumn, SortState } from "./sortPokemon";
 
@@ -148,7 +148,10 @@ export interface SortChip {
 export const SORT_CHIPS: readonly SortChip[] = [
 	{ column: "id", label: "No." },
 	{ column: "name", label: "Name" },
-	...FIELDS.flatMap((f) => (f.sortKey ? [{ column: f.sortKey, label: f.label }] : [])),
+	...FIELDS.flatMap((f) => {
+		const column = sortColumnOf(f);
+		return column ? [{ column, label: f.label }] : [];
+	}),
 ];
 
 // The grid's columns: as many tiles of at least the Card size's minimum width

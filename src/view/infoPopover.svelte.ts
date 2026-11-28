@@ -1,26 +1,16 @@
 import { CLOSED, stepPin, type PinEvent, type PinState } from "../utils/infoPopoverPin";
-import { getScreenRoot, relativeRect, type ScreenRootGetter, visibleBand } from "./domPosition";
+import { infoPopoverPosition, type InfoPopoverPosition } from "../utils/overlayPosition";
+import { getScreenRoot, measureOverlay, type ScreenRootGetter } from "./domPosition";
 import { getScroller, type ScrollerGetter } from "./viewportWatch";
-
-// Below this much room (px) between the target's bottom edge and the
-// bottom of the visible band (the scroller, visibleBand), there isn't enough space left to render a popover
-// underneath it without it running off-screen (or under Obsidian's status
-// bar) — flip it above the target instead. A fixed threshold rather than the
-// popover's actual rendered height, since that's only known post-render and
-// this decision has to be made before anything's on the DOM yet.
-const MIN_SPACE_BELOW = 120;
-
-type Placement = "below" | "above";
-type Pos = { top: number; left: number; placement: Placement };
 
 // The Info popover binding, shared by AbilitiesPanel, HeldItemsPanel,
 // MoveBrowser, BrowseScreen and TableGrid. The rules (hover previews for a mouse only, a
 // tap pins, a tap elsewhere closes without being swallowed, …) live in
 // utils/infoPopoverPin.ts and are tested there; this file only turns DOM
 // events into its PinEvents, reading pointerType per event, and positions the
-// box (relative to its screen's root, getScreenRoot — see relativeRect for why
-// position: fixed doesn't work here: Obsidian's .workspace-leaf has
-// contain: strict).
+// box (relative to its screen's root, getScreenRoot; the below/above flip and
+// why the box is not position: fixed are utils/overlayPosition.ts's
+// infoPopoverPosition, tested there).
 //
 // One pin state for the whole module, not one per createInfoPopover call:
 // the table's item and type popovers, and the detail screen's three panels,
@@ -31,7 +21,7 @@ type Pos = { top: number; left: number; placement: Placement };
 let pin = $state.raw<PinState<HTMLElement>>(CLOSED);
 let openOwner = $state.raw<object | null>(null);
 let openName = $state.raw<string | null>(null);
-let openPos = $state.raw<Pos | null>(null);
+let openPos = $state.raw<InfoPopoverPosition | null>(null);
 let detachDocListeners: (() => void) | null = null;
 
 // The attributes a target spreads onto its element (`{...popover.target(name)}`).
@@ -53,25 +43,6 @@ interface OpenInfo {
 	onOpen?: () => void;
 }
 
-function place(targetEl: HTMLElement, root: Element | undefined, scroller: Element | undefined, offsetY: number): Pos {
-	// Viewport-relative (not relativeRect's container-relative numbers) —
-	// this decision is about actual on-screen room, independent of wherever
-	// the anchor's own box happens to sit. The room ends at the scroller's
-	// bottom, which clips the box (a leaf in the top half of a split), within
-	// the target's own window (a pop-out's height is not the main window's).
-	const viewportRect = targetEl.getBoundingClientRect();
-	const room = visibleBand(targetEl, scroller).bottom - viewportRect.bottom;
-	const placement: Placement = room < MIN_SPACE_BELOW ? "above" : "below";
-	const r = relativeRect(targetEl, root);
-	return placement === "below"
-		? { top: r.bottom + offsetY, left: r.left, placement }
-		// Anchored to the target's own top edge, not a computed
-		// "top - popover height" — the popover's height isn't known here
-		// (only after it renders), so it grows upward from this point via
-		// `transform: translateY(-100%)` in InfoPopoverBox's CSS instead.
-		: { top: r.top - offsetY, left: r.left, placement };
-}
-
 // Feeds one event to the pin state and applies the result. Returns whether
 // the popover consumed the event (the caller then stops it).
 function dispatch(event: PinEvent<HTMLElement>, info?: OpenInfo): boolean {
@@ -91,7 +62,7 @@ function dispatch(event: PinEvent<HTMLElement>, info?: OpenInfo): boolean {
 		if (open && info) {
 			openOwner = info.owner;
 			openName = info.name;
-			openPos = place(open, info.root(), info.scroller(), info.offsetY);
+			openPos = infoPopoverPosition(measureOverlay(open, info.root(), info.scroller()), info.offsetY);
 			info.onOpen?.();
 		} else {
 			openOwner = null;

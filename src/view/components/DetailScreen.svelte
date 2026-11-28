@@ -10,7 +10,8 @@
 	import EvChips from "./EvChips.svelte";
 	import FavoriteToggle from "./FavoriteToggle.svelte";
 	import { DetailLoadState, type DetailEntrySnapshot } from "../DetailLoadState";
-	import { computeSideAnchoredPreviewPosition, provideScreenRoot } from "../domPosition";
+	import { artPreviewPosition } from "../../utils/overlayPosition";
+	import { measureOverlay, provideScreenRoot } from "../domPosition";
 	import { LEAF_COMMANDS_CONTEXT, type LeafCommandRegistry } from "../LeafCommandRegistry";
 	import { contentScale } from "../imageBounds";
 	import { getScroller } from "../viewportWatch";
@@ -181,7 +182,7 @@
 
 	// Hover-to-enlarge for the portrait, mirroring TableGrid's
 	// sprite-preview (same side-anchored-with-vertical-clamp shape, shared
-	// via domPosition.ts's computeSideAnchoredPreviewPosition) rather than
+	// via utils/overlayPosition.ts's artPreviewPosition) rather than
 	// the ability/move popovers' above/below flip — this is a magnified copy
 	// of the same image, not a text panel.
 	let portraitPreviewPos = $state<{ top: number; left: number } | null>(null);
@@ -196,7 +197,7 @@
 	const scrollerOf = getScroller();
 	function showPortraitPreview(target: EventTarget | null) {
 		const targetEl = target as HTMLElement;
-		portraitPreviewPos = computeSideAnchoredPreviewPosition(targetEl, rootEl, scrollerOf(), PORTRAIT_PREVIEW_HALF_HEIGHT);
+		portraitPreviewPos = artPreviewPosition(measureOverlay(targetEl, rootEl, scrollerOf()), PORTRAIT_PREVIEW_HALF_HEIGHT);
 	}
 	function hidePortraitPreview() {
 		portraitPreviewPos = null;
@@ -908,7 +909,7 @@
 	}
 
 	/* Hover-to-enlarge, same shape as TableGrid's .sprite-preview: fixed
-	size, side-anchored with vertical clamp via relativeRect against this screen's root,
+	size, side-anchored with vertical clamp (artPreviewPosition) against this screen's root,
 	position: absolute (not fixed — .workspace-leaf's `contain: strict` would
 	otherwise make it the fixed-positioning containing block instead of the
 	viewport, landing the popover off by the tab-bar's height). !important

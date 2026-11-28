@@ -1,16 +1,9 @@
-import type { StatBlock } from "../data/types";
 import type { ActiveGenRow } from "./activeGenScope";
-import { totalStat } from "./stats";
+import { sortByOf, type SortableFieldKey } from "./fields";
 
-export type SortColumn =
-	| "id"
-	| "name"
-	| "total"
-	| "catchRate"
-	| "hatchCounter"
-	| "height"
-	| "weight"
-	| keyof StatBlock;
+// No. and Name (the table's pinned columns, not Fields) and every Field with a
+// `sortBy` (fields.ts).
+export type SortColumn = "id" | "name" | SortableFieldKey;
 export type SortDirection = "asc" | "desc";
 
 export interface SortState {
@@ -27,16 +20,9 @@ export function nextSort(sort: SortState, column: SortColumn): SortState {
 }
 
 function valueOf(row: ActiveGenRow, column: SortColumn): number | string {
-	switch (column) {
-		case "id": return row.dexNumber;
-		case "name": return row.name;
-		case "total": return totalStat(row.stats);
-		case "catchRate": return row.catchRate;
-		case "hatchCounter": return row.hatchCounter;
-		case "height": return row.height;
-		case "weight": return row.weight;
-		default: return row.stats[column];
-	}
+	if (column === "id") return row.dexNumber;
+	if (column === "name") return row.name;
+	return sortByOf(column)(row);
 }
 
 export function sortPokemon(

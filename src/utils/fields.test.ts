@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { PokedexTableRow } from "../data/types";
 import {
 	DEFAULT_CARD_FIELDS, DEFAULT_VISIBLE_FIELDS, FIELDS, fieldsShown, formatEvYield, isStatField, isTileField,
-	sortAfterFieldsChange,
+	sortAfterFieldsChange, sortColumnOf,
 } from "./fields";
 import { makeRow } from "../data/__fixtures__/rows";
 import { describeEncounters } from "./encounters";
@@ -171,5 +171,50 @@ describe("isStatField", () => {
 		expect(FIELDS.filter(isStatField).map((f) => f.key)).toEqual([
 			"hp", "attack", "defense", "specialAttack", "specialDefense", "speed",
 		]);
+	});
+});
+
+describe("sortBy", () => {
+	// Three rows whose every sortable value differs, and whose orders differ
+	// between Fields (Height and Weight run opposite ways), so a Field sorting
+	// by another Field's value reorders them.
+	const rows = [
+		makeRow({ id: 1, stats: { hp: 10, attack: 90, defense: 50, specialAttack: 20, specialDefense: 70, speed: 30 },
+			catchRate: 45, hatchCounter: 20, height: 3, weight: 905 }),
+		makeRow({ id: 2, stats: { hp: 50, attack: 10, defense: 90, specialAttack: 70, specialDefense: 20, speed: 60 },
+			catchRate: 200, hatchCounter: 5, height: 17, weight: 10 }),
+		makeRow({ id: 3, stats: { hp: 90, attack: 50, defense: 10, specialAttack: 40, specialDefense: 90, speed: 5 },
+			catchRate: 3, hatchCounter: 40, height: 8, weight: 300 }),
+	].map((r) => scopeToActiveGen(r, 9));
+	const orderBy = (value: (r: (typeof rows)[number]) => number) => [...rows].sort((a, b) => value(a) - value(b)).map((r) => r.id);
+
+	// The number a sortable Field's cell reads ("1.7 m" -> 1.7) orders the
+	// rows as its sortBy does: the list is sorted by what the column shows.
+	it("orders rows as each sortable Field's rendered value reads", () => {
+		const sortable = FIELDS.filter((f) => f.sortBy);
+		expect(sortable.map((f) => f.key)).toEqual([
+			"hp", "attack", "defense", "specialAttack", "specialDefense", "speed", "total", "catchRate", "hatchCounter", "height", "weight",
+		]);
+		for (const field of sortable) {
+			if (field.custom || !field.sortBy) throw new Error(`Field ${field.key} has no text sortBy`);
+			const { render, sortBy } = field;
+			expect(orderBy(sortBy), field.key).toEqual(orderBy((r) => parseFloat(render(r))));
+		}
+	});
+});
+
+describe("sortColumnOf", () => {
+	it("is a sortable Field's own key", () => {
+		for (const key of ["speed", "total", "catchRate", "height"]) {
+			expect(sortColumnOf(textField(key))).toBe(key);
+		}
+	});
+
+	it("is null for the Fields that do not sort", () => {
+		for (const key of ["ev", "heldItems", "encounterLocation"]) {
+			const field = FIELDS.find((f) => f.key === key);
+			if (!field) throw new Error(`no Field ${key}`);
+			expect(sortColumnOf(field), key).toBeNull();
+		}
 	});
 });

@@ -89,6 +89,10 @@ Not the same as Generation fallback: that rule picks a different generation's ta
 A row scoped to the Active Gen (`ActiveGenRow`, or `ActiveGen<T>` for a `PokedexEntry`): `stats` overlaid, and `heldItems` / `encounterLocations` in place of the `*AllGens` fields, holding the Active Gen's entries only. It has no `*AllGens` field, so a layout, Field, filter or sort that reads unscoped data fails typecheck. The browse screen scopes its rows once (`scopedRows` in `BrowseScreen.svelte`) and the table, Card view, Fields, Quirks, Traits, filter and sort all take Active Gen rows; the detail page scopes its entry once (`scopedEntry`). Memoized per source row, so the same row at the same Active Gen is the same object across streamed updates.
 
 
+## Filter group
+
+One of the eight groups the browse screen's FilterBar draws as a rail segment (or, on a Narrow pane, a section of the inline Filters panel): Type, Gen, Ability, Stats, Rarity, EV, Traits, Quirks, in `FILTER_GROUP_KEYS` order (`src/utils/filterGroups.ts`). Search and the favourites toggle are filters but not groups. Each group has a predicate (`GROUP_MATCHES`, `filterPokemon.ts`), a count (its badge; Stats has none) and its chrome (`GROUP_CHROME` in `FilterBar.svelte`), each a `Record` over the group's key, so a new group fails typecheck until it has all three (ADR-0027). Filters (n) counts the active groups.
+
 ## Quirk and Trait
 
 The two checkbox groups in FilterBar. Each option is one entry in `src/utils/quirksAndTraits.ts` (`QUIRKS`, `TRAITS`) carrying its key, label, icon and `matches(row)` predicate, so an option cannot exist without its predicate. `filterPokemon` only decides how a selection combines: **Quirks** are OR'd (a personal shortlist that can overlap on one Pokemon: "pickup OR holds an item"), **Traits** are AND'd (independent yes/no properties of the Pokemon: "Baby AND Fossil"). Each takes an Active Gen row, so `held-item` sees only the Active Gen's items. A selected key with no entry matches nothing. `quirksAndTraits.test.ts` fails if an entry has no fixture row that matches it.
@@ -155,3 +159,7 @@ The small box that explains a name: an ability, held item, move, or a type icon'
 ## Art preview
 
 The enlarged image of a Pokemon: the table sprite's preview and the detail portrait's. With a mouse it appears on hover. On touch, the portrait's appears on press-and-hold, and the table sprite has none (tapping the row opens the detail screen). Different from an Info popover, which explains a name rather than showing art.
+
+## Visible band
+
+The on-screen band an Info popover or Art preview may use: the scroller's rect, within its own window. A popover with too little room below the target inside it opens above; an Art preview's centre is clamped into it. It ends at the scroller's edge, not the window's: a leaf in the top half of a split has a band that stops mid-window. Read by `visibleBand` (`view/domPosition.ts`); the rules are in `utils/overlayPosition.ts`.

@@ -50,7 +50,6 @@ interface FieldBase {
 	// the table width. Stats have none: they keep their short text labels.
 	// Which section a Field sits in is isStatField, not whether it has an icon.
 	icon?: string;
-	sortKey?: SortColumn;
 }
 
 // A plain-text Field: both layouts' generic cell is `render(row)`, with
@@ -86,18 +85,32 @@ export type Field =
 			// the muted "None" its held item chip uses; the table keeps
 			// `render`'s "-", as every empty table cell shows.
 			empty?: (row: ActiveGenRow) => boolean;
+			// The Field sorts the list (a table header, a Card view sort chip)
+			// by this number: the raw value `render` formats (decimetres, not
+			// "1.7 m"). Only a text Field sorts. SortColumn is derived from the
+			// Fields that have one (SortableFieldKey), so a new sortable Field is
+			// its entry here plus tileSortValue's case (ADR-0023).
+			sortBy?: (row: ActiveGenRow) => number;
 			custom?: undefined;
 	  })
-	| (FieldBase & { custom: CustomCell });
+	| (FieldBase & { custom: CustomCell; sortBy?: undefined });
 
-export const FIELDS: Field[] = [
+// Written with `satisfies` rather than as Field[], so SortableFieldKey can
+// read which entries have a `sortBy`; every reader takes FIELDS, typed Field.
+const FIELD_LIST = [
 	...STAT_COLUMNS.map((col) => ({
 		key: col.key,
 		label: col.label,
-		sortKey: col.key,
+		sortBy: (row: ActiveGenRow) => row.stats[col.key],
 		render: (row: ActiveGenRow) => String(row.stats[col.key]),
 	})),
-	{ key: "total", label: "Total", icon: "sigma", sortKey: "total", render: (row) => String(totalStat(row.stats)) },
+	{
+		key: "total",
+		label: "Total",
+		icon: "sigma",
+		sortBy: (row) => totalStat(row.stats),
+		render: (row) => String(totalStat(row.stats)),
+	},
 	{ key: "ev", label: "EV yield", icon: "dumbbell", custom: "ev" },
 	{ key: "heldItems", label: "Held item", icon: "gift", custom: "heldItems" },
 	{
@@ -113,17 +126,45 @@ export const FIELDS: Field[] = [
 		title: (row) => describeEncounters(row.encounterLocations).tooltip,
 		empty: (row) => describeEncounters(row.encounterLocations).isEmpty,
 	},
-	{ key: "catchRate", label: "Catch rate", icon: "target", sortKey: "catchRate", render: (row) => String(row.catchRate) },
+	{
+		key: "catchRate",
+		label: "Catch rate",
+		icon: "target",
+		sortBy: (row) => row.catchRate,
+		render: (row) => String(row.catchRate),
+	},
 	{
 		key: "hatchCounter",
 		label: "Hatch counter",
 		icon: "egg",
-		sortKey: "hatchCounter",
+		sortBy: (row) => row.hatchCounter,
 		render: (row) => String(row.hatchCounter),
 	},
-	{ key: "height", label: "Height", icon: "ruler", sortKey: "height", render: (row) => formatHeight(row.height) },
-	{ key: "weight", label: "Weight", icon: "weight", sortKey: "weight", render: (row) => formatWeight(row.weight) },
-];
+	{ key: "height", label: "Height", icon: "ruler", sortBy: (row) => row.height, render: (row) => formatHeight(row.height) },
+	{ key: "weight", label: "Weight", icon: "weight", sortBy: (row) => row.weight, render: (row) => formatWeight(row.weight) },
+] satisfies Field[];
+
+export const FIELDS: readonly Field[] = FIELD_LIST;
+
+// The keys of the Fields that sort: SortColumn (sortPokemon.ts) is these plus
+// No. and Name, which are not Fields.
+export type SortableFieldKey = Extract<(typeof FIELD_LIST)[number], { sortBy: (row: ActiveGenRow) => number }>["key"];
+
+// The column a Field sorts the list by, or null for one that does not sort
+// (EV yield, Held item, Capture). A Field sorts by its own key.
+export function sortColumnOf(field: Field): SortColumn | null {
+	return field.sortBy ? (field.key as SortableFieldKey) : null;
+}
+
+const SORT_BY = new Map(FIELDS.flatMap((f) => (f.sortBy ? [[f.key, f.sortBy] as const] : [])));
+
+// A sortable Field's `sortBy`. SortableFieldKey is derived from the entries
+// that have one, so a miss means two Fields share a key.
+export function sortByOf(column: SortableFieldKey): (row: ActiveGenRow) => number {
+	const sortBy = SORT_BY.get(column);
+	if (!sortBy) throw new Error(`no Field sorts by "${column}"`);
+	return sortBy;
+}
 
 // One of the six base stats: the Fields menu's Stats section, and in Card view
 // the tile's stat strip and the panel's stat columns. Total is not a stat
@@ -164,6 +205,6 @@ export function fieldsShown(layout: BrowseLayout, visibleFields: ReadonlySet<str
 // owning the current sort is no longer shown (fieldsShown), the sort resets to
 // No. ascending. No. and Name are not Fields, so they always stay.
 export function sortAfterFieldsChange(sort: SortState, visibleFields: ReadonlySet<string>): SortState {
-	const owner = FIELDS.find((f) => f.sortKey === sort.column);
+	const owner = FIELDS.find((f) => sortColumnOf(f) === sort.column);
 	return owner && !visibleFields.has(owner.key) ? { column: "id", direction: "asc" } : sort;
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { EMPTY_FILTERS, type PokedexFilters } from "./filterPokemon";
-import { activeFilterGroups, filterGroupCount } from "./filterGroups";
+import { activeFilterGroups, FILTER_GROUP_KEYS, filterGroupCount } from "./filterGroups";
+import { sampleFilters } from "./__fixtures__/filterGroupSamples";
 
 function filters(over: Partial<PokedexFilters>): PokedexFilters {
 	return { ...EMPTY_FILTERS, statRanges: {}, ...over };
@@ -38,5 +39,16 @@ describe("activeFilterGroups", () => {
 
 	it("does not count search or the favourites toggle", () => {
 		expect(activeFilterGroups(filters({ search: "char", favoritesOnly: true }))).toEqual([]);
+	});
+});
+
+describe("filter group samples", () => {
+	// Each group's count and active rule see its own selection: a count left
+	// at 0 (or wired to another group's field) drops the group from
+	// Filters (n) and from the panel's open sections.
+	it("each group's selection makes that group, and only it, active", () => {
+		for (const key of FILTER_GROUP_KEYS) {
+			expect(activeFilterGroups(sampleFilters(key)), key).toEqual([key]);
+		}
 	});
 });

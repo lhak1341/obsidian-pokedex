@@ -11,18 +11,25 @@ export const FILTER_GROUP_KEYS = ["type", "gen", "ability", "stats", "rarity", "
 export type FilterGroupKey = (typeof FILTER_GROUP_KEYS)[number];
 
 // How many selections a chip group holds, drawn as its badge on a rail segment
-// or panel section. Stats has no count (it would count stats, not chips).
+// or panel section, and what makes it active (below). Stats has no count (it
+// would count stats, not chips): its entry says so, rather than a missing
+// one. A Record, as filterPokemon.ts's GROUP_MATCHES and FilterBar's
+// GROUP_CHROME are, so a new group key fails typecheck until it has a count
+// (a switch here returned undefined for a missing case, which typecheck
+// allows, since the return type includes it).
+const GROUP_COUNTS: Record<FilterGroupKey, (filters: PokedexFilters) => number | undefined> = {
+	type: (f) => f.types.length,
+	gen: (f) => f.generations.length,
+	ability: (f) => f.abilities.length,
+	stats: () => undefined,
+	rarity: (f) => f.rarities.length,
+	ev: (f) => f.evStats.length,
+	traits: (f) => f.traits.length,
+	quirks: (f) => f.quirks.length,
+};
+
 export function filterGroupCount(filters: PokedexFilters, key: FilterGroupKey): number | undefined {
-	switch (key) {
-		case "type": return filters.types.length;
-		case "gen": return filters.generations.length;
-		case "ability": return filters.abilities.length;
-		case "stats": return undefined;
-		case "rarity": return filters.rarities.length;
-		case "ev": return filters.evStats.length;
-		case "traits": return filters.traits.length;
-		case "quirks": return filters.quirks.length;
-	}
+	return GROUP_COUNTS[key](filters);
 }
 
 function isGroupActive(filters: PokedexFilters, key: FilterGroupKey): boolean {

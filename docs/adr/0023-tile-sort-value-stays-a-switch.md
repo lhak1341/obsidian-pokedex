@@ -13,3 +13,5 @@ On inspection:
 **Rejected:** `compact` on `Field` (above).
 
 **Reopen when** `SortColumn` is derived from `FIELDS[].sortKey` (then every per-column switch could become a lookup on the Field, and that is the decision to make, not this one), or the tile needs a value that is not `render` less a unit.
+
+**Addendum (2026-11-28, architecture review candidate 3):** the first reopen condition is now met. A text Field that sorts carries `sortBy` (the raw number its `render` formats) in `fields.ts`, `sortKey` is gone, and `SortColumn` is `"id" | "name" | SortableFieldKey`, derived from the Fields that have a `sortBy`; `sortPokemon`'s `valueOf` is a lookup on it. `tileSortValue` kept its switch anyway: the unit drop is still a tile rule (the second bullet above), and the switch over the derived `SortColumn` is what makes typecheck demand a tile case for each new sortable Field ("lacks ending return statement"). A new sortable Field is now its `FIELDS` entry plus that case. Folding the switch into a lookup on the Field is the `compact` proposal again, rejected above; reopen only on the second condition.

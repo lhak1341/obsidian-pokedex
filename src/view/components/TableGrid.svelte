@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { ActiveGenRow, HeldItemForGen } from "../../utils/activeGenScope";
-	import { formatEvYield, unhandledCustomCell } from "../../utils/fields";
+	import { formatEvYield, sortColumnOf, unhandledCustomCell } from "../../utils/fields";
 	import { formatDexNumber, formatItemName, formatPokemonDisplayName } from "../../utils/pokemonDisplay";
 	import type { SortColumn, SortState } from "../../utils/sortPokemon";
 	import {
@@ -8,7 +8,8 @@
 	} from "../../utils/tableColumns";
 	import { untrack } from "svelte";
 	import { tableEntries, tableRowMetrics, tableWindow } from "../../utils/tableWindow";
-	import { computeSideAnchoredPreviewPosition, getScreenRoot } from "../domPosition";
+	import { artPreviewPosition } from "../../utils/overlayPosition";
+	import { getScreenRoot, measureOverlay } from "../domPosition";
 	import { getScroller, watchLayout, watchViewport } from "../viewportWatch";
 	import type { FavoriteMenu } from "../favoriteMenu";
 	import { createInfoPopover, type InfoTargetProps } from "../infoPopover.svelte";
@@ -82,14 +83,14 @@
 		// fixed — see its CSS comment for why), not the raw viewport rect.
 		// A row near the top or bottom edge of the visible viewport would
 		// otherwise center the preview off-screen (same class of bug
-		// infoPopover.svelte.ts's MIN_SPACE_BELOW flip already prevents for
+		// overlayPosition.ts's MIN_SPACE_BELOW flip already prevents for
 		// AbilitiesPanel/MoveBrowser/HeldItemsPanel — this is a different
-		// placement shape though, a side-anchored vertical center rather
-		// than a below/above corner flip, so it gets its own clamp instead
-		// of reusing that hook). See domPosition.ts's
-		// computeSideAnchoredPreviewPosition/utils/previewPosition.ts for the
-		// shared clamp math (also used by DetailScreen's portrait preview).
-		previewPos = computeSideAnchoredPreviewPosition(targetEl, screenRootOf(), scrollerOf(), PREVIEW_HALF_HEIGHT);
+		// shape though, a side-anchored vertical center rather than a
+		// below/above corner flip, so it gets its own clamp instead of
+		// reusing that hook). See utils/overlayPosition.ts's
+		// artPreviewPosition for the shared clamp (also used by
+		// DetailScreen's portrait preview).
+		previewPos = artPreviewPosition(measureOverlay(targetEl, screenRootOf(), scrollerOf()), PREVIEW_HALF_HEIGHT);
 	}
 
 	function hidePreview() {
@@ -267,11 +268,12 @@ accessibility tree. -->
 				<th class="pin pin-name" style:min-width={frame.name.min} onclick={() => onSort("name")}>Name{sortIndicator("name")}</th>
 				<th style:min-width={frame.type.min}>Type</th>
 				{#each activeColumns as col (col.key)}
+					{@const sortColumn = sortColumnOf(col)}
 					<th
 						class:center={!!col.icon}
 						class:right={col.align === "right"}
 						style:min-width={col.minWidth}
-						onclick={() => col.sortKey && onSort(col.sortKey)}
+						onclick={() => sortColumn && onSort(sortColumn)}
 						title={col.label}
 					>
 						{#if col.icon}
@@ -279,7 +281,7 @@ accessibility tree. -->
 						{:else}
 							{col.label}
 						{/if}
-						{col.sortKey ? sortIndicator(col.sortKey) : ""}
+						{sortColumn ? sortIndicator(sortColumn) : ""}
 					</th>
 				{/each}
 			</tr>

@@ -1,5 +1,5 @@
 import { getContext, setContext } from "svelte";
-import { sideAnchoredPreviewPosition } from "../utils/previewPosition";
+import type { Band, OverlayMeasure } from "../utils/overlayPosition";
 
 // The window an element is drawn in: a pop-out leaf's own, not the main
 // window the plugin's code runs in, which the bare `window`/`activeWindow`
@@ -18,7 +18,7 @@ export function windowOf(el: Element): Window {
 
 // A screen's root (BrowseScreen's, DetailScreen's): position: relative, and
 // the containing block every Info popover and hover preview inside that
-// screen is placed against (relativeRect). Each screen provides it through
+// screen is placed against (measureOverlay). Each screen provides it through
 // this context as a getter over its `$state`, as PokedexApp provides the
 // scroller (getScroller), so a child reads the element and nothing below a
 // screen looks it up by class name or DOM nesting.
@@ -40,75 +40,24 @@ export function getScreenRoot(): ScreenRootGetter {
 	return root;
 }
 
-export interface RelativeRect {
-	top: number;
-	left: number;
-	right: number;
-	bottom: number;
-	width: number;
-	height: number;
+// The one DOM reader behind utils/overlayPosition.ts: the target's, its
+// screen's root's (getScreenRoot) and the Visible band's rects, all
+// viewport-relative, which infoPopoverPosition and artPreviewPosition re-base
+// against the root themselves. Untested, as every DOM read in view/: this
+// project's vitest config has no jsdom, so getBoundingClientRect isn't
+// available to a unit test (ADR-0003).
+export function measureOverlay(target: Element, root: Element | undefined, scroller: Element | undefined): OverlayMeasure {
+	return { target: target.getBoundingClientRect(), root: root?.getBoundingClientRect(), band: visibleBand(target, scroller) };
 }
 
-// getBoundingClientRect() is viewport-relative, but a popover positioned
-// with `position: absolute` needs coordinates relative to its own
-// positioning ancestor instead — Obsidian's `.workspace-leaf` has `contain:
-// strict`, which (like a transform) makes it the containing block for a
-// `position: fixed` descendant, so a fixed popover positioned from a raw
-// viewport rect lands visibly off (by however tall the tab bar is). This
-// re-bases `target`'s rect against its screen's root (getScreenRoot) instead. Untested (see PokeApiClient.ts/PokedexView.ts
-// for the same convention) — this project's vitest config has no jsdom
-// environment, so `getBoundingClientRect`/`closest` aren't available to a
-// unit test without adding one just for this.
-export function relativeRect(target: HTMLElement, root: Element | undefined): RelativeRect {
-	const rect = target.getBoundingClientRect();
-	const containerRect = root?.getBoundingClientRect();
-	const top = containerRect?.top ?? 0;
-	const left = containerRect?.left ?? 0;
-	return {
-		top: rect.top - top,
-		left: rect.left - left,
-		right: rect.right - left,
-		bottom: rect.bottom - top,
-		width: rect.width,
-		height: rect.height,
-	};
-}
-
-// Side-anchored hover-preview positioning shared by TableGrid's sprite
-// preview and DetailScreen's portrait preview — used to be duplicated
-// verbatim between the two (same relativeRect + vertical-clamp shape, only
-// the screen and halfHeight differed). The clamp/shift math
-// itself is DOM-free and lives in utils/previewPosition.ts (tested there);
-// this wrapper is only the DOM-reading part (relativeRect,
-// getBoundingClientRect), left untested per this project's view/ convention
-// (no jsdom in vitest.config.ts).
-export function computeSideAnchoredPreviewPosition(
-	target: HTMLElement,
-	root: Element | undefined,
-	scroller: Element | undefined,
-	halfHeight: number,
-): { top: number; left: number } {
-	const r = relativeRect(target, root);
-	const viewportRect = target.getBoundingClientRect();
-	return sideAnchoredPreviewPosition(
-		r.top,
-		r.right,
-		r.height,
-		viewportRect.top,
-		viewportRect.height,
-		halfHeight,
-		visibleBand(target, scroller),
-	);
-}
-
-// The on-screen band (viewport-relative top and bottom) an Info popover or a
-// hover preview may use: the scroller's rect, which clips both (a screen's
-// root sits inside it), within the target's own window. Probed live: a
+// The Visible band (CONTEXT.md): the viewport-relative top and bottom an
+// Info popover or an Art preview may use: the scroller's rect, which clips
+// both (a screen's root sits inside it), within the target's own window. Probed live: a
 // Pokédex leaf in the top half of a horizontal split had its scroller end at
 // 403px in an 870px window, and both an Info box and the sprite preview
 // measured against the window ran past 403 and were cut off there. Without a
 // scroller (not yet bound) it is the window.
-export function visibleBand(target: Element, scroller: Element | undefined): { top: number; bottom: number } {
+export function visibleBand(target: Element, scroller: Element | undefined): Band {
 	const height = windowOf(target).innerHeight;
 	const rect = scroller?.getBoundingClientRect();
 	return { top: Math.max(rect?.top ?? 0, 0), bottom: Math.min(rect?.bottom ?? height, height) };

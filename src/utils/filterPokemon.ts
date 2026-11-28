@@ -2,6 +2,7 @@ import { GENERATIONS } from "../data/constants";
 import type { PokedexTableRow, StatBlock } from "../data/types";
 import { formatPokemonDisplayName } from "./pokemonDisplay";
 import type { ActiveGenRow } from "./activeGenScope";
+import type { FilterGroupKey } from "./filterGroups";
 import { type FlagDef, QUIRKS, TRAITS } from "./quirksAndTraits";
 
 export interface StatRange {
@@ -143,6 +144,25 @@ function matchesFavorite(row: ActiveGenRow, favoritesOnly: boolean, favoriteIds:
 	return favoriteIds.has(row.id);
 }
 
+// Each filter group's predicate (FILTER_GROUP_KEYS, utils/filterGroups.ts;
+// CONTEXT.md "Filter group"). A Record, so a new group key fails typecheck
+// here until it filters: a group whose chips draw but never narrow the list
+// cannot compile. Its count is filterGroups.ts's, its chrome FilterBar's
+// GROUP_CHROME, each a Record over the same key (ADR-0027). Search and the
+// favourites toggle are filters but not groups; filterPokemon applies them
+// itself.
+const GROUP_MATCHES: Record<FilterGroupKey, (row: ActiveGenRow, filters: PokedexFilters) => boolean> = {
+	type: (row, f) => matchesTypes(row, f.types),
+	gen: (row, f) => matchesGenerations(row, f.generations),
+	ability: (row, f) => matchesAbilities(row, f.abilities),
+	stats: (row, f) => matchesStatRanges(row, f.statRanges),
+	rarity: (row, f) => matchesRarities(row, f.rarities),
+	ev: (row, f) => matchesEvStats(row, f.evStats),
+	traits: (row, f) => matchesTraits(row, f.traits),
+	quirks: (row, f) => matchesQuirks(row, f.quirks),
+};
+const GROUP_PREDICATES = Object.values(GROUP_MATCHES);
+
 // External context not derivable from a row field (favorites are user state).
 // favoriteIds is safely omittable: an omitted set matches nothing extra;
 // favoritesOnly still gates it. Active Gen is not here: rows arrive already
@@ -159,14 +179,7 @@ export function filterPokemon(
 	const favoriteIds = context.favoriteIds ?? new Set<number>();
 	return rows.filter((row) =>
 		matchesSearch(row, filters.search) &&
-		matchesTypes(row, filters.types) &&
-		matchesGenerations(row, filters.generations) &&
-		matchesStatRanges(row, filters.statRanges) &&
-		matchesAbilities(row, filters.abilities) &&
-		matchesRarities(row, filters.rarities) &&
-		matchesEvStats(row, filters.evStats) &&
-		matchesQuirks(row, filters.quirks) &&
-		matchesTraits(row, filters.traits) &&
+		GROUP_PREDICATES.every((matches) => matches(row, filters)) &&
 		matchesFavorite(row, filters.favoritesOnly, favoriteIds)
 	);
 }

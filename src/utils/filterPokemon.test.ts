@@ -3,6 +3,8 @@ import type { PokedexTableRow } from "../data/types";
 import { EMPTY_FILTERS, type FilterContext, filterPokemon as filterPokemonIn } from "./filterPokemon";
 import { makeRow } from "../data/__fixtures__/rows";
 import { type ActiveGenRow, scopeRowsToActiveGen } from "./activeGenScope";
+import { FILTER_GROUP_KEYS } from "./filterGroups";
+import { SAMPLE_ROWS, sampleFilters } from "./__fixtures__/filterGroupSamples";
 
 // filterPokemon takes rows already scoped to an Active Gen (ActiveGenRow).
 // Tests keep stating unscoped rows and scope them here; 3 is the generation
@@ -229,5 +231,16 @@ describe("filterPokemon", () => {
 			const result = filterPokemon(regionalRows, { ...EMPTY_FILTERS, generations: [7] });
 			expect(result.map((r) => r.id)).toEqual([10091]);
 		});
+	});
+});
+
+describe("filter groups", () => {
+	// GROUP_MATCHES makes a group's predicate exist; this makes it narrow:
+	// each group's sample selection alone keeps one sample row and drops the
+	// other, so a predicate that matches everything (or nothing) fails here.
+	it("every group's selection narrows the list", () => {
+		for (const key of FILTER_GROUP_KEYS) {
+			expect(filterPokemon(SAMPLE_ROWS, sampleFilters(key)), key).toHaveLength(1);
+		}
 	});
 });

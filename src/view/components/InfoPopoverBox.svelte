@@ -1,10 +1,11 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
+	import type { InfoPopoverPosition } from "../../utils/overlayPosition";
 
 	interface InfoPopoverState {
 		open: string | null;
 		pinned: boolean;
-		pos: { top: number; left: number; placement: "below" | "above" } | null;
+		pos: InfoPopoverPosition | null;
 	}
 
 	// Shared by AbilitiesPanel, HeldItemsPanel and MoveBrowser: the box
@@ -21,7 +22,7 @@
 {#if popover.open && popover.pos}
 	<div
 		class="info-popover-box"
-		class:flip-above={popover.pos.placement === "above"}
+		class:flip-above={popover.pos.side === "above"}
 		class:pinned={popover.pinned}
 		style="top: {popover.pos.top}px; left: {popover.pos.left}px;"
 	>
