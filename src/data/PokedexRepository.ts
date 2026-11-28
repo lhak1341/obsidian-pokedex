@@ -73,8 +73,21 @@ const DISK_READ_CONCURRENCY = 50;
 
 // How a run of the detail-open plan (loadEntry) treats images: "hold" makes
 // blob URLs through ImageMemory for a screen to show, "store" writes bytes to
-// the store only (cacheRange).
+// the store only (cacheRange). Each names one ImageMode (imageMode).
 export type EntryImages = "hold" | "store";
+
+// One way of treating images, picked once per run (an Entry load, a variety
+// form) so no stage branches on it. Both modes apply the same failure policy
+// by an image's role (CONTEXT.md, "Image set"): `sprite` is the core sprite,
+// required, so a failure rejects; `optional` is every other image, each
+// failing on its own, to null when held and to not stored when stored. A
+// stored image makes no URL, so it resolves null and an all-null bundle, and
+// one already in memory or the store is skipped, so a repeat prefetch
+// downloads nothing.
+interface ImageMode {
+	sprite(key: number | string, sprites: ImageSources): Promise<string | null>;
+	optional(key: number | string, sprites: ImageSources, suffixes: readonly ImageSuffix[]): Promise<ImageBundle>;
+}
 
 export type EntryExtras = Pick<PokedexEntry, "artworkDataUri" | "shinyDataUri" | "shinyArtworkDataUri" | "evolutionChain">;
 
@@ -175,6 +188,24 @@ export class PokedexRepository {
 	// its own comment), so it needs its own in-flight tracking keyed by
 	// relPath instead of cachePath.
 	private imageInFlight = new Map<string, Promise<string | null>>();
+	// The two ImageModes: held images are blob URLs through ImageMemory
+	// (getOrFetchImage), stored ones bytes written with no URL (storeImage).
+	private readonly heldImages: ImageMode = {
+		sprite: (key, sprites) => this.getOrFetchImage(sprites.front_default, key, "sprite"),
+		optional: (key, sprites, suffixes) => this.fetchImages(key, sprites, suffixes),
+	};
+	private readonly storedImages: ImageMode = {
+		sprite: async (key, sprites) => {
+			await this.storeImage(sprites.front_default, imagePath(key, "sprite"));
+			return null;
+		},
+		optional: async (key, sprites, suffixes) => {
+			await Promise.all(
+				imageRequests(key, sprites, suffixes).map(({ url, relPath }) => this.storeImage(url, relPath).catch(() => undefined)),
+			);
+			return { sprite: null, artwork: null, shiny: null, shinyArtwork: null };
+		},
+	};
 
 	constructor(
 		private client: PokeApiClient,
@@ -185,6 +216,10 @@ export class PokedexRepository {
 			options.objectUrls ?? browserObjectUrls,
 			options.imageBudgetBytes ?? IMAGE_MEMORY_BUDGET_BYTES,
 		);
+	}
+
+	private imageMode(images: EntryImages): ImageMode {
+		return images === "hold" ? this.heldImages : this.storedImages;
 	}
 
 	// Shared shape behind every getOrFetch* method below: check the
@@ -483,15 +518,14 @@ export class PokedexRepository {
 		});
 	}
 
-	// Shared by getMegaForm/getGigantamaxForm below: both combine one JSON
-	// fetch with four image fetches, a different shape than getOrFetch's
-	// single-value cache (see ADR-0002 for why this doesn't reuse getOrFetch
-	// itself) — but that combined shape IS identical between the two of them,
-	// differing only in which mem cache/disk-path prefix/normalize function
-	// each uses. `normalize` takes the source even though
-	// toGigantamaxFormDetail ignores it (Gigantamax changes no
-	// types/abilities/stats, verified live comparing Gengar vs. gengar-gmax)
-	// — one shared signature, not two.
+	// Shared by getMegaForm/getGigantamaxForm below (images held) and
+	// storeVarietyForms (images stored): one JSON fetch with four image
+	// fetches, a different shape than getOrFetch's single-value cache (see
+	// ADR-0002 for why this doesn't reuse getOrFetch itself) — but that
+	// combined shape IS identical between Mega and Gigantamax, differing only
+	// in which mem cache and disk-path prefix each uses. Every image is
+	// optional (ImageMode), so a form whose source loaded never rejects on an
+	// image; each caller builds its own detail from the source and images.
 	//
 	// What is cached (mem and store) is the image-free VarietyFormSource, and
 	// the four images are resolved on every call: a cached image URL is a
@@ -499,16 +533,15 @@ export class PokedexRepository {
 	// themselves are mem/store hits after the first call. A record in the
 	// pre-blob shape (image URIs inside, no `sprites`) is stale and refetched;
 	// a field added to VarietyFormSource later extends isVarietyFormSource.
-	private async fetchVarietyForm<T>(
+	private async fetchVarietyForm(
 		varietyKey: string,
 		memCache: Map<string, VarietyFormSource>,
 		cachePathFor: (varietyKey: string) => string,
-		normalize: (source: VarietyFormSource, images: ImageBundle) => T,
 		render: PortraitRender,
-	): Promise<T> {
+		images: ImageMode,
+	): Promise<{ source: VarietyFormSource; images: ImageBundle }> {
 		const source = await this.getOrFetchVarietyFormSource(varietyKey, memCache, cachePathFor(varietyKey));
-		const images = await this.fetchImages(varietyKey, source.sprites, ["sprite", ...largeImageSuffixes(render)]);
-		return normalize(source, images);
+		return { source, images: await images.optional(varietyKey, source.sprites, ["sprite", ...largeImageSuffixes(render)]) };
 	}
 
 	// A plain single-value cache once the images are split off, so it rides
@@ -542,24 +575,28 @@ export class PokedexRepository {
 	// repository state, so a request made before a style switch keeps the
 	// render it asked for and its caller can tell the answer is stale.
 	async getMegaForm(varietyKey: string, render: PortraitRender): Promise<MegaFormDetail> {
-		return this.fetchVarietyForm(varietyKey, this.megaFormMemCache, megaFormPath, toMegaFormDetail, render);
+		const { source, images } = await this.fetchVarietyForm(varietyKey, this.megaFormMemCache, megaFormPath, render, this.heldImages);
+		return toMegaFormDetail(source, images);
 	}
 
 	// Same lazy fetch-on-click shape as getMegaForm. Cached separately from
 	// mega-forms/ since a variety name is never shared between the two (a
 	// species' Gigantamax key always ends "-gmax", Mega always
-	// "-mega"/"-mega-x/-y").
+	// "-mega"/"-mega-x/-y"). Only the images go into the detail: Gigantamax
+	// changes no types/abilities/stats (verified live comparing Gengar vs.
+	// gengar-gmax).
 	async getGigantamaxForm(varietyKey: string, render: PortraitRender): Promise<GigantamaxFormDetail> {
-		return this.fetchVarietyForm(
+		const { images } = await this.fetchVarietyForm(
 			varietyKey,
 			this.gigantamaxFormMemCache,
 			gigantamaxFormPath,
-			(_pokemon, images) => toGigantamaxFormDetail(images),
 			render,
+			this.heldImages,
 		);
+		return toGigantamaxFormDetail(images);
 	}
 
-	// Shared by partitionByCacheHit and getCacheStatus — an id counts as
+	// getCacheStatus's first half (isExtrasCached is the second) — an id counts as
 	// cached once both its pokemon and species JSON are on disk (or already
 	// in this session's mem cache), the same two files getRowsForIds' fetchRow
 	// needs to build a table row.
@@ -694,8 +731,10 @@ export class PokedexRepository {
 	// toggle works offline. Not part of the Entry load: a detail open leaves
 	// the forms to the toggle's click (getMegaForm). The keys come from the
 	// same derivation evictVarietyForms removes them by, and pokemon/species
-	// are memory hits after the Entry load. A form that fails is skipped, as a
-	// chain member is; cacheRange's only caller.
+	// are memory hits after the Entry load. Each form is fetchVarietyForm with
+	// images stored; a form whose source fails is skipped, as a chain member
+	// is, and an image that fails is left out (it is optional). cacheRange's
+	// only caller.
 	private async storeVarietyForms(id: number, render: PortraitRender): Promise<void> {
 		const pokemon = await this.getOrFetchPokemon(id);
 		const species = await this.getOrFetchSpecies(this.speciesIdFromPokemon(pokemon));
@@ -710,8 +749,7 @@ export class PokedexRepository {
 		await Promise.all(
 			forms.map(async ({ key, memCache, path }) => {
 				try {
-					const source = await this.getOrFetchVarietyFormSource(key, memCache, path(key));
-					await this.storeImages(key, source.sprites, ["sprite", ...largeImageSuffixes(render)]);
+					await this.fetchVarietyForm(key, memCache, path, render, this.storedImages);
 				} catch {
 					// Skipped: the toggle fetches it on click once online.
 				}
@@ -735,12 +773,14 @@ export class PokedexRepository {
 		}
 	}
 
-	// Fetches the requested members of a Pokemon's image set (see imageSet.ts for
-	// the suffix -> sprites-field table). Every image is caught independently and
-	// resolves to null on failure — a dropped connection on just the shiny
-	// sprite shouldn't take the rest down. The core sprite is NOT fetched
-	// through here: a failed core sprite must fail the whole id (the Entry
-	// load's core, entryCore, and getRowsForIds), the opposite policy. Suffixes not requested stay null.
+	// The held ImageMode's `optional`: the requested members of a Pokemon's
+	// image set (see imageSet.ts for the suffix -> sprites-field table). Every
+	// image is caught independently and resolves to null on failure — a
+	// dropped connection on just the shiny sprite shouldn't take the rest
+	// down. The core sprite is NOT fetched through here: a failed core sprite
+	// must fail the whole id (ImageMode's `sprite`, in the Entry load's core,
+	// entryCore, and getRowsForIds), the opposite policy. Suffixes not
+	// requested stay null.
 	private async fetchImages(
 		key: number | string,
 		sprites: ImageSources,
@@ -992,7 +1032,9 @@ export class PokedexRepository {
 	// (blob URLs, through ImageMemory) and its callbacks, and cacheRange runs
 	// it with images "store" (bytes written to the store, no URL made, so a
 	// generation's ~450 large images never pass through the LRU and revoke
-	// the open detail's portrait) and no callbacks. Images are the only fork;
+	// the open detail's portrait) and no callbacks. Images are the only fork,
+	// picked once as an ImageMode with the same failure policy either way, so
+	// a stored run rejects where a held one would (a failed core sprite);
 	// every JSON goes through getOrFetch either way.
 	//
 	// "render" is read when the extras stage starts, so a Sprite style switch
@@ -1005,7 +1047,7 @@ export class PokedexRepository {
 	async loadEntry(id: number, options: EntryLoadOptions): Promise<void> {
 		const { images, isCancelled } = options;
 		const live = () => !isCancelled?.();
-		const core = await this.entryCore(id, images);
+		const core = await this.entryCore(id, this.imageMode(images));
 		if (!live()) return;
 		options.onCore?.(core);
 		if (!live()) return;
@@ -1032,7 +1074,8 @@ export class PokedexRepository {
 	// fail to null, a member to a null sprite, and pokemon/species are
 	// already in memory.
 	async loadEntryExtras(id: number, render: PortraitRender, options: EntryExtrasOptions): Promise<void> {
-		const { images, isCancelled } = options;
+		const { isCancelled } = options;
+		const images = this.imageMode(options.images);
 		const live = () => !isCancelled?.();
 		const extras = await this.entryExtras(id, render, images);
 		if (!live()) return;
@@ -1049,16 +1092,15 @@ export class PokedexRepository {
 	// the actually-slow, never-cached-until-now parts (evolution chain,
 	// official artwork, shiny) that the detail view was previously blocking on
 	// before showing anything at all.
-	private async entryCore(id: number, images: EntryImages): Promise<PokedexEntry> {
+	private async entryCore(id: number, images: ImageMode): Promise<PokedexEntry> {
 		const pokemon = await this.getOrFetchPokemon(id);
 		const species = await this.getOrFetchSpecies(this.speciesIdFromPokemon(pokemon));
-		const sprite =
-			images === "hold" ? await this.getOrFetchImage(pokemon.sprites.front_default, id, "sprite") : await this.storeImages(id, pokemon.sprites, ["sprite"]);
+		const sprite = await images.sprite(id, pokemon.sprites);
 		const entry = toEntry(pokemon, species, null, { sprite, artwork: null, shiny: null, shinyArtwork: null });
 		return { ...entry, flavorTexts: await this.flavorTextsFor(pokemon, species, entry.flavorTexts) };
 	}
 
-	private async entryExtras(id: number, render: PortraitRender, images: EntryImages): Promise<EntryExtras> {
+	private async entryExtras(id: number, render: PortraitRender, images: ImageMode): Promise<EntryExtras> {
 		const pokemon = await this.getOrFetchPokemon(id);
 		const species = await this.getOrFetchSpecies(this.speciesIdFromPokemon(pokemon));
 		let evolutionChain: EvolutionNode | null = null;
@@ -1086,29 +1128,16 @@ export class PokedexRepository {
 			evolutionChain = null; // non-fatal: detail view still renders without it
 		}
 
-		const suffixes = largeImageSuffixes(render);
-		if (images === "store") {
-			await this.storeImages(id, pokemon.sprites, suffixes);
-			return { artworkDataUri: null, shinyDataUri: null, shinyArtworkDataUri: null, evolutionChain };
-		}
-		// Each image fetch is caught independently — a dropped connection on
-		// just the shiny sprite, say, shouldn't take the artwork (or the rest
-		// of the already-rendered core view) down with it.
-		const { artwork: artworkDataUri, shiny: shinyDataUri, shinyArtwork: shinyArtworkDataUri } = await this.fetchImages(id, pokemon.sprites, suffixes);
-		return { artworkDataUri, shinyDataUri, shinyArtworkDataUri, evolutionChain };
+		// Optional, each caught independently — a dropped connection on just
+		// the shiny sprite, say, shouldn't take the artwork (or the rest of
+		// the already-rendered core view) down with it. All null when stored.
+		const { artwork, shiny, shinyArtwork } = await images.optional(id, pokemon.sprites, largeImageSuffixes(render));
+		return { artworkDataUri: artwork, shinyDataUri: shiny, shinyArtworkDataUri: shinyArtwork, evolutionChain };
 	}
 
-	// The "store" side of an image: bytes written to the store, no blob URL
-	// made, each one caught on its own. An image already in memory or the
-	// store is skipped, so a repeat prefetch never re-downloads. Always null,
-	// for the URL a "hold" caller would have got.
-	private async storeImages(key: number | string, sprites: ImageSources, suffixes: readonly ImageSuffix[]): Promise<null> {
-		await Promise.all(
-			imageRequests(key, sprites, suffixes).map(({ url, relPath }) => this.storeImage(url, relPath).catch(() => undefined)),
-		);
-		return null;
-	}
-
+	// The stored ImageMode's write: bytes to the store, no blob URL made. An
+	// image already in memory or the store is skipped, so a repeat prefetch
+	// never re-downloads.
 	private async storeImage(url: string | null, relPath: string): Promise<void> {
 		if (!url || this.imageMemCache.has(relPath) || (await this.cache.exists(relPath))) return;
 		await this.cache.writeBinary(relPath, await this.client.fetchImageBinary(url));
@@ -1128,16 +1157,15 @@ export class PokedexRepository {
 	// whole species record just to throw away everything but that would be
 	// wasted work. Each id resolves independently to a null sprite / empty
 	// types on failure rather than rejecting the whole set — a dropped
-	// connection on one partner shouldn't blank out the others.
-	private async entryChainMembers(ids: number[], images: EntryImages): Promise<Record<number, ChainMember>> {
+	// connection on one partner shouldn't blank out the others. A partner's
+	// sprite is optional (ImageMode), so one whose sprite alone fails keeps
+	// its types; only a failed pokemon read empties it.
+	private async entryChainMembers(ids: number[], images: ImageMode): Promise<Record<number, ChainMember>> {
 		const pairs = await Promise.all(
 			ids.map(async (id): Promise<readonly [number, ChainMember]> => {
 				try {
 					const pokemon = await this.getOrFetchPokemon(id);
-					const sprite =
-						images === "hold"
-							? await this.getOrFetchImage(pokemon.sprites.front_default, id, "sprite")
-							: await this.storeImages(id, pokemon.sprites, ["sprite"]);
+					const { sprite } = await images.optional(id, pokemon.sprites, ["sprite"]);
 					const types = sortBySlot(pokemon.types).map((t) => t.type.name);
 					return [id, { sprite, types }];
 				} catch {

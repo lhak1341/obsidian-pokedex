@@ -53,6 +53,17 @@ async function chainMembersOf(repository: PokedexRepository, id: number): Promis
 	return members;
 }
 
+// Fails every image whose source URL matches, at the client: every fake
+// pokemon shares the bulbasaur fixture's URLs, so one URL fails that image
+// for every id that is not already in memory.
+function failImagesWhere(client: FakePokeApiClient, fails: (url: string) => boolean): void {
+	const fetchImage = client.fetchImageBinary.getMockImplementation()!;
+	client.fetchImageBinary.mockImplementation(async (url) => {
+		if (fails(url)) throw new Error(`fake failure fetching image ${url}`);
+		return fetchImage(url);
+	});
+}
+
 async function blobBytes(blob: Blob | undefined): Promise<Uint8Array | null> {
 	return blob ? new Uint8Array(await blob.arrayBuffer()) : null;
 }
@@ -613,6 +624,21 @@ describe("PokedexRepository", () => {
 		expect(visuals[3].sprite).not.toBeNull();
 	});
 
+	it("the extras stage keeps a chain member's types when only its sprite fails", async () => {
+		const { client, repository } = makeRepository();
+		// The viewed id's own sprite is already resident, as after its core.
+		await coreOf(repository, 1);
+		failImagesWhere(client, (url) => url === bulbasaur.sprites.front_default);
+
+		const visuals = await chainMembersOf(repository, 1);
+
+		expect(visuals[1].sprite).not.toBeNull();
+		for (const id of [2, 3]) {
+			expect(visuals[id].sprite).toBeNull();
+			expect(visuals[id].types.length).toBeGreaterThan(0);
+		}
+	});
+
 	it("getAbilityDescription fetches once per ability name, then serves cache on repeat calls", async () => {
 		const { client, repository } = makeRepository();
 
@@ -1142,6 +1168,28 @@ describe("PokedexRepository image memory", () => {
 		await repository.cacheRange(gen, "official-artwork");
 
 		expect(client.fetchImageBinary).not.toHaveBeenCalled();
+	});
+
+	// The core sprite is required whichever way the Entry load treats images:
+	// a held load rejects, so a stored one must not report success.
+	it("an Entry load rejects when the core sprite fails, with images stored as with images held", async () => {
+		const { client, repository } = makeRepository();
+		failImagesWhere(client, (url) => url === bulbasaur.sprites.front_default);
+
+		await expect(repository.loadEntry(2, { images: "store", render: () => "official-artwork" })).rejects.toThrow();
+		await expect(repository.loadEntry(3, { images: "hold", render: () => "official-artwork" })).rejects.toThrow();
+	});
+
+	it("an Entry load with images stored skips a failed large image and stores the rest", async () => {
+		const { client, cache, repository } = makeRepository();
+		failImagesWhere(client, (url) => url === bulbasaur.sprites.other["official-artwork"].front_default);
+
+		await repository.loadEntry(2, { images: "store", render: () => "official-artwork" });
+
+		expect(await cache.exists("images/2-artwork.png")).toBe(false);
+		for (const suffix of ["sprite", "shiny", "shiny-artwork"]) {
+			expect(await cache.exists(`images/2-${suffix}.png`)).toBe(true);
+		}
 	});
 
 	it("maps a held URL back to its cache path, and forgets it once evicted", async () => {
