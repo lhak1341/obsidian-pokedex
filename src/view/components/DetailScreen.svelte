@@ -13,6 +13,7 @@
 	import { computeSideAnchoredPreviewPosition, provideScreenRoot } from "../domPosition";
 	import { LEAF_COMMANDS_CONTEXT, type LeafCommandRegistry } from "../LeafCommandRegistry";
 	import { contentScale } from "../imageBounds";
+	import { getScroller } from "../viewportWatch";
 	import EvolutionTree from "./EvolutionTree.svelte";
 	import FlavorTextPanel from "./FlavorTextPanel.svelte";
 	import HeldItemsPanel from "./HeldItemsPanel.svelte";
@@ -190,9 +191,12 @@
 	let rootEl = $state<HTMLDivElement | undefined>();
 	provideScreenRoot(() => rootEl);
 	const PORTRAIT_PREVIEW_HALF_HEIGHT = 160;
+	// The scroller clips the preview, so its clamp reads the scroller's band
+	// (visibleBand, domPosition.ts).
+	const scrollerOf = getScroller();
 	function showPortraitPreview(target: EventTarget | null) {
 		const targetEl = target as HTMLElement;
-		portraitPreviewPos = computeSideAnchoredPreviewPosition(targetEl, rootEl, PORTRAIT_PREVIEW_HALF_HEIGHT);
+		portraitPreviewPos = computeSideAnchoredPreviewPosition(targetEl, rootEl, scrollerOf(), PORTRAIT_PREVIEW_HALF_HEIGHT);
 	}
 	function hidePortraitPreview() {
 		portraitPreviewPos = null;

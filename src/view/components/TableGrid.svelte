@@ -89,7 +89,7 @@
 		// of reusing that hook). See domPosition.ts's
 		// computeSideAnchoredPreviewPosition/utils/previewPosition.ts for the
 		// shared clamp math (also used by DetailScreen's portrait preview).
-		previewPos = computeSideAnchoredPreviewPosition(targetEl, screenRootOf(), PREVIEW_HALF_HEIGHT);
+		previewPos = computeSideAnchoredPreviewPosition(targetEl, screenRootOf(), scrollerOf(), PREVIEW_HALF_HEIGHT);
 	}
 
 	function hidePreview() {

@@ -1,8 +1,9 @@
 import { CLOSED, stepPin, type PinEvent, type PinState } from "../utils/infoPopoverPin";
-import { getScreenRoot, relativeRect, type ScreenRootGetter, windowOf } from "./domPosition";
+import { getScreenRoot, relativeRect, type ScreenRootGetter, visibleBand } from "./domPosition";
+import { getScroller, type ScrollerGetter } from "./viewportWatch";
 
 // Below this much room (px) between the target's bottom edge and the
-// viewport's own bottom, there isn't enough space left to render a popover
+// bottom of the visible band (the scroller, visibleBand), there isn't enough space left to render a popover
 // underneath it without it running off-screen (or under Obsidian's status
 // bar) — flip it above the target instead. A fixed threshold rather than the
 // popover's actual rendered height, since that's only known post-render and
@@ -47,17 +48,20 @@ interface OpenInfo {
 	owner: object;
 	name: string;
 	root: ScreenRootGetter;
+	scroller: ScrollerGetter;
 	offsetY: number;
 	onOpen?: () => void;
 }
 
-function place(targetEl: HTMLElement, root: Element | undefined, offsetY: number): Pos {
+function place(targetEl: HTMLElement, root: Element | undefined, scroller: Element | undefined, offsetY: number): Pos {
 	// Viewport-relative (not relativeRect's container-relative numbers) —
 	// this decision is about actual on-screen room, independent of wherever
-	// the anchor's own box happens to sit. The target's own window: a pop-out
-	// leaf's height is not the main window's (windowOf).
+	// the anchor's own box happens to sit. The room ends at the scroller's
+	// bottom, which clips the box (a leaf in the top half of a split), within
+	// the target's own window (a pop-out's height is not the main window's).
 	const viewportRect = targetEl.getBoundingClientRect();
-	const placement: Placement = windowOf(targetEl).innerHeight - viewportRect.bottom < MIN_SPACE_BELOW ? "above" : "below";
+	const room = visibleBand(targetEl, scroller).bottom - viewportRect.bottom;
+	const placement: Placement = room < MIN_SPACE_BELOW ? "above" : "below";
 	const r = relativeRect(targetEl, root);
 	return placement === "below"
 		? { top: r.bottom + offsetY, left: r.left, placement }
@@ -87,7 +91,7 @@ function dispatch(event: PinEvent<HTMLElement>, info?: OpenInfo): boolean {
 		if (open && info) {
 			openOwner = info.owner;
 			openName = info.name;
-			openPos = place(open, info.root(), info.offsetY);
+			openPos = place(open, info.root(), info.scroller(), info.offsetY);
 			info.onOpen?.();
 		} else {
 			openOwner = null;
@@ -149,6 +153,7 @@ function syncDocListeners() {
 export function createInfoPopover(offsetY = 6) {
 	const owner = {};
 	const root = getScreenRoot();
+	const scroller = getScroller();
 
 	// A component that unmounts with its popover open takes the popover (and
 	// the document listeners) with it.
@@ -160,7 +165,7 @@ export function createInfoPopover(offsetY = 6) {
 	// {...popover.target(name)}>`. `onOpen` runs each time this target's
 	// popover opens (a fetch, or per-target content like a held item's rarity).
 	function target(name: string, onOpen?: () => void): InfoTargetProps {
-		const info: OpenInfo = { owner, name, root, offsetY, onOpen };
+		const info: OpenInfo = { owner, name, root, scroller, offsetY, onOpen };
 		return {
 			role: "button",
 			tabindex: 0,

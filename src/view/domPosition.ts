@@ -3,9 +3,11 @@ import { sideAnchoredPreviewPosition } from "../utils/previewPosition";
 
 // The window an element is drawn in: a pop-out leaf's own, not the main
 // window the plugin's code runs in, which the bare `window`/`activeWindow`
-// globals can name instead. Frames, timers and the viewport's height come
-// from it. Probed live: a pop-out focused over a minimised main window got 90
-// frames in 1.5 s from its own window and 0 from the global
+// globals can name instead. Frames and the viewport's height come from it;
+// timers need not (a minimised main window's setTimeout kept full rate over a
+// visible pop-out, probed live for #37). Probed live: a pop-out focused over
+// a minimised main window got 90 frames in 1.5 s from its own window and 0
+// from the global
 // `requestAnimationFrame` (the table's spacers kept the old row height); a
 // 600px pop-out beside an 870px main window placed an Info popover below a
 // target with 79px of room, since the global `innerHeight` said 349.
@@ -83,6 +85,7 @@ export function relativeRect(target: HTMLElement, root: Element | undefined): Re
 export function computeSideAnchoredPreviewPosition(
 	target: HTMLElement,
 	root: Element | undefined,
+	scroller: Element | undefined,
 	halfHeight: number,
 ): { top: number; left: number } {
 	const r = relativeRect(target, root);
@@ -94,6 +97,19 @@ export function computeSideAnchoredPreviewPosition(
 		viewportRect.top,
 		viewportRect.height,
 		halfHeight,
-		windowOf(target).innerHeight,
+		visibleBand(target, scroller),
 	);
+}
+
+// The on-screen band (viewport-relative top and bottom) an Info popover or a
+// hover preview may use: the scroller's rect, which clips both (a screen's
+// root sits inside it), within the target's own window. Probed live: a
+// Pokédex leaf in the top half of a horizontal split had its scroller end at
+// 403px in an 870px window, and both an Info box and the sprite preview
+// measured against the window ran past 403 and were cut off there. Without a
+// scroller (not yet bound) it is the window.
+export function visibleBand(target: Element, scroller: Element | undefined): { top: number; bottom: number } {
+	const height = windowOf(target).innerHeight;
+	const rect = scroller?.getBoundingClientRect();
+	return { top: Math.max(rect?.top ?? 0, 0), bottom: Math.min(rect?.bottom ?? height, height) };
 }

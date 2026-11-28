@@ -1,7 +1,8 @@
 // Side-anchored hover-preview positioning: given a target's already-computed
 // container-relative rect plus its viewport-relative top/height, clamp the
-// preview's vertical center into the visible viewport (so a target near the
-// top/bottom edge doesn't center the preview off-screen), then express the
+// preview's vertical center into the visible band (the scroller's on-screen
+// rect, which clips the preview: view/domPosition.ts's visibleBand), so a
+// target near its top/bottom edge doesn't center the preview off it, then express the
 // result back in the caller's container-relative coordinate space. Shared by
 // TableGrid's sprite preview and DetailScreen's portrait preview — same
 // side-anchored-with-vertical-clamp shape, different fixed preview height
@@ -18,10 +19,10 @@ export function sideAnchoredPreviewPosition(
 	viewportTop: number,
 	viewportHeight: number,
 	halfHeight: number,
-	windowInnerHeight: number,
+	band: { top: number; bottom: number },
 ): { top: number; left: number } {
 	const desiredCenter = viewportTop + viewportHeight / 2;
-	const clampedCenter = Math.min(Math.max(desiredCenter, halfHeight), windowInnerHeight - halfHeight);
+	const clampedCenter = Math.min(Math.max(desiredCenter, band.top + halfHeight), band.bottom - halfHeight);
 	const shift = clampedCenter - desiredCenter;
 	return { top: rectTop + rectHeight / 2 + shift, left: rectRight + PREVIEW_LEFT_OFFSET };
 }
