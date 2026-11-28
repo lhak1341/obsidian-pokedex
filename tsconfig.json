@@ -15,5 +15,5 @@
 		"resolveJsonModule": true,
 		"lib": ["DOM", "DOM.Iterable", "ES2020", "ES2021.String"]
 	},
-	"include": ["src/**/*.ts", "scripts/*.ts", "vitest.config.ts"]
+	"include": ["src/**/*.ts", "src/**/*.svelte", "scripts/*.ts", "vitest.config.ts"]
 }

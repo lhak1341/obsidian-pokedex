@@ -1,6 +1,6 @@
 # Mobile verification loop
 
-Two paths. Emulation is cheap and agent-drivable, but it covers layout and `Platform` only (no touch, no WebKit, no phone memory: see `temp/research/obsidian-mobile-constraints.md`). Anything touch-, engine- or memory-dependent waits for the iPhone path.
+Two paths. Emulation is cheap and agent-drivable, but it covers layout and `Platform` only (no touch, no WebKit, no phone memory). Anything touch-, engine- or memory-dependent waits for the iPhone path.
 
 ## Emulated (agent-drivable, desktop)
 

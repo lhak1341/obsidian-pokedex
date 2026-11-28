@@ -253,7 +253,7 @@
 		// the user has since clicked through to another entry (e.g. from
 		// the evolution chain) before this one settled — load() itself
 		// never rejects, it records failure on `error` instead.
-		result.then(() => {
+		void result.then(() => {
 			if (id !== currentId || loadState.cancelled || !loadState.error) return;
 			new Notice(`Pokedex: couldn't load #${currentId} (${loadState.error})`);
 		});

@@ -152,7 +152,7 @@
 	const rowTextWidths = $derived.by(() => {
 		const font = measureFont || "14px sans-serif";
 		return rememberedRowTextWidths(memory, font, () => {
-			const ctx = document.createElement("canvas").getContext("2d");
+			const ctx = createEl("canvas").getContext("2d");
 			if (!ctx) return () => 0;
 			ctx.font = font;
 			return (text) => ctx.measureText(text).width;

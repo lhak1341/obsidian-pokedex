@@ -3,7 +3,6 @@
 	import { SvelteMap } from "svelte/reactivity";
 	import { STAT_COLORS, TYPE_COLORS } from "../../data/constants";
 	import type { PokedexRepository } from "../../data/PokedexRepository";
-	import type { PokedexTableRow } from "../../data/types";
 	import {
 		CARD_GRID_GAP, CARD_SIZE_SPECS, cardGrid, cardRowHeights, cardRowTop, type CardRowsInput, type CardSize, cardWindow, type ContentBounds, fitSprite, panelColumns, panelPlacement, SORT_CHIPS,
 		settleTopTile, type SpritePlacement, statStrip, tileCorners, tileSortValue, type TopTileIo, type TopTileState,

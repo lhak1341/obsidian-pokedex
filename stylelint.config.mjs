@@ -6,6 +6,19 @@ export default {
 	overrides: [
 		{ files: ["**/*.svelte"], customSyntax: "postcss-html" },
 		{
+			// Striping by position breaks once a row can be inserted: a divider,
+			// the Table window's spacers or its moving start shift the parity of
+			// every row after it. Stripe by an explicit index over real data rows
+			// only, applied as a class (TableGrid's `stripe`, MoveBrowser's moveIndex).
+			files: ["src/view/components/**/*.svelte"],
+			rules: {
+				"selector-pseudo-class-disallowed-list": [
+					["nth-child", "nth-last-child", "nth-of-type", "nth-last-of-type"],
+					{ message: "Stripe rows by an explicit index class (TableGrid's `stripe`), not position: see stylelint.config.mjs." },
+				],
+			},
+		},
+		{
 			// Named exemption: the Pokémon type and stat colours are canonical domain
 			// data, outside the contract (lhak-style-adoption SPEC stories 38-39).
 			// Only this file, and only the colour rules; the prefix and font-size

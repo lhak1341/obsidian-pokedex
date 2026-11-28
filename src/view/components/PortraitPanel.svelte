@@ -87,7 +87,7 @@
 	// keeps the previous scale.
 	$effect(() => {
 		let cancelled = false;
-		resolvePortraitScale({
+		void resolvePortraitScale({
 			style: spriteStyle,
 			baseUri: basePortraitUri,
 			currentUri: portraitUri,

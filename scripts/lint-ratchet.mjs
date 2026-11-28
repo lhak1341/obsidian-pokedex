@@ -21,7 +21,7 @@ import { spawnSync } from "node:child_process";
 // eslint.config.mjs rather than being absorbed into this number.
 const BASELINE = 0;
 
-const run = spawnSync("npx", ["eslint", "src/**/*.ts", "--format", "json"], {
+const run = spawnSync("npx", ["eslint", "src/**/*.ts", "src/**/*.svelte", "scripts/*.ts", "--format", "json"], {
 	encoding: "utf8",
 	shell: process.platform === "win32",
 });
@@ -40,7 +40,10 @@ if (start === -1) {
 const report = JSON.parse(run.stdout.slice(start));
 
 // Liveness: a scan-based check that walks nothing and passes is worse than no
-// check at all, so assert the walker actually saw the source tree.
+// check at all, so assert the walker actually saw the source tree. eslint
+// itself already fails a glob that matches no file, and reports a matched
+// file no config block covers as a warning (counted below), so this arm is
+// the last line rather than the first (both probed 2026-11-28).
 if (report.length === 0) {
 	console.error("eslint linted 0 files — the ratchet scanned nothing. Check the glob in this script.");
 	process.exit(1);

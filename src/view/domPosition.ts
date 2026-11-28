@@ -11,7 +11,8 @@ import type { Band, OverlayMeasure } from "../utils/overlayPosition";
 // `requestAnimationFrame` (the table's spacers kept the old row height); a
 // 600px pop-out beside an 870px main window placed an Info popover below a
 // target with 79px of room, since the global `innerHeight` said 349.
-// `src/view/ownWindow.test.ts` fails on a global read.
+// eslint (no-restricted-globals and no-restricted-properties in
+// eslint.config.mjs) fails a global read anywhere in src/view.
 export function windowOf(el: Element): Window {
 	return el.ownerDocument.defaultView ?? activeWindow;
 }

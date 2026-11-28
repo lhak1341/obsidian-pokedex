@@ -1,7 +1,7 @@
 // Leaf hotkeys (CONTEXT.md): the keys a Pokedex leaf answers, decided in one
 // place. PokedexView owns the only window keydown listener per leaf and asks
 // this for a command; nothing else in the plugin listens for keydown on the
-// window (pinned by leafHotkeyListener.test.ts).
+// window (eslint's no-restricted-syntax in eslint.config.mjs rejects another).
 //
 // `active` is part of the input, not a check the caller does first, so the
 // rule "a leaf that is not the active one leaves the event alone" is tested
